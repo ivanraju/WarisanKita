@@ -141,6 +141,89 @@ class ForumIndexScreen extends StatelessWidget {
     );
   }
 
+  void _showFlagPostDialog(BuildContext context, ForumThread thread) {
+    String selectedReason = 'Inappropriate Content';
+    final notesController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: Row(
+            children: [
+              const Icon(Icons.flag_rounded, color: Color(0xFFEF4444)),
+              const SizedBox(width: 10),
+              Text('Report / Flag Post', style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40))),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Report thread: "${thread.title}"',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey[800]),
+              ),
+              const SizedBox(height: 14),
+              Text('Select Moderation Reason:', style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[600])),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                value: selectedReason,
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'Inappropriate Content', child: Text('Inappropriate / Offensive Content')),
+                  DropdownMenuItem(value: 'Misinformation', child: Text('Misinformation / Fake Heritage Claim')),
+                  DropdownMenuItem(value: 'Spam/Off-topic', child: Text('Spam or Off-topic Advertisement')),
+                  DropdownMenuItem(value: 'Harassment', child: Text('Harassment or Abusive Language')),
+                ],
+                onChanged: (val) {
+                  if (val != null) setDialogState(() => selectedReason = val);
+                },
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: notesController,
+                maxLines: 2,
+                decoration: InputDecoration(
+                  labelText: 'Additional Notes for Admin (Optional)',
+                  hintText: 'Provide details for the admin moderation team...',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('CANCEL'),
+            ),
+            FilledButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('🚩 Post reported to Admin Moderation Officers ($selectedReason)'),
+                    backgroundColor: const Color(0xFFEF4444),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              },
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),
+              icon: const Icon(Icons.flag_rounded, size: 16),
+              label: const Text('SUBMIT REPORT'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildThreadCard(BuildContext context, ForumThread thread) {
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
@@ -169,19 +252,29 @@ class ForumIndexScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    CircleAvatar(
-                      radius: 12,
-                      backgroundImage: NetworkImage(thread.authorAvatar),
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 12,
+                          backgroundImage: NetworkImage(thread.authorAvatar),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${thread.authorName} • ${_formatTime(thread.createdAt)}',
+                          style: TextStyle(color: Colors.grey.shade500, fontSize: 11, fontWeight: FontWeight.bold),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${thread.authorName} • ${_formatTime(thread.createdAt)}',
-                      style: TextStyle(color: Colors.grey.shade500, fontSize: 11, fontWeight: FontWeight.bold),
+                    IconButton(
+                      icon: const Icon(Icons.flag_outlined, size: 18, color: Colors.black38),
+                      tooltip: 'Report / Flag Post',
+                      onPressed: () => _showFlagPostDialog(context, thread),
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 Text(
                   thread.title,
                   style: GoogleFonts.dmSerifDisplay(

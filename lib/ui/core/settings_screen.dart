@@ -18,7 +18,6 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _pushNotifications = true;
   bool _locationAlerts = true;
-  bool _showDailyChallenges = true;
 
   void _handleLogout(LanguageViewModel langVM) {
     showDialog(
@@ -155,14 +154,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             value: _locationAlerts,
             onChanged: (val) => setState(() => _locationAlerts = val),
           ),
-          _buildSwitchTile(
-            context,
-            icon: Icons.wb_sunny_outlined,
-            title: langVM.translate('Show Daily Heritage Challenges'),
-            subtitle: langVM.translate('Prompt daily craft check-ins and streak XP rewards'),
-            value: _showDailyChallenges,
-            onChanged: (val) => setState(() => _showDailyChallenges = val),
-          ),
+
           _buildSwitchTile(
             context,
             icon: Icons.dark_mode_outlined,
