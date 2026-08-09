@@ -24,39 +24,39 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
     return [
       {
         'id': 'a1',
-        'name': langVM.translate('pak_mat_name'),
-        'category': langVM.translate('clay_pottery'),
+        'name': langVM.translate('Pak Mat Pottery Studio'),
+        'category': langVM.translate('Clay Pottery & Ceramics'),
         'state': 'Melaka',
         'rating': 4.9,
         'image': 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&auto=format&fit=crop&q=80',
-        'bio': langVM.translate('pak_mat_bio'),
+        'bio': langVM.translate('Master Pak Mat has been hand-crafting traditional clay labu sayong and ceramic vessels for over 25 years in Kampung Morten.'),
       },
       {
         'id': 'a2',
-        'name': langVM.translate('wan_songket_name'),
-        'category': langVM.translate('songket_weaving'),
+        'name': langVM.translate('Wan Songket Heritage Weavers'),
+        'category': langVM.translate('Songket Gold Weaving'),
         'state': 'Kelantan',
         'rating': 4.8,
         'image': 'https://images.unsplash.com/photo-1528459801416-a9e53bbf4e17?w=600&auto=format&fit=crop&q=80',
-        'bio': langVM.translate('wan_songket_bio'),
+        'bio': langVM.translate('Royal songket weaving utilizing metallic gold and silver threads on handloom wooden apparatus in Kota Bharu.'),
       },
       {
         'id': 'a3',
-        'name': langVM.translate('siti_batik_name'),
-        'category': langVM.translate('batik_wax'),
+        'name': langVM.translate('Siti Batik Craft Workshop'),
+        'category': langVM.translate('Batik Wax Painting'),
         'state': 'Terengganu',
         'rating': 4.9,
         'image': 'https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=600&auto=format&fit=crop&q=80',
-        'bio': langVM.translate('siti_batik_bio'),
+        'bio': langVM.translate('Hand-drawn canting batik studio utilizing organic natural dyes and silk fabrics in coastal Terengganu.'),
       },
       {
         'id': 'a4',
-        'name': langVM.translate('wong_woodcraft_name'),
-        'category': langVM.translate('woodcarving'),
+        'name': langVM.translate('Master Wong Woodcraft'),
+        'category': langVM.translate('Traditional Woodcarving'),
         'state': 'Perak',
         'rating': 4.7,
         'image': 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80',
-        'bio': langVM.translate('wong_woodcraft_bio'),
+        'bio': langVM.translate('Ornate timber carving specializing in traditional Malay architectural wood panels and keris handles in Perak.'),
       },
     ];
   }
@@ -86,11 +86,11 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
 
   void _showFilterBottomSheet(LanguageViewModel langVM) {
     final categories = [
-      langVM.translate('all_crafts'),
-      langVM.translate('clay_pottery'),
-      langVM.translate('batik_wax'),
-      langVM.translate('songket_weaving'),
-      langVM.translate('woodcarving'),
+      langVM.translate('All Crafts'),
+      langVM.translate('Clay Pottery & Ceramics'),
+      langVM.translate('Batik Wax Painting'),
+      langVM.translate('Songket Gold Weaving'),
+      langVM.translate('Traditional Woodcarving'),
     ];
 
     showModalBottomSheet(
@@ -214,17 +214,17 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
 
       final matchesCategory = _selectedCategory == 'All Crafts' ||
           artisan['category'] == _selectedCategory ||
-          _selectedCategory == langVM.translate('all_crafts');
+          _selectedCategory == langVM.translate('All Crafts');
 
       return matchesQuery && matchesCategory;
     }).toList();
 
     final categories = [
-      langVM.translate('all_crafts'),
-      langVM.translate('clay_pottery'),
-      langVM.translate('batik_wax'),
-      langVM.translate('songket_weaving'),
-      langVM.translate('woodcarving'),
+      langVM.translate('All Crafts'),
+      langVM.translate('Clay Pottery & Ceramics'),
+      langVM.translate('Batik Wax Painting'),
+      langVM.translate('Songket Gold Weaving'),
+      langVM.translate('Traditional Woodcarving'),
     ];
 
     return CustomScrollView(
@@ -237,7 +237,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
           backgroundColor: const Color(0xFFF8F9FA),
           elevation: 0,
           title: Text(
-            langVM.translate('discover_heritage'),
+            langVM.translate('Explore Living Heritage'),
             style: GoogleFonts.dmSerifDisplay(
               color: const Color(0xFF004D40),
               fontSize: 26,
@@ -281,7 +281,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                         controller: _searchController,
                         onChanged: (_) => setState(() {}),
                         decoration: InputDecoration(
-                          hintText: langVM.translate('search_placeholder'),
+                          hintText: langVM.translate('Search master artisans, craft styles, or cities...'),
                           hintStyle: GoogleFonts.plusJakartaSans(fontSize: 13, color: Colors.grey[400]),
                           prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF004D40)),
                           filled: true,
@@ -357,9 +357,9 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                           child: ListView(
                             scrollDirection: Axis.horizontal,
                             children: [
-                              _buildRecommendationCard(langVM.translate('pak_mat_name'), langVM.translate('clay_pottery')),
-                              _buildRecommendationCard(langVM.translate('siti_batik_name'), langVM.translate('batik_wax')),
-                              _buildRecommendationCard(langVM.translate('wan_songket_name'), langVM.translate('songket_weaving')),
+                              _buildRecommendationCard(langVM.translate('Pak Mat Pottery Studio'), langVM.translate('Clay Pottery & Ceramics')),
+                              _buildRecommendationCard(langVM.translate('Siti Batik Craft Workshop'), langVM.translate('Batik Wax Painting')),
+                              _buildRecommendationCard(langVM.translate('Wan Songket Heritage Weavers'), langVM.translate('Songket Gold Weaving')),
                             ],
                           ),
                         ),
@@ -544,7 +544,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
                         child: Text(
-                          langVM.translate('view_profile'),
+                          langVM.translate('View Artisan Profile'),
                           style: GoogleFonts.plusJakartaSans(
                             color: const Color(0xFF004D40),
                             fontSize: 11,
@@ -573,7 +573,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                         ),
                         icon: const Icon(Icons.stars_rounded, size: 16),
                         label: Text(
-                          langVM.translate('start_quest'),
+                          langVM.translate('START QUEST'),
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,

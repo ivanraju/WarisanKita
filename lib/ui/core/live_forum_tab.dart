@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
 
 class LiveForumTab extends StatefulWidget {
   const LiveForumTab({super.key});
@@ -115,11 +117,13 @@ class _LiveForumTabState extends State<LiveForumTab> {
 
   @override
   Widget build(BuildContext context) {
+    final langVM = context.watch<LanguageViewModel>();
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
         title: Text(
-          _activeThread == null ? 'Live Community Forum' : 'Discussion Thread',
+          _activeThread == null ? langVM.translate('Live Community Forum') : langVM.translate('Discussion Thread'),
           style: GoogleFonts.dmSerifDisplay(color: const Color(0xFF004D40), fontSize: 22),
         ),
         backgroundColor: Colors.white,
@@ -132,12 +136,12 @@ class _LiveForumTabState extends State<LiveForumTab> {
               )
             : null,
       ),
-      body: _activeThread == null ? _buildForumThreadList() : _buildThreadChatUI(),
+      body: _activeThread == null ? _buildForumThreadList(langVM) : _buildThreadChatUI(langVM),
     );
   }
 
   // Forum Home: List View of Active Discussion Threads
-  Widget _buildForumThreadList() {
+  Widget _buildForumThreadList(LanguageViewModel langVM) {
     return ListView.builder(
       padding: const EdgeInsets.all(20),
       itemCount: _threads.length,
@@ -274,7 +278,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
   }
 
   // Inside a Thread: Real-time Chat UI Interface
-  Widget _buildThreadChatUI() {
+  Widget _buildThreadChatUI(LanguageViewModel langVM) {
     final List<Map<String, dynamic>> messages = _activeThread!['messages'];
 
     return Column(

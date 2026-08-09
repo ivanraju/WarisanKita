@@ -57,22 +57,22 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
             BottomNavigationBarItem(
               icon: const Icon(Icons.explore_outlined),
               activeIcon: const Icon(Icons.explore),
-              label: langVM.translate('nav_explore'),
+              label: langVM.translate('Explore'),
             ),
             BottomNavigationBarItem(
               icon: const Icon(Icons.map_outlined),
               activeIcon: const Icon(Icons.map),
-              label: langVM.translate('nav_matchmaker'),
+              label: langVM.translate('Matchmaker'),
             ),
             BottomNavigationBarItem(
               icon: const Icon(Icons.forum_outlined),
               activeIcon: const Icon(Icons.forum),
-              label: langVM.translate('nav_forum'),
+              label: langVM.translate('Forum'),
             ),
             BottomNavigationBarItem(
               icon: const Icon(Icons.card_membership_outlined),
               activeIcon: const Icon(Icons.card_membership),
-              label: langVM.translate('nav_passport'),
+              label: langVM.translate('Passport'),
             ),
           ],
         ),

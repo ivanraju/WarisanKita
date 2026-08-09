@@ -18,7 +18,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
     return [
       {
         'id': 'm1',
-        'craftName': langVM.translate('clay_pottery'),
+        'craftName': langVM.translate('Clay Pottery & Ceramics'),
         'rankText': 'LEVEL 4 • MASTER CRAFTSMAN',
         'progressPercent': '85% Complete (850 / 1,000 XP)',
         'progressValue': 0.85,
@@ -28,21 +28,21 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
         'nodes': [
           {
             'nodeLevel': 'LEVEL 1',
-            'title': langVM.translate('novice_spinning'),
+            'title': langVM.translate('Novice Clay Spinning'),
             'subtitle': 'Learn natural clay molding on wooden spinning wheel',
             'status': 'COMPLETED',
             'xp': '+200 XP',
           },
           {
             'nodeLevel': 'LEVEL 2',
-            'title': langVM.translate('kiln_firing'),
+            'title': langVM.translate('Paddy Husk Ash Kilning'),
             'subtitle': 'Kiln ceramic vessels at 900°C in paddy husk ash',
             'status': 'COMPLETED',
             'xp': '+300 XP',
           },
           {
             'nodeLevel': 'LEVEL 3 (ACTIVE)',
-            'title': langVM.translate('master_sayong'),
+            'title': langVM.translate('Labu Sayong Glazing'),
             'subtitle': 'Carve traditional floral motifs on wet clay surface',
             'status': 'IN_PROGRESS',
             'xp': '+350 XP (85% Done)',
@@ -51,7 +51,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
       },
       {
         'id': 'm2',
-        'craftName': langVM.translate('batik_wax'),
+        'craftName': langVM.translate('Batik Wax Painting'),
       'rankText': 'LEVEL 3 • JOURNEYMAN WEAVER',
       'progressPercent': '60% Complete (600 / 1,000 XP)',
       'progressValue': 0.60,
@@ -426,7 +426,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
           backgroundColor: const Color(0xFFF8F9FA),
           elevation: 0,
           title: Text(
-            langVM.translate('passport_title'),
+            langVM.translate('Heritage Passport & Mastery'),
             style: GoogleFonts.dmSerifDisplay(
               color: const Color(0xFF004D40),
               fontSize: 24,

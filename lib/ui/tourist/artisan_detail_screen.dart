@@ -251,7 +251,7 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  langVM.translate('audio_story_lore'),
+                                  langVM.translate('Listen to Master Artisan Audio Lore'),
                                   style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
                                 ),
                                 Text(
@@ -272,7 +272,7 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
 
                   // Master Bio Section
                   Text(
-                    langVM.translate('master_artisan_bio'),
+                    langVM.translate('About the Artisan Master & Heritage'),
                     style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
                   ),
                   const SizedBox(height: 10),
