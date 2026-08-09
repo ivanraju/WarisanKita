@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:warisan_kita/ui/artisan/artisan_application_pending_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -34,6 +35,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
     final confirmPassword = _confirmPasswordController.text.trim();
+    final ssm = _ssmController.text.trim();
 
     // UC002 - A3: Account already exists
     if (email == 'taken@example.com') {
@@ -84,7 +86,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
           behavior: SnackBarBehavior.floating,
         ),
       );
-      Navigator.of(context).pushReplacementNamed('/artisan');
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => ArtisanApplicationPendingScreen(
+            studioName: email.contains('@') ? '${email.split('@')[0].toUpperCase()} STUDIO' : 'ARTISAN MASTER STUDIO',
+            craftCategory: 'Pottery & Ceramics',
+            ssmNumber: ssm.isEmpty ? '202601004821 (SSM Verified)' : ssm,
+          ),
+        ),
+      );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

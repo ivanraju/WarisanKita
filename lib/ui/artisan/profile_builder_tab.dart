@@ -107,23 +107,23 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 📝 OFFICIAL ARTISAN APPLICATION BANNER
+            // 🛡️ VERIFIED MASTER LICENSE BADGE BANNER
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFFEFF6FF),
+                color: const Color(0xFFECFDF5),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFF3B82F6)),
+                border: Border.all(color: const Color(0xFF10B981)),
               ),
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: const BoxDecoration(
-                      color: Color(0xFF2563EB),
+                      color: Color(0xFF10B981),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.assignment_ind_rounded, color: Colors.white, size: 20),
+                    child: const Icon(Icons.verified_user_rounded, color: Colors.white, size: 20),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -131,18 +131,18 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Artisan Profile & Credentials Sync',
+                          'Verified Master Artisan Profile (Approved)',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
-                            color: const Color(0xFF1E3A8A),
+                            color: const Color(0xFF065F46),
                           ),
                         ),
                         Text(
-                          'Fields updated here directly update the Tourist Profile View & Marketplace Directory.',
+                          'Your studio license is active & verified by Kraftangan Malaysia Officers. Profile edits sync live to tourists.',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 11,
-                            color: const Color(0xFF1D4ED8),
+                            color: const Color(0xFF047857),
                           ),
                         ),
                       ],
