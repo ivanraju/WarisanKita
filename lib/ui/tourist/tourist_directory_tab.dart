@@ -16,9 +16,24 @@ class TouristDirectoryTab extends StatefulWidget {
 class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
   final TextEditingController _searchController = TextEditingController();
 
-  double _maxDistance = 25.0; // km
+  String _selectedState = 'All States';
   String _selectedCategory = 'All Crafts';
   bool _hasPreferences = true;
+
+  final List<String> _malaysianStates = const [
+    'All States',
+    'Melaka',
+    'Kelantan',
+    'Terengganu',
+    'Perak',
+    'Selangor',
+    'Johor',
+    'Penang',
+    'Kedah',
+    'Pahang',
+    'Sabah',
+    'Sarawak',
+  ];
 
   List<Map<String, dynamic>> _getArtisans(LanguageViewModel langVM) {
     return [
@@ -113,7 +128,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Filter Heritage Directory',
+                        langVM.translate('Filter Heritage Directory'),
                         style: GoogleFonts.dmSerifDisplay(fontSize: 22, color: const Color(0xFF004D40)),
                       ),
                       IconButton(
@@ -124,23 +139,52 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                   ),
                   const SizedBox(height: 20),
 
-                  Text('Maximum Distance (${_maxDistance.toInt()} km)', style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.bold)),
-                  Slider(
-                    value: _maxDistance,
-                    min: 5.0,
-                    max: 100.0,
-                    divisions: 19,
-                    activeColor: const Color(0xFF004D40),
-                    label: '${_maxDistance.toInt()} km',
-                    onChanged: (val) {
-                      setBottomSheetState(() => _maxDistance = val);
-                      setState(() => _maxDistance = val);
-                    },
+                  // Region / State Selection Filter
+                  Row(
+                    children: [
+                      const Icon(Icons.map_rounded, color: Color(0xFF004D40), size: 18),
+                      const SizedBox(width: 6),
+                      Text(
+                        langVM.translate('Region / State of Malaysia'),
+                        style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _malaysianStates.map((st) {
+                      final isSelected = _selectedState == st;
+                      return ChoiceChip(
+                        label: Text(st == 'All States' ? langVM.translate('All States') : st),
+                        selected: isSelected,
+                        onSelected: (selected) {
+                          if (selected) {
+                            setBottomSheetState(() => _selectedState = st);
+                            setState(() => _selectedState = st);
+                          }
+                        },
+                        selectedColor: const Color(0xFFD97706),
+                        labelStyle: TextStyle(color: isSelected ? Colors.white : const Color(0xFF1E293B), fontWeight: FontWeight.bold),
+                      );
+                    }).toList(),
                   ),
 
                   const SizedBox(height: 20),
 
-                  Text('Craft Category', style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.bold)),
+                  // Category Filter
+                  Row(
+                    children: [
+                      const Icon(Icons.palette_rounded, color: Color(0xFF004D40), size: 18),
+                      const SizedBox(width: 6),
+                      Text(
+                        langVM.translate('Craft Category'),
+                        style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 10),
 
                   Wrap(
@@ -170,16 +214,16 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                       TextButton(
                         onPressed: () {
                           setBottomSheetState(() {
-                            _maxDistance = 25.0;
+                            _selectedState = 'All States';
                             _selectedCategory = 'All Crafts';
                           });
                           setState(() {
-                            _maxDistance = 25.0;
+                            _selectedState = 'All States';
                             _selectedCategory = 'All Crafts';
                           });
                         },
                         child: Text(
-                          'Reset Filters',
+                          langVM.translate('Reset Filters'),
                           style: GoogleFonts.plusJakartaSans(color: Colors.grey[700], fontWeight: FontWeight.bold),
                         ),
                       ),
@@ -187,7 +231,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                       FilledButton(
                         onPressed: () => Navigator.of(context).pop(),
                         style: FilledButton.styleFrom(backgroundColor: const Color(0xFF004D40)),
-                        child: const Text('Apply Filters'),
+                        child: Text(langVM.translate('Apply Filters')),
                       ),
                     ],
                   ),
@@ -216,7 +260,10 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
           artisan['category'] == _selectedCategory ||
           _selectedCategory == langVM.translate('All Crafts');
 
-      return matchesQuery && matchesCategory;
+      final matchesState = _selectedState == 'All States' ||
+          artisan['state'].toLowerCase() == _selectedState.toLowerCase();
+
+      return matchesQuery && matchesCategory && matchesState;
     }).toList();
 
     final categories = [
@@ -281,7 +328,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                         controller: _searchController,
                         onChanged: (_) => setState(() {}),
                         decoration: InputDecoration(
-                          hintText: langVM.translate('Search master artisans, craft styles, or cities...'),
+                          hintText: langVM.translate('Search master artisans, state, or craft...'),
                           hintStyle: GoogleFonts.plusJakartaSans(fontSize: 13, color: Colors.grey[400]),
                           prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF004D40)),
                           filled: true,
@@ -301,9 +348,54 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                   ],
                 ),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
 
-                // FR600_1: Recommended Preferences Section Banner
+                // Region / State Filter Chips Row
+                Row(
+                  children: [
+                    const Icon(Icons.map_rounded, color: Color(0xFFD97706), size: 14),
+                    const SizedBox(width: 6),
+                    Text(
+                      langVM.translate('Filter by Region / State:'),
+                      style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFFD97706)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+
+                SizedBox(
+                  height: 34,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _malaysianStates.length,
+                    itemBuilder: (context, index) {
+                      final st = _malaysianStates[index];
+                      final isSelected = _selectedState == st;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 6.0),
+                        child: ChoiceChip(
+                          label: Text(st == 'All States' ? langVM.translate('All States') : st),
+                          selected: isSelected,
+                          onSelected: (selected) {
+                            if (selected) setState(() => _selectedState = st);
+                          },
+                          selectedColor: const Color(0xFFD97706),
+                          backgroundColor: Colors.white,
+                          labelStyle: GoogleFonts.plusJakartaSans(
+                            color: isSelected ? Colors.white : const Color(0xFF475569),
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+
+                const SizedBox(height: 14),
+
+                // Recommended Preferences Section Banner
                 Row(
                   children: [
                     Text(
@@ -368,9 +460,9 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                   ),
                 ],
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
 
-                // Category Chips List
+                // Craft Category Chips List
                 SizedBox(
                   height: 38,
                   child: ListView.builder(
@@ -459,19 +551,19 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFEF3C7),
+                    color: const Color(0xFF004D40),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.star_rounded, color: Color(0xFFD97706), size: 14),
+                      const Icon(Icons.verified_rounded, color: Color(0xFFFFD54F), size: 14),
                       const SizedBox(width: 4),
                       Text(
-                        artisan['rating'].toString(),
+                        'VERIFIED MASTER',
                         style: GoogleFonts.plusJakartaSans(
-                          fontSize: 11,
+                          fontSize: 10,
                           fontWeight: FontWeight.bold,
-                          color: const Color(0xFF78350F),
+                          color: Colors.white,
                         ),
                       ),
                     ],
@@ -496,12 +588,25 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                         color: const Color(0xFF004D40),
                       ),
                     ),
-                    Text(
-                      artisan['state'],
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFFD97706),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF3C7),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.location_on_rounded, size: 12, color: Color(0xFFD97706)),
+                          const SizedBox(width: 4),
+                          Text(
+                            artisan['state'],
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFFD97706),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],

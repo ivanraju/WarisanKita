@@ -12,14 +12,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _ssmController = TextEditingController();
 
+  String _selectedRole = 'TOURIST'; // 'TOURIST' or 'ARTISAN'
   String? _errorMessage;
+
+  String? _ssmFileName;
+  String? _kraftanganFileName;
+  final List<String> _uploadedPhotoNames = [];
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _ssmController.dispose();
     super.dispose();
   }
 
@@ -67,22 +74,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    // UC002 - M2: REGISTRATION SUCCESSFUL & FR002_4: Assign RBAC role
     setState(() => _errorMessage = null);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('REGISTRATION SUCCESSFUL'),
-        backgroundColor: Color(0xFF10B981),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
 
-    Navigator.of(context).pushReplacementNamed('/role-selection');
+    if (_selectedRole == 'ARTISAN') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('ARTISAN APPLICATION SUBMITTED: Pending Admin Verification'),
+          backgroundColor: Color(0xFF10B981),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      Navigator.of(context).pushReplacementNamed('/artisan');
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('REGISTRATION SUCCESSFUL: Authenticated as Cultural Explorer'),
+          backgroundColor: Color(0xFF10B981),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      Navigator.of(context).pushReplacementNamed('/tourist');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width > 800;
+    final isArtisan = _selectedRole == 'ARTISAN';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
@@ -116,29 +134,87 @@ class _RegisterScreenState extends State<RegisterScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'User Registration',
+                  isArtisan ? 'Artisan Studio Registration' : 'Tourist Registration',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.dmSerifDisplay(
-                    fontSize: 28,
+                    fontSize: 26,
                     color: const Color(0xFF004D40),
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 6),
 
-                // UC002 - M1: "PLEASE ENTER REGISTRATION DETAILS"
                 Text(
-                  'PLEASE ENTER REGISTRATION DETAILS',
+                  isArtisan
+                      ? 'REGISTER YOUR MASTER STUDIO FOR CULTURAL TOURISTS'
+                      : 'PLEASE ENTER REGISTRATION DETAILS',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.plusJakartaSans(
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0.8,
-                    color: const Color(0xFF004D40),
+                    color: isArtisan ? const Color(0xFFD97706) : const Color(0xFF004D40),
                   ),
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
+
+                // Role Toggle Selector Bar
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => _selectedRole = 'TOURIST'),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            decoration: BoxDecoration(
+                              color: !isArtisan ? const Color(0xFF004D40) : Colors.transparent,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '🧳 Tourist',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: !isArtisan ? Colors.white : Colors.grey[700],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => _selectedRole = 'ARTISAN'),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            decoration: BoxDecoration(
+                              color: isArtisan ? const Color(0xFFD97706) : Colors.transparent,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '🎨 Master Artisan',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: isArtisan ? Colors.white : Colors.grey[700],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 20),
 
                 if (_errorMessage != null) ...[
                   Container(
@@ -166,13 +242,176 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
-                    labelText: 'Username / Email Address',
+                    labelText: isArtisan ? 'Artisan Email / Studio Account' : 'Username / Email Address',
                     prefixIcon: const Icon(Icons.person_outline, size: 20),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                   ),
                 ),
 
                 const SizedBox(height: 16),
+
+                if (isArtisan) ...[
+                  // SSM License / Kraftangan Number Input
+                  TextField(
+                    controller: _ssmController,
+                    decoration: InputDecoration(
+                      labelText: 'SSM License / Kraftangan Reg. No.',
+                      prefixIcon: const Icon(Icons.verified_user_outlined, size: 20),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // 📄 SSM License Document Upload Box
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.upload_file_rounded, color: Color(0xFFD97706), size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Proof of Business License (SSM)',
+                                style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                _ssmFileName ?? 'Attach PDF or JPG proof',
+                                style: GoogleFonts.plusJakartaSans(fontSize: 10, color: Colors.grey[600]),
+                              ),
+                            ],
+                          ),
+                        ),
+                        OutlinedButton(
+                          onPressed: () {
+                            setState(() => _ssmFileName = 'SSM_Registration_Cert.pdf');
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('📄 SSM Business License attached successfully!'),
+                                backgroundColor: Color(0xFF004D40),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          },
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          child: Text(_ssmFileName == null ? 'Upload' : 'Attached ✓', style: const TextStyle(fontSize: 10)),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // 🏆 Kraftangan Master Certificate Upload Box
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.workspace_premium_rounded, color: Color(0xFFD97706), size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Kraftangan Master Certification',
+                                style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                _kraftanganFileName ?? 'Attach Official Master Certificate',
+                                style: GoogleFonts.plusJakartaSans(fontSize: 10, color: Colors.grey[600]),
+                              ),
+                            ],
+                          ),
+                        ),
+                        OutlinedButton(
+                          onPressed: () {
+                            setState(() => _kraftanganFileName = 'Kraftangan_Master_Cert.pdf');
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('🏆 Kraftangan Master Certificate attached successfully!'),
+                                backgroundColor: Color(0xFF004D40),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          },
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          child: Text(_kraftanganFileName == null ? 'Upload' : 'Attached ✓', style: const TextStyle(fontSize: 10)),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // 📸 Studio & Masterwork Photos Upload Box
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.add_a_photo_rounded, color: Color(0xFFD97706), size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Studio & Masterwork Photos',
+                                style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                '${_uploadedPhotoNames.length} Photos Attached (Unlimited Uploads)',
+                                style: GoogleFonts.plusJakartaSans(fontSize: 10, color: Colors.grey[600]),
+                              ),
+                            ],
+                          ),
+                        ),
+                        OutlinedButton(
+                          onPressed: () {
+                            setState(() => _uploadedPhotoNames.add('Studio_Photo_${_uploadedPhotoNames.length + 1}.jpg'));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('📸 Studio Photo ${_uploadedPhotoNames.length} attached!'),
+                                backgroundColor: const Color(0xFF004D40),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          },
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          child: const Text('+ Add Photo', style: TextStyle(fontSize: 10)),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+                ],
 
                 // Password Input (C1 > 7 chars)
                 TextField(
@@ -204,17 +443,47 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 FilledButton(
                   onPressed: _handleRegister,
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF004D40),
+                    backgroundColor: isArtisan ? const Color(0xFFD97706) : const Color(0xFF004D40),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
                   child: Text(
-                    'SUBMIT REGISTRATION',
+                    isArtisan ? 'SUBMIT ARTISAN APPLICATION' : 'SUBMIT REGISTRATION',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Artisan Link Prompt
+                Center(
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _selectedRole = isArtisan ? 'TOURIST' : 'ARTISAN';
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isArtisan ? const Color(0xFFF0FDF4) : const Color(0xFFFEF3C7),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        isArtisan
+                            ? '🧳 Register as a Cultural Tourist instead?'
+                            : '🎨 Are you a Master Artisan? Register your studio here',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: isArtisan ? const Color(0xFF047857) : const Color(0xFFB45309),
+                        ),
+                      ),
                     ),
                   ),
                 ),

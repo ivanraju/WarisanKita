@@ -172,7 +172,7 @@ class ArtisanProfileScreen extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _buildStat(artisan.experience, 'EXP'),
-          _buildStat(artisan.rating.toString(), 'RATING'),
+          _buildStat('VERIFIED', 'STATUS'),
           _buildStat(artisan.workshopCount.toString(), 'WORKSHOPS'),
         ],
       ),
@@ -270,21 +270,20 @@ class ArtisanProfileScreen extends StatelessWidget {
               state.toggleSave(artisan);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(isSaved ? 'Removed from itinerary' : 'Added to your Heritage Journey!'),
+                  content: Text(isSaved ? 'Removed from your itinerary saved list' : 'Saved to your itinerary!'),
                   behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 ),
               );
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: isSaved ? Colors.white.withOpacity(0.2) : Colors.white,
-              foregroundColor: isSaved ? Colors.white : const Color(0xFF004D40),
-              minimumSize: const Size(double.infinity, 64),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              backgroundColor: const Color(0xFFFF7043),
+              foregroundColor: Colors.white,
+              minimumSize: const Size(double.infinity, 54),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
             ),
             child: Text(
-              isSaved ? 'SAVED IN ITINERARY' : 'ADD TO ITINERARY',
-              style: const TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.5),
+              isSaved ? 'REMOVE FROM ITINERARY' : 'SAVE TO ITINERARY',
+              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold),
             ),
           ),
         ],

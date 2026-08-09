@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -83,61 +82,6 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       Navigator.of(context).pushReplacementNamed('/tourist');
     }
-  }
-
-  Future<void> _launchAdminUrl() async {
-    final Uri url = Uri.parse('https://warisankita-admin.vercel.app');
-    try {
-      final bool launched = await launchUrl(url, mode: LaunchMode.externalApplication);
-      if (!launched) {
-        await launchUrl(url, mode: LaunchMode.platformDefault);
-      }
-    } catch (_) {}
-  }
-
-  void _handleBypassAdmin() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Row(
-          children: [
-            const Icon(Icons.admin_panel_settings_rounded, color: Color(0xFF0284C7)),
-            const SizedBox(width: 10),
-            Text('Web Admin Portal', style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40))),
-          ],
-        ),
-        content: Text(
-          'The Web Admin Portal is hosted externally on Vercel at https://warisankita-admin.vercel.app.\n\nSelect how you want to open the Admin Portal:',
-          style: GoogleFonts.plusJakartaSans(fontSize: 13, height: 1.5),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _launchAdminUrl();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('🌐 Launching https://warisankita-admin.vercel.app in external browser...'),
-                  backgroundColor: Color(0xFF004D40),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
-            child: const Text('LAUNCH IN BROWSER'),
-          ),
-          FilledButton.icon(
-            onPressed: () {
-              Navigator.of(context).pop();
-              Navigator.of(context).pushNamed('/admin');
-            },
-            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF004D40)),
-            icon: const Icon(Icons.dashboard_rounded, size: 18),
-            label: const Text('OPEN EMBEDDED DASHBOARD'),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
@@ -336,29 +280,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ],
-                ),
-
-                const SizedBox(height: 24),
-                const Divider(height: 1, color: Colors.black12),
-                const SizedBox(height: 20),
-
-                // Bypass to Admin Web Button for Desktop Moderation Testing
-                OutlinedButton.icon(
-                  onPressed: _handleBypassAdmin,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF0F172A),
-                    side: const BorderSide(color: Color(0xFF10B981), width: 1.5),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  ),
-                  icon: const Icon(Icons.admin_panel_settings_rounded, color: Color(0xFF10B981), size: 20),
-                  label: Text(
-                    'Bypass to Admin Web Dashboard',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
                 ),
               ],
             ),

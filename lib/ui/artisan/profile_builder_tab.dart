@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:warisan_kita/ui/tourist/artisan_detail_screen.dart';
 
 class ProfileBuilderTab extends StatefulWidget {
   const ProfileBuilderTab({super.key});
@@ -9,28 +10,39 @@ class ProfileBuilderTab extends StatefulWidget {
 }
 
 class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
-  final _studioNameController = TextEditingController(text: 'Pak Mat Ceramic Studio');
+  final _studioNameController = TextEditingController(text: 'Pak Mat Pottery Studio');
   final _craftCategoryController = TextEditingController(text: 'Pottery & Ceramics');
+  final _stateController = TextEditingController(text: 'Melaka');
+  final _experienceController = TextEditingController(text: '25+ Years Experience');
+  final _phoneController = TextEditingController(text: '+60 12-345 6789');
+  final _operatingHoursController = TextEditingController(text: 'Mon - Sat: 9:00 AM - 6:00 PM');
   final _bioController = TextEditingController(
-    text: 'Hand-crafted clay labu sayong and traditional ceramic vessels.',
+    text: 'Master Pak Mat has been hand-crafting traditional clay labu sayong and ceramic vessels for over 25 years in Kampung Morten. Each piece is hand-spun and natural clay kilned.',
   );
 
-  final List<String?> _portfolioImages = [
+  bool _isOpenForDemos = true;
+
+  final List<String> _toolsAndMaterials = [
+    'Kampung Morten River Clay',
+    'Paddy Husk Kiln Ash',
+    'Organic Indigo Dyes',
+    'Hand-spun Wooden Wheel',
+  ];
+
+  final List<String> _portfolioImages = [
     'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&auto=format&fit=crop&q=80',
     'https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=600&auto=format&fit=crop&q=80',
     'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80',
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
   ];
 
   @override
   void dispose() {
     _studioNameController.dispose();
     _craftCategoryController.dispose();
+    _stateController.dispose();
+    _experienceController.dispose();
+    _phoneController.dispose();
+    _operatingHoursController.dispose();
     _bioController.dispose();
     super.dispose();
   }
@@ -39,12 +51,27 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Profile Submitted! Default Tasks ("Arrive at Workshop" & "Stay 15 Mins") auto-created!',
+          'Profile Saved! Live Tourist View updated successfully!',
           style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold),
         ),
         backgroundColor: const Color(0xFF004D40),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
+  void _previewTouristView() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ArtisanDetailScreen(
+          artisanName: _studioNameController.text.trim().isEmpty ? 'Pak Mat Pottery Studio' : _studioNameController.text.trim(),
+          craftCategory: _craftCategoryController.text.trim().isEmpty ? 'Pottery & Ceramics' : _craftCategoryController.text.trim(),
+          state: _stateController.text.trim().isEmpty ? 'Melaka' : _stateController.text.trim(),
+          bio: _bioController.text.trim().isEmpty ? 'Master Pak Mat has been hand-crafting traditional clay labu sayong...' : _bioController.text.trim(),
+          experience: _experienceController.text.trim().isEmpty ? '25+ Years Experience' : _experienceController.text.trim(),
+          imageUrl: _portfolioImages.firstWhere((img) => img != null, orElse: () => 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&auto=format&fit=crop&q=80')!,
+        ),
       ),
     );
   }
@@ -56,10 +83,24 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
       appBar: AppBar(
         title: Text(
           'Artisan Profile Builder',
-          style: GoogleFonts.dmSerifDisplay(color: const Color(0xFFD97706), fontSize: 22),
+          style: GoogleFonts.dmSerifDisplay(color: const Color(0xFF004D40), fontSize: 22),
         ),
         backgroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: TextButton.icon(
+              onPressed: _previewTouristView,
+              style: TextButton.styleFrom(foregroundColor: const Color(0xFF004D40)),
+              icon: const Icon(Icons.visibility_rounded, size: 18),
+              label: Text(
+                'Preview Tourist View',
+                style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
@@ -90,7 +131,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Artisan Application Form',
+                          'Artisan Profile & Credentials Sync',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
@@ -98,7 +139,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                           ),
                         ),
                         Text(
-                          'Complete your studio credentials & portfolio images to apply for official marketplace verification.',
+                          'Fields updated here directly update the Tourist Profile View & Marketplace Directory.',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 11,
                             color: const Color(0xFF1D4ED8),
@@ -113,17 +154,60 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
 
             const SizedBox(height: 24),
 
-            Text(
-              'Studio Information',
-              style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF1F2937)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Studio Information',
+                  style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
+                ),
+                OutlinedButton.icon(
+                  onPressed: _previewTouristView,
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    side: const BorderSide(color: Color(0xFF004D40)),
+                  ),
+                  icon: const Icon(Icons.remove_red_eye_rounded, size: 14, color: Color(0xFF004D40)),
+                  label: Text('Preview Tourist Page', style: GoogleFonts.plusJakartaSans(fontSize: 11, color: const Color(0xFF004D40), fontWeight: FontWeight.bold)),
+                ),
+              ],
             ),
+            const SizedBox(height: 16),
+
+            // Live Cultural Demo Switch
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: _isOpenForDemos ? const Color(0xFFECFDF5) : const Color(0xFFFEF2F2),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: _isOpenForDemos ? const Color(0xFF10B981) : const Color(0xFFEF4444)),
+              ),
+              child: SwitchListTile(
+                value: _isOpenForDemos,
+                onChanged: (val) => setState(() => _isOpenForDemos = val),
+                activeColor: const Color(0xFF10B981),
+                title: Text(
+                  _isOpenForDemos ? '🟢 STUDIO STATUS: OPEN FOR EDUCATIONAL DEMOS' : '🔴 STUDIO STATUS: IN KILN SESSION / CLOSED',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: _isOpenForDemos ? const Color(0xFF047857) : const Color(0xFFB91C1C),
+                  ),
+                ),
+                subtitle: Text(
+                  'Toggling this updates your live availability banner on the Tourist Studio detail page.',
+                  style: GoogleFonts.plusJakartaSans(fontSize: 10, color: Colors.grey[700]),
+                ),
+              ),
+            ),
+
             const SizedBox(height: 16),
 
             // Studio Name Input
             TextField(
               controller: _studioNameController,
               decoration: InputDecoration(
-                labelText: 'Studio / Artisan Name',
+                labelText: 'Studio / Master Artisan Name',
                 prefixIcon: const Icon(Icons.storefront_outlined),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
               ),
@@ -131,12 +215,74 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
 
             const SizedBox(height: 14),
 
-            // Craft Category Input
+            Row(
+              children: [
+                // Craft Category Input
+                Expanded(
+                  child: TextField(
+                    controller: _craftCategoryController,
+                    decoration: InputDecoration(
+                      labelText: 'Craft Category',
+                      prefixIcon: const Icon(Icons.palette_outlined),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+
+                // State / Region Location Input
+                Expanded(
+                  child: TextField(
+                    controller: _stateController,
+                    decoration: InputDecoration(
+                      labelText: 'State / Location',
+                      prefixIcon: const Icon(Icons.location_on_outlined),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 14),
+
+            Row(
+              children: [
+                // Phone Number Input
+                Expanded(
+                  child: TextField(
+                    controller: _phoneController,
+                    decoration: InputDecoration(
+                      labelText: 'Phone / WhatsApp',
+                      prefixIcon: const Icon(Icons.phone_outlined),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+
+                // Operating Hours Input
+                Expanded(
+                  child: TextField(
+                    controller: _operatingHoursController,
+                    decoration: InputDecoration(
+                      labelText: 'Operating Hours',
+                      prefixIcon: const Icon(Icons.access_time_outlined),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 14),
+
+            // Experience Input
             TextField(
-              controller: _craftCategoryController,
+              controller: _experienceController,
               decoration: InputDecoration(
-                labelText: 'Craft Category',
-                prefixIcon: const Icon(Icons.palette_outlined),
+                labelText: 'Years of Experience & Rank Title',
+                prefixIcon: const Icon(Icons.workspace_premium_outlined),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
               ),
             ),
@@ -146,26 +292,82 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
             // Bio Input
             TextField(
               controller: _bioController,
-              maxLines: 3,
+              maxLines: 4,
               decoration: InputDecoration(
-                labelText: 'Biography & Craft Story',
+                labelText: 'Biography & Heritage Craft Story',
                 alignLabelWithHint: true,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
               ),
             ),
 
+            const SizedBox(height: 28),
+
+            // 🛠️ TRADITIONAL MATERIALS & TOOLS BUILDER SECTION
+            Text(
+              'Traditional Materials & Tools Used',
+              style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Displayed on your tourist profile page to highlight authentic crafting methods.',
+              style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ..._toolsAndMaterials.map((tool) => Chip(
+                      avatar: const Icon(Icons.build_circle_rounded, size: 16, color: Color(0xFF004D40)),
+                      label: Text(tool, style: GoogleFonts.plusJakartaSans(fontSize: 11)),
+                      onDeleted: () {
+                        setState(() => _toolsAndMaterials.remove(tool));
+                      },
+                    )),
+                ActionChip(
+                  avatar: const Icon(Icons.add, size: 16, color: Color(0xFFD97706)),
+                  label: Text('Add Tool/Material', style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFFD97706))),
+                  onPressed: () {
+                    final textController = TextEditingController();
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Add Traditional Tool or Material'),
+                        content: TextField(
+                          controller: textController,
+                          decoration: const InputDecoration(hintText: 'e.g., Paddy Husk Kiln Ash'),
+                        ),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+                          FilledButton(
+                            onPressed: () {
+                              if (textController.text.trim().isNotEmpty) {
+                                setState(() => _toolsAndMaterials.add(textController.text.trim()));
+                              }
+                              Navigator.pop(context);
+                            },
+                            child: const Text('Add'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+
             const SizedBox(height: 32),
 
-            // 3x3 Portfolio Image Manager Grid Header
+            // Unlimited Portfolio Image Manager Grid Header
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Portfolio Image Manager',
-                  style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF1F2937)),
+                  'Portfolio Gallery Manager',
+                  style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
                 ),
                 Text(
-                  '3 / 9 Uploaded',
+                  '${_portfolioImages.length} Uploaded (Unlimited)',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -176,13 +378,13 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
             ),
             const SizedBox(height: 6),
             Text(
-              'Upload up to 9 high-resolution images of your handcrafted items.',
+              'Images uploaded here populate the top gallery slider on the Tourist Profile page.',
               style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.grey[600]),
             ),
 
             const SizedBox(height: 16),
 
-            // 3x3 Grid
+            // Dynamic Unlimited Grid
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -192,11 +394,10 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                 mainAxisSpacing: 12,
                 childAspectRatio: 1.0,
               ),
-              itemCount: 9,
+              itemCount: _portfolioImages.length + 1,
               itemBuilder: (context, index) {
-                final image = _portfolioImages[index];
-
-                if (image != null) {
+                if (index < _portfolioImages.length) {
+                  final image = _portfolioImages[index];
                   return Stack(
                     children: [
                       ClipRRect(
@@ -212,7 +413,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                         top: 4,
                         right: 4,
                         child: GestureDetector(
-                          onTap: () => setState(() => _portfolioImages[index] = null),
+                          onTap: () => setState(() => _portfolioImages.removeAt(index)),
                           child: Container(
                             padding: const EdgeInsets.all(4),
                             decoration: const BoxDecoration(
@@ -227,12 +428,21 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                   );
                 }
 
+                // Add Image Tile
                 return GestureDetector(
                   onTap: () {
                     setState(() {
-                      _portfolioImages[index] =
-                          'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=600&auto=format&fit=crop&q=80';
+                      _portfolioImages.add(
+                        'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=600&auto=format&fit=crop&q=80',
+                      );
                     });
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('📸 Photo ${_portfolioImages.length} added to gallery!'),
+                        backgroundColor: const Color(0xFF004D40),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
                   },
                   child: Container(
                     decoration: BoxDecoration(
@@ -267,8 +477,8 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Proof of Authenticity & Documents',
-                  style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF1F2937)),
+                  'Proof of Authenticity & Credentials',
+                  style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -277,7 +487,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    '3 / 3 Required Uploaded',
+                    '3 / 3 Uploaded',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
@@ -289,7 +499,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
             ),
             const SizedBox(height: 6),
             Text(
-              'Upload official certificates to verify master craftsman authenticity with admin moderators.',
+              'Upload official certificates to populate master credentials on the Tourist Profile view.',
               style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.grey[600]),
             ),
 
@@ -316,26 +526,49 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
 
             const SizedBox(height: 36),
 
-            // Save & Submit Button
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: _handleSave,
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFFD97706),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                ),
-                child: Text(
-                  'SAVE & SUBMIT FOR APPROVAL',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5,
+            // Save & Preview Buttons Row
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _previewTouristView,
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFF004D40), width: 1.5),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    icon: const Icon(Icons.visibility_rounded, color: Color(0xFF004D40)),
+                    label: Text(
+                      'PREVIEW TOURIST VIEW',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF004D40),
+                      ),
+                    ),
                   ),
                 ),
-              ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: _handleSave,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF004D40),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    child: Text(
+                      'SAVE PROFILE',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -355,14 +588,14 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
       decoration: BoxDecoration(
         color: isUploaded ? const Color(0xFFF8FAFC) : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isUploaded ? const Color(0xFFCBD5E1) : Colors.black12),
+        border: Border.all(color: isUploaded ? const Color(0xFFCBD5E1) : Colors.black.withValues(alpha: 0.06)),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: isUploaded ? const Color(0xFF004D40).withOpacity(0.1) : Colors.grey[100],
+              color: isUploaded ? const Color(0xFF004D40).withValues(alpha: 0.1) : Colors.grey[100],
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: isUploaded ? const Color(0xFF004D40) : Colors.grey[500], size: 22),

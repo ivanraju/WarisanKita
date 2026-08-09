@@ -44,17 +44,6 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
     super.dispose();
   }
 
-  void _handleMessageArtisan() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Chat thread opened with ${widget.artisanName}!'),
-        backgroundColor: const Color(0xFF004D40),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
-  }
-
   void _toggleAudioLore() {
     setState(() => _isPlayingAudioLore = !_isPlayingAudioLore);
     ScaffoldMessenger.of(context).showSnackBar(
@@ -74,16 +63,6 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _handleMessageArtisan,
-        backgroundColor: const Color(0xFF004D40),
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.chat_rounded, size: 20),
-        label: Text(
-          'Message Master Artisan',
-          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold),
-        ),
-      ),
       body: CustomScrollView(
         slivers: [
           // Top Image Carousel Sliver AppBar
@@ -203,27 +182,84 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Rating & Location Row
+                  // Location & Experience Row
                   Row(
                     children: [
-                      const Icon(Icons.star_rounded, color: Color(0xFFF59E0B), size: 20),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${widget.rating} ',
-                        style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 14),
-                      ),
-                      Text(
-                        '(128 reviews)',
-                        style: GoogleFonts.plusJakartaSans(color: Colors.grey[600], fontSize: 13),
-                      ),
-                      const Spacer(),
                       const Icon(Icons.location_on_rounded, color: Color(0xFF004D40), size: 18),
                       const SizedBox(width: 4),
                       Text(
-                        widget.state,
-                        style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, fontSize: 13),
+                        '${widget.state}, Malaysia',
+                        style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 13, color: const Color(0xFF004D40)),
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEF3C7),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          widget.experience,
+                          style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFFB45309)),
+                        ),
                       ),
                     ],
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // 🟢 STUDIO LIVE CULTURAL STATUS CARD
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFECFDF5),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFF10B981)),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF10B981),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                langVM.translate('STUDIO LIVE CULTURAL STATUS'),
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w900,
+                                  color: const Color(0xFF047857),
+                                  letterSpacing: 1.1,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                langVM.translate('OPEN FOR EDUCATIONAL DEMOS'),
+                                style: GoogleFonts.dmSerifDisplay(
+                                  fontSize: 16,
+                                  color: const Color(0xFF065F46),
+                                ),
+                              ),
+                              Text(
+                                langVM.translate('Master artisan is currently in studio spinning clay labu sayong vessels live.'),
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11,
+                                  color: const Color(0xFF047857),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
 
                   const SizedBox(height: 20),
@@ -450,29 +486,6 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                   ),
 
                   const SizedBox(height: 28),
-
-                  // Workshop Booking Button
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Workshop booking request sent to master artisan!'),
-                            backgroundColor: Color(0xFF004D40),
-                          ),
-                        );
-                      },
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF004D40),
-                        side: const BorderSide(color: Color(0xFF004D40), width: 1.5),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      ),
-                      icon: const Icon(Icons.calendar_month_rounded, size: 20),
-                      label: const Text('BOOK CRAFT WORKSHOP SESSION', style: TextStyle(fontWeight: FontWeight.bold)),
-                    ),
-                  ),
 
                   const SizedBox(height: 80),
                 ],

@@ -9,6 +9,8 @@ import 'package:warisan_kita/ui/admin_web/widgets/admin_forum_moderation_tab.dar
 import 'package:warisan_kita/ui/admin_web/widgets/admin_quest_approvals_tab.dart';
 import 'package:warisan_kita/ui/admin_web/widgets/admin_sidebar.dart';
 import 'package:warisan_kita/ui/admin_web/widgets/admin_system_settings_tab.dart';
+import 'package:warisan_kita/ui/admin_web/widgets/admin_overview_tab.dart';
+import 'package:warisan_kita/ui/admin_web/widgets/admin_active_artisans_tab.dart';
 import 'package:warisan_kita/ui/admin_web/widgets/pending_artisans_table.dart';
 import 'package:warisan_kita/ui/admin_web/widgets/user_management_table.dart';
 
@@ -119,13 +121,17 @@ class AdminModerationDashboardView extends StatelessWidget {
 
                         // Main Scrollable Area
                         Expanded(
-                          child: viewModel.activeTab == 'Quest Approvals'
-                              ? const AdminQuestApprovalsTab()
-                              : viewModel.activeTab == 'Settings'
-                                  ? const AdminSystemSettingsTab()
-                                  : viewModel.activeTab == 'Forum Moderation'
-                                      ? const AdminForumModerationTab()
-                                      : SingleChildScrollView(
+                          child: viewModel.activeTab == 'Overview'
+                              ? AdminOverviewTab(onNavigateTab: (tab) => viewModel.setActiveTab(tab))
+                              : viewModel.activeTab == 'Active Artisans'
+                                  ? const AdminActiveArtisansTab()
+                                  : viewModel.activeTab == 'Quest Approvals'
+                                      ? const AdminQuestApprovalsTab()
+                                      : viewModel.activeTab == 'Settings'
+                                          ? const AdminSystemSettingsTab()
+                                          : viewModel.activeTab == 'Forum Moderation'
+                                              ? const AdminForumModerationTab()
+                                              : SingleChildScrollView(
                                   padding: const EdgeInsets.all(32.0),
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,

@@ -7,6 +7,7 @@ class ArtisanMatchCard extends StatelessWidget {
   final bool isSelected;
   final VoidCallback onTap;
   final VoidCallback onViewProfile;
+  final VoidCallback onViewQuest;
 
   const ArtisanMatchCard({
     super.key,
@@ -14,6 +15,7 @@ class ArtisanMatchCard extends StatelessWidget {
     required this.isSelected,
     required this.onTap,
     required this.onViewProfile,
+    required this.onViewQuest,
   });
 
   @override
@@ -26,20 +28,20 @@ class ArtisanMatchCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: isSelected
-            ? (isDark ? const Color(0xFF1E3A8A).withOpacity(0.3) : const Color(0xFFFEF3C7))
+            ? (isDark ? const Color(0xFF1E3A8A).withValues(alpha: 0.3) : const Color(0xFFFEF3C7))
             : (isDark ? const Color(0xFF1E293B) : Colors.white),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: isSelected
               ? const Color(0xFFD97706)
-              : (isDark ? Colors.white10 : Colors.black.withOpacity(0.06)),
+              : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06)),
           width: isSelected ? 2 : 1,
         ),
         boxShadow: [
           BoxShadow(
             color: isSelected
-                ? const Color(0xFFD97706).withOpacity(0.15)
-                : Colors.black.withOpacity(0.04),
+                ? const Color(0xFFD97706).withValues(alpha: 0.15)
+                : Colors.black.withValues(alpha: 0.04),
             blurRadius: isSelected ? 16 : 10,
             offset: const Offset(0, 4),
           )
@@ -66,7 +68,7 @@ class ArtisanMatchCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(18),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: Colors.black.withValues(alpha: 0.1),
                             blurRadius: 6,
                             offset: const Offset(0, 2),
                           )
@@ -114,7 +116,7 @@ class ArtisanMatchCard extends StatelessWidget {
 
                 const SizedBox(width: 14),
 
-                // Artisan Information & Action Button
+                // Artisan Information & Action Buttons Row
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -123,7 +125,7 @@ class ArtisanMatchCard extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF0F3D3E).withOpacity(0.08),
+                          color: const Color(0xFF0F3D3E).withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
@@ -152,39 +154,23 @@ class ArtisanMatchCard extends StatelessWidget {
 
                       const SizedBox(height: 4),
 
-                      // Rating and Location
+                      // Location
                       Row(
                         children: [
                           const Icon(
-                            Icons.star_rounded,
-                            size: 16,
-                            color: Color(0xFFF59E0B),
+                            Icons.location_on_rounded,
+                            size: 14,
+                            color: Color(0xFFD97706),
                           ),
-                          const SizedBox(width: 3),
-                          Text(
-                            '${artisan.rating} ',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? Colors.grey[300] : Colors.grey[800],
-                            ),
-                          ),
-                          Text(
-                            '(${artisan.reviewCount})',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 12,
-                              color: Colors.grey[500],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 4),
                           Expanded(
                             child: Text(
-                              '• ${artisan.locationName}',
+                              artisan.locationName,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.plusJakartaSans(
-                                fontSize: 11,
-                                color: Colors.grey[500],
+                                fontSize: 12,
+                                color: isDark ? Colors.grey[400] : Colors.grey[600],
                               ),
                             ),
                           ),
@@ -193,51 +179,53 @@ class ArtisanMatchCard extends StatelessWidget {
 
                       const SizedBox(height: 10),
 
-                      // Walking Distance Pill & View Profile Button Row
+                      // Two Separate Action Buttons: View Profile & View Quest
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          // Walking Time Pill
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.directions_walk_rounded,
-                                size: 16,
-                                color: Color(0xFFD97706),
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                artisan.walkingTime,
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: const Color(0xFFD97706),
+                          // 1. View Profile (Leads to Artisan Profile Screen)
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: onViewProfile,
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: Color(0xFF004D40)),
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                                minimumSize: const Size(0, 34),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
                                 ),
                               ),
-                            ],
-                          ),
-
-                          // View Profile M3 Button
-                          FilledButton(
-                            onPressed: onViewProfile,
-                            style: FilledButton.styleFrom(
-                              backgroundColor: const Color(0xFF0F3D3E),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 8,
+                              child: Text(
+                                'View Profile',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF004D40),
+                                ),
                               ),
-                              minimumSize: const Size(0, 34),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              elevation: 1,
                             ),
-                            child: Text(
-                              'View Profile',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
+                          ),
+                          const SizedBox(width: 6),
+
+                          // 2. View Quest (Leads to Quest Completion Screen)
+                          Expanded(
+                            child: FilledButton.icon(
+                              onPressed: onViewQuest,
+                              style: FilledButton.styleFrom(
+                                backgroundColor: const Color(0xFF004D40),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                                minimumSize: const Size(0, 34),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              icon: const Icon(Icons.explore_rounded, size: 12, color: Color(0xFFFFD54F)),
+                              label: Text(
+                                'View Quest',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                           ),

@@ -9,6 +9,8 @@ class ArtisanTaskManagementScreen extends StatefulWidget {
 }
 
 class _ArtisanTaskManagementScreenState extends State<ArtisanTaskManagementScreen> {
+  int _selectedFilterIndex = 0; // 0: All, 1: Active & Live, 2: Pending Approval
+
   // Task Queue with Default 2 Tasks initialized on profile creation
   final List<Map<String, dynamic>> _tasks = [
     {
@@ -143,14 +145,257 @@ class _ArtisanTaskManagementScreenState extends State<ArtisanTaskManagementScree
 
           const SizedBox(height: 24),
 
-          Text(
-            'Active & Pending Quests (${_tasks.length})',
-            style: GoogleFonts.dmSerifDisplay(fontSize: 18, color: const Color(0xFF004D40)),
+          const SizedBox(height: 24),
+
+          // Filter Segmented Chips Row (All, Active, Pending)
+          Row(
+            children: [
+              _buildFilterChip(0, 'All Quests', _tasks.length),
+              const SizedBox(width: 8),
+              _buildFilterChip(1, '🟢 Active', _tasks.where((t) => t['status'] == 'APPROVED').length),
+              const SizedBox(width: 8),
+              _buildFilterChip(2, '⏳ Pending', _tasks.where((t) => t['status'] != 'APPROVED').length),
+            ],
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
 
-          ..._tasks.map((task) => _buildTaskCard(task)),
+          // Filtered Quests List
+          if (_filteredTasks.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(32),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.black.withValues(alpha: 0.06)),
+              ),
+              child: Column(
+                children: [
+                  const Icon(Icons.inbox_rounded, size: 40, color: Colors.grey),
+                  const SizedBox(height: 10),
+                  Text(
+                    _selectedFilterIndex == 1
+                        ? 'No active live quests found.'
+                        : (_selectedFilterIndex == 2
+                            ? 'No pending quests awaiting approval.'
+                            : 'No quests created yet.'),
+                    style: GoogleFonts.plusJakartaSans(fontSize: 13, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+            )
+          else
+            ..._filteredTasks.map((task) => _buildTaskCard(task)),
+        ],
+      ),
+    );
+  }
+
+  List<Map<String, dynamic>> get _filteredTasks {
+    if (_selectedFilterIndex == 1) {
+      return _tasks.where((t) => t['status'] == 'APPROVED').toList();
+    } else if (_selectedFilterIndex == 2) {
+      return _tasks.where((t) => t['status'] != 'APPROVED').toList();
+    }
+    return _tasks;
+  }
+
+  Widget _buildFilterChip(int index, String label, int count) {
+    final bool isSelected = _selectedFilterIndex == index;
+    return Expanded(
+      child: InkWell(
+        onTap: () => setState(() => _selectedFilterIndex = index),
+        borderRadius: BorderRadius.circular(14),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: isSelected ? const Color(0xFF004D40) : Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isSelected ? const Color(0xFF004D40) : Colors.black.withValues(alpha: 0.08),
+            ),
+          ),
+          child: Column(
+            children: [
+              Text(
+                label,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: isSelected ? Colors.white : const Color(0xFF1E293B),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '$count Quests',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 10,
+                  color: isSelected ? const Color(0xFFFFD54F) : Colors.grey[500],
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _confirmDeleteQuest(Map<String, dynamic> task) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.delete_forever_rounded, color: Color(0xFFEF4444)),
+            const SizedBox(width: 10),
+            Text(
+              'Delete Quest?',
+              style: GoogleFonts.dmSerifDisplay(color: const Color(0xFF004D40), fontSize: 20),
+            ),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to delete "${task['title']}"? This action cannot be undone and will remove it from the tourist quest list.',
+          style: GoogleFonts.plusJakartaSans(fontSize: 13, color: Colors.grey[700]),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.plusJakartaSans(color: Colors.grey[600], fontWeight: FontWeight.bold),
+            ),
+          ),
+          FilledButton.icon(
+            onPressed: () {
+              setState(() {
+                _tasks.removeWhere((t) => t['id'] == task['id']);
+              });
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('🗑️ Quest "${task['title']}" has been deleted.'),
+                  backgroundColor: const Color(0xFFEF4444),
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              );
+            },
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            icon: const Icon(Icons.delete_rounded, size: 16),
+            label: Text(
+              'Delete Quest',
+              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showQuestQRModal(Map<String, dynamic> task) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Row(
+          children: [
+            const Icon(Icons.qr_code_2_rounded, color: Color(0xFF004D40), size: 28),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Quest Verification QR',
+                style: GoogleFonts.dmSerifDisplay(color: const Color(0xFF004D40), fontSize: 20),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              task['title'],
+              textAlign: TextAlign.center,
+              style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+            ),
+            const SizedBox(height: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF3C7),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                '+${task['points']} EXP Reward • ${task['category']}',
+                style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFFB45309)),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Generated QR Code Card Container
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFF004D40), width: 2),
+                boxShadow: const [
+                  BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 4))
+                ],
+              ),
+              child: Column(
+                children: [
+                  const Icon(Icons.qr_code_2_rounded, size: 140, color: Color(0xFF004D40)),
+                  const SizedBox(height: 8),
+                  Text(
+                    'WARISAN_QUEST_KEY_${task['id'].toString().toUpperCase()}',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      color: const Color(0xFF004D40),
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            Text(
+              'Display or print this QR Code at your workshop station. Tourists will scan this code with their app to verify quest completion!',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[600], height: 1.4),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton.icon(
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('🖨️ Quest QR code for "${task['title']}" sent to printer!'),
+                  backgroundColor: const Color(0xFF004D40),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
+            icon: const Icon(Icons.print_rounded, size: 16),
+            label: Text('PRINT QR', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 11)),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.of(context).pop(),
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF004D40)),
+            icon: const Icon(Icons.check_rounded, size: 16),
+            label: Text('DONE', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 11)),
+          ),
         ],
       ),
     );
@@ -160,6 +405,8 @@ class _ArtisanTaskManagementScreenState extends State<ArtisanTaskManagementScree
     final bool isDefault = task['isDefault'] ?? false;
     final String status = task['status'];
     final bool isApproved = status == 'APPROVED';
+    final String category = task['category'] ?? '';
+    final bool requiresQr = task['requiresQr'] ?? (!category.contains('Geofence') && !category.contains('Duration'));
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -167,10 +414,10 @@ class _ArtisanTaskManagementScreenState extends State<ArtisanTaskManagementScree
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isDefault ? const Color(0xFF004D40).withOpacity(0.3) : Colors.black.withOpacity(0.06)),
+        border: Border.all(color: isDefault ? const Color(0xFF004D40).withValues(alpha: 0.3) : Colors.black.withValues(alpha: 0.06)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           )
@@ -185,7 +432,7 @@ class _ArtisanTaskManagementScreenState extends State<ArtisanTaskManagementScree
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: isDefault ? const Color(0xFF004D40).withOpacity(0.12) : const Color(0xFFE0F2FE),
+                  color: isDefault ? const Color(0xFF004D40).withValues(alpha: 0.12) : const Color(0xFFE0F2FE),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -197,20 +444,34 @@ class _ArtisanTaskManagementScreenState extends State<ArtisanTaskManagementScree
                   ),
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: isApproved ? const Color(0xFFD1FAE5) : const Color(0xFFFEF3C7),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  isApproved ? 'LIVE & APPROVED' : 'PENDING ADMIN APPROVAL',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: isApproved ? const Color(0xFF047857) : const Color(0xFFB45309),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isApproved ? const Color(0xFFD1FAE5) : const Color(0xFFFEF3C7),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      isApproved ? 'LIVE & APPROVED' : 'PENDING ADMIN APPROVAL',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: isApproved ? const Color(0xFF047857) : const Color(0xFFB45309),
+                      ),
+                    ),
                   ),
-                ),
+                  if (!isDefault) ...[
+                    const SizedBox(width: 6),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFEF4444), size: 20),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      tooltip: 'Delete Quest',
+                      onPressed: () => _confirmDeleteQuest(task),
+                    ),
+                  ],
+                ],
               ),
             ],
           ),
@@ -251,11 +512,32 @@ class _ArtisanTaskManagementScreenState extends State<ArtisanTaskManagementScree
                   ),
                 ],
               ),
-              if (isDefault)
-                Text(
-                  '🔒 Mandatory Step',
-                  style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey[600]),
-                ),
+              Row(
+                children: [
+                  if (requiresQr) ...[
+                    OutlinedButton.icon(
+                      onPressed: () => _showQuestQRModal(task),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        side: const BorderSide(color: Color(0xFF004D40)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      icon: const Icon(Icons.qr_code_2_rounded, size: 14, color: Color(0xFF004D40)),
+                      label: Text(
+                        'View Quest QR',
+                        style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF004D40)),
+                      ),
+                    ),
+                  ],
+                  if (isDefault) ...[
+                    const SizedBox(width: 8),
+                    Text(
+                      '🔒 Mandatory',
+                      style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey[600]),
+                    ),
+                  ],
+                ],
+              ),
             ],
           ),
         ],

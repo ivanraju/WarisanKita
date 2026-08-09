@@ -25,25 +25,6 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
     {'day': 'Sun', 'visitors': '28 Visitors', 'heightRatio': 0.65},
   ];
 
-  final List<Map<String, dynamic>> _educationalSessions = const [
-    {
-      'title': 'Labu Sayong Kiln Firing & Lore',
-      'attendees': 'Aiman Haziq & 1 Guest',
-      'time': '2:30 PM (Today)',
-      'type': 'Live Demonstration',
-      'badge': 'CONFIRMED',
-      'color': Color(0xFF10B981),
-    },
-    {
-      'title': 'Clay Pottery Engraving Workshop',
-      'attendees': 'Sarah Jenkins (UK Tourist)',
-      'time': '4:00 PM (Today)',
-      'type': 'Cultural Exchange',
-      'badge': 'PENDING',
-      'color': Color(0xFFF59E0B),
-    },
-  ];
-
   void _toggleStudioStatus(bool isOpen) {
     setState(() => _isStudioOpen = isOpen);
     ScaffoldMessenger.of(context).showSnackBar(
@@ -240,71 +221,6 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
 
                 const SizedBox(height: 24),
 
-                // 📡 LIVE CULTURAL PROXIMITY RADAR TICKER CARD
-                GestureDetector(
-                  onTap: _sendRadarInvite,
-                  child: Container(
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFEF3C7),
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: const Color(0xFFF59E0B)),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFD97706),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.radar_rounded, color: Colors.white, size: 24),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Text(
-                                    'Heritage Radar Active',
-                                    style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w900,
-                                      color: const Color(0xFF78350F),
-                                    ),
-                                  ),
-                                  const Spacer(),
-                                  Text(
-                                    '3 Nearby',
-                                    style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      color: const Color(0xFFB45309),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                '⚡ 3 Cultural Enthusiasts detected nearby in Kampung Morten! Tap to invite them for a live Labu Sayong spinning demo.',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 11,
-                                  color: const Color(0xFF92400E),
-                                  height: 1.3,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
                 // ⚡ MASTER STUDIO MANAGEMENT ACTIONS
                 Text(
                   'Studio Management Portal',
@@ -360,86 +276,6 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
                     ),
                   ],
                 ),
-
-                const SizedBox(height: 28),
-
-                // 📅 EDUCATIONAL DEMONSTRATION & WORKSHOP SESSIONS FEED
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Today\'s Demonstration Schedule',
-                      style: GoogleFonts.dmSerifDisplay(
-                        fontSize: 20,
-                        color: const Color(0xFF004D40),
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE0F2FE),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        '2 Cultural Demos',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF0284C7),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-
-                ..._educationalSessions.map((s) {
-                  final Color badgeColor = s['color'];
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.black.withValues(alpha: 0.06)),
-                    ),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          backgroundColor: const Color(0xFF004D40).withValues(alpha: 0.1),
-                          child: const Icon(Icons.school_rounded, color: Color(0xFF004D40)),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                s['title'],
-                                style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF1E293B)),
-                              ),
-                              Text(
-                                '${s['attendees']} • ${s['type']} (${s['time']})',
-                                style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[600]),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: badgeColor.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            s['badge'],
-                            style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.bold, color: badgeColor),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }),
 
                 const SizedBox(height: 28),
 
@@ -686,10 +522,10 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
                 color: const Color(0xFF10B981),
               ),
               _buildRichAnalyticsCard(
-                title: 'Cultural Rating',
-                value: '4.9 ⭐',
-                subtitle: '128 authentic reviews',
-                icon: Icons.star_rounded,
+                title: 'Digital Plaques',
+                value: '28 Issued',
+                subtitle: 'Handshake verified',
+                icon: Icons.verified_rounded,
                 color: const Color(0xFFF59E0B),
               ),
               _buildRichAnalyticsCard(
