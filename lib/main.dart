@@ -2,14 +2,32 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
-import 'package:warisan_kita/features/auth/login_screen.dart';
-import 'package:warisan_kita/state/auth_state.dart';
-import 'package:warisan_kita/state/directory_state.dart';
-import 'package:warisan_kita/state/forum_state.dart';
-import 'package:warisan_kita/state/gamification_state.dart';
-import 'package:warisan_kita/state/matchmaker_state.dart';
-import 'package:warisan_kita/state/navigation_state.dart';
-import 'package:warisan_kita/state/itinerary_state.dart';
+
+import 'package:warisan_kita/data/repositories/artisan_repository.dart';
+import 'package:warisan_kita/data/repositories/forum_repository.dart';
+import 'package:warisan_kita/data/repositories/matchmaker_repository.dart';
+import 'package:warisan_kita/data/repositories/user_repository.dart';
+import 'package:warisan_kita/data/services/supabase_service.dart';
+
+import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
+import 'package:warisan_kita/viewmodels/navigation_viewmodel.dart';
+import 'package:warisan_kita/viewmodels/directory_viewmodel.dart';
+import 'package:warisan_kita/viewmodels/itinerary_viewmodel.dart';
+import 'package:warisan_kita/viewmodels/forum_viewmodel.dart';
+import 'package:warisan_kita/viewmodels/gamification_viewmodel.dart';
+import 'package:warisan_kita/viewmodels/matchmaker_viewmodel.dart';
+import 'package:warisan_kita/viewmodels/moderation_viewmodel.dart';
+
+import 'package:warisan_kita/viewmodels/theme_viewmodel.dart';
+import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
+
+import 'package:warisan_kita/ui/auth/splash_screen.dart';
+import 'package:warisan_kita/ui/auth/login_screen.dart';
+import 'package:warisan_kita/ui/auth/register_screen.dart';
+import 'package:warisan_kita/ui/auth/role_selection_screen.dart';
+import 'package:warisan_kita/ui/tourist/tourist_main_scaffold.dart';
+import 'package:warisan_kita/ui/artisan/artisan_main_scaffold.dart';
+import 'package:warisan_kita/ui/admin_web/admin_moderation_dashboard_view.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,13 +41,29 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AuthState()),
-        ChangeNotifierProvider(create: (_) => DirectoryState()),
-        ChangeNotifierProvider(create: (_) => ForumState()),
-        ChangeNotifierProvider(create: (_) => GamificationState()),
-        ChangeNotifierProvider(create: (_) => MatchmakerState()),
-        ChangeNotifierProvider(create: (_) => NavigationState()),
-        ChangeNotifierProvider(create: (_) => ItineraryState()),
+        Provider(create: (_) => SupabaseService()),
+        Provider(create: (context) => UserRepository(service: context.read<SupabaseService>())),
+        Provider(create: (context) => ArtisanRepository(service: context.read<SupabaseService>())),
+        Provider(create: (context) => ForumRepository(service: context.read<SupabaseService>())),
+        Provider(create: (_) => const MatchmakerRepository()),
+        ChangeNotifierProvider(create: (_) => ThemeViewModel()),
+        ChangeNotifierProvider(create: (_) => LanguageViewModel()),
+        ChangeNotifierProvider(
+          create: (context) => AuthViewModel(repository: context.read<UserRepository>()),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => DirectoryViewModel(repository: context.read<ArtisanRepository>()),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => ForumViewModel(repository: context.read<ForumRepository>()),
+        ),
+        ChangeNotifierProvider(create: (_) => GamificationViewModel()),
+        ChangeNotifierProvider(
+          create: (context) => MatchmakerViewModel(repository: context.read<MatchmakerRepository>()),
+        ),
+        ChangeNotifierProvider(create: (_) => ModerationViewModel()),
+        ChangeNotifierProvider(create: (_) => NavigationViewModel()),
+        ChangeNotifierProvider(create: (_) => ItineraryViewModel()),
       ],
       child: const WarisanKitaApp(),
     ),
@@ -41,56 +75,24 @@ class WarisanKitaApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeVM = context.watch<ThemeViewModel>();
+
     return MaterialApp(
-      title: 'WarisanKita',
+      title: 'WarisanKita Marketplace',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF004D40),
-          primary: const Color(0xFF004D40),
-          secondary: const Color(0xFFFF7043),
-          tertiary: const Color(0xFFFFD54F),
-          surface: const Color(0xFFFFFFFF),
-          background: const Color(0xFFF8F9FA),
-        ),
-        scaffoldBackgroundColor: const Color(0xFFF8F9FA),
-        textTheme: GoogleFonts.plusJakartaSansTextTheme(
-          Theme.of(context).textTheme,
-        ).copyWith(
-          displayLarge: GoogleFonts.dmSerifDisplay(
-            color: const Color(0xFF004D40),
-            fontWeight: FontWeight.bold,
-          ),
-          titleLarge: GoogleFonts.dmSerifDisplay(
-            color: const Color(0xFF004D40),
-            fontSize: 26,
-          ),
-        ),
-        // FIXED: Using CardThemeData instead of CardTheme
-        cardTheme: CardThemeData(
-          elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          color: Colors.white,
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            elevation: 0,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-          ),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: Colors.white,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(20),
-            borderSide: BorderSide.none,
-          ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-        ),
-      ),
-      home: const LoginScreen(),
+      themeMode: themeVM.themeMode,
+      theme: ThemeViewModel.lightTheme,
+      darkTheme: ThemeViewModel.darkTheme,
+      initialRoute: '/',
+      routes: {
+        '/': (context) => const SplashScreen(),
+        '/login': (context) => const LoginScreen(),
+        '/register': (context) => const RegisterScreen(),
+        '/role-selection': (context) => const RoleSelectionScreen(),
+        '/tourist': (context) => const TouristMainScaffold(),
+        '/artisan': (context) => const ArtisanMainScaffold(),
+        '/admin': (context) => const AdminModerationDashboardView(),
+      },
     );
   }
 }
