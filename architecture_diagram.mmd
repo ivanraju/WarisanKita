@@ -1,0 +1,124 @@
+%%{init: {'themeVariables': { 'lineColor': '#ffffff' }}}%%
+flowchart TB
+
+%% Styling
+classDef uiLayer fill:#1e293b,stroke:#0f766e,stroke-width:2px,color:#fff;
+classDef domainLayer fill:#312e81,stroke:#6366f1,stroke-width:2px,color:#fff;
+classDef dataLayer fill:#172554,stroke:#1d4ed8,stroke-width:2px,color:#fff;
+classDef mainBox fill:#121212,stroke:#ffffff,stroke-width:1px,color:#fff;
+classDef nodeBox fill:#2d3748,stroke:#a0aec0,stroke-width:1px,color:#fff;
+classDef cloud fill:#2d3748,stroke:#4fd1c5,stroke-width:2px,color:#fff;
+classDef db fill:#2c5282,stroke:#63b3ed,stroke-width:2px,color:#fff;
+classDef supa fill:#1e1b4b,stroke:#8b5cf6,stroke-width:1px,color:#fff;
+
+%% 1. PRESENTATION LAYER: MOBILE & WEB ADMIN
+subgraph MobileApp ["📱 Flutter Mobile Application"]
+    subgraph UILayerMobile ["Presentation Layer (Mobile UI)"]
+        subgraph ViewModelMobile ["ViewModel (Business Logic & UI State)"]
+            VM1[auth_viewmodel]
+            VM2[dashboard_viewmodel]
+            VM3[directory_viewmodel]
+            VM4[forum_viewmodel]
+            VM5[gamification_viewmodel]
+            VM6[matchmaker_viewmodel]
+            VM7[navigation_viewmodel]
+        end
+
+        subgraph ViewMobile ["View (displays data, listens for events)"]
+            V1[Auth]
+            V2[Dashboard]
+            V3[Directory]
+            V4[Forum]
+            V5[Gamification]
+            V6[Matchmaker]
+        end
+        
+        ViewMobile -->|"User Actions / Commands"| ViewModelMobile
+        ViewModelMobile -.->|"UI State Updates"| ViewMobile
+    end
+end
+
+subgraph WebAdmin ["💻 Web Admin Dashboard"]
+    Host["Vercel Hosting (Flutter Web Admin)"]:::cloud
+    
+    subgraph UILayerWeb ["Presentation Layer (Web Admin UI)"]
+        subgraph ViewModelWeb ["ViewModel (Admin Logic)"]
+            WB["ViewModel: moderation_vm, user_mgmt_vm"]
+        end
+
+        subgraph ViewWeb ["View (Admin Web UI)"]
+            WP["View: Admin Dashboard, Artisan Approval, User Management"]
+        end
+        
+        ViewWeb -->|"Admin Commands"| ViewModelWeb
+        ViewModelWeb -.->|"UI State Updates"| ViewWeb
+    end
+    
+    Host -.->|"Hosts Static Assets"| ViewWeb
+end
+
+%% 2. DOMAIN / MODELS LAYER
+subgraph ModelsLayer ["📦 Domain Models & Entities Layer"]
+    M1[user_model]
+    M2[artisan_model]
+    M3[pending_profile_model]
+    M4[forum_model]
+    M5[gamification_model]
+end
+
+%% 3. SHARED CORE DATA LAYER
+subgraph DataLayer ["🗄️ Shared Core Data Layer (Shared across Mobile & Web)"]
+    subgraph Repository ["Repository (Data Access, Mapping, Caching, Error Handling)"]
+        R1[artisan_repository]
+        R2[forum_repository]
+        R3[gamification_repository]
+        R4[matchmaker_repository]
+        R5[user_repository]
+    end
+
+    subgraph Services ["Service (wraps API calls)"]
+        S1[supabase_service]
+        S2["google_map_service (Geocoding & Distance API)"]
+    end
+
+    Repository -->|"method calls / fetches data"| Services
+    Services -.->|"API models / Raw data"| Repository
+end
+
+%% 4. NETWORK & EXTERNAL SERVICES
+Network((🌐 Internet / HTTPS)):::cloud
+
+subgraph ExternalData ["External Services"]
+    subgraph Supabase ["Supabase Backend"]
+        SupaDB[(PostgreSQL)]:::db
+        SupaStore[(Storage)]:::db
+        SupaAuth[(Auth)]:::db
+    end
+    
+    GMap[Google Maps API]:::cloud
+end
+
+%% CONNECTIONS
+ViewModelMobile <-->|"Binds / Consumes"| ModelsLayer
+ViewModelWeb <-->|"Binds / Consumes"| ModelsLayer
+
+ViewModelMobile -->|"Method Calls"| Repository
+ViewModelWeb -->|"Method Calls"| Repository
+Repository -.->|"Domain Models"| ViewModelMobile
+Repository -.->|"Domain Models"| ViewModelWeb
+
+Services <-->|"HTTP / method channels"| Network
+Services <-->|"WebSockets (Real-time Forum Stream)"| Network
+
+Network <--> SupaDB
+Network <--> SupaStore
+Network <--> SupaAuth
+Network <--> GMap
+
+%% Apply Classes
+class UILayerMobile,UILayerWeb uiLayer;
+class ModelsLayer domainLayer;
+class DataLayer dataLayer;
+class Supabase supa;
+class MobileApp,WebAdmin,ExternalData mainBox;
+class ViewMobile,ViewModelMobile,ViewWeb,ViewModelWeb,Repository,Services,V1,V2,V3,V4,V5,V6,VM1,VM2,VM3,VM4,VM5,VM6,VM7,WP,WB,M1,M2,M3,M4,M5,R1,R2,R3,R4,R5,S1,S2 nodeBox;

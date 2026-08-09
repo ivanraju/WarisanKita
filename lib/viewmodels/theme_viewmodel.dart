@@ -1,0 +1,63 @@
+import 'package:flutter/material.dart';
+
+class ThemeViewModel extends ChangeNotifier {
+  ThemeMode _themeMode = ThemeMode.light;
+
+  ThemeMode get themeMode => _themeMode;
+  bool get isDarkMode => _themeMode == ThemeMode.dark;
+
+  void toggleTheme(bool isDark) {
+    _themeMode = isDark ? ThemeMode.dark : ThemeMode.light;
+    notifyListeners();
+  }
+
+  static ThemeData get lightTheme {
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.light,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: const Color(0xFF004D40),
+        primary: const Color(0xFF004D40),
+        secondary: const Color(0xFFFF7043),
+        tertiary: const Color(0xFFFFD54F),
+        surface: const Color(0xFFFFFFFF),
+        brightness: Brightness.light,
+      ),
+      scaffoldBackgroundColor: const Color(0xFFF8F9FA),
+      cardTheme: CardThemeData(
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        color: Colors.white,
+      ),
+    );
+  }
+
+  static ThemeData get darkTheme {
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: const Color(0xFF34D399),
+        primary: const Color(0xFF34D399),
+        secondary: const Color(0xFFFFD54F),
+        tertiary: const Color(0xFFFFD54F),
+        surface: const Color(0xFF0D2825),
+        brightness: Brightness.dark,
+      ),
+      scaffoldBackgroundColor: const Color(0xFF041412), // Deep Heritage Emerald Midnight
+      cardTheme: CardThemeData(
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        color: const Color(0xFF0D2825),
+      ),
+      dialogTheme: const DialogThemeData(
+        backgroundColor: Color(0xFF0D2825),
+      ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Color(0xFF041412),
+        foregroundColor: Color(0xFFFFD54F),
+        elevation: 0,
+      ),
+    );
+  }
+}

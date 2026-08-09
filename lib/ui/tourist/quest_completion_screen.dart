@@ -1,0 +1,617 @@
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+class QuestCompletionScreen extends StatefulWidget {
+  final String workshopName;
+  final String craftCategory;
+  final String locationName;
+  final double distanceMeters;
+
+  const QuestCompletionScreen({
+    super.key,
+    this.workshopName = 'Pak Mat Pottery Studio',
+    this.craftCategory = 'Clay Labu Sayong Kilning',
+    this.locationName = 'Kampung Morten, Melaka',
+    this.distanceMeters = 35.0,
+  });
+
+  @override
+  State<QuestCompletionScreen> createState() => _QuestCompletionScreenState();
+}
+
+class _QuestCompletionScreenState extends State<QuestCompletionScreen> {
+  late double _currentDistance;
+  bool _isQuestStarted = false;
+  bool _isGpsLost = false;
+
+  // Quest Checklist State (Includes Default Mandatory Tasks)
+  final List<Map<String, dynamic>> _checklist = [
+    {
+      'title': '1. Arrive at the Workshop (DEFAULT TASK)',
+      'subtitle': '📍 Geofence proximity check within 50m of studio coordinates',
+      'done': true, // Auto-checked since user is 35m in range
+      'isDefault': true,
+    },
+    {
+      'title': '2. Stay for 15 Minutes (DEFAULT TASK)',
+      'subtitle': '⏱️ 15-minute workshop session timer active',
+      'done': false,
+      'isDefault': true,
+    },
+    {
+      'title': '3. Hands-on Crafting Session',
+      'subtitle': '🎨 Shape your miniature labu sayong clay vessel',
+      'done': false,
+      'isDefault': false,
+    },
+    {
+      'title': '4. Scan Artisan QR Handshake',
+      'subtitle': '📜 Establish digital handshake to claim authenticity plaque',
+      'done': false,
+      'isDefault': false,
+    },
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _currentDistance = widget.distanceMeters;
+  }
+
+  bool get _isWithinRange => _currentDistance <= 50.0;
+
+  void _handleStartQuest() {
+    if (!_isWithinRange) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: const [
+              Icon(Icons.location_off_rounded, color: Colors.white, size: 18),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text('You are too far away to start this quest. Get within 50 meters of the workshop!'),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isQuestStarted = true;
+      _checklist[0]['done'] = true; // Mark first step done automatically
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '🎉 Quest Activated! Follow step-by-step instructions to earn your Plaque!',
+          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: const Color(0xFF004D40),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
+  void _openQrHandshakeScanner() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF0F172A),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (context) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.78,
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.qr_code_scanner_rounded, color: Color(0xFFFFD54F), size: 24),
+                      const SizedBox(width: 10),
+                      Text(
+                        'Artisan QR Handshake',
+                        style: GoogleFonts.dmSerifDisplay(color: Colors.white, fontSize: 20),
+                      ),
+                    ],
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Ask the Master Artisan for their unique QR code and scan to verify completion.',
+                style: GoogleFonts.plusJakartaSans(color: Colors.grey[400], fontSize: 12),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+
+              // Animated Scanning Viewfinder
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.black,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: const Color(0xFFFFD54F), width: 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFFFD54F).withOpacity(0.3),
+                        blurRadius: 20,
+                      )
+                    ],
+                  ),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.qr_code_2_rounded, size: 100, color: Color(0xFFFFD54F)),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Align Artisan QR Code inside frame',
+                            style: GoogleFonts.plusJakartaSans(color: Colors.white70, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                      Positioned(
+                        top: 16,
+                        left: 16,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10B981).withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Text(
+                            'LIVE SCANNER READY',
+                            style: TextStyle(color: Color(0xFF10B981), fontSize: 10, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Handshake failed. That QR code does not belong to this artisan.'),
+                            backgroundColor: Color(0xFFEF4444),
+                          ),
+                        );
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFFEF4444),
+                        side: const BorderSide(color: Color(0xFFEF4444)),
+                      ),
+                      child: const Text('Test Invalid QR'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        _showQuestCompletedCelebration();
+                      },
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF10B981),
+                      ),
+                      child: const Text('SCAN VALID QR'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showQuestCompletedCelebration() {
+    setState(() {
+      _checklist[0]['done'] = true;
+      _checklist[1]['done'] = true;
+      _checklist[2]['done'] = true;
+      _checklist[3]['done'] = true;
+    });
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+          child: Container(
+            padding: const EdgeInsets.all(28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Celebration Gold Medal Trophy
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFFD54F),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(color: Color(0xFFD97706), blurRadius: 20, offset: Offset(0, 6))
+                    ],
+                  ),
+                  child: const Icon(Icons.emoji_events_rounded, size: 54, color: Color(0xFF004D40)),
+                ),
+
+                const SizedBox(height: 20),
+
+                Text(
+                  '🎉 QUEST COMPLETED!',
+                  style: GoogleFonts.plusJakartaSans(
+                    color: const Color(0xFF047857),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.1,
+                  ),
+                ),
+
+                const SizedBox(height: 6),
+
+                Text(
+                  'Digital Plaque Unlocked!',
+                  style: GoogleFonts.dmSerifDisplay(fontSize: 24, color: const Color(0xFF0F172A)),
+                ),
+
+                const SizedBox(height: 8),
+
+                Text(
+                  'You earned +500 EXP and a Digital Plaque of Authenticity!',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.plusJakartaSans(fontSize: 13, color: Colors.grey[700]),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Digital Plaque Card with Wax Seal
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFFFFBEB), Color(0xFFFEF3C7)],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFFF59E0B), width: 1.5),
+                    boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 8)],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: const BoxDecoration(color: Color(0xFFD97706), shape: BoxShape.circle),
+                        child: const Icon(Icons.verified_rounded, color: Colors.white, size: 24),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Plaque of Authenticity #8492',
+                              style: GoogleFonts.dmSerifDisplay(fontSize: 15, color: const Color(0xFF78350F)),
+                            ),
+                            Text(
+                              'Certified by ${widget.workshopName}',
+                              style: GoogleFonts.plusJakartaSans(fontSize: 11, color: const Color(0xFFB45309)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Rank Up Banner
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF004D40),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.military_tech_rounded, color: Color(0xFFFFD54F), size: 24),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Rank Up! Promoted to Tier 4 Heritage Guardian!',
+                          style: GoogleFonts.plusJakartaSans(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      Navigator.of(context).pop();
+                    },
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF004D40),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    child: const Text('COLLECT REWARDS'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FA),
+      appBar: AppBar(
+        title: Text(
+          'Cultural Quest Hub',
+          style: GoogleFonts.dmSerifDisplay(color: const Color(0xFF004D40), fontSize: 22),
+        ),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF004D40)),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
+      body: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // HERO QUEST BANNER CARD
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF004D40), Color(0xFF0F172A)],
+                ),
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF004D40).withOpacity(0.3),
+                    blurRadius: 16,
+                    offset: const Offset(0, 8),
+                  )
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFD54F),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '🔥 +500 EXP REWARD',
+                          style: GoogleFonts.plusJakartaSans(
+                            color: const Color(0xFF004D40),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: _isWithinRange ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(_isWithinRange ? Icons.near_me : Icons.location_off, color: Colors.white, size: 12),
+                            const SizedBox(width: 4),
+                            Text(
+                              _isWithinRange ? '35m (IN RANGE)' : 'OUT OF RANGE',
+                              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  Text(
+                    widget.workshopName,
+                    style: GoogleFonts.dmSerifDisplay(color: Colors.white, fontSize: 26),
+                  ),
+
+                  Text(
+                    '${widget.craftCategory} • ${widget.locationName}',
+                    style: GoogleFonts.plusJakartaSans(color: Colors.white70, fontSize: 12),
+                  ),
+
+                  const SizedBox(height: 20),
+                  const Divider(color: Colors.white24),
+                  const SizedBox(height: 10),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: const [
+                          Icon(Icons.timer_outlined, color: Color(0xFFFFD54F), size: 16),
+                          SizedBox(width: 6),
+                          Text('Est. 45 Mins Session', style: TextStyle(color: Colors.white, fontSize: 12)),
+                        ],
+                      ),
+                      Row(
+                        children: const [
+                          Icon(Icons.workspace_premium_outlined, color: Color(0xFFFFD54F), size: 16),
+                          SizedBox(width: 6),
+                          Text('Plaque Certified', style: TextStyle(color: Colors.white, fontSize: 12)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // SIMULATION CONTROLS BAR
+            Row(
+              children: [
+                Text('Distance Testing:', style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[600])),
+                const SizedBox(width: 10),
+                ChoiceChip(
+                  label: const Text('In Range (35m)'),
+                  selected: _isWithinRange && !_isGpsLost,
+                  onSelected: (_) => setState(() {
+                    _currentDistance = 35.0;
+                    _isGpsLost = false;
+                  }),
+                ),
+                const SizedBox(width: 8),
+                ChoiceChip(
+                  label: const Text('Out Range (85m)'),
+                  selected: !_isWithinRange && !_isGpsLost,
+                  onSelected: (_) => setState(() {
+                    _currentDistance = 85.0;
+                    _isGpsLost = false;
+                  }),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 24),
+
+            // STEP-BY-STEP QUEST CHECKLIST
+            Text(
+              'Quest Checklist & Steps',
+              style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
+            ),
+            const SizedBox(height: 12),
+
+            ..._checklist.map((item) {
+              final bool done = item['done'];
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: done ? const Color(0xFFF0FDF4) : Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: done ? const Color(0xFF86EFAC) : Colors.black.withOpacity(0.06),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      done ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                      color: done ? const Color(0xFF16A34A) : Colors.grey[400],
+                      size: 24,
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item['title'],
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: done ? const Color(0xFF14532D) : const Color(0xFF1E293B),
+                            ),
+                          ),
+                          Text(
+                            item['subtitle'],
+                            style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[600]),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+
+            const SizedBox(height: 28),
+
+            // ACTION BUTTONS
+            if (!_isQuestStarted)
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _handleStartQuest,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF004D40),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                  icon: const Icon(Icons.play_arrow_rounded, size: 22),
+                  label: const Text('START QUEST & TIMER'),
+                ),
+              )
+            else
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _openQrHandshakeScanner,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF10B981),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                  icon: const Icon(Icons.qr_code_scanner_rounded, size: 22),
+                  label: const Text('VERIFY COMPLETION (SCAN QR)'),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
