@@ -127,13 +127,16 @@ class ForumIndexScreen extends StatelessWidget {
         children: [
           const Icon(Icons.whatshot_rounded, color: Color(0xFFFF7043), size: 20),
           const SizedBox(width: 8),
-          Text(
-            'TRENDING DISCUSSIONS',
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-              color: Colors.black26,
-              letterSpacing: 1.2,
+          Expanded(
+            child: Text(
+              'TRENDING DISCUSSIONS',
+              softWrap: true,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: Colors.black26,
+                letterSpacing: 1.2,
+              ),
             ),
           ),
         ],
@@ -164,7 +167,7 @@ class ForumIndexScreen extends StatelessWidget {
               Text(
                 'Report thread: "${thread.title}"',
                 maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+                softWrap: true,
                 style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey[800]),
               ),
               const SizedBox(height: 14),
@@ -254,18 +257,23 @@ class ForumIndexScreen extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 12,
-                          backgroundImage: NetworkImage(thread.authorAvatar),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${thread.authorName} • ${_formatTime(thread.createdAt)}',
-                          style: TextStyle(color: Colors.grey.shade500, fontSize: 11, fontWeight: FontWeight.bold),
-                        ),
-                      ],
+                    Expanded(
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 12,
+                            backgroundImage: NetworkImage(thread.authorAvatar),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '${thread.authorName} • ${_formatTime(thread.createdAt)}',
+                              softWrap: true,
+                              style: TextStyle(color: Colors.grey.shade500, fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     IconButton(
                       icon: const Icon(Icons.flag_outlined, size: 18, color: Colors.black38),
@@ -284,10 +292,11 @@ class ForumIndexScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                Row(
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 8,
                   children: [
                     _buildStat(Icons.mode_comment_outlined, '${thread.replyCount} responses'),
-                    const SizedBox(width: 16),
                     _buildStat(Icons.favorite_outline_rounded, '45'),
                   ],
                 ),
@@ -307,10 +316,17 @@ class ForumIndexScreen extends StatelessWidget {
 
   Widget _buildStat(IconData icon, String label) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Icon(icon, size: 16, color: Colors.black26),
         const SizedBox(width: 6),
-        Text(label, style: const TextStyle(color: Colors.black45, fontSize: 12, fontWeight: FontWeight.w600)),
+        Flexible(
+          child: Text(
+            label,
+            softWrap: true,
+            style: const TextStyle(color: Colors.black45, fontSize: 12, fontWeight: FontWeight.w600),
+          ),
+        ),
       ],
     );
   }

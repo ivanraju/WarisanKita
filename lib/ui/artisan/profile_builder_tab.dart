@@ -157,10 +157,14 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Studio Information',
-                  style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
+                Expanded(
+                  child: Text(
+                    'Studio Information',
+                    softWrap: true,
+                    style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
+                  ),
                 ),
+                const SizedBox(width: 8),
                 OutlinedButton.icon(
                   onPressed: _previewTouristView,
                   style: OutlinedButton.styleFrom(
@@ -362,10 +366,14 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Portfolio Gallery Manager',
-                  style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
+                Expanded(
+                  child: Text(
+                    'Portfolio Gallery Manager',
+                    softWrap: true,
+                    style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
+                  ),
                 ),
+                const SizedBox(width: 8),
                 Text(
                   '${_portfolioImages.length} Uploaded (Unlimited)',
                   style: GoogleFonts.plusJakartaSans(
@@ -476,10 +484,14 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Proof of Authenticity & Credentials',
-                  style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
+                Expanded(
+                  child: Text(
+                    'Proof of Authenticity & Credentials',
+                    softWrap: true,
+                    style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
+                  ),
                 ),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(

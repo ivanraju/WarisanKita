@@ -326,15 +326,19 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: GoogleFonts.plusJakartaSans(fontSize: 11, color: const Color(0xFF1E3A8A), fontWeight: FontWeight.bold),
+        Flexible(
+          child: Text(
+            label,
+            softWrap: true,
+            style: GoogleFonts.plusJakartaSans(fontSize: 11, color: const Color(0xFF1E3A8A), fontWeight: FontWeight.bold),
+          ),
         ),
+        const SizedBox(width: 8),
         Flexible(
           child: Text(
             value,
             textAlign: TextAlign.right,
-            overflow: TextOverflow.ellipsis,
+            softWrap: true,
             style: GoogleFonts.plusJakartaSans(fontSize: 11, color: const Color(0xFF1D4ED8), fontWeight: FontWeight.w600),
           ),
         ),

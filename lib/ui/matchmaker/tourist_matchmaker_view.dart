@@ -250,13 +250,16 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
                               children: [
                                 Row(
                                   children: [
-                                    Text(
-                                      langVM.translate('PROXIMITY QUEST RADAR'),
-                                      style: GoogleFonts.plusJakartaSans(
-                                        color: const Color(0xFFFFD54F),
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w900,
-                                        letterSpacing: 1.1,
+                                    Flexible(
+                                      child: Text(
+                                        langVM.translate('PROXIMITY QUEST RADAR'),
+                                        softWrap: true,
+                                        style: GoogleFonts.plusJakartaSans(
+                                          color: const Color(0xFFFFD54F),
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w900,
+                                          letterSpacing: 1.1,
+                                        ),
                                       ),
                                     ),
                                     const SizedBox(width: 6),
@@ -342,25 +345,30 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
                                     child: Row(
                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
-                                        Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              langVM.translate('Nearby Master Studios'),
-                                              style: GoogleFonts.dmSerifDisplay(
-                                                fontSize: 20,
-                                                color: const Color(0xFF004D40),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                langVM.translate('Nearby Master Studios'),
+                                                softWrap: true,
+                                                style: GoogleFonts.dmSerifDisplay(
+                                                  fontSize: 20,
+                                                  color: const Color(0xFF004D40),
+                                                ),
                                               ),
-                                            ),
-                                            Text(
-                                              langVM.translate('Tap or slide up to view master studios'),
-                                              style: GoogleFonts.plusJakartaSans(
-                                                fontSize: 11,
-                                                color: Colors.grey[600],
+                                              Text(
+                                                langVM.translate('Tap or slide up to view master studios'),
+                                                softWrap: true,
+                                                style: GoogleFonts.plusJakartaSans(
+                                                  fontSize: 11,
+                                                  color: Colors.grey[600],
+                                                ),
                                               ),
-                                            ),
-                                          ],
+                                            ],
+                                          ),
                                         ),
+                                        const SizedBox(width: 8),
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                           decoration: BoxDecoration(
@@ -368,6 +376,7 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
                                             borderRadius: BorderRadius.circular(16),
                                           ),
                                           child: Row(
+                                            mainAxisSize: MainAxisSize.min,
                                             children: [
                                               const Icon(Icons.unfold_more_rounded, size: 14, color: Color(0xFFFFD54F)),
                                               const SizedBox(width: 4),

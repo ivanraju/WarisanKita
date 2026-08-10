@@ -45,7 +45,13 @@ class RoleSelectionScreen extends StatelessWidget {
           children: [
             const Icon(Icons.open_in_browser_rounded, color: Color(0xFF0284C7)),
             const SizedBox(width: 10),
-            Text('Web Admin Dashboard', style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40))),
+            Expanded(
+              child: Text(
+                'Web Admin Dashboard',
+                softWrap: true,
+                style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
+              ),
+            ),
           ],
         ),
         content: Text(
@@ -227,12 +233,15 @@ class RoleSelectionScreen extends StatelessWidget {
               const SizedBox(height: 16),
               Row(
                 children: [
-                  Text(
-                    isExternal ? 'Open Web Admin Portal' : 'Enter Mobile Portal',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: accentColor,
+                  Expanded(
+                    child: Text(
+                      isExternal ? 'Open Web Admin Portal' : 'Enter Mobile Portal',
+                      softWrap: true,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: accentColor,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 6),

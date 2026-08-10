@@ -88,22 +88,27 @@ class _CraftMatchmakerQuizWizardState extends State<CraftMatchmakerQuizWizard> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF004D40).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(10),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF004D40).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.auto_awesome_rounded, color: Color(0xFF004D40), size: 20),
                         ),
-                        child: const Icon(Icons.auto_awesome_rounded, color: Color(0xFF004D40), size: 20),
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        'Craft Matchmaker Wizard',
-                        style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
-                      ),
-                    ],
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Craft Matchmaker Wizard',
+                            softWrap: true,
+                            style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   IconButton(
                     icon: const Icon(Icons.close, color: Colors.grey),

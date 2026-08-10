@@ -147,12 +147,15 @@ class GeofencedTasksScreen extends StatelessWidget {
                   children: [
                     const Icon(Icons.location_on, size: 14, color: Color(0xFFFF7043)),
                     const SizedBox(width: 4),
-                    Text(
-                      'Terengganu • Site Verified',
-                      style: GoogleFonts.plusJakartaSans(
-                        color: const Color(0xFFFF7043),
-                        fontWeight: FontWeight.w800,
-                        fontSize: 12,
+                    Expanded(
+                      child: Text(
+                        'Terengganu • Site Verified',
+                        softWrap: true,
+                        style: GoogleFonts.plusJakartaSans(
+                          color: const Color(0xFFFF7043),
+                          fontWeight: FontWeight.w800,
+                          fontSize: 12,
+                        ),
                       ),
                     ),
                   ],

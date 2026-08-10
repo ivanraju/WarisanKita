@@ -187,11 +187,14 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                     children: [
                       const Icon(Icons.location_on_rounded, color: Color(0xFF004D40), size: 18),
                       const SizedBox(width: 4),
-                      Text(
-                        '${widget.state}, Malaysia',
-                        style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 13, color: const Color(0xFF004D40)),
+                      Expanded(
+                        child: Text(
+                          '${widget.state}, Malaysia',
+                          softWrap: true,
+                          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 13, color: const Color(0xFF004D40)),
+                        ),
                       ),
-                      const Spacer(),
+                      const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
@@ -334,9 +337,13 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                           children: [
                             const Icon(Icons.history_edu_rounded, color: Color(0xFFD97706), size: 22),
                             const SizedBox(width: 8),
-                            Text(
-                              'Historical Origin & Cultural Lore',
-                              style: GoogleFonts.dmSerifDisplay(fontSize: 16, color: const Color(0xFF78350F)),
+                            Expanded(
+                              child: Text(
+                                'Historical Origin & Cultural Lore',
+                                maxLines: 2,
+                                softWrap: true,
+                                style: GoogleFonts.dmSerifDisplay(fontSize: 16, color: const Color(0xFF78350F)),
+                              ),
                             ),
                           ],
                         ),

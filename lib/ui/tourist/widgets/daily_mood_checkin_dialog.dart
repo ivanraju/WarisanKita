@@ -99,94 +99,102 @@ class _DailyMoodCheckinDialogState extends State<DailyMoodCheckinDialog> {
       child: Container(
         padding: const EdgeInsets.all(24),
         constraints: const BoxConstraints(maxWidth: 480),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFFEF3C7),
-                        shape: BoxShape.circle,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFFEF3C7),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.wb_sunny_rounded, color: Color(0xFFD97706), size: 20),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Daily Heritage Check-in',
+                            softWrap: true,
+                            style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.grey),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 6),
+              Text(
+                'What craft heritage would you like to explore today?',
+                style: GoogleFonts.plusJakartaSans(fontSize: 13, color: Colors.grey[700]),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Options List
+              ..._moodOptions.map((opt) {
+                final bool isSelected = _selectedMood == opt['category'];
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  decoration: BoxDecoration(
+                    color: isSelected ? const Color(0xFF004D40).withValues(alpha: 0.08) : Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isSelected ? const Color(0xFF004D40) : Colors.black.withValues(alpha: 0.08),
+                      width: isSelected ? 1.8 : 1.0,
+                    ),
+                  ),
+                  child: ListTile(
+                    onTap: () => setState(() => _selectedMood = opt['category']),
+                    title: Text(
+                      opt['title'],
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: isSelected ? const Color(0xFF004D40) : const Color(0xFF1E293B),
                       ),
-                      child: const Icon(Icons.wb_sunny_rounded, color: Color(0xFFD97706), size: 20),
                     ),
-                    const SizedBox(width: 10),
-                    Text(
-                      'Daily Heritage Check-in',
-                      style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
+                    subtitle: Text(
+                      opt['subtitle'],
+                      style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[600]),
                     ),
-                  ],
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close, color: Colors.grey),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 6),
-            Text(
-              'What craft heritage would you like to explore today?',
-              style: GoogleFonts.plusJakartaSans(fontSize: 13, color: Colors.grey[700]),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Options List
-            ..._moodOptions.map((opt) {
-              final bool isSelected = _selectedMood == opt['category'];
-
-              return Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                decoration: BoxDecoration(
-                  color: isSelected ? const Color(0xFF004D40).withValues(alpha: 0.08) : Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: isSelected ? const Color(0xFF004D40) : Colors.black.withValues(alpha: 0.08),
-                    width: isSelected ? 1.8 : 1.0,
+                    trailing: isSelected
+                        ? const Icon(Icons.check_circle_rounded, color: Color(0xFF004D40))
+                        : const Icon(Icons.radio_button_unchecked_rounded, color: Colors.grey),
                   ),
-                ),
-                child: ListTile(
-                  onTap: () => setState(() => _selectedMood = opt['category']),
-                  title: Text(
-                    opt['title'],
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: isSelected ? const Color(0xFF004D40) : const Color(0xFF1E293B),
+                );
+              }),
+
+              Row(
+                children: [
+                  Checkbox(
+                    value: _dontShowToday,
+                    activeColor: const Color(0xFF004D40),
+                    onChanged: (val) => setState(() => _dontShowToday = val ?? false),
+                  ),
+                  Expanded(
+                    child: Text(
+                      'Hide & don\'t prompt again today',
+                      style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[700]),
                     ),
                   ),
-                  subtitle: Text(
-                    opt['subtitle'],
-                    style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[600]),
-                  ),
-                  trailing: isSelected
-                      ? const Icon(Icons.check_circle_rounded, color: Color(0xFF004D40))
-                      : const Icon(Icons.radio_button_unchecked_rounded, color: Colors.grey),
-                ),
-              );
-            }),
-
-            Row(
-              children: [
-                Checkbox(
-                  value: _dontShowToday,
-                  activeColor: const Color(0xFF004D40),
-                  onChanged: (val) => setState(() => _dontShowToday = val ?? false),
-                ),
-                Text(
-                  'Hide & don\'t prompt again today',
-                  style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[700]),
-                ),
-              ],
-            ),
+                ],
+              ),
 
             const SizedBox(height: 12),
 
@@ -229,6 +237,7 @@ class _DailyMoodCheckinDialogState extends State<DailyMoodCheckinDialog> {
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 }

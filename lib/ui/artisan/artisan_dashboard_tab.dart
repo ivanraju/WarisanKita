@@ -116,55 +116,61 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            children: [
-                              Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  Container(
-                                    width: 60,
-                                    height: 60,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(color: const Color(0xFFFFD54F), width: 2),
-                                    ),
-                                  ),
-                                  CircleAvatar(
-                                    radius: 27,
-                                    backgroundColor: const Color(0xFFFFD54F),
-                                    child: Text(
-                                      'PM',
-                                      style: GoogleFonts.dmSerifDisplay(
-                                        color: const Color(0xFF004D40),
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 20,
+                          Expanded(
+                            child: Row(
+                              children: [
+                                Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    Container(
+                                      width: 60,
+                                      height: 60,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(color: const Color(0xFFFFD54F), width: 2),
                                       ),
                                     ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(width: 14),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Pak Mat Pottery Studio',
-                                    style: GoogleFonts.dmSerifDisplay(
-                                      color: Colors.white,
-                                      fontSize: 22,
+                                    CircleAvatar(
+                                      radius: 27,
+                                      backgroundColor: const Color(0xFFFFD54F),
+                                      child: Text(
+                                        'PM',
+                                        style: GoogleFonts.dmSerifDisplay(
+                                          color: const Color(0xFF004D40),
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 20,
+                                        ),
+                                      ),
                                     ),
+                                  ],
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Pak Mat Pottery Studio',
+                                        softWrap: true,
+                                        style: GoogleFonts.dmSerifDisplay(
+                                          color: Colors.white,
+                                          fontSize: 22,
+                                        ),
+                                      ),
+                                      Text(
+                                        '4th Generation Malay Clay Master • Est. 1998',
+                                        softWrap: true,
+                                        style: GoogleFonts.plusJakartaSans(
+                                          color: const Color(0xFFFFD54F),
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  Text(
-                                    '4th Generation Malay Clay Master • Est. 1998',
-                                    style: GoogleFonts.plusJakartaSans(
-                                      color: const Color(0xFFFFD54F),
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
@@ -190,23 +196,27 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Studio Live Cultural Status:',
-                                style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.white70),
-                              ),
-                              Text(
-                                _isStudioOpen ? '🟢 OPEN FOR EDUCATIONAL DEMOS' : '🔴 IN KILN SESSION (DEMOS PAUSED)',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  color: _isStudioOpen ? const Color(0xFF34D399) : const Color(0xFFFCA5A5),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Studio Live Cultural Status:',
+                                  style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.white70),
                                 ),
-                              ),
-                            ],
+                                Text(
+                                  _isStudioOpen ? '🟢 OPEN FOR EDUCATIONAL DEMOS' : '🔴 IN KILN SESSION (DEMOS PAUSED)',
+                                  softWrap: true,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: _isStudioOpen ? const Color(0xFF34D399) : const Color(0xFFFCA5A5),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
+                          const SizedBox(width: 8),
                           Switch(
                             value: _isStudioOpen,
                             onChanged: _toggleStudioStatus,
@@ -280,8 +290,11 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
                 const SizedBox(height: 28),
 
                 // 📊 INFORMATIONAL CULTURAL PRESERVATION METRICS & KNOWLEDGE TRANSFER HUB
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 12,
+                  runSpacing: 6,
                   children: [
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -339,8 +352,11 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      Wrap(
+                        alignment: WrapAlignment.spaceBetween,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 12,
+                        runSpacing: 10,
                         children: [
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -363,6 +379,7 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
                               border: Border.all(color: const Color(0xFF10B981)),
                             ),
                             child: Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
                                 const Icon(Icons.school_rounded, color: Color(0xFF34D399), size: 14),
                                 const SizedBox(width: 4),
@@ -645,6 +662,7 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
           const SizedBox(height: 12),
           Text(
             value,
+            softWrap: true,
             style: GoogleFonts.dmSerifDisplay(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -654,6 +672,7 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
           const SizedBox(height: 2),
           Text(
             title,
+            softWrap: true,
             style: GoogleFonts.plusJakartaSans(
               fontSize: 11,
               fontWeight: FontWeight.w600,
@@ -662,6 +681,7 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
           ),
           Text(
             subtitle,
+            softWrap: true,
             style: GoogleFonts.plusJakartaSans(
               fontSize: 10,
               fontWeight: FontWeight.bold,

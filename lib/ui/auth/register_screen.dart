@@ -488,6 +488,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         isArtisan
                             ? '🧳 Register as a Cultural Tourist instead?'
                             : '🎨 Are you a Master Artisan? Register your studio here',
+                        textAlign: TextAlign.center,
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
@@ -501,8 +502,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 16),
 
                 // Already Registered Link
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(
                       'Already registered? ',

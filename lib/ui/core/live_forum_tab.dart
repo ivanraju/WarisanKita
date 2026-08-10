@@ -228,7 +228,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
               Text(
                 'Report item: "$title"',
                 maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+                softWrap: true,
                 style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey[800]),
               ),
               const SizedBox(height: 14),
@@ -297,7 +297,13 @@ class _LiveForumTabState extends State<LiveForumTab> {
           children: [
             const Icon(Icons.delete_forever_rounded, color: Color(0xFFEF4444)),
             const SizedBox(width: 10),
-            Text('Delete Answer / Reply', style: GoogleFonts.dmSerifDisplay(fontSize: 18, color: const Color(0xFF004D40))),
+            Expanded(
+              child: Text(
+                'Delete Answer / Reply',
+                softWrap: true,
+                style: GoogleFonts.dmSerifDisplay(fontSize: 18, color: const Color(0xFF004D40)),
+              ),
+            ),
           ],
         ),
         content: Text(
@@ -343,7 +349,13 @@ class _LiveForumTabState extends State<LiveForumTab> {
           children: [
             const Icon(Icons.delete_forever_rounded, color: Color(0xFFEF4444)),
             const SizedBox(width: 10),
-            Text('Delete Question / Post', style: GoogleFonts.dmSerifDisplay(fontSize: 18, color: const Color(0xFF004D40))),
+            Expanded(
+              child: Text(
+                'Delete Question / Post',
+                softWrap: true,
+                style: GoogleFonts.dmSerifDisplay(fontSize: 18, color: const Color(0xFF004D40)),
+              ),
+            ),
           ],
         ),
         content: Text(
@@ -391,7 +403,13 @@ class _LiveForumTabState extends State<LiveForumTab> {
           children: [
             const Icon(Icons.edit_rounded, color: Color(0xFF004D40)),
             const SizedBox(width: 10),
-            Text('Edit Response', style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40))),
+            Expanded(
+              child: Text(
+                'Edit Response',
+                softWrap: true,
+                style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
+              ),
+            ),
           ],
         ),
         content: TextField(
@@ -449,7 +467,13 @@ class _LiveForumTabState extends State<LiveForumTab> {
           children: [
             const Icon(Icons.edit_rounded, color: Color(0xFF004D40)),
             const SizedBox(width: 10),
-            Text('Edit Question / Post Title', style: GoogleFonts.dmSerifDisplay(fontSize: 18, color: const Color(0xFF004D40))),
+            Expanded(
+              child: Text(
+                'Edit Question / Post Title',
+                softWrap: true,
+                style: GoogleFonts.dmSerifDisplay(fontSize: 18, color: const Color(0xFF004D40)),
+              ),
+            ),
           ],
         ),
         content: TextField(
@@ -516,23 +540,26 @@ class _LiveForumTabState extends State<LiveForumTab> {
                 top: 24,
                 bottom: MediaQuery.of(context).viewInsets.bottom + 24,
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Ask Question / Create Post',
-                        style: GoogleFonts.dmSerifDisplay(fontSize: 22, color: const Color(0xFF004D40)),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close_rounded),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ],
-                  ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Ask Question / Create Post',
+                            style: GoogleFonts.dmSerifDisplay(fontSize: 22, color: const Color(0xFF004D40)),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
                   const SizedBox(height: 16),
 
                   Text('Select Community Hub:', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold)),
@@ -649,7 +676,8 @@ class _LiveForumTabState extends State<LiveForumTab> {
                   ),
                 ],
               ),
-            );
+            ),
+          );
           },
         );
       },
@@ -663,16 +691,19 @@ class _LiveForumTabState extends State<LiveForumTab> {
     return Scaffold(
       backgroundColor: const Color(0xFFF1F5F9),
       appBar: AppBar(
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.forum_rounded, color: Color(0xFF004D40), size: 24),
-            const SizedBox(width: 8),
-            Text(
-              _activeThread == null ? 'Warisan Community Hub' : 'Question & Answers',
-              style: GoogleFonts.dmSerifDisplay(color: const Color(0xFF004D40), fontSize: 22),
-            ),
-          ],
+        title: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.forum_rounded, color: Color(0xFF004D40), size: 22),
+              const SizedBox(width: 8),
+              Text(
+                _activeThread == null ? 'Warisan Community Hub' : 'Question & Answers',
+                style: GoogleFonts.dmSerifDisplay(color: const Color(0xFF004D40), fontSize: 20),
+              ),
+            ],
+          ),
         ),
         backgroundColor: Colors.white,
         elevation: 0,
@@ -755,7 +786,8 @@ class _LiveForumTabState extends State<LiveForumTab> {
               ),
               const SizedBox(height: 8),
               // Sort Options (Hot, New, Top)
-              Padding(
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
                   children: [
@@ -887,7 +919,10 @@ class _LiveForumTabState extends State<LiveForumTab> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Subreddit & Author Info
-                      Row(
+                      Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 6,
+                        runSpacing: 4,
                         children: [
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -904,13 +939,11 @@ class _LiveForumTabState extends State<LiveForumTab> {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 8),
                           Text(
                             '• Posted by ${thread['authorName']}',
                             style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[600]),
                           ),
-                          if (isArtisan) ...[
-                            const SizedBox(width: 6),
+                          if (isArtisan)
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                               decoration: BoxDecoration(
@@ -926,9 +959,8 @@ class _LiveForumTabState extends State<LiveForumTab> {
                                 ),
                               ),
                             ),
-                          ],
-                          const Spacer(),
                           Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
                                 thread['timestamp'],
@@ -965,12 +997,15 @@ class _LiveForumTabState extends State<LiveForumTab> {
                         children: [
                           Icon(Icons.mode_comment_outlined, size: 14, color: Colors.grey[600]),
                           const SizedBox(width: 6),
-                          Text(
-                            '${thread['repliesCount']} Answers',
-                            style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey[700]),
+                          Flexible(
+                            child: Text(
+                              '${thread['repliesCount']} Answers',
+                              softWrap: true,
+                              style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey[700]),
+                            ),
                           ),
                           if (thread['isSolved'] == true) ...[
-                            const SizedBox(width: 12),
+                            const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                               decoration: BoxDecoration(
@@ -978,12 +1013,16 @@ class _LiveForumTabState extends State<LiveForumTab> {
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Row(
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
                                   const Icon(Icons.check_circle_rounded, size: 12, color: Color(0xFF166534)),
                                   const SizedBox(width: 4),
-                                  Text(
-                                    'Verified Answer',
-                                    style: GoogleFonts.plusJakartaSans(fontSize: 9, fontWeight: FontWeight.bold, color: const Color(0xFF166534)),
+                                  Flexible(
+                                    child: Text(
+                                      'Verified Answer',
+                                      softWrap: true,
+                                      style: GoogleFonts.plusJakartaSans(fontSize: 9, fontWeight: FontWeight.bold, color: const Color(0xFF166534)),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -1045,21 +1084,27 @@ class _LiveForumTabState extends State<LiveForumTab> {
             children: [
               Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF004D40).withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      _activeThread!['community'],
-                      style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF004D40)),
+                  Flexible(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF004D40).withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        _activeThread!['community'],
+                        softWrap: true,
+                        style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF004D40)),
+                      ),
                     ),
                   ),
-                  const Spacer(),
-                  Text(
-                    'Asked by ${_activeThread!['authorName']}',
-                    style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[600]),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      'Asked by ${_activeThread!['authorName']}',
+                      softWrap: true,
+                      style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[600]),
+                    ),
                   ),
                 ],
               ),
@@ -1078,6 +1123,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         const Icon(Icons.arrow_upward_rounded, size: 14, color: Color(0xFF004D40)),
                         const SizedBox(width: 4),
@@ -1196,9 +1242,12 @@ class _LiveForumTabState extends State<LiveForumTab> {
                 children: [
                   const Icon(Icons.verified_rounded, size: 14, color: Color(0xFFB45309)),
                   const SizedBox(width: 6),
-                  Text(
-                    'VERIFIED MASTER ARTISAN ANSWER',
-                    style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w900, color: const Color(0xFF78350F)),
+                  Flexible(
+                    child: Text(
+                      'VERIFIED MASTER ARTISAN ANSWER',
+                      softWrap: true,
+                      style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w900, color: const Color(0xFF78350F)),
+                    ),
                   ),
                 ],
               ),
@@ -1218,51 +1267,56 @@ class _LiveForumTabState extends State<LiveForumTab> {
                 ),
               ),
               const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        msg['sender'],
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF0F172A),
-                        ),
-                      ),
-                      if (isArtisan) ...[
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFEF3C7),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
                           child: Text(
-                            'MASTER',
-                            style: GoogleFonts.plusJakartaSans(fontSize: 8, fontWeight: FontWeight.bold, color: const Color(0xFF78350F)),
+                            msg['sender'],
+                            softWrap: true,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF0F172A),
+                            ),
                           ),
                         ),
+                        if (isArtisan) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFEF3C7),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              'MASTER',
+                              style: GoogleFonts.plusJakartaSans(fontSize: 8, fontWeight: FontWeight.bold, color: const Color(0xFF78350F)),
+                            ),
+                          ),
+                        ],
                       ],
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      Text(
-                        msg['time'],
-                        style: GoogleFonts.plusJakartaSans(fontSize: 10, color: Colors.grey),
-                      ),
-                      if (msg['isEdited'] == true || msg['time'].toString().contains('(edited)')) ...[
-                        const SizedBox(width: 4),
+                    ),
+                    Row(
+                      children: [
                         Text(
-                          '• (edited)',
-                          style: GoogleFonts.plusJakartaSans(fontSize: 10, fontStyle: FontStyle.italic, color: const Color(0xFFD97706), fontWeight: FontWeight.bold),
+                          msg['time'],
+                          style: GoogleFonts.plusJakartaSans(fontSize: 10, color: Colors.grey),
                         ),
+                        if (msg['isEdited'] == true || msg['time'].toString().contains('(edited)')) ...[
+                          const SizedBox(width: 4),
+                          Text(
+                            '• (edited)',
+                            style: GoogleFonts.plusJakartaSans(fontSize: 10, fontStyle: FontStyle.italic, color: const Color(0xFFD97706), fontWeight: FontWeight.bold),
+                          ),
+                        ],
                       ],
-                    ],
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
             ],
           ),

@@ -173,8 +173,8 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildFooter() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+    return Wrap(
+      alignment: WrapAlignment.center,
       children: [
         const Text("Don't have an account? ", style: TextStyle(color: Colors.white70)),
         GestureDetector(

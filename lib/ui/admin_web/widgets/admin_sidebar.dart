@@ -152,7 +152,7 @@ class AdminSidebar extends StatelessWidget {
                       Text(
                         'moderator@warisankita.my',
                         maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        softWrap: true,
                         style: GoogleFonts.plusJakartaSans(
                           color: const Color(0xFF94A3B8),
                           fontSize: 10,

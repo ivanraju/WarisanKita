@@ -44,7 +44,7 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
               Text(
                 'Report post: "$title"',
                 maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+                softWrap: true,
                 style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey[800]),
               ),
               const SizedBox(height: 14),
@@ -162,22 +162,27 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 22,
-                    backgroundImage: NetworkImage(widget.thread.authorAvatar),
-                  ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(widget.thread.authorName, style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 14)),
-                      const Text('Heritage Member', style: TextStyle(color: Colors.black26, fontSize: 11, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                ],
+              Expanded(
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 22,
+                      backgroundImage: NetworkImage(widget.thread.authorAvatar),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(widget.thread.authorName, softWrap: true, style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 14)),
+                          const Text('Heritage Member', softWrap: true, style: TextStyle(color: Colors.black26, fontSize: 11, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               OutlinedButton.icon(
                 onPressed: () => _showFlagDialog(context, widget.thread.title),
                 style: OutlinedButton.styleFrom(
@@ -233,13 +238,16 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
   Widget _buildResponseHeader() {
     return Row(
       children: [
-        Text(
-          'COMMUNITY RESPONSES',
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 12,
-            fontWeight: FontWeight.w800,
-            color: Colors.black26,
-            letterSpacing: 1.2,
+        Expanded(
+          child: Text(
+            'COMMUNITY RESPONSES',
+            softWrap: true,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: Colors.black26,
+              letterSpacing: 1.2,
+            ),
           ),
         ),
         const SizedBox(width: 8),
@@ -277,22 +285,27 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 14,
-                    backgroundColor: const Color(0xFF004D40),
-                    child: Text(
-                      reply.authorName[0],
-                      style: GoogleFonts.plusJakartaSans(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+              Expanded(
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 14,
+                      backgroundColor: const Color(0xFF004D40),
+                      child: Text(
+                        reply.authorName[0],
+                        style: GoogleFonts.plusJakartaSans(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    reply.authorName,
-                    style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 13),
-                  ),
-                ],
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        reply.authorName,
+                        softWrap: true,
+                        style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
               ),
               Text(
                 reply.timestamp,

@@ -85,11 +85,16 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
   void _showOfflineToast(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Row(
+        content: Row(
           children: [
-            Icon(Icons.wifi_off_rounded, color: Colors.white, size: 18),
-            SizedBox(width: 10),
-            Text('No internet connection. Showing cached data.'),
+            const Icon(Icons.wifi_off_rounded, color: Colors.white, size: 18),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'No internet connection. Showing cached data.',
+                softWrap: true,
+              ),
+            ),
           ],
         ),
         backgroundColor: const Color(0xFFEF4444),
@@ -127,9 +132,12 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        langVM.translate('Filter Heritage Directory'),
-                        style: GoogleFonts.dmSerifDisplay(fontSize: 22, color: const Color(0xFF004D40)),
+                      Expanded(
+                        child: Text(
+                          langVM.translate('Filter Heritage Directory'),
+                          softWrap: true,
+                          style: GoogleFonts.dmSerifDisplay(fontSize: 22, color: const Color(0xFF004D40)),
+                        ),
                       ),
                       IconButton(
                         icon: const Icon(Icons.close),
@@ -283,12 +291,16 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
           pinned: true,
           backgroundColor: const Color(0xFFF8F9FA),
           elevation: 0,
-          title: Text(
-            langVM.translate('Explore Living Heritage'),
-            style: GoogleFonts.dmSerifDisplay(
-              color: const Color(0xFF004D40),
-              fontSize: 26,
-              fontWeight: FontWeight.bold,
+          title: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              langVM.translate('Explore Living Heritage'),
+              style: GoogleFonts.dmSerifDisplay(
+                color: const Color(0xFF004D40),
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           actions: [
@@ -355,9 +367,12 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                   children: [
                     const Icon(Icons.map_rounded, color: Color(0xFFD97706), size: 14),
                     const SizedBox(width: 6),
-                    Text(
-                      langVM.translate('Filter by Region / State:'),
-                      style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFFD97706)),
+                    Expanded(
+                      child: Text(
+                        langVM.translate('Filter by Region / State:'),
+                        softWrap: true,
+                        style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFFD97706)),
+                      ),
                     ),
                   ],
                 ),
@@ -396,13 +411,15 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                 const SizedBox(height: 14),
 
                 // Recommended Preferences Section Banner
-                Row(
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 4,
                   children: [
                     Text(
                       'Preferences Matching:',
                       style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[600]),
                     ),
-                    const SizedBox(width: 8),
                     FilterChip(
                       label: Text(_hasPreferences ? '⚡ Personalized (Active)' : 'Off (Show All)'),
                       selected: _hasPreferences,
@@ -433,12 +450,15 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                           children: [
                             const Icon(Icons.auto_awesome_rounded, color: Color(0xFF15803D), size: 16),
                             const SizedBox(width: 6),
-                            Text(
-                              'Recommended for You (Based on Preferences)',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: const Color(0xFF15803D),
+                            Expanded(
+                              child: Text(
+                                'Recommended for You (Based on Preferences)',
+                                softWrap: true,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF15803D),
+                                ),
                               ),
                             ),
                           ],
@@ -581,13 +601,17 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      artisan['name'],
-                      style: GoogleFonts.dmSerifDisplay(
-                        fontSize: 20,
-                        color: const Color(0xFF004D40),
+                    Expanded(
+                      child: Text(
+                        artisan['name'],
+                        softWrap: true,
+                        style: GoogleFonts.dmSerifDisplay(
+                          fontSize: 20,
+                          color: const Color(0xFF004D40),
+                        ),
                       ),
                     ),
+                    const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
@@ -595,6 +619,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           const Icon(Icons.location_on_rounded, size: 12, color: Color(0xFFD97706)),
                           const SizedBox(width: 4),
@@ -615,7 +640,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                 Text(
                   artisan['bio'],
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                  softWrap: true,
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 12,
                     color: Colors.grey[600],
@@ -723,7 +748,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                   title,
                   style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  softWrap: true,
                 ),
                 Text(
                   category,

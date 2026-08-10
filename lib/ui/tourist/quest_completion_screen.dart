@@ -428,21 +428,25 @@ class _QuestCompletionScreenState extends State<QuestCompletionScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFD54F),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          '🔥 +500 EXP REWARD',
-                          style: GoogleFonts.plusJakartaSans(
-                            color: const Color(0xFF004D40),
-                            fontSize: 11,
-                            fontWeight: FontWeight.w900,
+                      Flexible(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFD54F),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            '🔥 +500 EXP REWARD',
+                            softWrap: true,
+                            style: GoogleFonts.plusJakartaSans(
+                              color: const Color(0xFF004D40),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w900,
+                            ),
                           ),
                         ),
                       ),
+                      const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
@@ -450,6 +454,7 @@ class _QuestCompletionScreenState extends State<QuestCompletionScreen> {
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(_isWithinRange ? Icons.near_me : Icons.location_off, color: Colors.white, size: 12),
                             const SizedBox(width: 4),
@@ -479,10 +484,13 @@ class _QuestCompletionScreenState extends State<QuestCompletionScreen> {
                   const Divider(color: Colors.white24),
                   const SizedBox(height: 10),
 
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    spacing: 12,
+                    runSpacing: 8,
                     children: [
                       Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: const [
                           Icon(Icons.timer_outlined, color: Color(0xFFFFD54F), size: 16),
                           SizedBox(width: 6),
@@ -490,6 +498,7 @@ class _QuestCompletionScreenState extends State<QuestCompletionScreen> {
                         ],
                       ),
                       Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: const [
                           Icon(Icons.workspace_premium_outlined, color: Color(0xFFFFD54F), size: 16),
                           SizedBox(width: 6),
@@ -505,28 +514,31 @@ class _QuestCompletionScreenState extends State<QuestCompletionScreen> {
             const SizedBox(height: 24),
 
             // SIMULATION CONTROLS BAR
-            Row(
-              children: [
-                Text('Distance Testing:', style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[600])),
-                const SizedBox(width: 10),
-                ChoiceChip(
-                  label: const Text('In Range (35m)'),
-                  selected: _isWithinRange && !_isGpsLost,
-                  onSelected: (_) => setState(() {
-                    _currentDistance = 35.0;
-                    _isGpsLost = false;
-                  }),
-                ),
-                const SizedBox(width: 8),
-                ChoiceChip(
-                  label: const Text('Out Range (85m)'),
-                  selected: !_isWithinRange && !_isGpsLost,
-                  onSelected: (_) => setState(() {
-                    _currentDistance = 85.0;
-                    _isGpsLost = false;
-                  }),
-                ),
-              ],
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  Text('Distance Testing:', style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[600])),
+                  const SizedBox(width: 10),
+                  ChoiceChip(
+                    label: const Text('In Range (35m)'),
+                    selected: _isWithinRange && !_isGpsLost,
+                    onSelected: (_) => setState(() {
+                      _currentDistance = 35.0;
+                      _isGpsLost = false;
+                    }),
+                  ),
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                    label: const Text('Out Range (85m)'),
+                    selected: !_isWithinRange && !_isGpsLost,
+                    onSelected: (_) => setState(() {
+                      _currentDistance = 85.0;
+                      _isGpsLost = false;
+                    }),
+                  ),
+                ],
+              ),
             ),
 
             const SizedBox(height: 24),

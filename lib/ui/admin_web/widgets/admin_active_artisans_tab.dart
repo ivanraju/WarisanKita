@@ -174,27 +174,32 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Verified Master Artisans Directory',
-                    style: GoogleFonts.dmSerifDisplay(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF0F172A),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Verified Master Artisans Directory',
+                      softWrap: true,
+                      style: GoogleFonts.dmSerifDisplay(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF0F172A),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Monitor and manage verified, licensed heritage craft masters across Malaysia.',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 14,
-                      color: const Color(0xFF64748B),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Monitor and manage verified, licensed heritage craft masters across Malaysia.',
+                      softWrap: true,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 13,
+                        color: const Color(0xFF64748B),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: 16),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
@@ -203,6 +208,7 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
                   border: Border.all(color: const Color(0xFF10B981)),
                 ),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     const Icon(Icons.verified_rounded, color: Color(0xFF10B981), size: 20),
                     const SizedBox(width: 8),

@@ -125,9 +125,12 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
         children: [
           Row(
             children: [
-              Text(
-                'Reported Content Queue',
-                style: GoogleFonts.dmSerifDisplay(fontSize: 26, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+              Expanded(
+                child: Text(
+                  'Reported Content Queue',
+                  softWrap: true,
+                  style: GoogleFonts.dmSerifDisplay(fontSize: 26, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+                ),
               ),
               const SizedBox(width: 12),
               Container(
@@ -186,17 +189,26 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                               child: const Icon(Icons.flag_rounded, size: 16, color: Color(0xFFEF4444)),
                             ),
                             const SizedBox(width: 10),
-                            Text(
-                              post['author'],
-                              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 14),
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      post['author'],
+                                      softWrap: true,
+                                      style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 14),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(6)),
+                                    child: Text(post['role'], style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                                  ),
+                                ],
+                              ),
                             ),
                             const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(6)),
-                              child: Text(post['role'], style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                            ),
-                            const Spacer(),
                             Text(post['timestamp'], style: TextStyle(fontSize: 11, color: Colors.grey[500])),
                           ],
                         ),
@@ -211,25 +223,25 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                         const SizedBox(height: 16),
 
                         // Action Buttons: Dismiss Flag, Edit Post, Delete Post (FR400_7)
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 8,
+                          alignment: WrapAlignment.end,
                           children: [
                             OutlinedButton.icon(
                               onPressed: () => _dismissFlag(post),
                               icon: const Icon(Icons.check_rounded, size: 16),
                               label: const Text('Dismiss Flag'),
                             ),
-                            const SizedBox(width: 10),
                             OutlinedButton.icon(
                               onPressed: () {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(content: Text('Edit Post view opened.')),
                                 );
                               },
-                              icon: const Icon(Icons.edit_outlined, size: 16),
+                              icon: const Icon(Icons.edit_rounded, size: 16),
                               label: const Text('Edit Post'),
                             ),
-                            const SizedBox(width: 10),
                             FilledButton.icon(
                               onPressed: () => _openDeletePostDialog(post),
                               style: FilledButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),

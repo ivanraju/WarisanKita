@@ -252,9 +252,12 @@ class _ArtisanTaskManagementScreenState extends State<ArtisanTaskManagementScree
           children: [
             const Icon(Icons.delete_forever_rounded, color: Color(0xFFEF4444)),
             const SizedBox(width: 10),
-            Text(
-              'Delete Quest?',
-              style: GoogleFonts.dmSerifDisplay(color: const Color(0xFF004D40), fontSize: 20),
+            Expanded(
+              child: Text(
+                'Delete Quest?',
+                softWrap: true,
+                style: GoogleFonts.dmSerifDisplay(color: const Color(0xFF004D40), fontSize: 20),
+              ),
             ),
           ],
         ),
@@ -429,49 +432,59 @@ class _ArtisanTaskManagementScreenState extends State<ArtisanTaskManagementScree
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: isDefault ? const Color(0xFF004D40).withValues(alpha: 0.12) : const Color(0xFFE0F2FE),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  task['category'],
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: isDefault ? const Color(0xFF004D40) : const Color(0xFF0284C7),
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isDefault ? const Color(0xFF004D40).withValues(alpha: 0.12) : const Color(0xFFE0F2FE),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    task['category'],
+                    softWrap: true,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: isDefault ? const Color(0xFF004D40) : const Color(0xFF0284C7),
+                    ),
                   ),
                 ),
               ),
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: isApproved ? const Color(0xFFD1FAE5) : const Color(0xFFFEF3C7),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      isApproved ? 'LIVE & APPROVED' : 'PENDING ADMIN APPROVAL',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: isApproved ? const Color(0xFF047857) : const Color(0xFFB45309),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: isApproved ? const Color(0xFFD1FAE5) : const Color(0xFFFEF3C7),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          isApproved ? 'LIVE & APPROVED' : 'PENDING ADMIN APPROVAL',
+                          softWrap: true,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: isApproved ? const Color(0xFF047857) : const Color(0xFFB45309),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                  if (!isDefault) ...[
-                    const SizedBox(width: 6),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFEF4444), size: 20),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      tooltip: 'Delete Quest',
-                      onPressed: () => _confirmDeleteQuest(task),
-                    ),
+                    if (!isDefault) ...[
+                      const SizedBox(width: 6),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFEF4444), size: 20),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        tooltip: 'Delete Quest',
+                        onPressed: () => _confirmDeleteQuest(task),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ],
           ),
@@ -499,10 +512,14 @@ class _ArtisanTaskManagementScreenState extends State<ArtisanTaskManagementScree
           const Divider(),
           const SizedBox(height: 8),
 
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            runSpacing: 8,
             children: [
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(Icons.stars_rounded, color: Color(0xFFD97706), size: 16),
                   const SizedBox(width: 4),
@@ -513,6 +530,7 @@ class _ArtisanTaskManagementScreenState extends State<ArtisanTaskManagementScree
                 ],
               ),
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   if (requiresQr) ...[
                     OutlinedButton.icon(
@@ -699,9 +717,12 @@ class _CreateGamificationTaskDialogState extends State<CreateGamificationTaskDia
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Create Workshop Quest',
-                style: GoogleFonts.dmSerifDisplay(fontSize: 22, color: const Color(0xFF004D40)),
+              Expanded(
+                child: Text(
+                  'Create Workshop Quest',
+                  softWrap: true,
+                  style: GoogleFonts.dmSerifDisplay(fontSize: 22, color: const Color(0xFF004D40)),
+                ),
               ),
               IconButton(
                 icon: const Icon(Icons.close),

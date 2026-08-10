@@ -179,12 +179,15 @@ class _ArtisanDirectChatScreenState extends State<ArtisanDirectChatScreen> {
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(
-                              msg['sender'],
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: isMe ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                            Flexible(
+                              child: Text(
+                                msg['sender'],
+                                softWrap: true,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: isMe ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                                ),
                               ),
                             ),
                             const SizedBox(width: 8),

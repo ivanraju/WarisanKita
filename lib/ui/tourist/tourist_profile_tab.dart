@@ -172,9 +172,12 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                     children: [
                       const Icon(Icons.stars_rounded, color: Color(0xFFFFD54F), size: 20),
                       const SizedBox(width: 6),
-                      Text(
-                        'Earned ${stamp['exp']} • ${stamp['date']}',
-                        style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 12, color: const Color(0xFF004D40)),
+                      Flexible(
+                        child: Text(
+                          'Earned ${stamp['exp']} • ${stamp['date']}',
+                          softWrap: true,
+                          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 12, color: const Color(0xFF004D40)),
+                        ),
                       ),
                     ],
                   )
@@ -262,11 +265,16 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
         SliverAppBar(
           backgroundColor: const Color(0xFFF8F9FA),
           elevation: 0,
-          title: Text(
-            langVM.translate('Heritage Passport & Mastery'),
-            style: GoogleFonts.dmSerifDisplay(
-              color: const Color(0xFF004D40),
-              fontSize: 24,
+          title: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              langVM.translate('Heritage Passport & Mastery'),
+              style: GoogleFonts.dmSerifDisplay(
+                color: const Color(0xFF004D40),
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           actions: [
@@ -316,21 +324,27 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Row(
-                              children: [
-                                const Icon(Icons.auto_awesome_rounded, color: Color(0xFFFFD54F), size: 20),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'PASPORT WARISAN KITA',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    color: const Color(0xFFFFD54F),
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: 1.5,
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.auto_awesome_rounded, color: Color(0xFFFFD54F), size: 20),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'PASPORT WARISAN KITA',
+                                      softWrap: true,
+                                      style: GoogleFonts.plusJakartaSans(
+                                        color: const Color(0xFFFFD54F),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: 1.5,
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
+                            const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
@@ -485,22 +499,29 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Heritage Stamps Collection',
-                          style: GoogleFonts.dmSerifDisplay(
-                            fontSize: 22,
-                            color: const Color(0xFF004D40),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Heritage Stamps Collection',
+                            maxLines: 2,
+                            softWrap: true,
+                            style: GoogleFonts.dmSerifDisplay(
+                              fontSize: 22,
+                              color: const Color(0xFF004D40),
+                            ),
                           ),
-                        ),
-                        Text(
-                          'Tap any stamp to inspect certificate lore',
-                          style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[600]),
-                        ),
-                      ],
+                          Text(
+                            'Tap any stamp to inspect certificate lore',
+                            maxLines: 2,
+                            softWrap: true,
+                            style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[600]),
+                          ),
+                        ],
+                      ),
                     ),
+                    const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
@@ -639,15 +660,19 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
     return Column(
       children: [
         Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, color: const Color(0xFFFFD54F), size: 16),
             const SizedBox(width: 6),
-            Text(
-              value,
-              style: GoogleFonts.dmSerifDisplay(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+            Flexible(
+              child: Text(
+                value,
+                softWrap: true,
+                style: GoogleFonts.dmSerifDisplay(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ],

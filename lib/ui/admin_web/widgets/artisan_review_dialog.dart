@@ -35,46 +35,53 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
       child: Container(
         width: 850,
         padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Modal Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF10B981).withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.rate_review_rounded, color: Color(0xFF10B981), size: 22),
-                    ),
-                    const SizedBox(width: 14),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Modal Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Row(
                       children: [
-                        Text(
-                          'Review Artisan Profile Application',
-                          style: GoogleFonts.dmSerifDisplay(fontSize: 22, fontWeight: FontWeight.bold),
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10B981).withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.rate_review_rounded, color: Color(0xFF10B981), size: 22),
                         ),
-                        Text(
-                          'Submitted on ${widget.artisan.dateSubmitted}',
-                          style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.grey[500]),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Review Artisan Profile Application',
+                                softWrap: true,
+                                style: GoogleFonts.dmSerifDisplay(fontSize: 22, fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                'Submitted on ${widget.artisan.dateSubmitted}',
+                                softWrap: true,
+                                style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.grey[500]),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
-                  ],
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B)),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
-            ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B)),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
 
             const SizedBox(height: 20),
             const Divider(),
@@ -260,7 +267,8 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildDetailRow(IconData icon, String label, String value) {
@@ -274,9 +282,12 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
             '$label: ',
             style: GoogleFonts.plusJakartaSans(fontSize: 11, color: const Color(0xFF64748B)),
           ),
-          Text(
-            value,
-            style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF1E293B)),
+          Expanded(
+            child: Text(
+              value,
+              softWrap: true,
+              style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF1E293B)),
+            ),
           ),
         ],
       ),

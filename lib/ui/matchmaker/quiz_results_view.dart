@@ -33,16 +33,16 @@ class QuizResultsScreen extends StatelessWidget {
               ),
             ),
           ),
-          
+
           SafeArea(
-            child: Padding(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 32.0),
               child: Column(
                 children: [
-                  const SizedBox(height: 60),
-                  _buildCelebrationBadge(),
                   const SizedBox(height: 40),
-                  
+                  _buildCelebrationBadge(),
+                  const SizedBox(height: 30),
+
                   Text(
                     'YOUR CRAFT SOUL IS...',
                     style: GoogleFonts.plusJakartaSans(
@@ -53,7 +53,7 @@ class QuizResultsScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  
+
                   ShaderMask(
                     shaderCallback: (bounds) => const LinearGradient(
                       colors: [Colors.white, Color(0xFFFFD54F)],
@@ -65,18 +65,18 @@ class QuizResultsScreen extends StatelessWidget {
                       textAlign: TextAlign.center,
                       style: GoogleFonts.dmSerifDisplay(
                         color: Colors.white,
-                        fontSize: 48,
+                        fontSize: 42,
                         height: 1.1,
                       ),
                     ),
                   ),
-                  
-                  const SizedBox(height: 32),
+
+                  const SizedBox(height: 24),
                   _buildResultCard(result.description, result.matchingCrafts),
-                  const Spacer(),
-                  
+                  const SizedBox(height: 32),
+
                   _buildExploreButton(context, result.matchingCrafts.isNotEmpty ? result.matchingCrafts.first : 'All Crafts'),
-                  
+
                   const SizedBox(height: 16),
                   TextButton(
                     onPressed: () => Navigator.pop(context),
@@ -159,9 +159,7 @@ class QuizResultsScreen extends StatelessWidget {
       ),
       child: ElevatedButton(
         onPressed: () {
-          // FIXED: updateFilter requires named parameter 'craft'
           context.read<DirectoryViewModel>().updateFilter(craft: matchedCraft);
-          // Switch tab to 'Explore' (Index 1)
           context.read<NavigationViewModel>().setTab(1);
           Navigator.pop(context);
         },

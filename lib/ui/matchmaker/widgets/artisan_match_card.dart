@@ -144,7 +144,7 @@ class ArtisanMatchCard extends StatelessWidget {
                       Text(
                         artisan.name,
                         maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        softWrap: true,
                         style: GoogleFonts.dmSerifDisplay(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
@@ -167,7 +167,7 @@ class ArtisanMatchCard extends StatelessWidget {
                             child: Text(
                               artisan.locationName,
                               maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                              softWrap: true,
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 12,
                                 color: isDark ? Colors.grey[400] : Colors.grey[600],
