@@ -225,14 +225,12 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.star_rounded, color: Color(0xFFFFD54F), size: 24),
+                            const Icon(Icons.verified_rounded, color: Color(0xFF004D40), size: 22),
                             const SizedBox(width: 6),
                             Text(
-                              '${widget.rating}',
-                              style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF004D40)),
+                              'Verified Artisan Studio',
+                              style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF004D40)),
                             ),
-                            const SizedBox(width: 4),
-                            Text('(128 Reviews)', style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.grey)),
                           ],
                         ),
                         Container(

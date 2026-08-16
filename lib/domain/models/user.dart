@@ -68,7 +68,24 @@ class UserModel {
       isDualRole ||
       roles.length > 1;
 
-  bool get isPendingApproval => status == 'PENDING_APPROVAL';
+  bool get isApproved => status == 'ACTIVE' || status == 'APPROVED';
+  bool get isPendingApproval => status == 'PENDING_APPROVAL' || status == 'PENDING';
+
+  bool get isApprovedArtisan =>
+      (role == 'Artisan' ||
+       role == 'Master Artisan' ||
+       isDualRole ||
+       roles.contains('Artisan') ||
+       roles.contains('Master Artisan')) &&
+      isApproved;
+
+  bool get isPendingArtisan =>
+      (role == 'Artisan' ||
+       role == 'Master Artisan' ||
+       isDualRole ||
+       roles.contains('Artisan') ||
+       roles.contains('Master Artisan')) &&
+      isPendingApproval;
 
   String get effectiveUsername {
     if (username != null && username!.trim().isNotEmpty) {

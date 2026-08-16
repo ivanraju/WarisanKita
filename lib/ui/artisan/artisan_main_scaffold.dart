@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:warisan_kita/ui/artisan/artisan_application_pending_screen.dart';
 import 'package:warisan_kita/ui/artisan/artisan_dashboard_tab.dart';
 import 'package:warisan_kita/ui/artisan/artisan_settings_screen.dart';
 import 'package:warisan_kita/ui/artisan/profile_builder_tab.dart';
 import 'package:warisan_kita/ui/core/live_forum_tab.dart';
+import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 
 class ArtisanMainScaffold extends StatefulWidget {
   const ArtisanMainScaffold({super.key});
@@ -23,6 +26,13 @@ class _ArtisanMainScaffoldState extends State<ArtisanMainScaffold> {
 
   @override
   Widget build(BuildContext context) {
+    final authVM = context.watch<AuthViewModel>();
+    final user = authVM.currentUser;
+
+    if (user != null && !user.isApprovedArtisan && (user.isPendingArtisan || user.status == 'PENDING_APPROVAL' || user.status == 'PENDING')) {
+      return const ArtisanApplicationPendingScreen();
+    }
+
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,

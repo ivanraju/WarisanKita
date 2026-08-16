@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:warisan_kita/viewmodels/forum_viewmodel.dart';
 
 class AdminForumModerationTab extends StatefulWidget {
   const AdminForumModerationTab({super.key});
@@ -9,32 +11,17 @@ class AdminForumModerationTab extends StatefulWidget {
 }
 
 class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
-  // FR400_6: Flagged threads and reported reply data
-  final List<Map<String, dynamic>> _reportedPosts = [
-    {
-      'id': 'p101',
-      'author': 'User_8492',
-      'role': 'Tourist',
-      'content': 'Offensive promotional spam link posted in Batik thread.',
-      'reason': 'Spam / Unauthorized Advertising',
-      'reportsCount': 5,
-      'timestamp': '12 mins ago',
-    },
-    {
-      'id': 'p102',
-      'author': 'Visitor_3920',
-      'role': 'Tourist',
-      'content': 'Inappropriate language directed at master artisan in Pottery thread.',
-      'reason': 'Harassment / Inappropriate Content',
-      'reportsCount': 3,
-      'timestamp': '45 mins ago',
-    },
-  ];
+  // FR400_6: Flagged threads and reported reply moderation queue
+  final List<Map<String, dynamic>> _staticReportedPosts = [];
 
   void _dismissFlag(Map<String, dynamic> post) {
-    setState(() {
-      _reportedPosts.removeWhere((p) => p['id'] == post['id']);
-    });
+    if (post['isDynamic'] == true) {
+      context.read<ForumViewModel>().dismissReport(post['id'].toString());
+    } else {
+      setState(() {
+        _staticReportedPosts.removeWhere((p) => p['id'] == post['id']);
+      });
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Flag dismissed for post by ${post['author']}.'),
@@ -49,7 +36,7 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
 
     showDialog(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: Text('Delete Forum Post', style: GoogleFonts.dmSerifDisplay(color: const Color(0xFFEF4444))),
@@ -73,13 +60,13 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+            TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Cancel')),
             FilledButton(
               onPressed: () {
                 final reason = reasonController.text.trim();
                 // C2: Reason Required = deletion_reason.length >= 10 AND deletion_reason.length <= 255
                 if (reason.length < 10 || reason.length > 255) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
                     const SnackBar(
                       content: Text('Deletion reason must be between 10 and 255 characters.'),
                       backgroundColor: Color(0xFFEF4444),
@@ -88,18 +75,21 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                   return;
                 }
 
-                Navigator.of(context).pop();
+                Navigator.of(dialogContext).pop();
 
-                // Soft Deletion in DB & Audit Trail Logging (FR400_8, M1)
-                setState(() {
-                  _reportedPosts.removeWhere((p) => p['id'] == post['id']);
-                });
+                if (post['isDynamic'] == true) {
+                  context.read<ForumViewModel>().deleteThread(post['id'].toString());
+                } else {
+                  setState(() {
+                    _staticReportedPosts.removeWhere((p) => p['id'] == post['id']);
+                  });
+                }
 
                 // M1: Action Logged
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
-                      'Forum content successfully moderated and author notified.',
+                      'Forum content successfully moderated ($reason) and author notified.',
                       style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold),
                     ),
                     backgroundColor: const Color(0xFF10B981),
@@ -118,6 +108,23 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
 
   @override
   Widget build(BuildContext context) {
+    final forumVM = context.watch<ForumViewModel>();
+
+    final dynamicReported = forumVM.threads.where((t) => t.isReported).map((t) {
+      return {
+        'id': t.id,
+        'author': t.authorName,
+        'role': t.isArtisan ? 'Master Artisan' : 'Tourist',
+        'content': t.title,
+        'reason': t.reportReason ?? 'User Reported Flag',
+        'reportsCount': 1,
+        'timestamp': t.timestamp,
+        'isDynamic': true,
+      };
+    }).toList();
+
+    final allReported = [...dynamicReported, ..._staticReportedPosts];
+
     return Padding(
       padding: const EdgeInsets.all(32.0),
       child: Column(
@@ -140,7 +147,7 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  '${_reportedPosts.length} Pending Flags',
+                  '${allReported.length} Pending Flags',
                   style: GoogleFonts.plusJakartaSans(color: const Color(0xFFEF4444), fontSize: 11, fontWeight: FontWeight.bold),
                 ),
               ),
@@ -149,7 +156,7 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
 
           const SizedBox(height: 20),
 
-          if (_reportedPosts.isEmpty)
+          if (allReported.isEmpty)
             Expanded(
               child: Center(
                 child: Column(
@@ -165,9 +172,9 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
           else
             Expanded(
               child: ListView.builder(
-                itemCount: _reportedPosts.length,
+                itemCount: allReported.length,
                 itemBuilder: (context, index) {
-                  final post = _reportedPosts[index];
+                  final post = allReported[index];
 
                   return Container(
                     margin: const EdgeInsets.only(bottom: 16),
@@ -194,7 +201,7 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                                 children: [
                                   Flexible(
                                     child: Text(
-                                      post['author'],
+                                      post['author'].toString(),
                                       softWrap: true,
                                       style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 14),
                                     ),
@@ -203,13 +210,13 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                     decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(6)),
-                                    child: Text(post['role'], style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                                    child: Text(post['role'].toString(), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
                                   ),
                                 ],
                               ),
                             ),
                             const SizedBox(width: 8),
-                            Text(post['timestamp'], style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+                            Text(post['timestamp'].toString(), style: TextStyle(fontSize: 11, color: Colors.grey[500])),
                           ],
                         ),
 
@@ -218,6 +225,21 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                         Text(
                           '"${post['content']}"',
                           style: GoogleFonts.plusJakartaSans(fontSize: 13, fontStyle: FontStyle.italic, color: const Color(0xFF334155)),
+                        ),
+
+                        const SizedBox(height: 8),
+
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFFBEB),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFFDE68A)),
+                          ),
+                          child: Text(
+                            'Reason: ${post['reason']}',
+                            style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFFB45309)),
+                          ),
                         ),
 
                         const SizedBox(height: 16),
@@ -232,15 +254,6 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                               onPressed: () => _dismissFlag(post),
                               icon: const Icon(Icons.check_rounded, size: 16),
                               label: const Text('Dismiss Flag'),
-                            ),
-                            OutlinedButton.icon(
-                              onPressed: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Edit Post view opened.')),
-                                );
-                              },
-                              icon: const Icon(Icons.edit_rounded, size: 16),
-                              label: const Text('Edit Post'),
                             ),
                             FilledButton.icon(
                               onPressed: () => _openDeletePostDialog(post),

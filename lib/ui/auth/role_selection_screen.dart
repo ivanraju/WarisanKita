@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:warisan_kita/ui/artisan/artisan_application_pending_screen.dart';
+import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 
 class RoleSelectionScreen extends StatelessWidget {
   const RoleSelectionScreen({super.key});
@@ -127,7 +130,23 @@ class RoleSelectionScreen extends StatelessWidget {
                 subtitle: 'Register your studio, manage your craft portfolio, track application status, and engage with heritage enthusiasts in the live forum.',
                 icon: Icons.palette_rounded,
                 accentColor: const Color(0xFFD97706),
-                onTap: () => Navigator.of(context).pushReplacementNamed('/artisan'),
+                onTap: () {
+                  final authVM = context.read<AuthViewModel>();
+                  final user = authVM.currentUser;
+                  if (user != null && !user.isApprovedArtisan) {
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(
+                        builder: (_) => ArtisanApplicationPendingScreen(
+                          studioName: user.studioName ?? 'Master Artisan Studio',
+                          craftCategory: user.craftCategory ?? 'Heritage Craft',
+                          ssmNumber: user.ssmNumber ?? 'Pending Document Verification',
+                        ),
+                      ),
+                    );
+                  } else {
+                    Navigator.of(context).pushReplacementNamed('/artisan');
+                  }
+                },
               ),
 
               const SizedBox(height: 16),

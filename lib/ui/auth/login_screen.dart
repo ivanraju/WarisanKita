@@ -62,6 +62,8 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 18),
             ...roles.map((role) {
               final isArtisan = role.contains('Artisan');
+              final bool isArtisanPending = isArtisan && (authVM.currentUser?.isApprovedArtisan != true);
+
               return Padding(
                 padding: const EdgeInsets.only(bottom: 10),
                 child: Material(
@@ -72,16 +74,42 @@ class _LoginScreenState extends State<LoginScreen> {
                     onTap: () {
                       Navigator.of(ctx).pop();
                       authVM.selectActiveRole(role);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Active Session Role Set: $role'),
-                          backgroundColor: const Color(0xFF10B981),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
                       if (isArtisan) {
-                        Navigator.of(context).pushReplacementNamed('/artisan');
+                        if (isArtisanPending) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('⏳ Opening Master Artisan Application Status...'),
+                              backgroundColor: Color(0xFFD97706),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                          Navigator.of(context).pushReplacement(
+                            MaterialPageRoute(
+                              builder: (_) => ArtisanApplicationPendingScreen(
+                                studioName: authVM.currentUser?.studioName ?? 'Master Artisan Studio',
+                                craftCategory: authVM.currentUser?.craftCategory ?? 'Heritage Craft',
+                                ssmNumber: authVM.currentUser?.ssmNumber ?? 'Pending Document Verification',
+                              ),
+                            ),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Active Session Role Set: $role'),
+                              backgroundColor: const Color(0xFF10B981),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                          Navigator.of(context).pushReplacementNamed('/artisan');
+                        }
                       } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Active Session Role Set: $role'),
+                            backgroundColor: const Color(0xFF10B981),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
                         Navigator.of(context).pushReplacementNamed('/tourist');
                       }
                     },
@@ -90,30 +118,59 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: Row(
                         children: [
                           Icon(
-                            isArtisan ? Icons.palette_rounded : Icons.explore_rounded,
-                            color: isArtisan ? const Color(0xFFD97706) : const Color(0xFF0284C7),
+                            isArtisan ? (isArtisanPending ? Icons.lock_clock_rounded : Icons.palette_rounded) : Icons.explore_rounded,
+                            color: isArtisan ? (isArtisanPending ? Colors.grey : const Color(0xFFD97706)) : const Color(0xFF0284C7),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  role,
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: isArtisan ? const Color(0xFFB45309) : const Color(0xFF0369A1),
-                                  ),
+                                Row(
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        role,
+                                        softWrap: true,
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: isArtisan
+                                              ? (isArtisanPending ? Colors.grey[700] : const Color(0xFFB45309))
+                                              : const Color(0xFF0369A1),
+                                        ),
+                                      ),
+                                    ),
+                                    if (isArtisanPending) ...[
+                                      const SizedBox(width: 6),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFFEF3C7),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          'PENDING REVIEW',
+                                          style: GoogleFonts.plusJakartaSans(fontSize: 9, fontWeight: FontWeight.bold, color: const Color(0xFF92400E)),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
                                 ),
                                 Text(
-                                  isArtisan ? 'Access studio management & masterwork' : 'Explore crafts, map & quests',
+                                  isArtisan
+                                      ? (isArtisanPending ? 'Studio application currently under admin verification' : 'Access studio management & masterwork')
+                                      : 'Explore crafts, map & quests',
                                   style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.black54),
                                 ),
                               ],
                             ),
                           ),
-                          const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.black45),
+                          Icon(
+                            isArtisanPending ? Icons.lock_outline_rounded : Icons.arrow_forward_ios_rounded,
+                            size: 14,
+                            color: isArtisanPending ? Colors.grey : Colors.black45,
+                          ),
                         ],
                       ),
                     ),

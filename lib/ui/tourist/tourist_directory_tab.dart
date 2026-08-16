@@ -786,10 +786,10 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.star_rounded, color: Color(0xFFFFD54F), size: 14),
+                          const Icon(Icons.verified_rounded, color: Color(0xFFFFD54F), size: 14),
                           const SizedBox(width: 4),
                           Text(
-                            '${artisan['rating']} (120+ Reviews)',
+                            '${artisan['craft']} Studio',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,

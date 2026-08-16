@@ -190,7 +190,7 @@ class AuthViewModel extends ChangeNotifier {
       if (user.role == 'Admin') {
         targetRoute = '/admin';
       } else if (user.role == 'Artisan' || user.role == 'Master Artisan') {
-        if (user.status == 'PENDING_APPROVAL') {
+        if (!user.isApprovedArtisan) {
           targetRoute = 'pending_artisan';
         } else {
           targetRoute = '/artisan';
@@ -218,6 +218,10 @@ class AuthViewModel extends ChangeNotifier {
 
   // UC001 - A5: Select Active Session Role
   void selectActiveRole(String role) {
+    if (role.contains('Artisan') && _currentUser != null && !_currentUser!.isApprovedArtisan) {
+      // Security guard: Cannot select Master Artisan role unless approved by admin
+      return;
+    }
     _activeRole = role;
     _requiresRoleSelection = false;
     if (_currentUser != null) {

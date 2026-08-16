@@ -19,12 +19,29 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width > 800;
+    final authVM = context.watch<AuthViewModel>();
+    final user = authVM.currentUser;
+    final String effectiveStudio = (user?.studioName != null && user!.studioName!.isNotEmpty)
+        ? user.studioName!
+        : ((studioName.isNotEmpty) ? studioName : 'Traditional Craft Studio');
+    final String effectiveCraft = (user?.craftCategory != null && user!.craftCategory!.isNotEmpty)
+        ? user.craftCategory!
+        : ((craftCategory.isNotEmpty) ? craftCategory : 'Heritage Craft');
+    final String effectiveSsm = (user?.ssmNumber != null && user!.ssmNumber!.isNotEmpty)
+        ? user.ssmNumber!
+        : ((ssmNumber.isNotEmpty) ? ssmNumber : 'Under Verification');
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
+        leading: Navigator.of(context).canPop()
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF004D40)),
+                onPressed: () => Navigator.of(context).pop(),
+              )
+            : null,
         title: Text(
           'Application Status',
           style: GoogleFonts.dmSerifDisplay(color: const Color(0xFF004D40), fontSize: 22),
@@ -174,11 +191,11 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
                   ),
                   child: Column(
                     children: [
-                      _buildSummaryRow('Studio Name:', studioName),
+                      _buildSummaryRow('Studio Name:', effectiveStudio),
                       const SizedBox(height: 8),
-                      _buildSummaryRow('Craft Category:', craftCategory),
+                      _buildSummaryRow('Craft Category:', effectiveCraft),
                       const SizedBox(height: 8),
-                      _buildSummaryRow('SSM Reg. Number:', ssmNumber),
+                      _buildSummaryRow('SSM Reg. Number:', effectiveSsm),
                       const SizedBox(height: 8),
                       _buildSummaryRow('Uploaded Proof:', 'SSM_Cert.pdf, Kraftangan_Cert.pdf'),
                     ],
@@ -265,6 +282,27 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
                     icon: const Icon(Icons.headset_mic_rounded, size: 18, color: Color(0xFF004D40)),
                     label: Text(
                       'Contact Verification Support',
+                      style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF004D40)),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: TextButton.icon(
+                    onPressed: () {
+                      if (Navigator.of(context).canPop()) {
+                        Navigator.of(context).pop();
+                      } else {
+                        Navigator.of(context).pushReplacementNamed('/tourist');
+                      }
+                    },
+                    icon: const Icon(Icons.explore_rounded, size: 18, color: Color(0xFF004D40)),
+                    label: Text(
+                      'Explore as Cultural Tourist while waiting',
                       style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF004D40)),
                     ),
                   ),

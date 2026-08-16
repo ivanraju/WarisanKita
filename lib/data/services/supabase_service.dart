@@ -1131,44 +1131,397 @@ class SupabaseService {
 
   // --- Forum Services ---
 
+  static final List<ForumThread> _forumStore = [];
+  static final Map<String, int> _sessionThreadVotes = {};
+  static final Map<String, int> _sessionReplyVotes = {};
+
   Future<List<ForumThread>> fetchThreads() async {
-    await Future.delayed(const Duration(milliseconds: 600));
-    return [
-      ForumThread(
-        id: 'f1',
-        title: 'Identifying authentic Terengganu Batik',
-        authorName: 'Aminah Bakar',
-        authorAvatar: 'https://i.pravatar.cc/150?u=1',
-        createdAt: DateTime.now().subtract(const Duration(hours: 3)),
-        replyCount: 14,
-        tags: ['Batik', 'Guide'],
-        replies: [
-          ThreadReply(
-            id: 'r1',
-            authorName: 'Master Zaid',
-            content: 'Look for slight irregularities in the chanting lines. Hand-drawn batik is never factory-perfect.',
-            timestamp: '1h ago',
-            isVerifiedArtisan: true,
-          ),
-          ThreadReply(
-            id: 'r2',
-            authorName: 'Collector_Ali',
-            content: 'Also, check if the color bleeds through to the back side perfectly.',
-            timestamp: '45m ago',
-          ),
-        ],
-      ),
-      ForumThread(
-        id: 'f2',
-        title: 'The symbolism of Wau Bulan shapes',
-        authorName: 'Aizat Rahim',
-        authorAvatar: 'https://i.pravatar.cc/150?u=3',
-        createdAt: DateTime.now().subtract(const Duration(days: 1)),
-        replyCount: 8,
-        tags: ['Wau', 'History'],
-        replies: [],
-      ),
-    ];
+    await Future.delayed(const Duration(milliseconds: 300));
+    final client = _client;
+    if (client != null) {
+      try {
+        final res = await client.from('forum_posts').select();
+        final List<ForumThread> remote = [];
+        if (res.isNotEmpty) {
+          for (final row in res) {
+            final threadMap = Map<String, dynamic>.from(row);
+            threadMap['userVote'] = _sessionThreadVotes[threadMap['id']] ?? (threadMap['user_vote'] as int?) ?? 0;
+
+            final localMatch = _forumStore.where((l) => l.id == threadMap['id']).firstOrNull;
+
+            try {
+              final repliesRes = await client.from('forum_replies').select().eq('thread_id', threadMap['id']);
+              final List<Map<String, dynamic>> processedReplies = [];
+              for (final r in repliesRes) {
+                final rMap = Map<String, dynamic>.from(r);
+                rMap['userVote'] = _sessionReplyVotes[rMap['id']] ?? (rMap['user_vote'] as int?) ?? 0;
+                processedReplies.add(rMap);
+              }
+              if (processedReplies.isNotEmpty) {
+                threadMap['replies'] = processedReplies;
+              } else if (localMatch != null && localMatch.replies.isNotEmpty) {
+                threadMap['replies'] = localMatch.replies.map((r) => r.toMap()).toList();
+              }
+            } catch (_) {
+              if (localMatch != null && localMatch.replies.isNotEmpty) {
+                threadMap['replies'] = localMatch.replies.map((r) => r.toMap()).toList();
+              }
+            }
+            remote.add(ForumThread.fromMap(threadMap));
+          }
+        }
+        _forumStore.clear();
+        _forumStore.addAll(remote);
+        return remote;
+      } catch (e) {
+        debugPrint('Supabase fetchThreads error: $e');
+      }
+    }
+    return List.from(_forumStore);
+  }
+
+  Future<void> createThread(ForumThread thread) async {
+    _forumStore.insert(0, thread);
+    _sessionThreadVotes[thread.id] = 1; // Author automatically upvotes own thread
+
+    final client = _client;
+    if (client != null) {
+      final String? authUid = client.auth.currentUser?.id;
+      final String? userStoreUid = _userStore[thread.authorEmail]?['id']?.toString();
+      final String effectiveUid = thread.userId ?? authUid ?? userStoreUid ?? '00000000-0000-4000-8000-000000000001';
+      final String authorRole = thread.isArtisan ? 'Master Artisan' : 'Tourist';
+      final String postContent = thread.replies.isNotEmpty ? thread.replies.first.text : thread.title;
+      final String tagValue = thread.community.replaceAll('c/', '');
+
+      final Map<String, dynamic> verifiedDbMap = {
+        'id': thread.id,
+        'user_id': effectiveUid,
+        'tag': tagValue,
+        'title': thread.title,
+        'content': postContent,
+        'author_name': thread.authorName,
+        'author_role': authorRole,
+        'is_artisan': thread.isArtisan,
+        'upvotes': thread.upvotes,
+        'timestamp': thread.timestamp,
+      };
+
+      final Map<String, dynamic> fullMap = {
+        ...verifiedDbMap,
+        if (thread.isReported) ...{
+          'is_reported': thread.isReported,
+          if (thread.reportReason != null) 'report_reason': thread.reportReason,
+          if (thread.reportNotes != null) 'report_notes': thread.reportNotes,
+        },
+      };
+
+      try {
+        await client.from('forum_posts').insert(fullMap);
+      } catch (e) {
+        debugPrint('Supabase createThread full insert note: $e');
+        try {
+          // Fallback to verified columns without optional report fields
+          await client.from('forum_posts').insert(verifiedDbMap);
+        } catch (e2) {
+          debugPrint('Supabase createThread verifiedDbMap fallback error: $e2');
+          try {
+            // Ultra-minimal fallback for legacy/basic forum_posts table
+            await client.from('forum_posts').insert({
+              'id': thread.id,
+              'user_id': effectiveUid,
+              'author_name': thread.authorName,
+              'author_role': authorRole,
+              'tag': tagValue,
+              'title': thread.title,
+              'content': postContent,
+            });
+          } catch (e3) {
+            debugPrint('Supabase createThread ultra-minimal fallback error: $e3');
+          }
+        }
+      }
+
+      for (final reply in thread.replies) {
+        try {
+          await client.from('forum_replies').insert(reply.toDbMap(thread.id));
+        } catch (re) {
+          try {
+            await client.from('forum_replies').insert({
+              'id': reply.id,
+              'thread_id': thread.id,
+              'sender': reply.sender,
+              'author_email': reply.authorEmail,
+              'text': reply.text,
+              'timestamp': reply.timestamp,
+            });
+          } catch (re2) {
+            debugPrint('Supabase createThread initial reply note: $re2');
+          }
+        }
+      }
+    }
+  }
+
+  Future<void> postReply(String threadId, ThreadReply reply) async {
+    _sessionReplyVotes[reply.id] = 1;
+
+    final idx = _forumStore.indexWhere((t) => t.id == threadId);
+    if (idx != -1) {
+      final t = _forumStore[idx];
+      final updatedReplies = List<ThreadReply>.from(t.replies)..add(reply);
+      final bool nowSolved = t.isSolved || reply.isArtisan;
+      _forumStore[idx] = t.copyWith(
+        replies: updatedReplies,
+        replyCount: updatedReplies.length,
+        isSolved: nowSolved,
+      );
+    }
+    final client = _client;
+    if (client != null) {
+      final Map<String, dynamic> verifiedReplyMap = {
+        'id': reply.id,
+        'thread_id': threadId,
+        'sender': reply.sender,
+        'author_email': reply.authorEmail,
+        'is_artisan': reply.isArtisan,
+        'upvotes': reply.upvotes,
+        'timestamp': reply.timestamp,
+        'text': reply.text,
+      };
+
+      try {
+        await client.from('forum_replies').insert(verifiedReplyMap);
+      } catch (e) {
+        debugPrint('Supabase postReply verified insert note: $e');
+        try {
+          await client.from('forum_replies').insert({
+            'id': reply.id,
+            'thread_id': threadId,
+            'sender': reply.sender,
+            'text': reply.text,
+          });
+        } catch (e2) {
+          debugPrint('Supabase postReply fallback error: $e2');
+        }
+      }
+    }
+  }
+
+  Future<void> voteThread(String threadId, int voteDirection) async {
+    final int currentVote = _sessionThreadVotes[threadId] ?? 0;
+    int newVote = 0;
+    int delta = 0;
+
+    if (currentVote == voteDirection) {
+      // Toggle off
+      newVote = 0;
+      delta = -voteDirection;
+    } else {
+      newVote = voteDirection;
+      delta = voteDirection - currentVote;
+    }
+
+    _sessionThreadVotes[threadId] = newVote;
+
+    final idx = _forumStore.indexWhere((t) => t.id == threadId);
+    if (idx != -1) {
+      final t = _forumStore[idx];
+      final int updatedUpvotes = t.upvotes + delta;
+      _forumStore[idx] = t.copyWith(
+        upvotes: updatedUpvotes,
+        userVote: newVote,
+      );
+
+      final client = _client;
+      if (client != null) {
+        try {
+          await client.from('forum_posts').update({
+            'upvotes': updatedUpvotes,
+          }).eq('id', threadId);
+        } catch (e) {
+          debugPrint('Supabase voteThread note: $e');
+        }
+      }
+    }
+  }
+
+  Future<void> voteReply(String threadId, String replyId, int voteDirection) async {
+    final int currentVote = _sessionReplyVotes[replyId] ?? 0;
+    int newVote = 0;
+    int delta = 0;
+
+    if (currentVote == voteDirection) {
+      // Toggle off
+      newVote = 0;
+      delta = -voteDirection;
+    } else {
+      newVote = voteDirection;
+      delta = voteDirection - currentVote;
+    }
+
+    _sessionReplyVotes[replyId] = newVote;
+
+    final tIdx = _forumStore.indexWhere((t) => t.id == threadId);
+    if (tIdx != -1) {
+      final t = _forumStore[tIdx];
+      final rIdx = t.replies.indexWhere((r) => r.id == replyId);
+      if (rIdx != -1) {
+        final r = t.replies[rIdx];
+        final int updatedUpvotes = r.upvotes + delta;
+        final updatedReply = r.copyWith(
+          upvotes: updatedUpvotes,
+          userVote: newVote,
+        );
+        final updatedReplies = List<ThreadReply>.from(t.replies)..[rIdx] = updatedReply;
+        _forumStore[tIdx] = t.copyWith(replies: updatedReplies);
+
+        final client = _client;
+        if (client != null) {
+          try {
+            await client.from('forum_replies').update({
+              'upvotes': updatedUpvotes,
+            }).eq('id', replyId);
+          } catch (e) {
+            debugPrint('Supabase voteReply note: $e');
+          }
+        }
+      }
+    }
+  }
+
+  Future<void> editThread(String threadId, String newTitle) async {
+    final idx = _forumStore.indexWhere((t) => t.id == threadId);
+    if (idx != -1) {
+      _forumStore[idx] = _forumStore[idx].copyWith(
+        title: newTitle,
+        isEdited: true,
+      );
+    }
+    final client = _client;
+    if (client != null) {
+      try {
+        await client.from('forum_posts').update({
+          'title': newTitle,
+          'is_edited': true,
+        }).eq('id', threadId);
+      } catch (e) {
+        try {
+          await client.from('forum_posts').update({
+            'title': newTitle,
+          }).eq('id', threadId);
+        } catch (e2) {
+          debugPrint('Supabase editThread note: $e2');
+        }
+      }
+    }
+  }
+
+  Future<void> deleteThread(String threadId) async {
+    _forumStore.removeWhere((t) => t.id == threadId);
+    final client = _client;
+    if (client != null) {
+      try {
+        await client.from('forum_posts').delete().eq('id', threadId);
+        try {
+          await client.from('forum_replies').delete().eq('thread_id', threadId);
+        } catch (_) {}
+      } catch (e) {
+        debugPrint('Supabase deleteThread note: $e');
+      }
+    }
+  }
+
+  Future<void> editReply(String threadId, String replyId, String newText) async {
+    final tIdx = _forumStore.indexWhere((t) => t.id == threadId);
+    if (tIdx != -1) {
+      final t = _forumStore[tIdx];
+      final rIdx = t.replies.indexWhere((r) => r.id == replyId);
+      if (rIdx != -1) {
+        final updatedReply = t.replies[rIdx].copyWith(text: newText, isEdited: true);
+        final updatedReplies = List<ThreadReply>.from(t.replies)..[rIdx] = updatedReply;
+        _forumStore[tIdx] = t.copyWith(replies: updatedReplies);
+      }
+    }
+    final client = _client;
+    if (client != null) {
+      try {
+        await client.from('forum_replies').update({
+          'text': newText,
+          'is_edited': true,
+        }).eq('id', replyId);
+      } catch (e) {
+        try {
+          await client.from('forum_replies').update({
+            'content': newText,
+          }).eq('id', replyId);
+        } catch (e2) {
+          debugPrint('Supabase editReply note: $e2');
+        }
+      }
+    }
+  }
+
+  Future<void> deleteReply(String threadId, String replyId) async {
+    final tIdx = _forumStore.indexWhere((t) => t.id == threadId);
+    if (tIdx != -1) {
+      final t = _forumStore[tIdx];
+      final updatedReplies = List<ThreadReply>.from(t.replies)..removeWhere((r) => r.id == replyId);
+      _forumStore[tIdx] = t.copyWith(replies: updatedReplies, replyCount: updatedReplies.length);
+    }
+    final client = _client;
+    if (client != null) {
+      try {
+        await client.from('forum_replies').delete().eq('id', replyId);
+      } catch (e) {
+        debugPrint('Supabase deleteReply note: $e');
+      }
+    }
+  }
+
+  Future<void> reportThread(String threadId, String reason, String notes) async {
+    final idx = _forumStore.indexWhere((t) => t.id == threadId);
+    if (idx != -1) {
+      _forumStore[idx] = _forumStore[idx].copyWith(
+        isReported: true,
+        reportReason: reason,
+        reportNotes: notes,
+      );
+    }
+    final client = _client;
+    if (client != null) {
+      try {
+        await client.from('forum_posts').update({
+          'is_reported': true,
+          'report_reason': reason,
+          'report_notes': notes,
+        }).eq('id', threadId);
+      } catch (e) {
+        debugPrint('Supabase reportThread note: $e');
+      }
+    }
+  }
+
+  Future<void> dismissReport(String threadId) async {
+    final idx = _forumStore.indexWhere((t) => t.id == threadId);
+    if (idx != -1) {
+      _forumStore[idx] = _forumStore[idx].copyWith(
+        isReported: false,
+        reportReason: null,
+        reportNotes: null,
+      );
+    }
+    final client = _client;
+    if (client != null) {
+      try {
+        await client.from('forum_posts').update({
+          'is_reported': false,
+          'report_reason': null,
+          'report_notes': null,
+        }).eq('id', threadId);
+      } catch (e) {
+        debugPrint('Supabase dismissReport note: $e');
+      }
+    }
   }
 
   // --- Gamification Services ---
