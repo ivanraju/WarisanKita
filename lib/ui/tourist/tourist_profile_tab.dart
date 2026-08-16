@@ -148,57 +148,61 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                   stamp['title'],
                   style: GoogleFonts.dmSerifDisplay(fontSize: 22, color: const Color(0xFF0F172A)),
                 ),
-
                 Text(
-                  stamp['location'],
-                  style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.grey[600]),
+                  stamp['category'],
+                  style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: stamp['color']),
                 ),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 const Divider(),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
+
+                Row(
+                  children: [
+                    const Icon(Icons.location_on_rounded, size: 16, color: Color(0xFF004D40)),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        stamp['location'],
+                        style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF334155)),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 8),
+
+                Row(
+                  children: [
+                    const Icon(Icons.stars_rounded, size: 16, color: Color(0xFFD97706)),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Reward: ${stamp['exp']}',
+                      style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFFD97706)),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 14),
 
                 Text(
                   stamp['lore'],
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.plusJakartaSans(fontSize: 13, color: const Color(0xFF334155), height: 1.4),
+                  style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.grey[600], height: 1.4),
                 ),
-
-                const SizedBox(height: 20),
-
-                if (unlocked)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.stars_rounded, color: Color(0xFFFFD54F), size: 20),
-                      const SizedBox(width: 6),
-                      Flexible(
-                        child: Text(
-                          'Earned ${stamp['exp']} • ${stamp['date']}',
-                          softWrap: true,
-                          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 12, color: const Color(0xFF004D40)),
-                        ),
-                      ),
-                    ],
-                  )
-                else
-                  Text(
-                    '📌 Visit studio location to unlock stamp!',
-                    style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFFEF4444)),
-                  ),
 
                 const SizedBox(height: 24),
 
                 SizedBox(
                   width: double.infinity,
+                  height: 48,
                   child: FilledButton(
                     onPressed: () => Navigator.of(context).pop(),
                     style: FilledButton.styleFrom(
                       backgroundColor: const Color(0xFF004D40),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     ),
-                    child: const Text('CLOSE PASSPORT SEAL'),
+                    child: const Text('CLOSE STAMP SEAL', style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
                 ),
               ],
@@ -212,46 +216,60 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
   void _showCertificateModal() {
     showDialog(
       context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-        child: Container(
-          padding: const EdgeInsets.all(28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.verified_rounded, size: 56, color: Color(0xFFFFD54F)),
-              const SizedBox(height: 12),
-              Text(
-                'OFFICIAL HERITAGE GUARDIAN CERTIFICATE',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFFB45309)),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Issued to Aiman Haziq',
-                style: GoogleFonts.dmSerifDisplay(fontSize: 22, color: const Color(0xFF004D40)),
-              ),
-              const SizedBox(height: 14),
-              const Divider(),
-              const SizedBox(height: 14),
-              Text(
-                'This certificate confirms that Aiman Haziq has completed 14 Cultural Quests and directly supported 4 Master Artisan Families in Melaka, Terengganu, and Kelantan.',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.plusJakartaSans(fontSize: 12, color: const Color(0xFF334155), height: 1.4),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF004D40)),
-                  child: const Text('CLOSE CERTIFICATE'),
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF3C7),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: const Color(0xFFD97706), width: 2),
+                  ),
+                  child: const Icon(Icons.workspace_premium_rounded, size: 48, color: Color(0xFFB45309)),
                 ),
-              ),
-            ],
+                const SizedBox(height: 16),
+                Text(
+                  'NATIONAL HERITAGE GUARDIAN',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'OFFICIAL DIGITAL CERTIFICATE OF APPRECIATION',
+                  style: GoogleFonts.plusJakartaSans(fontSize: 9, fontWeight: FontWeight.w900, color: const Color(0xFFD97706), letterSpacing: 1),
+                ),
+                const SizedBox(height: 16),
+                const Divider(),
+                const SizedBox(height: 12),
+                Text(
+                  'This certifies that Aiman Haziq has actively supported Malaysian craft preservation by completing 14 cultural quests across 8 verified master studios.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.plusJakartaSans(fontSize: 12, height: 1.4, color: const Color(0xFF334155)),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  height: 44,
+                  child: FilledButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF004D40),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    child: const Text('CLOSE PASSPORT SEAL'),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -295,7 +313,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 🛂 ROYAL MALAYSIAN HERITAGE PASSPORT BOOKLET CARD
+                // 🛂 POLARSTEPS INSPIRED ROYAL PASSPORT BOOKLET CARD
                 GestureDetector(
                   onTap: _showCertificateModal,
                   child: Container(
@@ -312,11 +330,12 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                       borderRadius: BorderRadius.circular(28),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF004D40).withValues(alpha: 0.3),
-                          blurRadius: 20,
+                          color: const Color(0xFF004D40).withValues(alpha: 0.35),
+                          blurRadius: 24,
                           offset: const Offset(0, 10),
                         )
                       ],
+                      border: Border.all(color: const Color(0xFFFFD54F).withValues(alpha: 0.3), width: 1.5),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -346,11 +365,11 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                             ),
                             const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
                                 color: Colors.white.withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: const Color(0xFFFFD54F).withValues(alpha: 0.4)),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: const Color(0xFFFFD54F).withValues(alpha: 0.5)),
                               ),
                               child: Text(
                                 '#MY-HERITAGE-8492',
@@ -372,15 +391,21 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                               alignment: Alignment.center,
                               children: [
                                 Container(
-                                  width: 74,
-                                  height: 74,
+                                  width: 76,
+                                  height: 76,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    border: Border.all(color: const Color(0xFFFFD54F), width: 2),
+                                    border: Border.all(color: const Color(0xFFFFD54F), width: 2.5),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(0xFFFFD54F).withValues(alpha: 0.3),
+                                        blurRadius: 12,
+                                      )
+                                    ],
                                   ),
                                 ),
                                 CircleAvatar(
-                                  radius: 33,
+                                  radius: 34,
                                   backgroundColor: const Color(0xFFFFD54F),
                                   child: Text(
                                     'AH',
@@ -414,17 +439,17 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                  const SizedBox(height: 6),
+                                  const SizedBox(height: 8),
                                   Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       ClipRRect(
-                                        borderRadius: BorderRadius.circular(4),
+                                        borderRadius: BorderRadius.circular(6),
                                         child: LinearProgressIndicator(
                                           value: 2450 / 3000,
                                           backgroundColor: Colors.white24,
                                           color: const Color(0xFFFFD54F),
-                                          minHeight: 6,
+                                          minHeight: 8,
                                         ),
                                       ),
                                       const SizedBox(height: 4),
@@ -433,6 +458,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                         style: GoogleFonts.plusJakartaSans(
                                           color: Colors.white70,
                                           fontSize: 10,
+                                          fontWeight: FontWeight.w600,
                                         ),
                                       ),
                                     ],
@@ -460,7 +486,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                   ),
                 ),
 
-                const SizedBox(height: 28),
+                const SizedBox(height: 24),
 
                 // 🌱 HERITAGE PRESERVATION IMPACT CARD
                 Container(
@@ -469,10 +495,24 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                     color: const Color(0xFFF0FDF4),
                     borderRadius: BorderRadius.circular(24),
                     border: Border.all(color: const Color(0xFF86EFAC)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF166534).withValues(alpha: 0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      )
+                    ],
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.nature_people_rounded, size: 40, color: Color(0xFF166534)),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF166534).withValues(alpha: 0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.nature_people_rounded, size: 28, color: Color(0xFF166534)),
+                      ),
                       const SizedBox(width: 14),
                       Expanded(
                         child: Column(
@@ -493,7 +533,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                   ),
                 ),
 
-                const SizedBox(height: 28),
+                const SizedBox(height: 24),
 
                 // 📜 HERITAGE PASSPORT STAMPS COLLECTION HEADER
                 Row(
@@ -504,7 +544,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Heritage Stamps Collection',
+                            'Heritage Passport Stamps',
                             maxLines: 2,
                             softWrap: true,
                             style: GoogleFonts.dmSerifDisplay(
@@ -523,18 +563,25 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                     ),
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
                         color: const Color(0xFFFEF3C7),
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.5)),
                       ),
-                      child: Text(
-                        '4 / 6 Stamps',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFFB45309),
-                        ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.verified_rounded, size: 12, color: Color(0xFFB45309)),
+                          const SizedBox(width: 4),
+                          Text(
+                            '4 / 6 STAMPS',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                              color: const Color(0xFFB45309),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -546,7 +593,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
           ),
         ),
 
-        // 🎨 VIBRANT PASSPORT STAMPS GRID
+        // 🎨 PERFECTLY CENTERED PASSPORT STAMPS GRID
         SliverPadding(
           padding: const EdgeInsets.symmetric(horizontal: 20.0),
           sliver: SliverGrid(
@@ -554,7 +601,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
               crossAxisCount: 2,
               crossAxisSpacing: 16,
               mainAxisSpacing: 16,
-              childAspectRatio: 0.95,
+              childAspectRatio: 0.92,
             ),
             delegate: SliverChildBuilderDelegate(
               (context, index) {
@@ -567,53 +614,60 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: unlocked ? Colors.white : const Color(0xFFF1F5F9),
+                      color: unlocked ? Colors.white : const Color(0xFFF8FAFC),
                       borderRadius: BorderRadius.circular(24),
                       border: Border.all(
-                        color: unlocked ? color.withValues(alpha: 0.4) : Colors.black12,
+                        color: unlocked ? color.withValues(alpha: 0.35) : Colors.black12,
                         width: unlocked ? 1.5 : 1.0,
                       ),
                       boxShadow: unlocked
                           ? [
                               BoxShadow(
-                                color: color.withValues(alpha: 0.08),
-                                blurRadius: 12,
-                                offset: const Offset(0, 4),
+                                color: color.withValues(alpha: 0.12),
+                                blurRadius: 16,
+                                offset: const Offset(0, 6),
                               )
                             ]
                           : [],
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Stack(
                           alignment: Alignment.center,
                           children: [
                             Container(
-                              width: 58,
-                              height: 58,
+                              width: 64,
+                              height: 64,
                               decoration: BoxDecoration(
-                                color: unlocked ? color.withValues(alpha: 0.12) : Colors.grey[300],
+                                color: unlocked ? color.withValues(alpha: 0.12) : Colors.grey[200],
                                 shape: BoxShape.circle,
                                 border: Border.all(
                                   color: unlocked ? color : Colors.grey[400]!,
-                                  width: 1.5,
+                                  width: 2.0,
                                 ),
                               ),
                             ),
                             Icon(
                               stamp['icon'],
-                              color: unlocked ? color : Colors.grey[500],
-                              size: 28,
+                              color: unlocked ? color : Colors.grey[400],
+                              size: 30,
                             ),
                             if (unlocked)
                               Positioned(
                                 top: 0,
                                 right: 0,
                                 child: Container(
-                                  padding: const EdgeInsets.all(2),
-                                  decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                                  child: const Icon(Icons.stars_rounded, size: 14, color: Color(0xFFFFD54F)),
+                                  padding: const EdgeInsets.all(3),
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFFFFD54F),
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(color: Colors.black26, blurRadius: 4)
+                                    ],
+                                  ),
+                                  child: const Icon(Icons.stars_rounded, size: 14, color: Color(0xFF004D40)),
                                 ),
                               ),
                           ],
@@ -625,20 +679,27 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                           stamp['title'],
                           textAlign: TextAlign.center,
                           style: GoogleFonts.dmSerifDisplay(
-                            fontSize: 14,
+                            fontSize: 15,
                             fontWeight: FontWeight.bold,
                             color: unlocked ? const Color(0xFF0F172A) : Colors.grey[500],
                           ),
                         ),
 
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 6),
 
-                        Text(
-                          unlocked ? stamp['date'] : 'LOCKED',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: unlocked ? color : Colors.grey[400],
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: unlocked ? color.withValues(alpha: 0.1) : Colors.grey[200],
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            unlocked ? stamp['date'] : 'LOCKED STAMP',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: unlocked ? color : Colors.grey[500],
+                            ),
                           ),
                         ),
                       ],
@@ -651,7 +712,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
           ),
         ),
 
-        const SliverToBoxAdapter(child: SizedBox(height: 40)),
+        const SliverToBoxAdapter(child: SizedBox(height: 100)),
       ],
     );
   }

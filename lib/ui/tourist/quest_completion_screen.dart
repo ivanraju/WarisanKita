@@ -153,7 +153,7 @@ class _QuestCompletionScreenState extends State<QuestCompletionScreen> {
                     border: Border.all(color: const Color(0xFFFFD54F), width: 2),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFFFFD54F).withOpacity(0.3),
+                        color: const Color(0xFFFFD54F).withValues(alpha: 0.3),
                         blurRadius: 20,
                       )
                     ],
@@ -178,7 +178,7 @@ class _QuestCompletionScreenState extends State<QuestCompletionScreen> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF10B981).withOpacity(0.2),
+                            color: const Color(0xFF10B981).withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: const Text(
@@ -416,7 +416,7 @@ class _QuestCompletionScreenState extends State<QuestCompletionScreen> {
                 borderRadius: BorderRadius.circular(28),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF004D40).withOpacity(0.3),
+                    color: const Color(0xFF004D40).withValues(alpha: 0.3),
                     blurRadius: 16,
                     offset: const Offset(0, 8),
                   )
@@ -561,7 +561,7 @@ class _QuestCompletionScreenState extends State<QuestCompletionScreen> {
                   color: done ? const Color(0xFFF0FDF4) : Colors.white,
                   borderRadius: BorderRadius.circular(18),
                   border: Border.all(
-                    color: done ? const Color(0xFF86EFAC) : Colors.black.withOpacity(0.06),
+                    color: done ? const Color(0xFF86EFAC) : Colors.black.withValues(alpha: 0.06),
                   ),
                 ),
                 child: Row(

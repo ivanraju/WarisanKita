@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:warisan_kita/ui/matchmaker/tourist_matchmaker_view.dart';
 import 'package:warisan_kita/ui/core/live_forum_tab.dart';
 import 'package:warisan_kita/ui/tourist/tourist_directory_tab.dart';
@@ -28,52 +29,124 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
     final langVM = context.watch<LanguageViewModel>();
 
     return Scaffold(
+      extendBody: true,
       body: IndexedStack(
         index: _currentIndex,
         children: _tabs,
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 20,
-              offset: const Offset(0, -4),
-            )
-          ],
+      bottomNavigationBar: SafeArea(
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: const Color(0xFF0F172A),
+            borderRadius: BorderRadius.circular(32),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF004D40).withValues(alpha: 0.35),
+                blurRadius: 24,
+                offset: const Offset(0, 10),
+              ),
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.2),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.12),
+              width: 1.5,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildNavItem(
+                index: 0,
+                icon: Icons.explore_outlined,
+                activeIcon: Icons.explore_rounded,
+                label: langVM.translate('Explore'),
+              ),
+              _buildNavItem(
+                index: 1,
+                icon: Icons.near_me_outlined,
+                activeIcon: Icons.near_me_rounded,
+                label: langVM.translate('Matchmaker'),
+              ),
+              _buildNavItem(
+                index: 2,
+                icon: Icons.forum_outlined,
+                activeIcon: Icons.forum_rounded,
+                label: langVM.translate('Forum'),
+              ),
+              _buildNavItem(
+                index: 3,
+                icon: Icons.badge_outlined,
+                activeIcon: Icons.badge_rounded,
+                label: langVM.translate('Passport'),
+              ),
+            ],
+          ),
         ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: (index) => setState(() => _currentIndex = index),
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: Colors.white,
-          selectedItemColor: const Color(0xFF004D40),
-          unselectedItemColor: Colors.black38,
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
-          unselectedLabelStyle: const TextStyle(fontSize: 11),
-          elevation: 0,
-          items: [
-            BottomNavigationBarItem(
-              icon: const Icon(Icons.explore_outlined),
-              activeIcon: const Icon(Icons.explore),
-              label: langVM.translate('Explore'),
+      ),
+    );
+  }
+
+  Widget _buildNavItem({
+    required int index,
+    required IconData icon,
+    required IconData activeIcon,
+    required String label,
+  }) {
+    final bool isSelected = _currentIndex == index;
+
+    return GestureDetector(
+      onTap: () => setState(() => _currentIndex = index),
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOutCubic,
+        padding: EdgeInsets.symmetric(
+          horizontal: isSelected ? 16 : 12,
+          vertical: 8,
+        ),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? const Color(0xFF004D40)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(24),
+          border: isSelected
+              ? Border.all(color: const Color(0xFFFFD54F).withValues(alpha: 0.5), width: 1)
+              : null,
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFF004D40).withValues(alpha: 0.6),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  )
+                ]
+              : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isSelected ? activeIcon : icon,
+              size: 20,
+              color: isSelected ? const Color(0xFFFFD54F) : Colors.white60,
             ),
-            BottomNavigationBarItem(
-              icon: const Icon(Icons.map_outlined),
-              activeIcon: const Icon(Icons.map),
-              label: langVM.translate('Matchmaker'),
-            ),
-            BottomNavigationBarItem(
-              icon: const Icon(Icons.forum_outlined),
-              activeIcon: const Icon(Icons.forum),
-              label: langVM.translate('Forum'),
-            ),
-            BottomNavigationBarItem(
-              icon: const Icon(Icons.card_membership_outlined),
-              activeIcon: const Icon(Icons.card_membership),
-              label: langVM.translate('Passport'),
-            ),
+            if (isSelected) ...[
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ],
           ],
         ),
       ),

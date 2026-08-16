@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
-import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
+import 'package:warisan_kita/ui/tourist/artisan_direct_chat_screen.dart';
+import 'package:warisan_kita/ui/tourist/quest_completion_screen.dart';
 
 class ArtisanDetailScreen extends StatefulWidget {
   final String artisanName;
@@ -59,11 +59,10 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final langVM = context.watch<LanguageViewModel>();
-
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
         slivers: [
           // Top Image Carousel Sliver AppBar
           SliverAppBar(
@@ -71,7 +70,7 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
             pinned: true,
             backgroundColor: const Color(0xFF004D40),
             leading: CircleAvatar(
-              backgroundColor: Colors.black.withOpacity(0.4),
+              backgroundColor: Colors.black.withValues(alpha: 0.4),
               child: IconButton(
                 icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
                 onPressed: () => Navigator.of(context).pop(),
@@ -79,7 +78,7 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
             ),
             actions: [
               CircleAvatar(
-                backgroundColor: Colors.black.withOpacity(0.4),
+                backgroundColor: Colors.black.withValues(alpha: 0.4),
                 child: IconButton(
                   icon: const Icon(Icons.share_rounded, color: Colors.white),
                   onPressed: () {},
@@ -109,9 +108,9 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
-                          Colors.black.withOpacity(0.3),
+                          Colors.black.withValues(alpha: 0.3),
                           Colors.transparent,
-                          Colors.black.withOpacity(0.8),
+                          Colors.black.withValues(alpha: 0.8),
                         ],
                       ),
                     ),
@@ -130,7 +129,7 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                             shape: BoxShape.circle,
                             color: _currentCarouselIndex == index
                                 ? const Color(0xFFFFD54F)
-                                : Colors.white.withOpacity(0.5),
+                                : Colors.white.withValues(alpha: 0.5),
                           ),
                         ),
                       ),
@@ -152,9 +151,9 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                           child: Text(
                             widget.craftCategory,
                             style: GoogleFonts.plusJakartaSans(
-                              color: const Color(0xFF004D40),
-                              fontSize: 11,
                               fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                              color: const Color(0xFF004D40),
                             ),
                           ),
                         ),
@@ -162,8 +161,8 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                         Text(
                           widget.artisanName,
                           style: GoogleFonts.dmSerifDisplay(
-                            color: Colors.white,
                             fontSize: 28,
+                            color: Colors.white,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -175,7 +174,7 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
             ),
           ),
 
-          // Content Details
+          // Main Screen Content
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(24.0),
@@ -203,61 +202,54 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                         ),
                         child: Text(
                           widget.experience,
-                          style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFFB45309)),
+                          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 11, color: const Color(0xFFB45309)),
                         ),
                       ),
                     ],
                   ),
 
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
 
-                  // 🟢 STUDIO LIVE CULTURAL STATUS CARD
+                  // Rating & Live Status Bar
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFECFDF5),
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0xFF10B981)),
+                      boxShadow: [
+                        BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4))
+                      ],
                     ),
                     child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF10B981),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+                        Row(
+                          children: [
+                            const Icon(Icons.star_rounded, color: Color(0xFFFFD54F), size: 24),
+                            const SizedBox(width: 6),
+                            Text(
+                              '${widget.rating}',
+                              style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF004D40)),
+                            ),
+                            const SizedBox(width: 4),
+                            Text('(128 Reviews)', style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.grey)),
+                          ],
                         ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFDCFCE7),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(
                             children: [
-                              Text(
-                                langVM.translate('STUDIO LIVE CULTURAL STATUS'),
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w900,
-                                  color: const Color(0xFF047857),
-                                  letterSpacing: 1.1,
-                                ),
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(color: Color(0xFF16A34A), shape: BoxShape.circle),
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                langVM.translate('OPEN FOR EDUCATIONAL DEMOS'),
-                                style: GoogleFonts.dmSerifDisplay(
-                                  fontSize: 16,
-                                  color: const Color(0xFF065F46),
-                                ),
-                              ),
-                              Text(
-                                langVM.translate('Master artisan is currently in studio spinning clay labu sayong vessels live.'),
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 11,
-                                  color: const Color(0xFF047857),
-                                ),
-                              ),
+                              const SizedBox(width: 6),
+                              Text('OPEN DEMOS', style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF15803D))),
                             ],
                           ),
                         ),
@@ -265,37 +257,45 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
 
-                  // 🎧 AUDIO LORE STORY PLAYER PILL
+                  // Audio Lore Story Banner
                   GestureDetector(
                     onTap: _toggleAudioLore,
                     child: Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(18),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF004D40),
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF004D40), Color(0xFF00251A)],
+                        ),
                         borderRadius: BorderRadius.circular(20),
-                        boxShadow: [BoxShadow(color: const Color(0xFF004D40).withOpacity(0.2), blurRadius: 10)],
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF004D40).withValues(alpha: 0.3),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          )
+                        ],
                       ),
                       child: Row(
                         children: [
                           Icon(
                             _isPlayingAudioLore ? Icons.pause_circle_filled_rounded : Icons.play_circle_fill_rounded,
                             color: const Color(0xFFFFD54F),
-                            size: 32,
+                            size: 38,
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 14),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  langVM.translate('Listen to Master Artisan Audio Lore'),
-                                  style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                                  _isPlayingAudioLore ? 'NOW PLAYING AUDIO LORE' : 'LISTEN TO CULTURAL AUDIO STORY',
+                                  style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w900, color: const Color(0xFFFFD54F), letterSpacing: 1),
                                 ),
                                 Text(
-                                  _isPlayingAudioLore ? '▶ Playing 2:15 Audio Lore Story' : 'Tap to hear Pak Mat explain 25 yrs of pottery heritage',
-                                  style: GoogleFonts.plusJakartaSans(fontSize: 10, color: const Color(0xFFFFD54F)),
+                                  'Master Pak Mat: 4th Gen Labu Sayong Heritage Story',
+                                  style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
                                 ),
                               ],
                             ),
@@ -306,27 +306,22 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                   ),
 
                   const SizedBox(height: 24),
-                  const Divider(),
-                  const SizedBox(height: 16),
 
-                  // Master Bio Section
-                  Text(
-                    langVM.translate('About the Artisan Master & Heritage'),
-                    style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
-                  ),
-                  const SizedBox(height: 10),
+                  // Master Bio Card
+                  Text('Artisan Biography', style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40))),
+                  const SizedBox(height: 8),
                   Text(
                     widget.bio,
-                    style: GoogleFonts.plusJakartaSans(fontSize: 14, height: 1.6, color: Colors.black87),
+                    style: GoogleFonts.plusJakartaSans(fontSize: 13, color: const Color(0xFF475569), height: 1.6),
                   ),
 
                   const SizedBox(height: 24),
 
-                  // 📜 CULTURAL CRAFT ORIGIN & HERITAGE HISTORY LORE
+                  // Historical Lore Card
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFEF3C7),
+                      color: const Color(0xFFFFFBEB),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(color: const Color(0xFFF59E0B)),
                     ),
@@ -340,7 +335,6 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                             Expanded(
                               child: Text(
                                 'Historical Origin & Cultural Lore',
-                                maxLines: 2,
                                 softWrap: true,
                                 style: GoogleFonts.dmSerifDisplay(fontSize: 16, color: const Color(0xFF78350F)),
                               ),
@@ -437,7 +431,7 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                     decoration: BoxDecoration(
                       color: const Color(0xFFE2E8F0),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.black.withOpacity(0.06)),
+                      border: Border.all(color: Colors.black.withValues(alpha: 0.06)),
                     ),
                     child: Stack(
                       alignment: Alignment.center,
@@ -450,7 +444,7 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                               child: Icon(
                                 Icons.map_outlined,
                                 size: 80,
-                                color: Colors.indigo.withOpacity(0.2),
+                                color: Colors.indigo.withValues(alpha: 0.2),
                               ),
                             ),
                           ),
@@ -492,14 +486,82 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 28),
-
-                  const SizedBox(height: 80),
+                  const SizedBox(height: 100),
                 ],
               ),
             ),
           ),
         ],
+      ),
+      bottomNavigationBar: SafeArea(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 20,
+                offset: const Offset(0, -6),
+              )
+            ],
+            border: const Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => ArtisanDirectChatScreen(
+                          artisanName: widget.artisanName,
+                          craftCategory: widget.craftCategory,
+                          imageUrl: widget.imageUrl,
+                        ),
+                      ),
+                    );
+                  },
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Color(0xFF004D40), width: 1.5),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                  icon: const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF004D40), size: 18),
+                  label: Text(
+                    'Chat Master',
+                    style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, color: const Color(0xFF004D40)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => QuestCompletionScreen(
+                          workshopName: widget.artisanName,
+                          craftCategory: widget.craftCategory,
+                        ),
+                      ),
+                    );
+                  },
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF004D40),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                  icon: const Icon(Icons.stars_rounded, color: Color(0xFFFFD54F), size: 18),
+                  label: Text(
+                    'START QUEST',
+                    style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w900, letterSpacing: 0.5),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -515,7 +577,7 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.black.withOpacity(0.06)),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.06)),
       ),
       child: Row(
         children: [
@@ -545,7 +607,7 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.black.withOpacity(0.06)),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.06)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
