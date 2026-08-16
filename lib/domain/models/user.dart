@@ -17,6 +17,7 @@ class UserModel {
   final String? bio;
   final String? address;
   final String? state;
+  final String? phone;
 
   const UserModel({
     required this.id,
@@ -35,6 +36,7 @@ class UserModel {
     this.bio,
     this.address,
     this.state,
+    this.phone,
   });
 
   bool get isDualRole =>
@@ -112,6 +114,7 @@ class UserModel {
     String? bio,
     String? address,
     String? state,
+    String? phone,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -130,6 +133,7 @@ class UserModel {
       bio: bio ?? this.bio,
       address: address ?? this.address,
       state: state ?? this.state,
+      phone: phone ?? this.phone,
     );
   }
 
@@ -151,6 +155,7 @@ class UserModel {
       'bio': bio,
       'address': address,
       'state': state,
+      'phone': phone,
     };
   }
 
@@ -176,6 +181,7 @@ class UserModel {
       bio: map['bio'],
       address: map['address'],
       state: map['state'],
+      phone: map['phone'] ?? map['phone_number'],
     );
   }
 }
