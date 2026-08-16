@@ -34,8 +34,8 @@ void main() async {
 
   // Initialize Supabase
   await Supabase.initialize(
-    url: 'https://placeholder.supabase.co',
-    anonKey: 'placeholder-key',
+    url: 'https://zmvykemnpuremkebjvyo.supabase.co',
+    publishableKey: 'sb_publishable_8XUf77oFBVRsQ5fq1N8aOw_UljZ5waS',
   );
 
   runApp(
