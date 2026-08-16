@@ -6,12 +6,14 @@ class UserManagementTable extends StatelessWidget {
   final List<UserModel> users;
   final Function(UserModel) onSuspend;
   final Function(UserModel) onReactivate;
+  final Function(UserModel)? onResetPassword;
 
   const UserManagementTable({
     super.key,
     required this.users,
     required this.onSuspend,
     required this.onReactivate,
+    this.onResetPassword,
   });
 
   @override
@@ -136,7 +138,9 @@ class UserManagementTable extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    'Joined ${user.joinedDate}',
+                    user.username != null && user.username!.isNotEmpty
+                        ? '@${user.username} • Joined ${user.joinedDate}'
+                        : 'Joined ${user.joinedDate}',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 10,
                       color: const Color(0xFF94A3B8),
@@ -217,33 +221,44 @@ class UserManagementTable extends StatelessWidget {
           ),
         ),
 
-        // Actions Cell (Suspend / Reactivate)
+        // Actions Cell (Suspend / Reactivate + Reset Password)
         DataCell(
-          user.isSuspended
-              ? ElevatedButton.icon(
-                  onPressed: () => onReactivate(user),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF10B981),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    minimumSize: const Size(0, 32),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  icon: const Icon(Icons.check_circle_outline_rounded, size: 14),
-                  label: const Text('Reactivate', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                )
-              : OutlinedButton.icon(
-                  onPressed: () => onSuspend(user),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFFEF4444),
-                    side: const BorderSide(color: Color(0xFFEF4444), width: 1.5),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    minimumSize: const Size(0, 32),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  icon: const Icon(Icons.block_rounded, size: 14),
-                  label: const Text('Suspend', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              user.isSuspended
+                  ? ElevatedButton.icon(
+                      onPressed: () => onReactivate(user),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF10B981),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        minimumSize: const Size(0, 32),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      icon: const Icon(Icons.check_circle_outline_rounded, size: 14),
+                      label: const Text('Reactivate', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                    )
+                  : OutlinedButton.icon(
+                      onPressed: () => onSuspend(user),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFFEF4444),
+                        side: const BorderSide(color: Color(0xFFEF4444), width: 1.5),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        minimumSize: const Size(0, 32),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      icon: const Icon(Icons.block_rounded, size: 14),
+                      label: const Text('Suspend', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                    ),
+              const SizedBox(width: 8),
+              IconButton(
+                icon: const Icon(Icons.lock_reset_rounded, size: 18, color: Color(0xFF64748B)),
+                tooltip: 'Send Password Reset Email',
+                onPressed: onResetPassword != null ? () => onResetPassword!(user) : null,
+              ),
+            ],
+          ),
         ),
       ],
     );

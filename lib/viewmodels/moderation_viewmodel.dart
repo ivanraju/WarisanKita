@@ -276,7 +276,91 @@ class ModerationViewModel extends ChangeNotifier {
     ),
   ];
 
+  void updateUserProfileInState({
+    required String email,
+    String? username,
+    String? displayName,
+    String? studioName,
+    String? craftCategory,
+    String? state,
+    String? phone,
+    String? bio,
+  }) {
+    final cleanEmail = email.trim().toLowerCase();
+    final targetName = studioName ?? displayName ?? username;
+
+    final userIdx = _registeredUsers.indexWhere((u) => u.email.toLowerCase() == cleanEmail);
+    if (userIdx != -1) {
+      final user = _registeredUsers[userIdx];
+      _registeredUsers[userIdx] = user.copyWith(
+        username: username ?? user.username,
+        displayName: displayName ?? username ?? user.displayName,
+        studioName: targetName ?? user.studioName,
+        craftCategory: craftCategory ?? user.craftCategory,
+        state: state ?? user.state,
+        phone: phone ?? user.phone,
+        bio: bio ?? user.bio,
+      );
+    }
+
+    final artisanIdx = _activeArtisanMasters.indexWhere((a) => a.email.toLowerCase() == cleanEmail);
+    if (artisanIdx != -1) {
+      final artisan = _activeArtisanMasters[artisanIdx];
+      _activeArtisanMasters[artisanIdx] = artisan.copyWith(
+        name: targetName ?? artisan.name,
+        category: craftCategory ?? artisan.category,
+        state: state ?? artisan.state,
+        phone: phone ?? artisan.phone,
+        bio: bio ?? artisan.bio,
+      );
+    }
+
+    notifyListeners();
+  }
+
+  String _userSearchQuery = '';
+  String get userSearchQuery => _userSearchQuery;
+
+  String _userRoleFilter = 'All Roles';
+  String get userRoleFilter => _userRoleFilter;
+
+  String _userStatusFilter = 'All Statuses';
+  String get userStatusFilter => _userStatusFilter;
+
+  final List<String> userRoles = const [
+    'All Roles',
+    'Cultural Tourist',
+    'Master Artisan',
+    'Dual Role',
+  ];
+
+  final List<String> userStatuses = const [
+    'All Statuses',
+    'Active',
+    'Suspended',
+  ];
+
   List<UserModel> get registeredUsers => _registeredUsers;
+
+  List<UserModel> get filteredUsers {
+    return _registeredUsers.where((user) {
+      final matchesSearch = _userSearchQuery.isEmpty ||
+          (user.displayName ?? '').toLowerCase().contains(_userSearchQuery.toLowerCase()) ||
+          (user.username ?? '').toLowerCase().contains(_userSearchQuery.toLowerCase()) ||
+          user.email.toLowerCase().contains(_userSearchQuery.toLowerCase());
+
+      final matchesRole = _userRoleFilter == 'All Roles' ||
+          (_userRoleFilter == 'Cultural Tourist' && user.role == 'Tourist') ||
+          (_userRoleFilter == 'Master Artisan' && user.role == 'Artisan') ||
+          (_userRoleFilter == 'Dual Role' && user.isDualRole);
+
+      final matchesStatus = _userStatusFilter == 'All Statuses' ||
+          (_userStatusFilter == 'Active' && !user.isSuspended) ||
+          (_userStatusFilter == 'Suspended' && user.isSuspended);
+
+      return matchesSearch && matchesRole && matchesStatus;
+    }).toList();
+  }
 
   List<PendingArtisanProfile> get filteredArtisans {
     return _pendingArtisans.where((artisan) {
@@ -310,11 +394,28 @@ class ModerationViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setUserSearchQuery(String query) {
+    _userSearchQuery = query;
+    notifyListeners();
+  }
+
+  void setUserRoleFilter(String role) {
+    _userRoleFilter = role;
+    notifyListeners();
+  }
+
+  void setUserStatusFilter(String status) {
+    _userStatusFilter = status;
+    notifyListeners();
+  }
+
   Future<void> fetchPendingArtisans() async {
     try {
-      final List<Map<String, dynamic>> dbPending = _repository != null
-          ? await _repository!.getPendingArtisans()
-          : (_service != null ? await _service!.getPendingArtisans() : []);
+      final repo = _repository;
+      final service = _service;
+      final List<Map<String, dynamic>> dbPending = repo != null
+          ? await repo.getPendingArtisans()
+          : (service != null ? await service.getPendingArtisans() : []);
 
       for (final raw in dbPending) {
         final email = (raw['email'] ?? '').toString();
@@ -439,14 +540,16 @@ class ModerationViewModel extends ChangeNotifier {
       );
 
       // Persist to DB
-      if (_repository != null) {
-        await _repository!.updateArtisanStatus(
+      final repo = _repository;
+      final service = _service;
+      if (repo != null) {
+        await repo.updateArtisanStatus(
           email: artisan.email,
           newStatus: 'ACTIVE',
           newRole: targetRole,
         );
-      } else if (_service != null) {
-        await _service!.updateArtisanStatusInDb(
+      } else if (service != null) {
+        await service.updateArtisanStatusInDb(
           email: artisan.email,
           newStatus: 'ACTIVE',
           newRole: targetRole,
@@ -472,14 +575,16 @@ class ModerationViewModel extends ChangeNotifier {
       final artisan = _activeArtisanMasters[idx];
       _activeArtisanMasters[idx] = artisan.copyWith(isSuspended: true, isLiveOpen: false);
 
-      if (_repository != null) {
-        await _repository!.updateArtisanStatus(
+      final repo = _repository;
+      final service = _service;
+      if (repo != null) {
+        await repo.updateArtisanStatus(
           email: artisan.email,
           newStatus: 'SUSPENDED',
           newRole: artisan.isDualRole ? 'Artisan & Tourist' : 'Artisan',
         );
-      } else if (_service != null) {
-        await _service!.updateArtisanStatusInDb(
+      } else if (service != null) {
+        await service.updateArtisanStatusInDb(
           email: artisan.email,
           newStatus: 'SUSPENDED',
           newRole: artisan.isDualRole ? 'Artisan & Tourist' : 'Artisan',
@@ -496,14 +601,16 @@ class ModerationViewModel extends ChangeNotifier {
       final artisan = _activeArtisanMasters[idx];
       _activeArtisanMasters[idx] = artisan.copyWith(isSuspended: false, isLiveOpen: true);
 
-      if (_repository != null) {
-        await _repository!.updateArtisanStatus(
+      final repo = _repository;
+      final service = _service;
+      if (repo != null) {
+        await repo.updateArtisanStatus(
           email: artisan.email,
           newStatus: 'ACTIVE',
           newRole: artisan.isDualRole ? 'Artisan & Tourist' : 'Artisan',
         );
-      } else if (_service != null) {
-        await _service!.updateArtisanStatusInDb(
+      } else if (service != null) {
+        await service.updateArtisanStatusInDb(
           email: artisan.email,
           newStatus: 'ACTIVE',
           newRole: artisan.isDualRole ? 'Artisan & Tourist' : 'Artisan',
@@ -527,14 +634,16 @@ class ModerationViewModel extends ChangeNotifier {
         );
       }
 
-      if (_repository != null) {
-        await _repository!.updateArtisanStatus(
+      final repo = _repository;
+      final service = _service;
+      if (repo != null) {
+        await repo.updateArtisanStatus(
           email: artisan.email,
           newStatus: 'REJECTED',
           newRole: 'Artisan',
         );
-      } else if (_service != null) {
-        await _service!.updateArtisanStatusInDb(
+      } else if (service != null) {
+        await service.updateArtisanStatusInDb(
           email: artisan.email,
           newStatus: 'REJECTED',
           newRole: 'Artisan',
@@ -545,19 +654,66 @@ class ModerationViewModel extends ChangeNotifier {
     }
   }
 
-  void suspendUser(String id) {
+  Future<void> suspendUser(String id, {String? reason}) async {
     final idx = _registeredUsers.indexWhere((u) => u.id == id);
     if (idx != -1) {
-      _registeredUsers[idx] = _registeredUsers[idx].copyWith(isSuspended: true);
+      final user = _registeredUsers[idx];
+      _registeredUsers[idx] = user.copyWith(isSuspended: true, status: 'SUSPENDED');
+
+      final repo = _repository;
+      final service = _service;
+      if (repo != null) {
+        await repo.updateArtisanStatus(
+          email: user.email,
+          newStatus: 'SUSPENDED',
+          newRole: user.role,
+        );
+      } else if (service != null) {
+        await service.updateArtisanStatusInDb(
+          email: user.email,
+          newStatus: 'SUSPENDED',
+          newRole: user.role,
+        );
+      }
+
       notifyListeners();
     }
   }
 
-  void reactivateUser(String id) {
+  Future<void> reactivateUser(String id) async {
     final idx = _registeredUsers.indexWhere((u) => u.id == id);
     if (idx != -1) {
-      _registeredUsers[idx] = _registeredUsers[idx].copyWith(isSuspended: false);
+      final user = _registeredUsers[idx];
+      _registeredUsers[idx] = user.copyWith(isSuspended: false, status: 'ACTIVE');
+
+      final repo = _repository;
+      final service = _service;
+      if (repo != null) {
+        await repo.updateArtisanStatus(
+          email: user.email,
+          newStatus: 'ACTIVE',
+          newRole: user.role,
+        );
+      } else if (service != null) {
+        await service.updateArtisanStatusInDb(
+          email: user.email,
+          newStatus: 'ACTIVE',
+          newRole: user.role,
+        );
+      }
+
       notifyListeners();
+    }
+  }
+
+  Future<void> sendPasswordResetEmail(String email) async {
+    try {
+      final service = _service;
+      if (service != null) {
+        await service.sendPasswordResetEmail(email);
+      }
+    } catch (e) {
+      debugPrint('Error sending password reset email: $e');
     }
   }
 }

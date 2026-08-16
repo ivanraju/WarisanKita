@@ -12,6 +12,7 @@ class ProfileBuilderTab extends StatefulWidget {
 }
 
 class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
+  late final TextEditingController _usernameController;
   late final TextEditingController _studioNameController;
   late final TextEditingController _craftCategoryController;
   late final TextEditingController _stateController;
@@ -40,6 +41,9 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     super.initState();
     final authVM = context.read<AuthViewModel>();
     final user = authVM.currentUser;
+    _usernameController = TextEditingController(
+      text: user?.effectiveUsername ?? 'Pak Mat',
+    );
     _studioNameController = TextEditingController(
       text: user?.studioName ?? user?.effectiveUsername ?? 'Pak Mat Pottery Studio',
     );
@@ -48,7 +52,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     );
     _stateController = TextEditingController(text: user?.state ?? 'Melaka');
     _experienceController = TextEditingController(text: '25+ Years Experience');
-    _phoneController = TextEditingController(text: '+60 12-345 6789');
+    _phoneController = TextEditingController(text: user?.phone ?? '+60 12-345 6789');
     _operatingHoursController = TextEditingController(text: 'Mon - Sat: 9:00 AM - 6:00 PM');
     _bioController = TextEditingController(
       text: user?.bio ?? 'Master Pak Mat has been hand-crafting traditional clay labu sayong and ceramic vessels for over 25 years in Kampung Morten. Each piece is hand-spun and natural clay kilned.',
@@ -57,6 +61,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
 
   @override
   void dispose() {
+    _usernameController.dispose();
     _studioNameController.dispose();
     _craftCategoryController.dispose();
     _stateController.dispose();
@@ -68,25 +73,53 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
   }
 
   Future<void> _handleSave() async {
+    final username = _usernameController.text.trim();
     final studio = _studioNameController.text.trim();
     final craft = _craftCategoryController.text.trim();
     final bio = _bioController.text.trim();
     final state = _stateController.text.trim();
+    final phone = _phoneController.text.trim();
+
+    if (username.isEmpty && studio.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Username or Studio name cannot be empty!'),
+          backgroundColor: Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
 
     final authVM = context.read<AuthViewModel>();
-    await authVM.updateProfile(
-      studioName: studio,
-      craftCategory: craft,
-      bio: bio,
-      state: state,
-    );
+    try {
+      await authVM.updateProfile(
+        username: username.isNotEmpty ? username : studio,
+        displayName: username.isNotEmpty ? username : studio,
+        studioName: studio.isNotEmpty ? studio : username,
+        craftCategory: craft,
+        bio: bio,
+        state: state,
+        phone: phone,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceAll('Exception: ', '')),
+          backgroundColor: const Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
 
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Profile Saved! Live Tourist View updated successfully!',
+          'Artisan Studio Profile & Tourist handle synced successfully!',
           style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold),
         ),
         backgroundColor: const Color(0xFF004D40),
@@ -302,12 +335,26 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
 
             const SizedBox(height: 16),
 
+            // Account Username / Handle Input
+            TextField(
+              controller: _usernameController,
+              decoration: InputDecoration(
+                labelText: 'Account Username / Handle (@username)',
+                prefixIcon: const Icon(Icons.person_outline_rounded),
+                helperText: 'Unified account handle synced across Tourist & Master Artisan roles',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+            ),
+
+            const SizedBox(height: 14),
+
             // Studio Name Input
             TextField(
               controller: _studioNameController,
               decoration: InputDecoration(
-                labelText: 'Studio / Master Artisan Name',
+                labelText: 'Artisan Studio Name',
                 prefixIcon: const Icon(Icons.storefront_outlined),
+                helperText: 'Public workshop or studio brand name displayed on the directory',
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
               ),
             ),

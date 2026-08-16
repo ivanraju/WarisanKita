@@ -60,17 +60,90 @@ class AdminModerationDashboardView extends StatelessWidget {
   }
 
   void _handleSuspendUser(BuildContext context, UserModel user) {
-    final vm = context.read<ModerationViewModel>();
-    vm.suspendUser(user.id);
+    final authVm = context.read<AuthViewModel>();
+    final currentAdminEmail = authVm.currentUser?.email ?? '';
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Account for ${user.displayName ?? user.email} has been suspended.'),
-        backgroundColor: const Color(0xFFEF4444),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        width: 480,
-      ),
+    // Enforce C2: Administrators cannot suspend their own account
+    if (user.email.toLowerCase() == currentAdminEmail.toLowerCase()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Cannot suspend your own active Administrator account.'),
+          backgroundColor: Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+          width: 480,
+        ),
+      );
+      return;
+    }
+
+    final reasonController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              const Icon(Icons.warning_amber_rounded, color: Color(0xFFEF4444), size: 24),
+              const SizedBox(width: 10),
+              Text(
+                'Suspend User Account',
+                style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF0F172A)),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Are you sure you want to suspend ${user.displayName ?? user.email}? This will immediately invalidate their active sessions.',
+                style: GoogleFonts.plusJakartaSans(fontSize: 13, color: const Color(0xFF475569)),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: reasonController,
+                maxLines: 2,
+                decoration: InputDecoration(
+                  labelText: 'Suspension Reason',
+                  hintText: 'e.g. Violation of community guidelines',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: const Text('CANCEL'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFEF4444),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: () {
+                final vm = context.read<ModerationViewModel>();
+                vm.suspendUser(user.id, reason: reasonController.text);
+                Navigator.pop(dialogCtx);
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('USER ACCOUNT SUSPENDED: Login access revoked (${user.displayName ?? user.email})'),
+                    backgroundColor: const Color(0xFFEF4444),
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    width: 480,
+                  ),
+                );
+              },
+              child: const Text('CONFIRM SUSPENSION', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -80,11 +153,32 @@ class AdminModerationDashboardView extends StatelessWidget {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Account for ${user.displayName ?? user.email} has been reactivated.'),
+        content: Text('USER ACCOUNT REACTIVATED SUCCESSFULLY (${user.displayName ?? user.email})'),
         backgroundColor: const Color(0xFF10B981),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         width: 480,
+      ),
+    );
+  }
+
+  void _handleResetPassword(BuildContext context, UserModel user) {
+    final vm = context.read<ModerationViewModel>();
+    vm.sendPasswordResetEmail(user.email);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.mark_email_read_rounded, color: Colors.white, size: 20),
+            const SizedBox(width: 10),
+            Text('PASSWORD RESET EMAIL SENT TO ${user.email}'),
+          ],
+        ),
+        backgroundColor: const Color(0xFF2563EB),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        width: 520,
       ),
     );
   }
@@ -168,18 +262,20 @@ class AdminModerationDashboardView extends StatelessWidget {
 
                                       const SizedBox(height: 32),
 
-                                      if (!isUserManagementTab) ...[
-                                        // Controls Row: Search Input + Craft Category Dropdown Filter
+                                      // Controls Row
+                                      if (isUserManagementTab)
+                                        _buildUserFilterControlsRow(context, viewModel)
+                                      else
                                         _buildFilterControlsRow(context, viewModel),
-                                        const SizedBox(height: 20),
-                                      ],
+                                      const SizedBox(height: 20),
 
                                       // Main Data Table Component
                                       isUserManagementTab
                                           ? UserManagementTable(
-                                              users: viewModel.registeredUsers,
+                                              users: viewModel.filteredUsers,
                                               onSuspend: (user) => _handleSuspendUser(context, user),
                                               onReactivate: (user) => _handleReactivateUser(context, user),
+                                              onResetPassword: (user) => _handleResetPassword(context, user),
                                             )
                                           : PendingArtisansTable(
                                               artisans: viewModel.filteredArtisans,
@@ -495,6 +591,131 @@ class AdminModerationDashboardView extends StatelessWidget {
                       return DropdownMenuItem<String>(
                         value: cat,
                         child: Text(cat),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUserFilterControlsRow(BuildContext context, ModerationViewModel viewModel) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Row(
+        children: [
+          // Search Input Bar
+          Expanded(
+            child: SizedBox(
+              height: 44,
+              child: TextField(
+                onChanged: (val) => viewModel.setUserSearchQuery(val),
+                decoration: InputDecoration(
+                  hintText: 'Search by user name, email, or @handle...',
+                  hintStyle: GoogleFonts.plusJakartaSans(
+                    fontSize: 13,
+                    color: const Color(0xFF94A3B8),
+                  ),
+                  prefixIcon: const Icon(Icons.search_rounded, size: 20, color: Color(0xFF64748B)),
+                  filled: true,
+                  fillColor: const Color(0xFFF8FAFC),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Color(0xFF10B981)),
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(width: 16),
+
+          // Role Filter Dropdown
+          Container(
+            height: 44,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.badge_outlined, size: 18, color: Color(0xFF64748B)),
+                const SizedBox(width: 8),
+                DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: viewModel.userRoleFilter,
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B)),
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF1E293B),
+                    ),
+                    onChanged: (val) {
+                      if (val != null) viewModel.setUserRoleFilter(val);
+                    },
+                    items: viewModel.userRoles.map((role) {
+                      return DropdownMenuItem<String>(
+                        value: role,
+                        child: Text(role),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(width: 16),
+
+          // Status Filter Dropdown
+          Container(
+            height: 44,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.verified_user_outlined, size: 18, color: Color(0xFF64748B)),
+                const SizedBox(width: 8),
+                DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: viewModel.userStatusFilter,
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B)),
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF1E293B),
+                    ),
+                    onChanged: (val) {
+                      if (val != null) viewModel.setUserStatusFilter(val);
+                    },
+                    items: viewModel.userStatuses.map((status) {
+                      return DropdownMenuItem<String>(
+                        value: status,
+                        child: Text(status),
                       );
                     }).toList(),
                   ),

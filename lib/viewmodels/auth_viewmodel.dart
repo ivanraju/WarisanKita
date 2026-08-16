@@ -85,12 +85,19 @@ class AuthViewModel extends ChangeNotifier {
     String? craftCategory,
   }) async {
     final email = _currentUser?.email ?? 'tourist@warisankita.my';
+    final newUsername = username ?? displayName;
+    final newDisplayName = displayName ?? username;
+    
+    // Always sync studioName with username if user has an artisan role, unless custom studioName is explicitly passed
+    final isDualOrArtisan = _currentUser?.isDualRole == true || _currentUser?.isArtisan == true;
+    final newStudioName = studioName ?? (isDualOrArtisan ? (newDisplayName ?? newUsername ?? _currentUser?.studioName) : _currentUser?.studioName);
+
     try {
       final updated = await _repository.updateUserProfile(
         email: email,
-        username: username,
-        displayName: displayName ?? username,
-        studioName: studioName,
+        username: newUsername,
+        displayName: newDisplayName,
+        studioName: newStudioName,
         bio: bio,
         phone: phone,
         state: state,
@@ -98,14 +105,18 @@ class AuthViewModel extends ChangeNotifier {
       );
       _currentUser = updated;
     } catch (e) {
+      if (e.toString().contains('USERNAME ALREADY TAKEN')) {
+        rethrow;
+      }
       if (_currentUser != null) {
         _currentUser = _currentUser!.copyWith(
-          username: username,
-          displayName: displayName ?? username,
-          studioName: studioName,
-          bio: bio,
-          state: state,
-          craftCategory: craftCategory,
+          username: newUsername ?? _currentUser!.username,
+          displayName: newDisplayName ?? _currentUser!.displayName,
+          studioName: newStudioName ?? _currentUser!.studioName,
+          bio: bio ?? _currentUser!.bio,
+          phone: phone ?? _currentUser!.phone,
+          state: state ?? _currentUser!.state,
+          craftCategory: craftCategory ?? _currentUser!.craftCategory,
         );
       }
     } finally {

@@ -292,34 +292,32 @@ class SupabaseService {
   
   Future<UserModel> signIn(String emailOrUsername, String password) async {
     final cleanInput = emailOrUsername.trim().toLowerCase().replaceAll('@', '');
+    final normInput = emailOrUsername.trim().toLowerCase().replaceAll('@', '').replaceAll(' ', '').replaceAll('_', '');
     final rawInput = emailOrUsername.trim().toLowerCase();
     
     // Simulate network latency
     await Future.delayed(const Duration(milliseconds: 500));
 
-    // Resolve email if username was provided
+    // 1. Resolve email from in-memory store by exact email, current username, display name, or email prefix
     String cleanEmail = rawInput;
-    
-    // 1. Check local in-memory store by email, username, or display name
-    if (!_userStore.containsKey(rawInput)) {
-      for (final entry in _userStore.entries) {
-        final u = entry.value;
-        final uName = (u['username'] as String?)?.toLowerCase().replaceAll('@', '');
-        final dName = (u['displayName'] as String?)?.toLowerCase().replaceAll('@', '');
-        final fName = (u['full_name'] as String?)?.toLowerCase().replaceAll('@', '');
-        final dNameUnderscore = (u['displayName'] as String?)?.toLowerCase().replaceAll(' ', '_');
-        final fNameUnderscore = (u['full_name'] as String?)?.toLowerCase().replaceAll(' ', '_');
-        final emailPrefix = entry.key.split('@')[0].toLowerCase();
-        
-        if (uName == cleanInput ||
-            dName == rawInput ||
-            fName == rawInput ||
-            dNameUnderscore == cleanInput ||
-            fNameUnderscore == cleanInput ||
-            emailPrefix == cleanInput) {
-          cleanEmail = entry.key;
-          break;
-        }
+    bool storeMatch = false;
+
+    for (final entry in _userStore.entries) {
+      final storedEmail = entry.key.toLowerCase();
+      final storedEmailPrefix = storedEmail.split('@')[0].replaceAll('.', '').replaceAll('_', '');
+      final u = entry.value;
+      final uNameNorm = (u['username'] as String?)?.toLowerCase().replaceAll('@', '').replaceAll(' ', '').replaceAll('_', '');
+      final dNameNorm = (u['displayName'] as String?)?.toLowerCase().replaceAll('@', '').replaceAll(' ', '').replaceAll('_', '');
+      final fNameNorm = (u['full_name'] as String?)?.toLowerCase().replaceAll('@', '').replaceAll(' ', '').replaceAll('_', '');
+
+      if (storedEmail == rawInput ||
+          uNameNorm == normInput ||
+          dNameNorm == normInput ||
+          fNameNorm == normInput ||
+          storedEmailPrefix == normInput) {
+        cleanEmail = entry.key;
+        storeMatch = true;
+        break;
       }
     }
 
@@ -329,12 +327,11 @@ class SupabaseService {
       if (!rawInput.contains('@')) {
         bool emailFound = false;
         
-        // 2a. Try querying by 'username' column if present
         try {
           final userRow = await client
               .from('users')
               .select('email')
-              .ilike('username', cleanInput)
+              .ilike('username', normInput)
               .maybeSingle();
           if (userRow != null && userRow['email'] != null) {
             cleanEmail = (userRow['email'] as String).toLowerCase();
@@ -344,22 +341,22 @@ class SupabaseService {
           debugPrint('Supabase username lookup note: $e');
         }
 
-        // 2b. If not found or column missing, search by full_name or email prefix
         if (!emailFound) {
           try {
             final usersList = await client
                 .from('users')
-                .select('email, full_name');
+                .select('email, full_name, display_name');
             for (final row in usersList) {
               final rowEmail = (row['email'] as String?)?.toLowerCase() ?? '';
               final rowFullName = (row['full_name'] as String?)?.toLowerCase() ?? '';
-              final rowFullNameUnderscore = rowFullName.replaceAll(' ', '_');
-              final rowEmailPrefix = rowEmail.split('@')[0];
+              final rowDisplayName = (row['display_name'] as String?)?.toLowerCase() ?? '';
+              final rowFullNameNorm = rowFullName.replaceAll('@', '').replaceAll(' ', '').replaceAll('_', '');
+              final rowDisplayNameNorm = rowDisplayName.replaceAll('@', '').replaceAll(' ', '').replaceAll('_', '');
+              final rowEmailPrefixNorm = rowEmail.split('@')[0].replaceAll('.', '').replaceAll('_', '');
 
-              if (rowFullName == rawInput ||
-                  rowFullName == cleanInput ||
-                  rowFullNameUnderscore == cleanInput ||
-                  rowEmailPrefix == cleanInput) {
+              if (rowFullNameNorm == normInput ||
+                  rowDisplayNameNorm == normInput ||
+                  rowEmailPrefixNorm == normInput) {
                 cleanEmail = rowEmail;
                 emailFound = true;
                 break;
@@ -369,8 +366,16 @@ class SupabaseService {
             debugPrint('Supabase full_name/email lookup note: $e');
           }
         }
-      }
 
+        if (!emailFound && !storeMatch) {
+          throw Exception('INVALID CREDENTIALS: User account not found with identifier "$emailOrUsername".');
+        }
+      }
+    } else if (!storeMatch && !_userStore.containsKey(rawInput)) {
+      throw Exception('INVALID CREDENTIALS: User account not found with identifier "$emailOrUsername".');
+    }
+
+    if (client != null) {
       try {
         final authRes = await client.auth.signInWithPassword(
           email: cleanEmail,
@@ -880,12 +885,34 @@ class SupabaseService {
         ? _userStore[cleanEmail]!
         : <String, dynamic>{'email': cleanEmail, 'role': 'Tourist', 'roles': ['Tourist'], 'status': 'ACTIVE'};
 
+    final roleStr = (userRecord['role'] ?? '').toString();
+    final rolesList = userRecord['roles'] is List ? List<String>.from(userRecord['roles']) : <String>[];
+    final isArtisanAccount = roleStr.toLowerCase().contains('artisan') || rolesList.any((r) => r.toLowerCase().contains('artisan'));
+
+    // Uniqueness validation: Ensure newly chosen username is available and not registered by another account
+    if (username != null && username.trim().isNotEmpty) {
+      final currentUsername = (userRecord['username'] as String?)?.trim().toLowerCase().replaceAll('@', '');
+      final candidateUsername = username.trim().toLowerCase().replaceAll('@', '');
+      if (currentUsername != candidateUsername) {
+        final isAvailable = await isUsernameAvailable(username, excludeEmail: cleanEmail);
+        if (!isAvailable) {
+          throw Exception('USERNAME ALREADY TAKEN: "@${username.replaceAll('@', '')}" is registered by another user. Please choose a different username.');
+        }
+      }
+    }
+
     if (username != null && username.isNotEmpty) {
       userRecord['username'] = username;
       userRecord['displayName'] = username;
+      if (isArtisanAccount && (studioName == null || studioName.isEmpty)) {
+        userRecord['studioName'] = username;
+      }
     }
     if (displayName != null && displayName.isNotEmpty) {
       userRecord['displayName'] = displayName;
+      if (isArtisanAccount && (studioName == null || studioName.isEmpty)) {
+        userRecord['studioName'] = displayName;
+      }
     }
     if (studioName != null && studioName.isNotEmpty) {
       userRecord['studioName'] = studioName;
@@ -908,22 +935,51 @@ class SupabaseService {
           updateMap['display_name'] = displayName;
           updateMap['full_name'] = displayName;
         }
-        if (studioName != null) updateMap['studio_name'] = studioName;
+        if (studioName != null) {
+          updateMap['studio_name'] = studioName;
+        } else if (isArtisanAccount && (username != null || displayName != null)) {
+          updateMap['studio_name'] = displayName ?? username;
+        }
         if (bio != null) updateMap['bio'] = bio;
         if (state != null) updateMap['state'] = state;
         if (craftCategory != null) updateMap['craft_category'] = craftCategory;
         updateMap['updated_at'] = DateTime.now().toIso8601String();
 
         if (updateMap.isNotEmpty) {
+          // 1. Update Supabase Postgres 'users' table
           try {
             await client.from('users').update({
-              if (updateMap.containsKey('full_name')) 'full_name': updateMap['full_name'],
+              if (username != null) 'username': username,
+              if (displayName != null || username != null) 'display_name': displayName ?? username,
+              if (displayName != null || username != null) 'full_name': displayName ?? username,
+              if (updateMap.containsKey('studio_name')) 'studio_name': updateMap['studio_name'],
+              if (bio != null) 'bio': bio,
+              if (state != null) 'state': state,
+              if (craftCategory != null) 'craft_category': craftCategory,
               if (phone != null) 'phone_number': phone,
               'updated_at': DateTime.now().toIso8601String(),
             }).eq('email', cleanEmail);
           } catch (e) {
             debugPrint('Supabase updateUserProfile users table note: $e');
           }
+
+          // 2. Update Supabase Postgres 'artisan_profiles' table (if linked)
+          if (isArtisanAccount) {
+            try {
+              await client.from('artisan_profiles').update({
+                if (updateMap.containsKey('studio_name')) 'studio_name': updateMap['studio_name'],
+                if (displayName != null || username != null) 'full_name': displayName ?? username,
+                if (bio != null) 'bio': bio,
+                if (state != null) 'state': state,
+                if (craftCategory != null) 'craft_category': craftCategory,
+                'updated_at': DateTime.now().toIso8601String(),
+              }).eq('email', cleanEmail);
+            } catch (e) {
+              debugPrint('Supabase updateUserProfile artisan_profiles table note: $e');
+            }
+          }
+
+          // 3. Update Supabase Auth User Metadata (UserAttributes)
           try {
             await client.auth.updateUser(UserAttributes(data: updateMap));
           } catch (e) {

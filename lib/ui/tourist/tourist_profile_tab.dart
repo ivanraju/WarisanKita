@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:warisan_kita/ui/core/edit_profile_screen.dart';
 import 'package:warisan_kita/ui/core/settings_screen.dart';
 import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
@@ -301,7 +302,17 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
           ),
           actions: [
             IconButton(
+              icon: const Icon(Icons.edit_outlined, color: Color(0xFF004D40)),
+              tooltip: 'Edit Explorer Profile',
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+                );
+              },
+            ),
+            IconButton(
               icon: const Icon(Icons.settings_outlined, color: Color(0xFF004D40)),
+              tooltip: 'Settings',
               onPressed: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const SettingsScreen()),
@@ -427,12 +438,50 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    username,
-                                    style: GoogleFonts.dmSerifDisplay(
-                                      color: Colors.white,
-                                      fontSize: 24,
-                                    ),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          username,
+                                          style: GoogleFonts.dmSerifDisplay(
+                                            color: Colors.white,
+                                            fontSize: 24,
+                                          ),
+                                        ),
+                                      ),
+                                      InkWell(
+                                        onTap: () {
+                                          Navigator.of(context).push(
+                                            MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+                                          );
+                                        },
+                                        borderRadius: BorderRadius.circular(20),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withValues(alpha: 0.15),
+                                            borderRadius: BorderRadius.circular(20),
+                                            border: Border.all(color: Colors.white24),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(Icons.edit_rounded, size: 12, color: Color(0xFFFFD54F)),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                'Edit',
+                                                style: GoogleFonts.plusJakartaSans(
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
