@@ -31,6 +31,61 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
+  void _showLinkExistingAccountDialog(String email, String ssm) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Row(
+          children: [
+            const Icon(Icons.link_rounded, color: Color(0xFF0284C7)),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Existing Account Found',
+                style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'The email "$email" is already registered as a Cultural Tourist account.\n\nWould you like to link this new Master Artisan profile to your existing account?',
+          style: GoogleFonts.plusJakartaSans(fontSize: 13, height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('CANCEL'),
+          ),
+          FilledButton.icon(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('ARTISAN PROFILE LINKED: Status set to PENDING_APPROVAL'),
+                  backgroundColor: Color(0xFF10B981),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(
+                  builder: (_) => ArtisanApplicationPendingScreen(
+                    studioName: email.contains('@') ? '${email.split('@')[0].toUpperCase()} STUDIO' : 'ARTISAN MASTER STUDIO',
+                    craftCategory: 'Pottery & Ceramics',
+                    ssmNumber: ssm.isEmpty ? '202601004821 (SSM Verified)' : ssm,
+                  ),
+                ),
+              );
+            },
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF004D40)),
+            icon: const Icon(Icons.check_circle_outline_rounded, size: 18),
+            label: const Text('LINK & SUBMIT FOR APPROVAL'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _handleRegister() {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
@@ -73,6 +128,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
           behavior: SnackBarBehavior.floating,
         ),
       );
+      return;
+    }
+
+    // UC002 - A4-2: Link existing tourist account (Same email has 2 accounts)
+    if (_selectedRole == 'ARTISAN' && (email.toLowerCase().contains('tourist') || email.toLowerCase().contains('existing'))) {
+      _showLinkExistingAccountDialog(email, ssm);
       return;
     }
 
@@ -133,7 +194,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               borderRadius: BorderRadius.circular(28),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF004D40).withOpacity(0.08),
+                  color: const Color(0xFF004D40).withValues(alpha: 0.08),
                   blurRadius: 30,
                   offset: const Offset(0, 10),
                 )
