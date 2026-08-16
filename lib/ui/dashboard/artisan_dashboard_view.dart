@@ -3,7 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 import 'package:warisan_kita/ui/auth/auth_view.dart';
-
 class ArtisanDashboardScreen extends StatelessWidget {
   const ArtisanDashboardScreen({super.key});
 
@@ -50,9 +49,11 @@ class ArtisanDashboardScreen extends StatelessWidget {
       actions: [
         IconButton(
           icon: const Icon(Icons.logout_rounded, color: Colors.white),
-          onPressed: () {
-            context.read<AuthViewModel>().logout();
-            Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+          tooltip: 'Log Out',
+          onPressed: () async {
+            await context.read<AuthViewModel>().logout();
+            if (!context.mounted) return;
+            Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil('/login', (route) => false);
           },
         ),
         const SizedBox(width: 8),

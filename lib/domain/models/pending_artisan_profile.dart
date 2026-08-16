@@ -8,6 +8,12 @@ class PendingArtisanProfile {
   final String email;
   final String experience;
   final String phone;
+  final String? ssmNumber;
+  final String? ssmFileName;
+  final String? certFileName;
+  final List<String> photos;
+  final String? bio;
+  final bool isUpgradeFromTourist;
 
   const PendingArtisanProfile({
     required this.id,
@@ -19,5 +25,12 @@ class PendingArtisanProfile {
     required this.email,
     required this.experience,
     required this.phone,
+    this.ssmNumber,
+    this.ssmFileName,
+    this.certFileName,
+    this.photos = const [],
+    this.bio,
+    this.isUpgradeFromTourist = false,
   });
 }
+

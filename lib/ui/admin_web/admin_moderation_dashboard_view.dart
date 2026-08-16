@@ -91,8 +91,13 @@ class AdminModerationDashboardView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => ModerationViewModel(),
+    ModerationViewModel? globalVM;
+    try {
+      globalVM = context.watch<ModerationViewModel>();
+    } catch (_) {}
+
+    return ChangeNotifierProvider.value(
+      value: globalVM ?? ModerationViewModel(),
       child: Scaffold(
         backgroundColor: const Color(0xFFF8FAFC),
         body: Consumer<ModerationViewModel>(
@@ -225,6 +230,22 @@ class AdminModerationDashboardView extends StatelessWidget {
           Row(
             children: [
               IconButton(
+                icon: const Icon(Icons.refresh_rounded, color: Color(0xFF64748B)),
+                tooltip: 'Fetch Latest Applications',
+                onPressed: () async {
+                  await context.read<ModerationViewModel>().fetchPendingArtisans();
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Artisan applications queue refreshed!'),
+                      duration: Duration(seconds: 1),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(width: 8),
+              IconButton(
                 icon: const Icon(Icons.notifications_none_rounded, color: Color(0xFF64748B)),
                 onPressed: () {},
                 tooltip: 'Notifications',
@@ -237,8 +258,9 @@ class AdminModerationDashboardView extends StatelessWidget {
               ),
               const SizedBox(width: 16),
               OutlinedButton.icon(
-                onPressed: () {
-                  context.read<AuthViewModel>().logout();
+                onPressed: () async {
+                  await context.read<AuthViewModel>().logout();
+                  if (!context.mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
@@ -249,7 +271,7 @@ class AdminModerationDashboardView extends StatelessWidget {
                       behavior: SnackBarBehavior.floating,
                     ),
                   );
-                  Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+                  Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil('/login', (route) => false);
                 },
                 style: OutlinedButton.styleFrom(
                   foregroundColor: const Color(0xFFEF4444),

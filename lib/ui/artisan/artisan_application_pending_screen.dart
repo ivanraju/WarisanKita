@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:warisan_kita/ui/artisan/artisan_main_scaffold.dart';
+import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 
 class ArtisanApplicationPendingScreen extends StatelessWidget {
   final String studioName;
@@ -32,7 +34,12 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.logout_rounded, color: Color(0xFFEF4444)),
             tooltip: 'Log Out',
-            onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false),
+            onPressed: () async {
+              final authVM = context.read<AuthViewModel>();
+              await authVM.logout();
+              if (!context.mounted) return;
+              Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil('/login', (route) => false);
+            },
           ),
         ],
       ),

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:warisan_kita/ui/tourist/artisan_detail_screen.dart';
+import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 
 class ProfileBuilderTab extends StatefulWidget {
   const ProfileBuilderTab({super.key});
@@ -10,15 +12,13 @@ class ProfileBuilderTab extends StatefulWidget {
 }
 
 class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
-  final _studioNameController = TextEditingController(text: 'Pak Mat Pottery Studio');
-  final _craftCategoryController = TextEditingController(text: 'Pottery & Ceramics');
-  final _stateController = TextEditingController(text: 'Melaka');
-  final _experienceController = TextEditingController(text: '25+ Years Experience');
-  final _phoneController = TextEditingController(text: '+60 12-345 6789');
-  final _operatingHoursController = TextEditingController(text: 'Mon - Sat: 9:00 AM - 6:00 PM');
-  final _bioController = TextEditingController(
-    text: 'Master Pak Mat has been hand-crafting traditional clay labu sayong and ceramic vessels for over 25 years in Kampung Morten. Each piece is hand-spun and natural clay kilned.',
-  );
+  late final TextEditingController _studioNameController;
+  late final TextEditingController _craftCategoryController;
+  late final TextEditingController _stateController;
+  late final TextEditingController _experienceController;
+  late final TextEditingController _phoneController;
+  late final TextEditingController _operatingHoursController;
+  late final TextEditingController _bioController;
 
   bool _isOpenForDemos = true;
 
@@ -36,6 +36,26 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    final authVM = context.read<AuthViewModel>();
+    final user = authVM.currentUser;
+    _studioNameController = TextEditingController(
+      text: user?.studioName ?? user?.effectiveUsername ?? 'Pak Mat Pottery Studio',
+    );
+    _craftCategoryController = TextEditingController(
+      text: user?.craftCategory ?? 'Pottery & Ceramics',
+    );
+    _stateController = TextEditingController(text: user?.state ?? 'Melaka');
+    _experienceController = TextEditingController(text: '25+ Years Experience');
+    _phoneController = TextEditingController(text: '+60 12-345 6789');
+    _operatingHoursController = TextEditingController(text: 'Mon - Sat: 9:00 AM - 6:00 PM');
+    _bioController = TextEditingController(
+      text: user?.bio ?? 'Master Pak Mat has been hand-crafting traditional clay labu sayong and ceramic vessels for over 25 years in Kampung Morten. Each piece is hand-spun and natural clay kilned.',
+    );
+  }
+
+  @override
   void dispose() {
     _studioNameController.dispose();
     _craftCategoryController.dispose();
@@ -47,7 +67,22 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     super.dispose();
   }
 
-  void _handleSave() {
+  Future<void> _handleSave() async {
+    final studio = _studioNameController.text.trim();
+    final craft = _craftCategoryController.text.trim();
+    final bio = _bioController.text.trim();
+    final state = _stateController.text.trim();
+
+    final authVM = context.read<AuthViewModel>();
+    await authVM.updateProfile(
+      studioName: studio,
+      craftCategory: craft,
+      bio: bio,
+      state: state,
+    );
+
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -151,6 +186,66 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                 ],
               ),
             ),
+
+            if (context.watch<AuthViewModel>().currentUser?.isDualRole == true) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE0F2FE),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFF38BDF8)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0284C7).withOpacity(0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.explore_rounded, color: Color(0xFF0284C7), size: 24),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Dual Role: Cultural Explorer Mode',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: const Color(0xFF0369A1),
+                            ),
+                          ),
+                          Text(
+                            'Switch to explore craft heritage, visit artisan workshops, and earn passport stamps.',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11,
+                              color: const Color(0xFF0284C7),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton(
+                      onPressed: () {
+                        context.read<AuthViewModel>().selectActiveRole('Cultural Tourist');
+                        Navigator.of(context).pushReplacementNamed('/tourist');
+                      },
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF0284C7),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text('Switch', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
 
             const SizedBox(height: 24),
 

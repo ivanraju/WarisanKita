@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -9,17 +11,54 @@ class EditProfileScreen extends StatefulWidget {
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
-  final _nameController = TextEditingController(text: 'Aiman Haziq');
-  final _phoneController = TextEditingController(text: '+60 12-345 6789');
+  late final TextEditingController _nameController;
+  late final TextEditingController _phoneController;
+  late final TextEditingController _bioController;
+
+  @override
+  void initState() {
+    super.initState();
+    final authVM = context.read<AuthViewModel>();
+    final user = authVM.currentUser;
+    _nameController = TextEditingController(text: user?.effectiveUsername ?? 'Aiman Haziq');
+    _phoneController = TextEditingController(text: '+60 12-345 6789');
+    _bioController = TextEditingController(text: user?.bio ?? 'Passionate Malaysian cultural explorer and craft preserver.');
+  }
 
   @override
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
+    _bioController.dispose();
     super.dispose();
   }
 
-  void _handleSave() {
+  Future<void> _handleSave() async {
+    final name = _nameController.text.trim();
+    final phone = _phoneController.text.trim();
+    final bio = _bioController.text.trim();
+
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Username cannot be empty!'),
+          backgroundColor: Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final authVM = context.read<AuthViewModel>();
+    await authVM.updateProfile(
+      username: name,
+      displayName: name,
+      phone: phone,
+      bio: bio,
+    );
+
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Profile information updated successfully!'),
@@ -32,6 +71,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authVM = context.watch<AuthViewModel>();
+    final initials = authVM.currentUser?.initials ?? 'AH';
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
@@ -81,9 +123,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 children: [
                   CircleAvatar(
                     radius: 54,
-                    backgroundColor: const Color(0xFF004D40).withOpacity(0.1),
+                    backgroundColor: const Color(0xFF004D40).withValues(alpha: 0.1),
                     child: Text(
-                      'AH',
+                      initials,
                       style: GoogleFonts.dmSerifDisplay(
                         fontSize: 32,
                         color: const Color(0xFF004D40),
@@ -110,11 +152,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
             const SizedBox(height: 32),
 
-            // Full Name Input Field
+            // Full Name / Username Input Field
             TextField(
               controller: _nameController,
               decoration: InputDecoration(
-                labelText: 'Full Name',
+                labelText: 'Username / Full Name',
                 prefixIcon: const Icon(Icons.person_outline_rounded),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
               ),
@@ -132,9 +174,23 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
               ),
             ),
+
+            const SizedBox(height: 16),
+
+            // Bio / Explorer Note Field
+            TextField(
+              controller: _bioController,
+              maxLines: 3,
+              decoration: InputDecoration(
+                labelText: 'Heritage Bio / Explorer Note',
+                prefixIcon: const Icon(Icons.description_outlined),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 }
+

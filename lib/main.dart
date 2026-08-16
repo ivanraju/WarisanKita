@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
 import 'package:warisan_kita/data/repositories/artisan_repository.dart';
@@ -25,6 +24,7 @@ import 'package:warisan_kita/ui/auth/splash_screen.dart';
 import 'package:warisan_kita/ui/auth/login_screen.dart';
 import 'package:warisan_kita/ui/auth/register_screen.dart';
 import 'package:warisan_kita/ui/auth/role_selection_screen.dart';
+import 'package:warisan_kita/ui/auth/forgot_password_screen.dart';
 import 'package:warisan_kita/ui/tourist/tourist_main_scaffold.dart';
 import 'package:warisan_kita/ui/artisan/artisan_main_scaffold.dart';
 import 'package:warisan_kita/ui/admin_web/admin_moderation_dashboard_view.dart';
@@ -61,7 +61,9 @@ void main() async {
         ChangeNotifierProvider(
           create: (context) => MatchmakerViewModel(repository: context.read<MatchmakerRepository>()),
         ),
-        ChangeNotifierProvider(create: (_) => ModerationViewModel()),
+        ChangeNotifierProvider(
+          create: (context) => ModerationViewModel(repository: context.read<UserRepository>()),
+        ),
         ChangeNotifierProvider(create: (_) => NavigationViewModel()),
         ChangeNotifierProvider(create: (_) => ItineraryViewModel()),
       ],
@@ -89,6 +91,7 @@ class WarisanKitaApp extends StatelessWidget {
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
         '/role-selection': (context) => const RoleSelectionScreen(),
+        '/forgot-password': (context) => const ForgotPasswordScreen(),
         '/tourist': (context) => const TouristMainScaffold(),
         '/artisan': (context) => const ArtisanMainScaffold(),
         '/admin': (context) => const AdminModerationDashboardView(),

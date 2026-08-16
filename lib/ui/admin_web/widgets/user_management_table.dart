@@ -153,16 +153,30 @@ class UserManagementTable extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: isArtisan ? const Color(0xFFFEF3C7) : const Color(0xFFE0F2FE),
+              color: user.isDualRole
+                  ? const Color(0xFFF0FDF4)
+                  : (isArtisan ? const Color(0xFFFEF3C7) : const Color(0xFFE0F2FE)),
               borderRadius: BorderRadius.circular(10),
+              border: user.isDualRole ? Border.all(color: const Color(0xFF86EFAC)) : null,
             ),
-            child: Text(
-              user.role,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: isArtisan ? const Color(0xFFB45309) : const Color(0xFF0369A1),
-              ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (user.isDualRole) ...[
+                  const Icon(Icons.swap_horiz_rounded, size: 14, color: Color(0xFF16A34A)),
+                  const SizedBox(width: 4),
+                ],
+                Text(
+                  user.isDualRole ? 'Artisan & Tourist' : user.role,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: user.isDualRole
+                        ? const Color(0xFF15803D)
+                        : (isArtisan ? const Color(0xFFB45309) : const Color(0xFF0369A1)),
+                  ),
+                ),
+              ],
             ),
           ),
         ),

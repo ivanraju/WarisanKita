@@ -1,8 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:warisan_kita/data/repositories/user_repository.dart';
+import 'package:warisan_kita/data/services/supabase_service.dart';
+import 'package:warisan_kita/domain/models/active_artisan_master.dart';
 import 'package:warisan_kita/domain/models/pending_artisan_profile.dart';
 import 'package:warisan_kita/domain/models/user.dart';
 
 class ModerationViewModel extends ChangeNotifier {
+  final UserRepository? _repository;
+  final SupabaseService? _service;
+
+  ModerationViewModel({UserRepository? repository, SupabaseService? service})
+      : _repository = repository,
+        _service = service {
+    fetchPendingArtisans();
+  }
+
   String _activeTab = 'Pending Approvals';
   String get activeTab => _activeTab;
 
@@ -32,6 +44,15 @@ class ModerationViewModel extends ChangeNotifier {
       email: 'ahmad.razak@example.com',
       experience: '12 Years',
       phone: '+60 12-345 6789',
+      ssmNumber: '202601004821 (SSM Verified)',
+      ssmFileName: 'SSM_Registration_Cert_Melaka.pdf',
+      certFileName: 'Kraftangan_Master_Ceramics_Cert.pdf',
+      photos: [
+        'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600',
+        'https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=600',
+      ],
+      bio: 'Master ceramicist with 12 years preserving traditional Melaka pottery techniques.',
+      isUpgradeFromTourist: false,
     ),
     const PendingArtisanProfile(
       id: 'p2',
@@ -43,6 +64,15 @@ class ModerationViewModel extends ChangeNotifier {
       email: 'siti.batik@example.com',
       experience: '8 Years',
       phone: '+60 19-876 5432',
+      ssmNumber: 'KT-TRG-99482',
+      ssmFileName: 'SSM_Terengganu_Batik.pdf',
+      certFileName: 'Kraftangan_National_Award_Batik.pdf',
+      photos: [
+        'https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=600',
+        'https://images.unsplash.com/photo-1528459801416-a9e53bbf4e17?w=600',
+      ],
+      bio: 'Award-winning hand-drawn batik block printing master from Kuala Terengganu.',
+      isUpgradeFromTourist: false,
     ),
     const PendingArtisanProfile(
       id: 'p3',
@@ -54,6 +84,14 @@ class ModerationViewModel extends ChangeNotifier {
       email: 'wong.wood@example.com',
       experience: '25 Years',
       phone: '+60 17-234 5678',
+      ssmNumber: 'PRK-WOOD-8831',
+      ssmFileName: 'SSM_Woodcarving_Perak.pdf',
+      certFileName: 'Kraftangan_Master_Woodcarver.pdf',
+      photos: [
+        'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600',
+      ],
+      bio: 'Heritage Malay-Nyonya floral and relief architectural woodcarver with 25 years of mastery.',
+      isUpgradeFromTourist: false,
     ),
     const PendingArtisanProfile(
       id: 'p4',
@@ -65,19 +103,142 @@ class ModerationViewModel extends ChangeNotifier {
       email: 'minah.songket@example.com',
       experience: '15 Years',
       phone: '+60 13-456 7890',
+      ssmNumber: 'KT-KEL-19948',
+      ssmFileName: 'SSM_Songket_Kelantan.pdf',
+      certFileName: 'Kraftangan_Gold_Songket_Certificate.pdf',
+      photos: [
+        'https://images.unsplash.com/photo-1528459801416-a9e53bbf4e17?w=600',
+      ],
+      bio: 'Traditional Kelantanese gold-thread songket weaver keeping Royal Court patterns alive.',
+      isUpgradeFromTourist: false,
     ),
     const PendingArtisanProfile(
       id: 'p5',
-      name: 'Rajan Royal Pewter',
-      craftCategory: 'Pewter Craft',
-      state: 'Kuala Lumpur',
-      dateSubmitted: 'Jul 30, 2026',
-      imageUrl: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=600&auto=format&fit=crop&q=80',
-      email: 'rajan.pewter@example.com',
-      experience: '10 Years',
-      phone: '+60 16-789 0123',
+      name: 'Aiman Haziq Woodcraft Studio',
+      craftCategory: 'Wood Carving',
+      state: 'Terengganu',
+      dateSubmitted: 'Aug 16, 2026',
+      imageUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80',
+      email: 'tourist@warisankita.my',
+      experience: '5 Years',
+      phone: '+60 11-2345 6789',
+      ssmNumber: '202601004821 (SSM Verified)',
+      ssmFileName: 'SSM_Registration_Cert_2026.pdf',
+      certFileName: 'Kraftangan_Master_Certificate.pdf',
+      photos: [
+        'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600',
+      ],
+      bio: 'Existing Cultural Explorer applying for studio registration in ukiran kayu warisan.',
+      isUpgradeFromTourist: true,
     ),
   ];
+
+  // Active Verified Master Artisans State
+  final List<ActiveArtisanMaster> _activeArtisanMasters = [
+    const ActiveArtisanMaster(
+      id: 'a1',
+      name: 'Pak Mat Pottery Studio',
+      email: 'pakmat.clay@example.com',
+      category: 'Pottery & Ceramics',
+      state: 'Melaka',
+      experience: '25+ Years',
+      plaques: 28,
+      isLiveOpen: true,
+      licenseNo: 'KFG-2024-889',
+      verifiedDate: 'Jan 10, 2024',
+      imageUrl: 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&auto=format&fit=crop&q=80',
+      bio: 'Renowned ceramic master specializing in traditional Melaka clay vessels and porcelain glazes.',
+      phone: '+60 12-345 6789',
+      isDualRole: false,
+      isSuspended: false,
+    ),
+    const ActiveArtisanMaster(
+      id: 'a2',
+      name: 'Tok Guru Crafts',
+      email: 'tokguru.wood@example.com',
+      category: 'Wood Carving',
+      state: 'Kelantan',
+      experience: '30+ Years',
+      plaques: 42,
+      isLiveOpen: false,
+      licenseNo: 'KFG-2023-112',
+      verifiedDate: 'Mar 15, 2023',
+      imageUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80',
+      bio: 'National heritage wood carver preserving Kelantanese architectural wood reliefs.',
+      phone: '+60 19-876 5432',
+      isDualRole: false,
+      isSuspended: false,
+    ),
+    const ActiveArtisanMaster(
+      id: 'a3',
+      name: 'Kak Lina Silk Batik',
+      email: 'kaklina.silk@example.com',
+      category: 'Batik Weaving',
+      state: 'Terengganu',
+      experience: '18 Years',
+      plaques: 19,
+      isLiveOpen: true,
+      licenseNo: 'KFG-2024-405',
+      verifiedDate: 'Feb 20, 2024',
+      imageUrl: 'https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=600&auto=format&fit=crop&q=80',
+      bio: 'East Coast silk batik artisan creating hand-painted floral canting masterpieces.',
+      phone: '+60 17-234 5678',
+      isDualRole: true,
+      isSuspended: false,
+    ),
+    const ActiveArtisanMaster(
+      id: 'a4',
+      name: 'Sayong Black Clay Master',
+      email: 'sayong.black@example.com',
+      category: 'Pottery & Ceramics',
+      state: 'Perak',
+      experience: '22 Years',
+      plaques: 35,
+      isLiveOpen: true,
+      licenseNo: 'KFG-2023-774',
+      verifiedDate: 'Nov 12, 2023',
+      imageUrl: 'https://images.unsplash.com/photo-1528459801416-a9e53bbf4e17?w=600&auto=format&fit=crop&q=80',
+      bio: 'Kuala Kangsar master of authentic Labu Sayong pit-firing and natural black finishes.',
+      phone: '+60 13-987 6543',
+      isDualRole: false,
+      isSuspended: false,
+    ),
+    const ActiveArtisanMaster(
+      id: 'a5',
+      name: 'Mah Meri Heritage Woodcraft',
+      email: 'mahmeri.wood@example.com',
+      category: 'Wood Carving',
+      state: 'Selangor',
+      experience: '20 Years',
+      plaques: 24,
+      isLiveOpen: true,
+      licenseNo: 'KFG-2024-512',
+      verifiedDate: 'May 05, 2024',
+      imageUrl: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=600&auto=format&fit=crop&q=80',
+      bio: 'Indigenous Mah Meri master carver preserving spiritual masks and Nyireh Batu timber figurines.',
+      phone: '+60 11-3456 7890',
+      isDualRole: false,
+      isSuspended: false,
+    ),
+  ];
+
+  List<ActiveArtisanMaster> get activeArtisanMasters => _activeArtisanMasters;
+
+  List<ActiveArtisanMaster> get filteredActiveArtisans {
+    return _activeArtisanMasters.where((artisan) {
+      final matchesSearch = _searchQuery.isEmpty ||
+          artisan.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          artisan.category.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          artisan.state.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          artisan.licenseNo.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          artisan.email.toLowerCase().contains(_searchQuery.toLowerCase());
+
+      final matchesCategory = _selectedCategory == 'All Categories' ||
+          artisan.category == _selectedCategory;
+
+      return matchesSearch && matchesCategory;
+    }).toList();
+  }
 
   // User Management State
   final List<UserModel> _registeredUsers = [
@@ -149,14 +310,239 @@ class ModerationViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void approveArtisan(String id) {
-    _pendingArtisans.removeWhere((item) => item.id == id);
+  Future<void> fetchPendingArtisans() async {
+    try {
+      final List<Map<String, dynamic>> dbPending = _repository != null
+          ? await _repository!.getPendingArtisans()
+          : (_service != null ? await _service!.getPendingArtisans() : []);
+
+      for (final raw in dbPending) {
+        final email = (raw['email'] ?? '').toString();
+        if (email.isEmpty) continue;
+
+        final id = raw['id']?.toString() ?? 'p_${email.hashCode}';
+        final name = (raw['studio_name'] ?? raw['full_name'] ?? raw['displayName'] ?? raw['username'] ?? 'Artisan Studio').toString();
+        final craft = (raw['craft_category'] ?? raw['craftCategory'] ?? 'Handicraft & Heritage').toString();
+        final state = (raw['state'] ?? 'Malaysia').toString();
+        final role = (raw['role'] ?? '').toString();
+        final isUpgrade = role.contains('Tourist') || role.contains('Both');
+
+        final existingIdx = _pendingArtisans.indexWhere((p) => p.email.toLowerCase() == email.toLowerCase());
+        final newProfile = PendingArtisanProfile(
+          id: id,
+          name: name,
+          craftCategory: craft,
+          state: state,
+          dateSubmitted: 'Today',
+          imageUrl: (raw['imageUrl'] ?? 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600').toString(),
+          email: email,
+          experience: (raw['experience'] ?? 'Verified Studio').toString(),
+          phone: (raw['phone'] ?? raw['phone_number'] ?? '+60 12-345 6789').toString(),
+          ssmNumber: (raw['ssm_number'] ?? raw['ssmNumber'] ?? '202601004821 (SSM Verified)').toString(),
+          ssmFileName: (raw['ssm_file'] ?? raw['ssmFileName'] ?? 'SSM_Registration_Cert.pdf').toString(),
+          certFileName: (raw['cert_file'] ?? raw['certFileName'] ?? 'Kraftangan_Master_Cert.pdf').toString(),
+          photos: (raw['photos'] is List) ? List<String>.from(raw['photos']) : const ['Studio_Workshop_Photo_1.jpg'],
+          bio: raw['bio']?.toString(),
+          isUpgradeFromTourist: isUpgrade,
+        );
+
+        if (existingIdx == -1) {
+          _pendingArtisans.insert(0, newProfile);
+        } else {
+          _pendingArtisans[existingIdx] = newProfile;
+        }
+      }
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error fetching pending artisans: $e');
+    }
+  }
+
+  void addPendingArtisan(PendingArtisanProfile profile) {
+    _pendingArtisans.removeWhere((p) => p.email.toLowerCase() == profile.email.toLowerCase());
+    _pendingArtisans.insert(0, profile);
     notifyListeners();
   }
 
-  void rejectArtisan(String id) {
-    _pendingArtisans.removeWhere((item) => item.id == id);
-    notifyListeners();
+  Future<void> approveArtisan(String id) async {
+    final idx = _pendingArtisans.indexWhere((item) => item.id == id);
+    if (idx != -1) {
+      final artisan = _pendingArtisans[idx];
+      _pendingArtisans.removeAt(idx);
+
+      // Determine target role
+      final userIdx = _registeredUsers.indexWhere((u) => u.email.toLowerCase() == artisan.email.toLowerCase());
+      final isUpgrade = userIdx != -1 || artisan.isUpgradeFromTourist;
+      final targetRole = isUpgrade ? 'Artisan & Tourist' : 'Artisan';
+
+      if (isUpgrade) {
+        if (userIdx != -1) {
+          _registeredUsers[userIdx] = _registeredUsers[userIdx].copyWith(
+            role: targetRole,
+            roles: ['Tourist', 'Artisan'],
+            status: 'ACTIVE',
+            studioName: artisan.name,
+            craftCategory: artisan.craftCategory,
+            ssmNumber: artisan.ssmNumber,
+          );
+        } else {
+          _registeredUsers.add(UserModel(
+            id: 'u_${DateTime.now().millisecondsSinceEpoch}',
+            email: artisan.email,
+            displayName: artisan.name,
+            role: targetRole,
+            roles: const ['Tourist', 'Artisan'],
+            status: 'ACTIVE',
+            studioName: artisan.name,
+            craftCategory: artisan.craftCategory,
+            ssmNumber: artisan.ssmNumber,
+            state: artisan.state,
+          ));
+        }
+      } else {
+        // Purely new Artisan
+        _registeredUsers.add(UserModel(
+          id: 'u_${DateTime.now().millisecondsSinceEpoch}',
+          email: artisan.email,
+          displayName: artisan.name,
+          role: 'Artisan',
+          roles: const ['Artisan'],
+          status: 'ACTIVE',
+          studioName: artisan.name,
+          craftCategory: artisan.craftCategory,
+          ssmNumber: artisan.ssmNumber,
+          state: artisan.state,
+        ));
+      }
+
+      // Insert into Active Verified Masters
+      _activeArtisanMasters.removeWhere((a) => a.email.toLowerCase() == artisan.email.toLowerCase());
+      _activeArtisanMasters.insert(
+        0,
+        ActiveArtisanMaster(
+          id: artisan.id,
+          name: artisan.name,
+          email: artisan.email,
+          category: artisan.craftCategory,
+          state: artisan.state,
+          experience: artisan.experience,
+          plaques: 1,
+          isLiveOpen: true,
+          licenseNo: artisan.ssmNumber ?? '202601004821 (SSM Verified)',
+          verifiedDate: 'Just Approved',
+          imageUrl: artisan.imageUrl,
+          bio: artisan.bio ?? 'Verified heritage master preserving traditional ${artisan.craftCategory}.',
+          phone: artisan.phone,
+          isDualRole: isUpgrade,
+          isSuspended: false,
+        ),
+      );
+
+      // Persist to DB
+      if (_repository != null) {
+        await _repository!.updateArtisanStatus(
+          email: artisan.email,
+          newStatus: 'ACTIVE',
+          newRole: targetRole,
+        );
+      } else if (_service != null) {
+        await _service!.updateArtisanStatusInDb(
+          email: artisan.email,
+          newStatus: 'ACTIVE',
+          newRole: targetRole,
+        );
+      }
+
+      notifyListeners();
+    }
+  }
+
+  void toggleActiveArtisanLiveStatus(String id) {
+    final idx = _activeArtisanMasters.indexWhere((a) => a.id == id);
+    if (idx != -1) {
+      final current = _activeArtisanMasters[idx];
+      _activeArtisanMasters[idx] = current.copyWith(isLiveOpen: !current.isLiveOpen);
+      notifyListeners();
+    }
+  }
+
+  Future<void> suspendActiveArtisan(String id) async {
+    final idx = _activeArtisanMasters.indexWhere((a) => a.id == id);
+    if (idx != -1) {
+      final artisan = _activeArtisanMasters[idx];
+      _activeArtisanMasters[idx] = artisan.copyWith(isSuspended: true, isLiveOpen: false);
+
+      if (_repository != null) {
+        await _repository!.updateArtisanStatus(
+          email: artisan.email,
+          newStatus: 'SUSPENDED',
+          newRole: artisan.isDualRole ? 'Artisan & Tourist' : 'Artisan',
+        );
+      } else if (_service != null) {
+        await _service!.updateArtisanStatusInDb(
+          email: artisan.email,
+          newStatus: 'SUSPENDED',
+          newRole: artisan.isDualRole ? 'Artisan & Tourist' : 'Artisan',
+        );
+      }
+
+      notifyListeners();
+    }
+  }
+
+  Future<void> reactivateActiveArtisan(String id) async {
+    final idx = _activeArtisanMasters.indexWhere((a) => a.id == id);
+    if (idx != -1) {
+      final artisan = _activeArtisanMasters[idx];
+      _activeArtisanMasters[idx] = artisan.copyWith(isSuspended: false, isLiveOpen: true);
+
+      if (_repository != null) {
+        await _repository!.updateArtisanStatus(
+          email: artisan.email,
+          newStatus: 'ACTIVE',
+          newRole: artisan.isDualRole ? 'Artisan & Tourist' : 'Artisan',
+        );
+      } else if (_service != null) {
+        await _service!.updateArtisanStatusInDb(
+          email: artisan.email,
+          newStatus: 'ACTIVE',
+          newRole: artisan.isDualRole ? 'Artisan & Tourist' : 'Artisan',
+        );
+      }
+
+      notifyListeners();
+    }
+  }
+
+  Future<void> rejectArtisan(String id, {String? reason}) async {
+    final idx = _pendingArtisans.indexWhere((item) => item.id == id);
+    if (idx != -1) {
+      final artisan = _pendingArtisans[idx];
+      _pendingArtisans.removeAt(idx);
+
+      final userIdx = _registeredUsers.indexWhere((u) => u.email.toLowerCase() == artisan.email.toLowerCase());
+      if (userIdx != -1) {
+        _registeredUsers[userIdx] = _registeredUsers[userIdx].copyWith(
+          status: 'REJECTED',
+        );
+      }
+
+      if (_repository != null) {
+        await _repository!.updateArtisanStatus(
+          email: artisan.email,
+          newStatus: 'REJECTED',
+          newRole: 'Artisan',
+        );
+      } else if (_service != null) {
+        await _service!.updateArtisanStatusInDb(
+          email: artisan.email,
+          newStatus: 'REJECTED',
+          newRole: 'Artisan',
+        );
+      }
+
+      notifyListeners();
+    }
   }
 
   void suspendUser(String id) {

@@ -7,6 +7,7 @@ import 'package:warisan_kita/ui/core/edit_profile_screen.dart';
 import 'package:warisan_kita/ui/core/widgets/translation_language_dialog.dart';
 import 'package:warisan_kita/viewmodels/theme_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
+import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -20,18 +21,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _locationAlerts = true;
 
   void _handleLogout(LanguageViewModel langVM) {
+    final nav = Navigator.of(context, rootNavigator: true);
+    final authVM = context.read<AuthViewModel>();
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogCtx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(langVM.translate('Log Out'), style: GoogleFonts.dmSerifDisplay(color: Theme.of(context).colorScheme.primary)),
         content: Text(langVM.translate('Are you sure you want to log out of WarisanKita?'), style: GoogleFonts.plusJakartaSans(fontSize: 13)),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(langVM.translate('Cancel'))),
+          TextButton(onPressed: () => Navigator.of(dialogCtx).pop(), child: Text(langVM.translate('Cancel'))),
           FilledButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+            onPressed: () async {
+              Navigator.of(dialogCtx).pop();
+              await authVM.logout();
+              nav.pushNamedAndRemoveUntil('/login', (route) => false);
             },
             style: FilledButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),
             child: Text(langVM.translate('Log Out')),
@@ -71,6 +75,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final theme = Theme.of(context);
     final isDark = context.watch<ThemeViewModel>().isDarkMode;
     final langVM = context.watch<LanguageViewModel>();
+    final authVM = context.watch<AuthViewModel>();
+    final user = authVM.currentUser;
+    final username = user?.effectiveUsername ?? 'Aiman Haziq';
+    final initials = user?.initials ?? 'AH';
+    final email = user?.email ?? 'tourist@warisankita.my';
+    final role = user?.role ?? 'Tourist';
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -91,6 +101,71 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.all(24.0),
         children: [
+          // User Account Profile Card Banner
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                )
+              ],
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 28,
+                  backgroundColor: const Color(0xFF004D40),
+                  child: Text(
+                    initials,
+                    style: GoogleFonts.dmSerifDisplay(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        username,
+                        style: GoogleFonts.dmSerifDisplay(
+                          fontSize: 18,
+                          color: isDark ? Colors.white : const Color(0xFF004D40),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        email,
+                        style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF004D40).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    role,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF004D40),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
           // Section 1: Account
           _buildSectionHeader(langVM.translate('ACCOUNT')),
           const SizedBox(height: 10),

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
+import 'package:warisan_kita/viewmodels/moderation_viewmodel.dart';
 
 class AdminSidebar extends StatelessWidget {
   final String activeTab;
@@ -13,6 +16,18 @@ class AdminSidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final authVM = context.watch<AuthViewModel>();
+    ModerationViewModel? modVM;
+    try {
+      modVM = context.watch<ModerationViewModel>();
+    } catch (_) {}
+
+    final user = authVM.currentUser;
+    final username = user?.effectiveUsername ?? 'Admin';
+    final email = user?.email ?? 'admin@warisankita.my';
+    final initials = user?.initials ?? 'AD';
+    final pendingCount = modVM?.totalPendingCount ?? 5;
+
     return Container(
       width: double.infinity,
       color: const Color(0xFF0F172A), // Dark slate theme for professional admin navigation
@@ -26,25 +41,21 @@ class AdminSidebar extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF10B981),
-                  borderRadius: BorderRadius.circular(12),
+                  color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(
-                  Icons.shield_outlined,
-                  color: Colors.white,
-                  size: 22,
-                ),
+                child: const Icon(Icons.security_rounded, color: Color(0xFF10B981), size: 24),
               ),
               const SizedBox(width: 12),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'WarisanKita',
+                    'WARISAN KITA',
                     style: GoogleFonts.dmSerifDisplay(
                       color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      letterSpacing: 1.2,
                     ),
                   ),
                   Text(
@@ -52,7 +63,6 @@ class AdminSidebar extends StatelessWidget {
                     style: GoogleFonts.plusJakartaSans(
                       color: const Color(0xFF94A3B8),
                       fontSize: 11,
-                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],
@@ -60,56 +70,52 @@ class AdminSidebar extends StatelessWidget {
             ],
           ),
 
-          const SizedBox(height: 36),
+          const SizedBox(height: 28),
 
-          // Section Title Label
-          Text(
-            'NAVIGATION',
-            style: GoogleFonts.plusJakartaSans(
-              color: const Color(0xFF64748B),
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.2,
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Menu Links
+          // Navigation Links
           _buildNavItem(
             icon: Icons.dashboard_rounded,
-            label: 'Overview',
-            badgeText: null,
+            tabId: 'Overview',
+            label: 'Overview & Analytics',
           ),
+          const SizedBox(height: 4),
           _buildNavItem(
-            icon: Icons.rate_review_rounded,
-            label: 'Pending Approvals',
-            badgeText: '5',
+            icon: Icons.verified_user_rounded,
+            tabId: 'Pending Approvals',
+            label: 'Artisan Verification',
+            badgeText: pendingCount > 0 ? '$pendingCount PENDING' : 'CLEAR',
           ),
-          _buildNavItem(
-            icon: Icons.stars_rounded,
-            label: 'Quest Approvals',
-            badgeText: '3',
-          ),
-          _buildNavItem(
-            icon: Icons.forum_rounded,
-            label: 'Forum Moderation',
-            badgeText: '2',
-          ),
-          _buildNavItem(
-            icon: Icons.people_alt_rounded,
-            label: 'User Management',
-            badgeText: '4',
-          ),
+          const SizedBox(height: 4),
           _buildNavItem(
             icon: Icons.storefront_rounded,
+            tabId: 'Active Artisans',
             label: 'Active Artisans',
-            badgeText: null,
           ),
+          const SizedBox(height: 4),
+          _buildNavItem(
+            icon: Icons.manage_accounts_rounded,
+            tabId: 'User Management',
+            label: 'User Management',
+          ),
+          const SizedBox(height: 4),
+          _buildNavItem(
+            icon: Icons.stars_rounded,
+            tabId: 'Quest Approvals',
+            label: 'Quest Moderation',
+            badgeText: '2 NEW',
+          ),
+          const SizedBox(height: 4),
+          _buildNavItem(
+            icon: Icons.forum_rounded,
+            tabId: 'Forum Moderation',
+            label: 'Community Forum',
+            badgeText: 'FLAGGED',
+          ),
+          const SizedBox(height: 4),
           _buildNavItem(
             icon: Icons.settings_rounded,
-            label: 'Settings',
-            badgeText: null,
+            tabId: 'Settings',
+            label: 'System Settings',
           ),
 
           const Spacer(),
@@ -120,16 +126,16 @@ class AdminSidebar extends StatelessWidget {
             decoration: BoxDecoration(
               color: const Color(0xFF1E293B),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white.withOpacity(0.08)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
             ),
             child: Row(
               children: [
                 CircleAvatar(
                   radius: 18,
-                  backgroundColor: const Color(0xFF10B981).withOpacity(0.2),
-                  child: const Text(
-                    'AD',
-                    style: TextStyle(
+                  backgroundColor: const Color(0xFF10B981).withValues(alpha: 0.2),
+                  child: Text(
+                    initials,
+                    style: const TextStyle(
                       color: Color(0xFF10B981),
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
@@ -142,7 +148,7 @@ class AdminSidebar extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Admin Officer',
+                        username,
                         style: GoogleFonts.plusJakartaSans(
                           color: Colors.white,
                           fontSize: 13,
@@ -150,7 +156,7 @@ class AdminSidebar extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        'moderator@warisankita.my',
+                        email,
                         maxLines: 1,
                         softWrap: true,
                         style: GoogleFonts.plusJakartaSans(
@@ -164,7 +170,9 @@ class AdminSidebar extends StatelessWidget {
                 IconButton(
                   icon: const Icon(Icons.logout_rounded, color: Color(0xFFEF4444), size: 18),
                   tooltip: 'Admin Logout',
-                  onPressed: () {
+                  onPressed: () async {
+                    await authVM.logout();
+                    if (!context.mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
@@ -175,7 +183,7 @@ class AdminSidebar extends StatelessWidget {
                         behavior: SnackBarBehavior.floating,
                       ),
                     );
-                    Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+                    Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil('/login', (route) => false);
                   },
                 ),
               ],
@@ -188,22 +196,23 @@ class AdminSidebar extends StatelessWidget {
 
   Widget _buildNavItem({
     required IconData icon,
+    required String tabId,
     required String label,
     String? badgeText,
   }) {
-    final bool isSelected = activeTab == label;
+    final bool isSelected = activeTab == tabId || activeTab == label;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
+      padding: const EdgeInsets.only(bottom: 2.0),
       child: Material(
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
-          onTap: () => onTabSelected(label),
+          onTap: () => onTabSelected(tabId),
           borderRadius: BorderRadius.circular(12),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 150),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
             decoration: BoxDecoration(
               color: isSelected ? const Color(0xFF10B981) : Colors.transparent,
               borderRadius: BorderRadius.circular(12),
@@ -236,7 +245,7 @@ class AdminSidebar extends StatelessWidget {
                     child: Text(
                       badgeText,
                       style: GoogleFonts.plusJakartaSans(
-                        fontSize: 11,
+                        fontSize: 10.5,
                         fontWeight: FontWeight.bold,
                         color: isSelected ? const Color(0xFF0F172A) : const Color(0xFF38BDF8),
                       ),

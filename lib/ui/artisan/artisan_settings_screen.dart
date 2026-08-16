@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:warisan_kita/ui/artisan/artisan_task_management_screen.dart';
 import 'package:warisan_kita/ui/artisan/profile_builder_tab.dart';
 import 'package:warisan_kita/viewmodels/theme_viewmodel.dart';
+import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 
 class ArtisanSettingsScreen extends StatefulWidget {
   const ArtisanSettingsScreen({super.key});
@@ -16,18 +17,23 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
   bool _proximityAlerts = true;
 
   void _handleLogout() {
+    final nav = Navigator.of(context, rootNavigator: true);
+    final authVM = context.read<AuthViewModel>();
+    final studio = authVM.currentUser?.studioName ?? 'Pak Mat Pottery Studio';
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogCtx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text('Log Out Studio Account', style: GoogleFonts.dmSerifDisplay(color: const Color(0xFF004D40))),
-        content: Text('Are you sure you want to log out of Pak Mat Pottery Studio?', style: GoogleFonts.plusJakartaSans(fontSize: 13)),
+        content: Text('Are you sure you want to log out of $studio?', style: GoogleFonts.plusJakartaSans(fontSize: 13)),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.of(dialogCtx).pop(), child: const Text('Cancel')),
           FilledButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+            onPressed: () async {
+              Navigator.of(dialogCtx).pop();
+              await authVM.logout();
+              nav.pushNamedAndRemoveUntil('/login', (route) => false);
             },
             style: FilledButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),
             child: const Text('Log Out'),
@@ -41,6 +47,11 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = context.watch<ThemeViewModel>().isDarkMode;
+    final authVM = context.watch<AuthViewModel>();
+    final user = authVM.currentUser;
+    final studioName = user?.studioName ?? user?.effectiveUsername ?? 'Pak Mat Pottery Studio';
+    final initials = user?.initials ?? 'PM';
+    final craft = user?.craftCategory ?? 'Pottery & Ceramics';
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -61,6 +72,71 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.all(24.0),
         children: [
+          // Studio Account Profile Card Banner
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                )
+              ],
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 28,
+                  backgroundColor: const Color(0xFFD97706),
+                  child: Text(
+                    initials,
+                    style: GoogleFonts.dmSerifDisplay(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        studioName,
+                        style: GoogleFonts.dmSerifDisplay(
+                          fontSize: 18,
+                          color: isDark ? Colors.white : const Color(0xFF004D40),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        craft,
+                        style: GoogleFonts.plusJakartaSans(fontSize: 12, color: const Color(0xFFD97706), fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text(
+                    'VERIFIED',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF10B981),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
           // Section 1: Studio & Business Management
           _buildSectionHeader('STUDIO & BUSINESS MANAGEMENT'),
           const SizedBox(height: 10),

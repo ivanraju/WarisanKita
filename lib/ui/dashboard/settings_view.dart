@@ -98,23 +98,23 @@ class SettingsScreen extends StatelessWidget {
   }
 
   void _showLogoutDialog(BuildContext context) {
+    final nav = Navigator.of(context, rootNavigator: true);
+    final authVM = context.read<AuthViewModel>();
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogCtx) => AlertDialog(
         title: const Text('Logout', style: TextStyle(fontFamily: 'Serif')),
         content: const Text('Are you sure you want to sign out of WarisanKita?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogCtx),
             child: const Text('CANCEL'),
           ),
           TextButton(
-            onPressed: () {
-              context.read<AuthViewModel>().logout();
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-                (route) => false,
-              );
+            onPressed: () async {
+              Navigator.pop(dialogCtx);
+              await authVM.logout();
+              nav.pushNamedAndRemoveUntil('/login', (route) => false);
             },
             child: const Text('LOGOUT', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
           ),

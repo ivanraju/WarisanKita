@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:warisan_kita/ui/core/settings_screen.dart';
 import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
+import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 
 class TouristProfileTab extends StatefulWidget {
   const TouristProfileTab({super.key});
@@ -213,7 +214,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
     );
   }
 
-  void _showCertificateModal() {
+  void _showCertificateModal(String username) {
     showDialog(
       context: context,
       builder: (context) {
@@ -248,7 +249,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                 const Divider(),
                 const SizedBox(height: 12),
                 Text(
-                  'This certifies that Aiman Haziq has actively supported Malaysian craft preservation by completing 14 cultural quests across 8 verified master studios.',
+                  'This certifies that $username has actively supported Malaysian craft preservation by completing 14 cultural quests across 8 verified master studios.',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.plusJakartaSans(fontSize: 12, height: 1.4, color: const Color(0xFF334155)),
                 ),
@@ -276,6 +277,9 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
   @override
   Widget build(BuildContext context) {
     final langVM = context.watch<LanguageViewModel>();
+    final authVM = context.watch<AuthViewModel>();
+    final username = authVM.currentUser?.effectiveUsername ?? 'Aiman Haziq';
+    final initials = authVM.currentUser?.initials ?? 'AH';
 
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
@@ -315,7 +319,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
               children: [
                 // 🛂 POLARSTEPS INSPIRED ROYAL PASSPORT BOOKLET CARD
                 GestureDetector(
-                  onTap: _showCertificateModal,
+                  onTap: () => _showCertificateModal(username),
                   child: Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
@@ -408,7 +412,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                   radius: 34,
                                   backgroundColor: const Color(0xFFFFD54F),
                                   child: Text(
-                                    'AH',
+                                    initials,
                                     style: GoogleFonts.dmSerifDisplay(
                                       color: const Color(0xFF004D40),
                                       fontSize: 26,
@@ -424,7 +428,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Aiman Haziq',
+                                    username,
                                     style: GoogleFonts.dmSerifDisplay(
                                       color: Colors.white,
                                       fontSize: 24,
@@ -532,6 +536,65 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                     ],
                   ),
                 ),
+                if (authVM.currentUser?.isDualRole == true) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF3C7),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFFF59E0B)),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFD97706).withOpacity(0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.storefront_rounded, color: Color(0xFFB45309), size: 24),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Dual Role: Master Artisan Studio',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  color: const Color(0xFF92400E),
+                                ),
+                              ),
+                              Text(
+                                'Switch to manage your craft studio, live sessions, and masterworks.',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11,
+                                  color: const Color(0xFFB45309),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        FilledButton(
+                          onPressed: () {
+                            authVM.selectActiveRole('Master Artisan');
+                            Navigator.of(context).pushReplacementNamed('/artisan');
+                          },
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFFD97706),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: const Text('Switch', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
 
                 const SizedBox(height: 24),
 

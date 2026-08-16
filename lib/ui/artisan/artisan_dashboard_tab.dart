@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:warisan_kita/ui/artisan/artisan_task_management_screen.dart';
 import 'package:warisan_kita/ui/artisan/profile_builder_tab.dart';
 import 'package:warisan_kita/ui/core/live_forum_tab.dart';
 import 'package:warisan_kita/ui/artisan/artisan_settings_screen.dart';
+import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 
 class ArtisanDashboardTab extends StatefulWidget {
   const ArtisanDashboardTab({super.key});
@@ -57,6 +59,10 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
 
   @override
   Widget build(BuildContext context) {
+    final authVM = context.watch<AuthViewModel>();
+    final studioName = authVM.currentUser?.studioName ?? authVM.currentUser?.effectiveUsername ?? 'Pak Mat Pottery Studio';
+    final initials = authVM.currentUser?.initials ?? 'PM';
+
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [
@@ -134,7 +140,7 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
                                       radius: 27,
                                       backgroundColor: const Color(0xFFFFD54F),
                                       child: Text(
-                                        'PM',
+                                        initials,
                                         style: GoogleFonts.dmSerifDisplay(
                                           color: const Color(0xFF004D40),
                                           fontWeight: FontWeight.bold,
@@ -150,7 +156,7 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Pak Mat Pottery Studio',
+                                        studioName,
                                         softWrap: true,
                                         style: GoogleFonts.dmSerifDisplay(
                                           color: Colors.white,

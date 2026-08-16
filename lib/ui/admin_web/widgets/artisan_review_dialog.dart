@@ -32,9 +32,10 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
       backgroundColor: Colors.white,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       child: Container(
-        width: 850,
-        padding: const EdgeInsets.all(32),
+        constraints: const BoxConstraints(maxWidth: 850),
+        padding: const EdgeInsets.all(24),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -106,12 +107,9 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      GridView.count(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 10,
-                        mainAxisSpacing: 10,
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
                         children: [
                           _buildPortfolioThumbnail(widget.artisan.imageUrl),
                           _buildPortfolioThumbnail('https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=600'),
@@ -133,13 +131,23 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
                     children: [
                       Row(
                         children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(14),
-                            child: Image.network(
-                              widget.artisan.imageUrl,
-                              width: 56,
-                              height: 56,
-                              fit: BoxFit.cover,
+                          SizedBox(
+                            width: 56,
+                            height: 56,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(14),
+                              child: Image.network(
+                                widget.artisan.imageUrl,
+                                width: 56,
+                                height: 56,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Container(
+                                  width: 56,
+                                  height: 56,
+                                  color: const Color(0xFFE2E8F0),
+                                  child: const Icon(Icons.person, color: Color(0xFF64748B)),
+                                ),
+                              ),
                             ),
                           ),
                           const SizedBox(width: 14),
@@ -174,6 +182,35 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
 
                       const SizedBox(height: 16),
 
+                      if (widget.artisan.isUpgradeFromTourist) ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEFF6FF),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFF93C5FD)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.stars_rounded, color: Color(0xFF1D4ED8), size: 20),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  '🌟 Tourist Account Upgrade: Upon approval, this user will automatically become "Artisan & Tourist" with dual-role privileges.',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xFF1E40AF),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+
+                      _buildDetailRow(Icons.verified_user_outlined, 'SSM License / Reg No', widget.artisan.ssmNumber ?? '202601004821 (SSM Verified)'),
                       _buildDetailRow(Icons.location_on_outlined, 'State & Location', widget.artisan.state),
                       _buildDetailRow(Icons.email_outlined, 'Email Address', widget.artisan.email),
                       _buildDetailRow(Icons.phone_outlined, 'Contact Phone', widget.artisan.phone),
@@ -187,7 +224,7 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Master artisan specializing in authentic hand-crafted traditional heritage items passed down through generations.',
+                        widget.artisan.bio ?? 'Master artisan specializing in authentic hand-crafted traditional heritage items passed down through generations.',
                         style: GoogleFonts.plusJakartaSans(fontSize: 12, color: const Color(0xFF64748B), height: 1.4),
                       ),
 
@@ -199,9 +236,10 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
                         style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF334155)),
                       ),
                       const SizedBox(height: 6),
-                      _buildAdminDocChip(Icons.article_rounded, 'SSM_Registration_License_2026.pdf (1.2 MB)'),
-                      _buildAdminDocChip(Icons.workspace_premium_rounded, 'Kraftangan_Malaysia_Master_Cert.pdf (2.4 MB)'),
-                      _buildAdminDocChip(Icons.badge_rounded, 'MyKad_Identity_Scan.jpg (950 KB)'),
+                      _buildAdminDocChip(Icons.article_rounded, widget.artisan.ssmFileName ?? 'SSM_Registration_License_2026.pdf (1.2 MB)'),
+                      _buildAdminDocChip(Icons.workspace_premium_rounded, widget.artisan.certFileName ?? 'Kraftangan_Malaysia_Master_Cert.pdf (2.4 MB)'),
+                      if (widget.artisan.photos.isNotEmpty)
+                        _buildAdminDocChip(Icons.photo_library_rounded, '${widget.artisan.photos.length} Studio & Workshop Photos Attached'),
 
                       const SizedBox(height: 18),
 
@@ -229,40 +267,48 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
             const SizedBox(height: 20),
 
             // Two Large Buttons: 'Approve' and 'Reject'
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    widget.onReject();
-                  },
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFFEF4444),
-                    side: const BorderSide(color: Color(0xFFEF4444), width: 1.5),
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Wrap(
+                alignment: WrapAlignment.end,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 12,
+                runSpacing: 10,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      widget.onReject();
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFFEF4444),
+                      side: const BorderSide(color: Color(0xFFEF4444), width: 1.5),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    icon: const Icon(Icons.close_rounded, size: 18),
+                    label: const Text('Reject Application', style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
-                  icon: const Icon(Icons.close_rounded, size: 18),
-                  label: const Text('Reject Application', style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
-                const SizedBox(width: 14),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    widget.onApprove();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF10B981),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    elevation: 0,
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      widget.onApprove();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF10B981),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      elevation: 0,
+                    ),
+                    icon: const Icon(Icons.check_rounded, size: 18),
+                    label: Text(
+                      widget.artisan.isUpgradeFromTourist ? 'Approve & Upgrade to Dual Role' : 'Approve Artisan Studio',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
-                  icon: const Icon(Icons.check_rounded, size: 18),
-                  label: const Text('Approve Artisan Profile', style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),
@@ -320,12 +366,23 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
   }
 
   Widget _buildPortfolioThumbnail(String url) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: Image.network(
-        url,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => Container(color: const Color(0xFFE2E8F0)),
+    return SizedBox(
+      width: 80,
+      height: 80,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.network(
+          url,
+          width: 80,
+          height: 80,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Container(
+            width: 80,
+            height: 80,
+            color: const Color(0xFFE2E8F0),
+            child: const Icon(Icons.photo_rounded, size: 24, color: Color(0xFF94A3B8)),
+          ),
+        ),
       ),
     );
   }
