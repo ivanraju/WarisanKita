@@ -345,7 +345,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           _buildAutofillChip('🎨 Master Artisan', 'artisan@warisankita.my', 'password123'),
                           _buildAutofillChip('⏳ Pending Artisan', 'pending.artisan@warisankita.my', 'password123'),
                           _buildAutofillChip('👑 Super Admin', 'admin@warisankita.my', 'password123'),
-                          _buildAutofillChip('🎭 Dual Roles', 'dual.role@warisankita.my', 'password123'),
                           _buildAutofillChip('🚫 Suspended', 'suspended@warisankita.my', 'password123'),
                         ],
                       ),

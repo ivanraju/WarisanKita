@@ -109,14 +109,14 @@ class SupabaseService {
       'joinedDate': 'Jan 2025',
       'isSuspended': false,
     },
-    'dual.role@warisankita.my': {
-      'id': 'usr-dual-001',
-      'email': 'dual.role@warisankita.my',
+    'artisan.sarah@warisankita.my': {
+      'id': 'usr-artisan-002',
+      'email': 'artisan.sarah@warisankita.my',
       'username': 'Sarah Chen',
-      'displayName': 'Sarah Chen (Artisan & Explorer)',
+      'displayName': 'Sarah Chen (Master Artisan)',
       'password': 'password123',
-      'role': 'Artisan & Tourist',
-      'roles': ['Tourist', 'Artisan'],
+      'role': 'Artisan',
+      'roles': ['Artisan'],
       'status': 'ACTIVE',
       'studioName': 'WARISAN CERAMICS & BATIK',
       'craftCategory': 'Pottery & Ceramics',
@@ -132,7 +132,7 @@ class SupabaseService {
   // --- Auth Services ---
 
   Future<bool> isUsernameAvailable(String username, {String? excludeEmail}) async {
-    final cleanUsername = username.trim().toLowerCase().replaceAll('@', '');
+    final cleanUsername = username.trim().toLowerCase().replaceAll('@', '').replaceAll(' ', '').replaceAll('_', '').replaceAll('-', '');
     if (cleanUsername.isEmpty) return false;
 
     // 1. Check local in-memory store for unique username/handle
@@ -141,8 +141,8 @@ class SupabaseService {
         continue;
       }
       final u = entry.value;
-      final existingUsername = (u['username'] as String?)?.toLowerCase().replaceAll('@', '');
-      if (existingUsername == cleanUsername) {
+      final existingUsername = (u['username'] as String?)?.toLowerCase().replaceAll('@', '').replaceAll(' ', '').replaceAll('_', '').replaceAll('-', '');
+      if (existingUsername != null && existingUsername.isNotEmpty && existingUsername == cleanUsername) {
         return false;
       }
     }
@@ -298,23 +298,16 @@ class SupabaseService {
     // Simulate network latency
     await Future.delayed(const Duration(milliseconds: 500));
 
-    // 1. Resolve email from in-memory store by exact email, current username, display name, or email prefix
+    // 1. Resolve email from in-memory store by exact email or current active username only
     String cleanEmail = rawInput;
     bool storeMatch = false;
 
     for (final entry in _userStore.entries) {
       final storedEmail = entry.key.toLowerCase();
-      final storedEmailPrefix = storedEmail.split('@')[0].replaceAll('.', '').replaceAll('_', '');
       final u = entry.value;
       final uNameNorm = (u['username'] as String?)?.toLowerCase().replaceAll('@', '').replaceAll(' ', '').replaceAll('_', '');
-      final dNameNorm = (u['displayName'] as String?)?.toLowerCase().replaceAll('@', '').replaceAll(' ', '').replaceAll('_', '');
-      final fNameNorm = (u['full_name'] as String?)?.toLowerCase().replaceAll('@', '').replaceAll(' ', '').replaceAll('_', '');
 
-      if (storedEmail == rawInput ||
-          uNameNorm == normInput ||
-          dNameNorm == normInput ||
-          fNameNorm == normInput ||
-          storedEmailPrefix == normInput) {
+      if (storedEmail == rawInput || (uNameNorm != null && uNameNorm.isNotEmpty && uNameNorm == normInput)) {
         cleanEmail = entry.key;
         storeMatch = true;
         break;
@@ -323,7 +316,7 @@ class SupabaseService {
 
     final client = _client;
     if (client != null) {
-      // 2. If client connected and input does not contain '@', lookup email from Supabase users table
+      // 2. If client connected and input does not contain '@', lookup email from Supabase users table by username only
       if (!rawInput.contains('@')) {
         bool emailFound = false;
         
@@ -341,34 +334,8 @@ class SupabaseService {
           debugPrint('Supabase username lookup note: $e');
         }
 
-        if (!emailFound) {
-          try {
-            final usersList = await client
-                .from('users')
-                .select('email, full_name, display_name');
-            for (final row in usersList) {
-              final rowEmail = (row['email'] as String?)?.toLowerCase() ?? '';
-              final rowFullName = (row['full_name'] as String?)?.toLowerCase() ?? '';
-              final rowDisplayName = (row['display_name'] as String?)?.toLowerCase() ?? '';
-              final rowFullNameNorm = rowFullName.replaceAll('@', '').replaceAll(' ', '').replaceAll('_', '');
-              final rowDisplayNameNorm = rowDisplayName.replaceAll('@', '').replaceAll(' ', '').replaceAll('_', '');
-              final rowEmailPrefixNorm = rowEmail.split('@')[0].replaceAll('.', '').replaceAll('_', '');
-
-              if (rowFullNameNorm == normInput ||
-                  rowDisplayNameNorm == normInput ||
-                  rowEmailPrefixNorm == normInput) {
-                cleanEmail = rowEmail;
-                emailFound = true;
-                break;
-              }
-            }
-          } catch (e) {
-            debugPrint('Supabase full_name/email lookup note: $e');
-          }
-        }
-
         if (!emailFound && !storeMatch) {
-          throw Exception('INVALID CREDENTIALS: User account not found with identifier "$emailOrUsername".');
+          throw Exception('INVALID CREDENTIALS: User account not found with username "@$emailOrUsername".');
         }
       }
     } else if (!storeMatch && !_userStore.containsKey(rawInput)) {
@@ -461,62 +428,21 @@ class SupabaseService {
     final cleanEmail = email.trim().toLowerCase();
     await Future.delayed(const Duration(milliseconds: 600));
 
-    // Account already exists check & Automatic Dual-Role Upgrade:
+    // Account already exists check:
     if (_userStore.containsKey(cleanEmail)) {
-      final existing = _userStore[cleanEmail]!;
-      final existingRole = (existing['role'] ?? '').toString();
-      final existingRoles = (existing['roles'] is List) ? List<String>.from(existing['roles']) : <String>[existingRole];
+      throw Exception('ACCOUNT ALREADY REGISTERED: An account is already registered with email "$email". Please sign in instead.');
+    }
 
-      final isTargetArtisan = role == 'Artisan' || role == 'Master Artisan' || role == 'Artisan & Tourist';
-      final isTargetTourist = role == 'Tourist' || role == 'Cultural Tourist';
-
-      // Verify existing password to authorize cross-role linking
-      if (existing['password'] != null && existing['password'] != password) {
-        final roleLabel = (existingRole == 'Tourist' || existingRoles.contains('Tourist')) ? 'Tourist' : 'Master Artisan';
-        throw Exception('INCORRECT PASSWORD: The password entered does not match your existing $roleLabel account. Please enter your existing account password to link this profile.');
-      }
-
-      // Case 1: Existing Tourist applying for Artisan studio -> Link with PENDING_APPROVAL
-      if ((existingRole == 'Tourist' || existingRoles.contains('Tourist')) && !existingRoles.contains('Artisan') && isTargetArtisan) {
-        existing['role'] = 'Artisan & Tourist';
-        existing['roles'] = ['Tourist', 'Artisan'];
-        existing['status'] = 'PENDING_APPROVAL';
-        if (studioName != null && studioName.isNotEmpty) existing['studioName'] = studioName;
-        if (craftCategory != null && craftCategory.isNotEmpty) existing['craftCategory'] = craftCategory;
-        if (ssmNumber != null && ssmNumber.isNotEmpty) existing['ssmNumber'] = ssmNumber;
-
-        final client = _client;
-        if (client != null) {
-          try {
-            await client.from('users').update({
-              'role': 'Artisan & Tourist',
-              'status': 'PENDING_APPROVAL',
-              'updated_at': DateTime.now().toIso8601String(),
-            }).eq('email', cleanEmail);
-          } catch (_) {}
+    final client = _client;
+    if (client != null) {
+      try {
+        final existingOnline = await client.from('users').select('id').eq('email', cleanEmail).maybeSingle();
+        if (existingOnline != null) {
+          throw Exception('ACCOUNT ALREADY REGISTERED: An account is already registered with email "$email". Please sign in instead.');
         }
-        return UserModel.fromMap(existing);
+      } catch (e) {
+        if (e.toString().contains('ACCOUNT ALREADY REGISTERED')) rethrow;
       }
-
-      // Case 2: Existing Artisan registering as Tourist -> Upgrade immediately
-      if ((existingRole == 'Artisan' || existingRoles.contains('Artisan')) && !existingRoles.contains('Tourist') && isTargetTourist) {
-        existing['role'] = 'Artisan & Tourist';
-        existing['roles'] = ['Tourist', 'Artisan'];
-        if (existing['status'] == 'APPROVED') existing['status'] = 'ACTIVE';
-
-        final client = _client;
-        if (client != null) {
-          try {
-            await client.from('users').update({
-              'role': 'Artisan & Tourist',
-              'updated_at': DateTime.now().toIso8601String(),
-            }).eq('email', cleanEmail);
-          } catch (_) {}
-        }
-        return UserModel.fromMap(existing);
-      }
-
-      throw Exception('ACCOUNT ALREADY REGISTERED: An account with this role already exists. Please sign in instead.');
     }
 
     final resolvedUsername = (username != null && username.trim().isNotEmpty)
@@ -574,7 +500,6 @@ class SupabaseService {
       'bio': isArtisan ? 'New applicant studio registered on Warisan Kita.' : null,
     };
 
-    final client = _client;
     if (client != null) {
       try {
         final authRes = await client.auth.signUp(
@@ -842,11 +767,7 @@ class SupabaseService {
     }
 
     final userRecord = _userStore[cleanEmail]!;
-    final List<String> existingRoles = ['Tourist', 'Artisan'];
-
-    // UC002 - A4-2: Link existing tourist account with role 'Artisan & Tourist' and status PENDING_APPROVAL
-    userRecord['role'] = 'Artisan & Tourist';
-    userRecord['roles'] = existingRoles;
+    // UC002 / UC004: Submit artisan studio application with status PENDING_APPROVAL
     userRecord['studioName'] = studioName;
     userRecord['craftCategory'] = craftCategory;
     userRecord['ssmNumber'] = ssmNumber;
@@ -856,7 +777,6 @@ class SupabaseService {
     if (client != null) {
       try {
         await client.from('users').update({
-          'role': 'Artisan & Tourist',
           'status': 'PENDING_APPROVAL',
           'updated_at': DateTime.now().toIso8601String(),
         }).eq('email', cleanEmail);
