@@ -166,18 +166,12 @@ class UserManagementTable extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (user.isDualRole) ...[
-                  const Icon(Icons.swap_horiz_rounded, size: 14, color: Color(0xFF16A34A)),
-                  const SizedBox(width: 4),
-                ],
                 Text(
-                  user.isDualRole ? 'Artisan & Tourist' : user.role,
+                  user.role,
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
-                    color: user.isDualRole
-                        ? const Color(0xFF15803D)
-                        : (isArtisan ? const Color(0xFFB45309) : const Color(0xFF0369A1)),
+                    color: isArtisan ? const Color(0xFFB45309) : const Color(0xFF0369A1),
                   ),
                 ),
               ],

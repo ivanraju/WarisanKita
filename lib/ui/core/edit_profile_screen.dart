@@ -48,7 +48,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.initState();
     final authVM = context.read<AuthViewModel>();
     final user = authVM.currentUser;
-    _nameController = TextEditingController(text: user?.effectiveUsername ?? 'Aiman Haziq');
+    final initialUsername = (user?.username ?? user?.effectiveUsername ?? 'aiman_haziq').replaceAll('@', '');
+    _nameController = TextEditingController(text: initialUsername);
     _phoneController = TextEditingController(text: user?.phone ?? '+60 12-345 6789');
     _bioController = TextEditingController(text: user?.bio ?? 'Passionate Malaysian cultural explorer and craft preserver.');
     _studioNameController = TextEditingController(text: user?.studioName ?? 'Warisan Craft Studio');
@@ -246,12 +247,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ),
             const SizedBox(height: 12),
 
-            // Full Name / Username Input Field
+            // Unique Username Handle Input Field
             TextField(
               controller: _nameController,
               decoration: InputDecoration(
-                labelText: 'Username / Full Name',
-                prefixIcon: const Icon(Icons.person_outline_rounded),
+                labelText: 'Unique Username Handle',
+                hintText: 'e.g. siticrafts',
+                prefixText: '@',
+                prefixIcon: const Icon(Icons.alternate_email_rounded, color: Color(0xFF004D40)),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
               ),
             ),
