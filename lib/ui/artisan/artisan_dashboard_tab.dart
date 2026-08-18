@@ -60,8 +60,11 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
   @override
   Widget build(BuildContext context) {
     final authVM = context.watch<AuthViewModel>();
-    final studioName = authVM.currentUser?.studioName ?? authVM.currentUser?.effectiveUsername ?? 'Pak Mat Pottery Studio';
-    final initials = authVM.currentUser?.initials ?? 'PM';
+    final user = authVM.currentUser;
+    final studioName = user?.studioName ?? user?.displayName ?? 'Pak Mat Pottery Studio';
+    final handle = user?.handle ?? 'pakmat';
+    final craft = user?.craftCategory ?? 'Pottery & Ceramics';
+    final initials = user?.initials ?? 'PM';
 
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
@@ -164,7 +167,7 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
                                         ),
                                       ),
                                       Text(
-                                        '4th Generation Malay Clay Master • Est. 1998',
+                                        '@$handle • $craft',
                                         softWrap: true,
                                         style: GoogleFonts.plusJakartaSans(
                                           color: const Color(0xFFFFD54F),

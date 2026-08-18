@@ -85,12 +85,10 @@ class AuthViewModel extends ChangeNotifier {
     String? craftCategory,
   }) async {
     final email = _currentUser?.email ?? 'tourist@warisankita.my';
-    final newUsername = username ?? displayName;
-    final newDisplayName = displayName ?? username;
-    
-    // Always sync studioName with username if user has an artisan role, unless custom studioName is explicitly passed
-    final isDualOrArtisan = _currentUser?.isDualRole == true || _currentUser?.isArtisan == true;
-    final newStudioName = studioName ?? (isDualOrArtisan ? (newDisplayName ?? newUsername ?? _currentUser?.studioName) : _currentUser?.studioName);
+    final cleanUsername = username?.trim().replaceAll('@', '');
+    final newUsername = (cleanUsername != null && cleanUsername.isNotEmpty) ? cleanUsername : _currentUser?.username;
+    final newDisplayName = (displayName != null && displayName.trim().isNotEmpty) ? displayName.trim() : (newUsername ?? _currentUser?.displayName);
+    final newStudioName = (studioName != null && studioName.trim().isNotEmpty) ? studioName.trim() : _currentUser?.studioName;
 
     try {
       final updated = await _repository.updateUserProfile(

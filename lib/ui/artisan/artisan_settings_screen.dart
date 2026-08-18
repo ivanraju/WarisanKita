@@ -49,7 +49,8 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
     final isDark = context.watch<ThemeViewModel>().isDarkMode;
     final authVM = context.watch<AuthViewModel>();
     final user = authVM.currentUser;
-    final studioName = user?.studioName ?? user?.effectiveUsername ?? 'Pak Mat Pottery Studio';
+    final studioName = user?.studioName ?? user?.displayName ?? 'Pak Mat Pottery Studio';
+    final handle = user?.handle ?? 'pakmat';
     final initials = user?.initials ?? 'PM';
     final craft = user?.craftCategory ?? 'Pottery & Ceramics';
 
@@ -110,7 +111,7 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        craft,
+                        '@$handle • $craft',
                         style: GoogleFonts.plusJakartaSans(fontSize: 12, color: const Color(0xFFD97706), fontWeight: FontWeight.bold),
                       ),
                     ],
