@@ -82,12 +82,22 @@ class UserModel {
       isPendingApproval ||
       (studioName != null && studioName!.trim().isNotEmpty && !isApprovedArtisan);
 
-  String get effectiveUsername {
+  String get handle {
     if (username != null && username!.trim().isNotEmpty) {
-      return username!.trim();
+      return username!.trim().replaceAll('@', '');
     }
+    if (email.contains('@')) {
+      return email.split('@')[0];
+    }
+    return 'user';
+  }
+
+  String get effectiveUsername {
     if (displayName != null && displayName!.trim().isNotEmpty) {
       return displayName!.trim();
+    }
+    if (username != null && username!.trim().isNotEmpty) {
+      return username!.trim().replaceAll('@', '');
     }
     if (studioName != null && studioName!.trim().isNotEmpty) {
       return studioName!.trim();

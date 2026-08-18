@@ -12,7 +12,8 @@ class EditProfileScreen extends StatefulWidget {
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
-  late final TextEditingController _nameController;
+  late final TextEditingController _fullNameController;
+  late final TextEditingController _usernameController;
   late final TextEditingController _phoneController;
   late final TextEditingController _bioController;
   late final TextEditingController _studioNameController;
@@ -48,11 +49,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.initState();
     final authVM = context.read<AuthViewModel>();
     final user = authVM.currentUser;
+    final initialFullName = user?.displayName ?? user?.effectiveUsername ?? 'Aiman Haziq';
     final initialUsername = (user?.username ?? user?.effectiveUsername ?? 'aiman_haziq').replaceAll('@', '');
-    _nameController = TextEditingController(text: initialUsername);
+    _fullNameController = TextEditingController(text: initialFullName);
+    _usernameController = TextEditingController(text: initialUsername);
     _phoneController = TextEditingController(text: user?.phone ?? '+60 12-345 6789');
     _bioController = TextEditingController(text: user?.bio ?? 'Passionate Malaysian cultural explorer and craft preserver.');
-    _studioNameController = TextEditingController(text: user?.studioName ?? 'Warisan Craft Studio');
+    _studioNameController = TextEditingController(text: user?.studioName ?? user?.displayName ?? 'Warisan Craft Studio');
 
     if (user?.craftCategory != null && _craftCategories.contains(user!.craftCategory)) {
       _selectedCraftCategory = user.craftCategory!;
@@ -64,7 +67,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   @override
   void dispose() {
-    _nameController.dispose();
+    _fullNameController.dispose();
+    _usernameController.dispose();
     _phoneController.dispose();
     _bioController.dispose();
     _studioNameController.dispose();
@@ -72,12 +76,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> _handleSave() async {
-    final name = _nameController.text.trim();
+    final fullName = _fullNameController.text.trim();
+    final username = _usernameController.text.trim().replaceAll('@', '');
     final phone = _phoneController.text.trim();
     final bio = _bioController.text.trim();
     final studioName = _studioNameController.text.trim();
 
-    if (name.isEmpty) {
+    if (username.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Username cannot be empty!'),
@@ -93,13 +98,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final isDualOrArtisan = user?.isDualRole == true || user?.isArtisan == true || (user?.role.toLowerCase().contains('artisan') ?? false);
 
     final finalStudioName = isDualOrArtisan
-        ? (studioName.isNotEmpty ? studioName : name)
+        ? (studioName.isNotEmpty ? studioName : (fullName.isNotEmpty ? fullName : username))
         : null;
 
     try {
       await authVM.updateProfile(
-        username: name,
-        displayName: name,
+        username: username,
+        displayName: fullName.isNotEmpty ? fullName : username,
         phone: phone,
         bio: bio,
         studioName: finalStudioName,
@@ -123,8 +128,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (user?.email != null) {
         moderationVM.updateUserProfileInState(
           email: user!.email,
-          username: name,
-          displayName: name,
+          username: username,
+          displayName: fullName.isNotEmpty ? fullName : username,
           studioName: finalStudioName,
           craftCategory: isDualOrArtisan ? _selectedCraftCategory : null,
           state: isDualOrArtisan ? _selectedState : null,
@@ -247,9 +252,23 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ),
             const SizedBox(height: 12),
 
+            // Full Name Input Field
+            TextField(
+              controller: _fullNameController,
+              textCapitalization: TextCapitalization.words,
+              decoration: InputDecoration(
+                labelText: 'Full Name',
+                hintText: 'e.g. Siti Nurhaliza',
+                prefixIcon: const Icon(Icons.badge_outlined, color: Color(0xFF004D40)),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
             // Unique Username Handle Input Field
             TextField(
-              controller: _nameController,
+              controller: _usernameController,
               decoration: InputDecoration(
                 labelText: 'Unique Username Handle',
                 hintText: 'e.g. siticrafts',
