@@ -202,7 +202,23 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
 
           const SizedBox(height: 28),
 
-          // Section 3: Account & Studio Security
+          // Section 3: Portal Switcher
+          _buildSectionHeader('PORTAL SWITCHER'),
+          const SizedBox(height: 10),
+          _buildSettingsTile(
+            context,
+            icon: Icons.explore_rounded,
+            title: 'Switch to Cultural Explorer (Tourist) View',
+            subtitle: 'Browse craft directory, map radar, community forum, and quests',
+            onTap: () {
+              authVM.selectActiveRole('Tourist');
+              Navigator.of(context).pushReplacementNamed('/tourist');
+            },
+          ),
+
+          const SizedBox(height: 28),
+
+          // Section 4: Account & Studio Security
           _buildSectionHeader('ACCOUNT SECURITY', isDanger: true),
           const SizedBox(height: 10),
           _buildDangerTile(
