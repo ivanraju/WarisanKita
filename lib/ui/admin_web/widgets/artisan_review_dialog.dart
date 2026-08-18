@@ -196,7 +196,7 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Text(
-                                  '🌟 Tourist Account Upgrade: Upon approval, this user will be upgraded to "Artisan" role with verified studio privileges.',
+                                  '🌟 Tourist Account Upgrade: Upon approval, this user will automatically become "Artisan & Tourist" with dual-role privileges.',
                                   style: GoogleFonts.plusJakartaSans(
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,

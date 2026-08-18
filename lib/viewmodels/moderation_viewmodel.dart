@@ -474,13 +474,13 @@ class ModerationViewModel extends ChangeNotifier {
       // Determine target role
       final userIdx = _registeredUsers.indexWhere((u) => u.email.toLowerCase() == artisan.email.toLowerCase());
       final isUpgrade = userIdx != -1 || artisan.isUpgradeFromTourist;
-      const targetRole = 'Artisan';
+      final targetRole = isUpgrade ? 'Artisan & Tourist' : 'Artisan';
 
       if (isUpgrade) {
         if (userIdx != -1) {
           _registeredUsers[userIdx] = _registeredUsers[userIdx].copyWith(
             role: targetRole,
-            roles: ['Artisan'],
+            roles: ['Tourist', 'Artisan'],
             status: 'ACTIVE',
             studioName: artisan.name,
             craftCategory: artisan.craftCategory,
@@ -492,7 +492,7 @@ class ModerationViewModel extends ChangeNotifier {
             email: artisan.email,
             displayName: artisan.name,
             role: targetRole,
-            roles: const ['Artisan'],
+            roles: const ['Tourist', 'Artisan'],
             status: 'ACTIVE',
             studioName: artisan.name,
             craftCategory: artisan.craftCategory,
@@ -581,13 +581,13 @@ class ModerationViewModel extends ChangeNotifier {
         await repo.updateArtisanStatus(
           email: artisan.email,
           newStatus: 'SUSPENDED',
-          newRole: 'Artisan',
+          newRole: artisan.isDualRole ? 'Artisan & Tourist' : 'Artisan',
         );
       } else if (service != null) {
         await service.updateArtisanStatusInDb(
           email: artisan.email,
           newStatus: 'SUSPENDED',
-          newRole: 'Artisan',
+          newRole: artisan.isDualRole ? 'Artisan & Tourist' : 'Artisan',
         );
       }
 
@@ -607,13 +607,13 @@ class ModerationViewModel extends ChangeNotifier {
         await repo.updateArtisanStatus(
           email: artisan.email,
           newStatus: 'ACTIVE',
-          newRole: 'Artisan',
+          newRole: artisan.isDualRole ? 'Artisan & Tourist' : 'Artisan',
         );
       } else if (service != null) {
         await service.updateArtisanStatusInDb(
           email: artisan.email,
           newStatus: 'ACTIVE',
-          newRole: 'Artisan',
+          newRole: artisan.isDualRole ? 'Artisan & Tourist' : 'Artisan',
         );
       }
 

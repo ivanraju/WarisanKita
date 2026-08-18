@@ -169,11 +169,11 @@ class AuthViewModel extends ChangeNotifier {
 
       _currentUser = user;
 
-      // Alternate Flow A5: Artisan Active Mode Selection (Master Artisan vs Cultural Tourist)
-      if (user.isArtisan || user.isApprovedArtisan || user.isPendingArtisan) {
+      // Alternate Flow A5: Multiple Roles Detected
+      if (user.isDualRole || user.hasMultipleRoles || user.roles.length > 1) {
         _requiresRoleSelection = true;
-        _availableRoles = const ['Master Artisan', 'Cultural Tourist'];
-        _statusMessage = 'SELECT YOUR ACTIVE ROLE MODE';
+        _availableRoles = const ['Cultural Tourist', 'Master Artisan'];
+        _statusMessage = 'MULTIPLE ROLES DETECTED: PLEASE SELECT YOUR ACTIVE ROLE';
         _isLoading = false;
         notifyListeners();
         return AuthResult(

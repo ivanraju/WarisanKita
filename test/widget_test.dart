@@ -61,26 +61,22 @@ void main() {
       expect(result.user?.role, equals('Tourist'));
     });
 
-    test('Basic Flow: Master Artisan Login succeeds and offers session mode selection', () async {
+    test('Basic Flow: Master Artisan Login succeeds and routes to /artisan', () async {
       final result = await authVM.login('artisan@warisankita.my', 'password123');
       expect(result.success, isTrue);
       expect(result.user?.role, equals('Artisan'));
-      expect(result.requiresRoleSelection, isTrue);
-      expect(result.availableRoles, contains('Master Artisan'));
-      
-      authVM.selectActiveRole('Master Artisan');
-      expect(authVM.activeRole, equals('Master Artisan'));
+      expect(result.route, equals('/artisan'));
     });
 
     test('A4 Alternate Flow: Pending Artisan routes to pending_artisan screen', () async {
       final result = await authVM.login('pending.artisan@warisankita.my', 'password123');
       expect(result.success, isTrue);
       expect(result.user?.status, equals('PENDING_APPROVAL'));
-      expect(result.requiresRoleSelection, isTrue);
+      expect(result.route, equals('pending_artisan'));
     });
 
-    test('A5 Alternate Flow: Artisan account triggers role selection prompt M7', () async {
-      final result = await authVM.login('artisan@warisankita.my', 'password123');
+    test('A5 Alternate Flow: Dual role account triggers role selection prompt M7', () async {
+      final result = await authVM.login('dual.role@warisankita.my', 'password123');
       expect(result.success, isTrue);
       expect(result.requiresRoleSelection, isTrue);
       expect(result.availableRoles.length, greaterThanOrEqualTo(2));
@@ -203,7 +199,7 @@ void main() {
       expect(result.user?.status, equals('PENDING_APPROVAL'));
     });
 
-    test('A4-2 Alternate Flow: Linking Artisan role to existing Tourist account sets status PENDING_APPROVAL', () async {
+    test('A4-2 Alternate Flow: Linking Artisan role to existing Tourist account sets role Artisan & Tourist and status PENDING_APPROVAL', () async {
       final result = await authVM.linkArtisanToExistingTourist(
         email: 'tourist@warisankita.my',
         studioName: 'AHMAD HERITAGE WOODCRAFT',
@@ -212,31 +208,69 @@ void main() {
         ssmFileName: 'SSM_Doc.pdf',
       );
       expect(result.success, isTrue);
+      expect(result.user?.role, equals('Artisan & Tourist'));
+      expect(result.user?.isDualRole, isTrue);
       expect(result.user?.status, equals('PENDING_APPROVAL'));
-      expect(result.user?.studioName, equals('AHMAD HERITAGE WOODCRAFT'));
-      expect(result.user?.craftCategory, equals('Woodwork'));
+      expect(result.user?.roles, contains('Tourist'));
+      expect(result.user?.roles, contains('Artisan'));
     });
 
-    test('A3 Alternate Flow: Existing email attempting registration is rejected', () async {
+    test('Cross-Role Upgrade: Existing Tourist registering as Artisan with same email updates to Artisan & Tourist with PENDING_APPROVAL', () async {
+      // Register a brand new tourist
+      final regTourist = await authVM.registerTourist(
+        username: 'nur_tourist',
+        email: 'nur.tourist@warisankita.my',
+        password: 'password123',
+        confirmPassword: 'password123',
+      );
+      expect(regTourist.success, isTrue);
+      expect(regTourist.user?.role, equals('Tourist'));
+
+      // Same email registers as Artisan studio
+      final regArtisan = await authVM.registerArtisan(
+        username: 'nur_tourist',
+        email: 'nur.tourist@warisankita.my',
+        password: 'password123',
+        confirmPassword: 'password123',
+        studioName: 'NUR BATIK STUDIO',
+        craftCategory: 'Batik & Textile',
+        ssmNumber: 'SSM-BATIK-2026',
+      );
+      expect(regArtisan.success, isTrue);
+      expect(regArtisan.user?.role, equals('Artisan & Tourist'));
+      expect(regArtisan.user?.isDualRole, isTrue);
+      expect(regArtisan.user?.status, equals('PENDING_APPROVAL'));
+      expect(regArtisan.user?.roles, contains('Tourist'));
+      expect(regArtisan.user?.roles, contains('Artisan'));
+    });
+
+    test('Cross-Role Upgrade: Existing Artisan registering as Tourist with same email upgrades to Artisan & Tourist with status ACTIVE', () async {
+      // artisan@warisankita.my exists as an active approved artisan
       final regTourist = await authVM.registerTourist(
         username: 'pakmat_explorer',
         email: 'artisan@warisankita.my',
         password: 'password123',
         confirmPassword: 'password123',
       );
-      expect(regTourist.success, isFalse);
-      expect(regTourist.message, contains('ACCOUNT ALREADY REGISTERED'));
+      expect(regTourist.success, isTrue);
+      expect(regTourist.user?.role, equals('Artisan & Tourist'));
+      expect(regTourist.user?.isDualRole, isTrue);
+      expect(regTourist.user?.status, equals('ACTIVE'));
+      expect(regTourist.user?.roles, contains('Tourist'));
+      expect(regTourist.user?.roles, contains('Artisan'));
     });
 
-    test('Authentication Check: Registering existing account fails with ACCOUNT ALREADY REGISTERED error', () async {
-      final duplicateResult = await authVM.registerTourist(
-        username: 'new_username',
+    test('Authentication Check: Linking existing account with wrong password fails with INCORRECT PASSWORD error', () async {
+      final wrongPasswordResult = await authVM.registerArtisan(
         email: 'tourist@warisankita.my',
-        password: 'password123',
-        confirmPassword: 'password123',
+        password: 'wrongPassword999',
+        confirmPassword: 'wrongPassword999',
+        studioName: 'AIMAN POTTERY',
+        craftCategory: 'Pottery & Ceramics',
+        ssmNumber: 'SSM-2026-FAIL',
       );
-      expect(duplicateResult.success, isFalse);
-      expect(duplicateResult.message, contains('ACCOUNT ALREADY REGISTERED'));
+      expect(wrongPasswordResult.success, isFalse);
+      expect(wrongPasswordResult.message, contains('INCORRECT PASSWORD'));
     });
 
     test('Existing Account Check API returns profile metadata for both roles', () async {
@@ -341,7 +375,7 @@ void main() {
   });
 
   group('Artisan Registration UI & Document Upload Tests', () {
-    testWidgets('RegisterScreen renders single-page tourist registration form', (tester) async {
+    testWidgets('RegisterScreen renders role selector, artisan fields, and document cards', (tester) async {
       await tester.pumpWidget(
         MultiProvider(
           providers: [
@@ -353,15 +387,46 @@ void main() {
         ),
       );
 
-      // Verify single-page tourist registration UI
-      expect(find.text('Create Account'), findsOneWidget);
-      expect(find.text('Full Name'), findsOneWidget);
-      expect(find.text('Unique Username / Handle'), findsOneWidget);
-      expect(find.text('Email Address'), findsOneWidget);
-      expect(find.text('Create Explorer Account'), findsOneWidget);
+      // Verify basic fields rendered
+      expect(find.text('Tourist Registration'), findsOneWidget);
+      expect(find.text('🧳 Cultural Tourist'), findsOneWidget);
+      expect(find.text('🎨 Master Artisan'), findsOneWidget);
+
+      // Switch to Artisan Tab
+      await tester.tap(find.text('🎨 Master Artisan'));
+      await tester.pumpAndSettle();
+
+      // Verify Artisan specific UI & Document Upload Sections
+      expect(find.text('Artisan Studio Registration'), findsOneWidget);
+      expect(find.text('Heritage Studio / Business Name'), findsOneWidget);
+      expect(find.text('Craft Specialization'), findsOneWidget);
+      expect(find.text('SSM License / Kraftangan Reg. No.'), findsOneWidget);
+      expect(find.text('SUPPORTING VERIFICATION DOCUMENTS'), findsOneWidget);
+      expect(find.text('OPTIONAL'), findsOneWidget);
+      expect(find.text('Proof of Business License (SSM)'), findsOneWidget);
+      expect(find.text('Kraftangan Master Certification'), findsOneWidget);
+      expect(find.text('Studio & Workshop Masterpiece Photos'), findsOneWidget);
+
+      // Test "Use Sample" for SSM Document
+      final useSampleButtons = find.text('Use Sample');
+      expect(useSampleButtons, findsNWidgets(2));
+
+      await tester.ensureVisible(useSampleButtons.first);
+      await tester.tap(useSampleButtons.first);
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('SSM_Registration_Cert_2026.pdf'), findsOneWidget);
+
+      // Test "Add Sample" for Photos
+      final addSampleButton = find.text('Add Sample');
+      await tester.ensureVisible(addSampleButton);
+      await tester.tap(addSampleButton);
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Studio_Workshop_Photo_1.jpg'), findsOneWidget);
     });
 
-    testWidgets('RegisterScreen dynamic inline alert: Typing registered email shows Sign In shortcut', (tester) async {
+    testWidgets('RegisterScreen dynamic banner: Typing Artisan email on Tourist form shows Existing Master Artisan Profile Found', (tester) async {
       await tester.pumpWidget(
         MultiProvider(
           providers: [
@@ -374,15 +439,37 @@ void main() {
         ),
       );
 
-      // Enter registered email
-      final emailField = find.widgetWithText(TextFormField, 'Email Address');
-      await tester.enterText(emailField, 'tourist@warisankita.my');
-      await tester.pump(const Duration(milliseconds: 600));
+      // Verify we are on Tourist Registration by default
+      expect(find.text('Tourist Registration'), findsOneWidget);
+
+      // Enter pure artisan email (pending.artisan@warisankita.my)
+      final emailFields = find.byType(TextField);
+      await tester.enterText(emailFields.at(2), 'pending.artisan@warisankita.my');
       await tester.pumpAndSettle();
 
-      // Verify inline alert appears
-      expect(find.text('Account Already Exists'), findsOneWidget);
-      expect(find.text('Sign In'), findsWidgets);
+      // Verify "Existing Master Artisan Profile Found!" banner appears
+      expect(find.text('Existing Master Artisan Profile Found!'), findsOneWidget);
+      expect(find.text('Existing Account Password'), findsOneWidget);
+
+      // Switch to Artisan Tab
+      await tester.tap(find.text('🎨 Master Artisan'));
+      await tester.pumpAndSettle();
+
+      // Register a fresh pure tourist account for testing Artisan upgrade detection
+      await authVM.registerTourist(
+        email: 'sarah_explorer@warisankita.my',
+        username: 'sarah_explorer',
+        password: 'password123',
+        confirmPassword: 'password123',
+      );
+
+      // Enter pure tourist email (index 4 on Artisan tab: name, username, studioName, ssm, email)
+      final artisanEmailFields = find.byType(TextField);
+      await tester.enterText(artisanEmailFields.at(4), 'sarah_explorer@warisankita.my');
+      await tester.pumpAndSettle();
+
+      // Verify "Existing Cultural Tourist Profile Found!" banner appears
+      expect(find.text('Existing Cultural Tourist Profile Found!'), findsOneWidget);
     });
   });
 
@@ -413,7 +500,7 @@ void main() {
       expect(approvedUser.status, equals('ACTIVE'));
     });
 
-    test('Basic Flow: Admin approves Tourist upgrade application -> role automatically upgrades to Artisan', () {
+    test('Basic Flow: Admin approves Tourist upgrade application -> role automatically upgrades to Artisan & Tourist', () {
       final initialCount = moderationVM.totalPendingCount;
       final upgradeApp = moderationVM.filteredArtisans.firstWhere((a) => a.isUpgradeFromTourist);
 
@@ -421,8 +508,10 @@ void main() {
 
       expect(moderationVM.totalPendingCount, equals(initialCount - 1));
       final upgradedUser = moderationVM.registeredUsers.firstWhere((u) => u.email == upgradeApp.email);
-      expect(upgradedUser.role, equals('Artisan'));
+      expect(upgradedUser.isDualRole, isTrue);
+      expect(upgradedUser.role, equals('Artisan & Tourist'));
       expect(upgradedUser.status, equals('ACTIVE'));
+      expect(upgradedUser.roles, containsAll(['Tourist', 'Artisan']));
     });
 
     test('Alternate Flow: Admin rejects Artisan application -> status set to REJECTED', () {

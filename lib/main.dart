@@ -26,7 +26,6 @@ import 'package:warisan_kita/ui/auth/register_screen.dart';
 import 'package:warisan_kita/ui/auth/role_selection_screen.dart';
 import 'package:warisan_kita/ui/auth/forgot_password_screen.dart';
 import 'package:warisan_kita/ui/tourist/tourist_main_scaffold.dart';
-import 'package:warisan_kita/ui/tourist/apply_artisan_screen.dart';
 import 'package:warisan_kita/ui/artisan/artisan_main_scaffold.dart';
 import 'package:warisan_kita/ui/artisan/artisan_application_pending_screen.dart';
 import 'package:warisan_kita/ui/admin_web/admin_moderation_dashboard_view.dart';
@@ -95,7 +94,6 @@ class WarisanKitaApp extends StatelessWidget {
         '/role-selection': (context) => const RoleSelectionScreen(),
         '/forgot-password': (context) => const ForgotPasswordScreen(),
         '/tourist': (context) => const TouristMainScaffold(),
-        '/apply-artisan': (context) => const ApplyArtisanScreen(),
         '/artisan': (context) => const ArtisanMainScaffold(),
         '/pending-artisan': (context) => const ArtisanApplicationPendingScreen(),
         'pending_artisan': (context) => const ArtisanApplicationPendingScreen(),

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:warisan_kita/ui/artisan/artisan_application_pending_screen.dart';
-import 'package:warisan_kita/ui/tourist/apply_artisan_screen.dart';
 import 'package:warisan_kita/ui/core/edit_profile_screen.dart';
 import 'package:warisan_kita/ui/core/settings_screen.dart';
 import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
@@ -645,9 +644,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                       ],
                     ),
                   ),
-                ] else if (authVM.currentUser?.isPendingArtisan == true ||
-                           authVM.currentUser?.isPendingApproval == true ||
-                           (authVM.currentUser?.studioName != null && authVM.currentUser!.studioName!.trim().isNotEmpty && authVM.currentUser?.isApprovedArtisan != true)) ...[
+                ] else if (authVM.currentUser?.isPendingArtisan == true || (authVM.currentUser?.isDualRole == true && authVM.currentUser?.isApproved != true)) ...[
                   const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.all(16),
@@ -729,7 +726,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
-                          child: const Text('View Application', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                          child: const Text('View Status', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
                         ),
                       ],
                     ),
@@ -776,15 +773,11 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                         const SizedBox(width: 8),
                         OutlinedButton(
                           onPressed: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => const ApplyArtisanScreen(),
-                              ),
-                            );
+                            Navigator.of(context).pushNamed('/register');
                           },
                           style: OutlinedButton.styleFrom(
                             side: const BorderSide(color: Color(0xFF004D40)),
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
                           child: const Text('Apply', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Color(0xFF004D40))),

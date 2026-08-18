@@ -3,7 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:warisan_kita/ui/artisan/artisan_application_pending_screen.dart';
-import 'package:warisan_kita/ui/tourist/apply_artisan_screen.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 
 class RoleSelectionScreen extends StatelessWidget {
@@ -134,26 +133,16 @@ class RoleSelectionScreen extends StatelessWidget {
                 onTap: () {
                   final authVM = context.read<AuthViewModel>();
                   final user = authVM.currentUser;
-                  if (user != null) {
-                    if (user.isApprovedArtisan) {
-                      Navigator.of(context).pushReplacementNamed('/artisan');
-                    } else if (user.isPendingArtisan) {
-                      Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(
-                          builder: (_) => ArtisanApplicationPendingScreen(
-                            studioName: user.studioName ?? 'Master Artisan Studio',
-                            craftCategory: user.craftCategory ?? 'Heritage Craft',
-                            ssmNumber: user.ssmNumber ?? 'Pending Document Verification',
-                          ),
+                  if (user != null && !user.isApprovedArtisan) {
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(
+                        builder: (_) => ArtisanApplicationPendingScreen(
+                          studioName: user.studioName ?? 'Master Artisan Studio',
+                          craftCategory: user.craftCategory ?? 'Heritage Craft',
+                          ssmNumber: user.ssmNumber ?? 'Pending Document Verification',
                         ),
-                      );
-                    } else {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const ApplyArtisanScreen(),
-                        ),
-                      );
-                    }
+                      ),
+                    );
                   } else {
                     Navigator.of(context).pushReplacementNamed('/artisan');
                   }
