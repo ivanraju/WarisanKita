@@ -41,11 +41,10 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     super.initState();
     final authVM = context.read<AuthViewModel>();
     final user = authVM.currentUser;
-    _usernameController = TextEditingController(
-      text: user?.effectiveUsername ?? 'Pak Mat',
-    );
+    final initialHandle = (user?.username ?? user?.effectiveUsername ?? 'Pak Mat').replaceAll('@', '');
+    _usernameController = TextEditingController(text: initialHandle);
     _studioNameController = TextEditingController(
-      text: user?.studioName ?? user?.effectiveUsername ?? 'Pak Mat Pottery Studio',
+      text: user?.studioName ?? user?.displayName ?? 'Pak Mat Pottery Studio',
     );
     _craftCategoryController = TextEditingController(
       text: user?.craftCategory ?? 'Pottery & Ceramics',
@@ -73,7 +72,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
   }
 
   Future<void> _handleSave() async {
-    final username = _usernameController.text.trim();
+    final username = _usernameController.text.trim().replaceAll('@', '');
     final studio = _studioNameController.text.trim();
     final craft = _craftCategoryController.text.trim();
     final bio = _bioController.text.trim();
@@ -95,13 +94,40 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     try {
       await authVM.updateProfile(
         username: username.isNotEmpty ? username : studio,
-        displayName: username.isNotEmpty ? username : studio,
+        displayName: studio.isNotEmpty ? studio : username,
         studioName: studio.isNotEmpty ? studio : username,
         craftCategory: craft,
         bio: bio,
         state: state,
         phone: phone,
       );
+
+      if (mounted) {
+        final updatedUser = authVM.currentUser;
+        if (updatedUser != null) {
+          setState(() {
+            _usernameController.text = (updatedUser.username ?? updatedUser.effectiveUsername).replaceAll('@', '');
+            _studioNameController.text = updatedUser.studioName ?? updatedUser.displayName ?? updatedUser.effectiveUsername;
+          });
+        }
+      }
+
+      try {
+        final moderationVM = context.read<ModerationViewModel>();
+        final email = authVM.currentUser?.email;
+        if (email != null) {
+          moderationVM.updateUserProfileInState(
+            email: email,
+            username: username.isNotEmpty ? username : studio,
+            displayName: studio.isNotEmpty ? studio : username,
+            studioName: studio.isNotEmpty ? studio : username,
+            craftCategory: craft,
+            state: state,
+            phone: phone,
+            bio: bio,
+          );
+        }
+      } catch (_) {}
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

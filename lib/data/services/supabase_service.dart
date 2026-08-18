@@ -822,24 +822,28 @@ class SupabaseService {
     }
 
     if (username != null && username.isNotEmpty) {
-      userRecord['username'] = username;
-      userRecord['displayName'] = username;
+      final cleanHandle = username.trim().replaceAll('@', '');
+      userRecord['username'] = cleanHandle;
+      userRecord['displayName'] = displayName ?? cleanHandle;
       if (isArtisanAccount && (studioName == null || studioName.isEmpty)) {
-        userRecord['studioName'] = username;
+        userRecord['studioName'] = cleanHandle;
       }
     }
     if (displayName != null && displayName.isNotEmpty) {
-      userRecord['displayName'] = displayName;
+      userRecord['displayName'] = displayName.trim();
+      userRecord['full_name'] = displayName.trim();
       if (isArtisanAccount && (studioName == null || studioName.isEmpty)) {
-        userRecord['studioName'] = displayName;
+        userRecord['studioName'] = displayName.trim();
       }
     }
     if (studioName != null && studioName.isNotEmpty) {
-      userRecord['studioName'] = studioName;
+      userRecord['studioName'] = studioName.trim();
+      userRecord['studio_name'] = studioName.trim();
     }
     if (bio != null) userRecord['bio'] = bio;
     if (state != null) userRecord['state'] = state;
     if (craftCategory != null) userRecord['craftCategory'] = craftCategory;
+    if (phone != null) userRecord['phone'] = phone;
 
     _userStore[cleanEmail] = userRecord;
 
@@ -848,28 +852,30 @@ class SupabaseService {
       try {
         final updateMap = <String, dynamic>{};
         if (username != null) {
-          updateMap['username'] = username;
-          updateMap['full_name'] = username;
+          final cleanHandle = username.trim().replaceAll('@', '');
+          updateMap['username'] = cleanHandle;
+          updateMap['full_name'] = displayName ?? cleanHandle;
         }
         if (displayName != null) {
-          updateMap['display_name'] = displayName;
-          updateMap['full_name'] = displayName;
+          updateMap['display_name'] = displayName.trim();
+          updateMap['full_name'] = displayName.trim();
         }
         if (studioName != null) {
-          updateMap['studio_name'] = studioName;
+          updateMap['studio_name'] = studioName.trim();
         } else if (isArtisanAccount && (username != null || displayName != null)) {
           updateMap['studio_name'] = displayName ?? username;
         }
         if (bio != null) updateMap['bio'] = bio;
         if (state != null) updateMap['state'] = state;
         if (craftCategory != null) updateMap['craft_category'] = craftCategory;
+        if (phone != null) updateMap['phone_number'] = phone;
         updateMap['updated_at'] = DateTime.now().toIso8601String();
 
         if (updateMap.isNotEmpty) {
           // 1. Update Supabase Postgres 'users' table
           try {
             await client.from('users').update({
-              if (username != null) 'username': username,
+              if (username != null) 'username': username.trim().replaceAll('@', ''),
               if (displayName != null || username != null) 'display_name': displayName ?? username,
               if (displayName != null || username != null) 'full_name': displayName ?? username,
               if (updateMap.containsKey('studio_name')) 'studio_name': updateMap['studio_name'],
@@ -899,11 +905,13 @@ class SupabaseService {
             }
           }
 
-          // 3. Update Supabase Auth User Metadata (UserAttributes)
-          try {
-            await client.auth.updateUser(UserAttributes(data: updateMap));
-          } catch (e) {
-            debugPrint('Supabase updateUserProfile auth meta note: $e');
+          // 3. Update Supabase Auth User Metadata ONLY if real cloud session is active
+          if (client.auth.currentUser != null) {
+            try {
+              await client.auth.updateUser(UserAttributes(data: updateMap));
+            } catch (e) {
+              debugPrint('Supabase updateUserProfile auth meta note: $e');
+            }
           }
         }
       } catch (e) {
