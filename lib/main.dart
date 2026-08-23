@@ -117,16 +117,16 @@ class _WarisanKitaAppState extends State<WarisanKitaApp> {
   }
 
   static final Map<String, WidgetBuilder> _appRoutes = {
-    '/': (context) => const SplashScreen(),
+    '/': (context) => kIsWeb ? const LoginScreen() : const SplashScreen(),
     '/login': (context) => const LoginScreen(),
-    '/register': (context) => const RegisterScreen(),
-    '/role-selection': (context) => const RoleSelectionScreen(),
+    '/register': (context) => kIsWeb ? const LoginScreen() : const RegisterScreen(),
+    '/role-selection': (context) => kIsWeb ? const LoginScreen() : const RoleSelectionScreen(),
     '/forgot-password': (context) => const ForgotPasswordScreen(),
-    '/tourist': (context) => const TouristMainScaffold(),
-    '/apply-artisan': (context) => const ApplyArtisanScreen(),
-    '/artisan': (context) => const ArtisanMainScaffold(),
-    '/pending-artisan': (context) => const ArtisanApplicationPendingScreen(),
-    'pending_artisan': (context) => const ArtisanApplicationPendingScreen(),
+    '/tourist': (context) => kIsWeb ? const LoginScreen() : const TouristMainScaffold(),
+    '/apply-artisan': (context) => kIsWeb ? const LoginScreen() : const ApplyArtisanScreen(),
+    '/artisan': (context) => kIsWeb ? const LoginScreen() : const ArtisanMainScaffold(),
+    '/pending-artisan': (context) => kIsWeb ? const LoginScreen() : const ArtisanApplicationPendingScreen(),
+    'pending_artisan': (context) => kIsWeb ? const LoginScreen() : const ArtisanApplicationPendingScreen(),
     '/admin': (context) => const AdminModerationDashboardView(),
   };
 
@@ -140,8 +140,27 @@ class _WarisanKitaAppState extends State<WarisanKitaApp> {
       debugShowCheckedModeBanner: false,
       themeMode: themeVM.themeMode,
       theme: ThemeViewModel.lightTheme,
-      initialRoute: '/',
+      initialRoute: kIsWeb ? '/login' : '/',
       onGenerateInitialRoutes: (initialRoute) {
+        if (kIsWeb) {
+          // On Web, strictly restrict access: /admin or /login only.
+          if (initialRoute == '/admin') {
+            return [
+              MaterialPageRoute(
+                settings: const RouteSettings(name: '/admin'),
+                builder: (_) => const AdminModerationDashboardView(),
+              ),
+            ];
+          }
+          return [
+            MaterialPageRoute(
+              settings: const RouteSettings(name: '/login'),
+              builder: (_) => const LoginScreen(),
+            ),
+          ];
+        }
+
+        // On Native Mobile / Desktop:
         if (initialRoute == '/' || initialRoute.isEmpty) {
           return [
             MaterialPageRoute(
