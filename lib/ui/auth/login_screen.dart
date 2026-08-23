@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 import 'package:warisan_kita/ui/artisan/artisan_application_pending_screen.dart';
 import 'package:warisan_kita/ui/auth/forgot_password_screen.dart';
@@ -280,55 +281,51 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    // 📱 Mobile Guard: If logging in as Administrator on a mobile viewport (< 800px on mobile native)
+    // 📱 Mobile Guard: If logging in as Administrator on mobile app
     if (!kIsWeb && result.user?.role == 'Admin') {
-      final isMobileScreen = MediaQuery.of(context).size.width < 800;
-      if (isMobileScreen) {
-        showDialog(
-          context: context,
-          builder: (dialogCtx) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: Row(
-              children: [
-                const Icon(Icons.laptop_chromebook_rounded, color: Color(0xFF004D40), size: 26),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Admin Web Portal',
-                    style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
-                  ),
+      showDialog(
+        context: context,
+        builder: (dialogCtx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: Row(
+            children: [
+              const Icon(Icons.laptop_chromebook_rounded, color: Color(0xFF004D40), size: 26),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Admin Web Portal Only',
+                  style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
                 ),
-              ],
-            ),
-            content: Text(
-              'Administrator features and moderation tables are optimized for Desktop Web.\n\nPlease access the admin portal on your computer browser at:\nhttps://warisan-kita.vercel.app',
-              style: GoogleFonts.plusJakartaSans(fontSize: 13, height: 1.5, color: Colors.black87),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogCtx),
-                child: const Text('CANCEL'),
-              ),
-              FilledButton(
-                style: FilledButton.styleFrom(backgroundColor: const Color(0xFF004D40)),
-                onPressed: () {
-                  Navigator.pop(dialogCtx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('LOGIN SUCCESSFUL: Authenticated as Admin'),
-                      backgroundColor: Color(0xFF10B981),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                  Navigator.of(context).pushReplacementNamed('/admin');
-                },
-                child: const Text('CONTINUE ON MOBILE'),
               ),
             ],
           ),
-        );
-        return;
-      }
+          content: Text(
+            'Administrator accounts and moderation features are hosted exclusively on the Desktop Web Portal.\n\nPlease open the Admin Portal in a web browser at:\nhttps://warisan-kita.vercel.app',
+            style: GoogleFonts.plusJakartaSans(fontSize: 13, height: 1.5, color: Colors.black87),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: const Text('DISMISS'),
+            ),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF004D40)),
+              icon: const Icon(Icons.open_in_browser_rounded, size: 18),
+              label: const Text('OPEN WEB PORTAL'),
+              onPressed: () async {
+                Navigator.pop(dialogCtx);
+                final uri = Uri.parse('https://warisan-kita.vercel.app');
+                try {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                } catch (e) {
+                  await launchUrl(uri, mode: LaunchMode.platformDefault);
+                }
+              },
+            ),
+          ],
+        ),
+      );
+      return;
     }
 
     // Handle Regular RBAC Routes [M2]
@@ -447,7 +444,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                 _buildAutofillChip('🧳 Tourist', 'tourist@warisankita.my', 'password123'),
                                 _buildAutofillChip('🎨 Master Artisan', 'artisan@warisankita.my', 'password123'),
                                 _buildAutofillChip('⏳ Pending Artisan', 'pending.artisan@warisankita.my', 'password123'),
-                                _buildAutofillChip('👑 Super Admin', 'admin@warisankita.my', 'admin123'),
                                 _buildAutofillChip('🚫 Suspended', 'suspended@warisankita.my', 'password123'),
                               ],
                       ),
