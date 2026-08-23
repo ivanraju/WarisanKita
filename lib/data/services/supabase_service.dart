@@ -840,27 +840,71 @@ class SupabaseService {
     String? certFileName,
     List<String>? photos,
   }) async {
-    final cleanEmail = email.trim().toLowerCase();
-    await Future.delayed(const Duration(milliseconds: 500));
+    String cleanEmail = email.trim().toLowerCase();
+    final client = _client;
 
-    if (!_userStore.containsKey(cleanEmail)) {
-      throw Exception('Account not found to link artisan profile.');
+    if (cleanEmail.isEmpty && client != null && client.auth.currentUser != null) {
+      cleanEmail = client.auth.currentUser!.email?.toLowerCase() ?? '';
+    }
+    if (cleanEmail.isEmpty) {
+      cleanEmail = 'tourist@warisankita.my';
     }
 
-    final userRecord = _userStore[cleanEmail]!;
-    // UC002 / UC004: Submit artisan studio application with status PENDING_APPROVAL
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    Map<String, dynamic>? userRecord = _userStore[cleanEmail];
+
+    // If not in local store, query Supabase public.users table
+    if (userRecord == null && client != null) {
+      try {
+        final row = await client.from('users').select().ilike('email', cleanEmail).maybeSingle();
+        if (row != null) {
+          userRecord = Map<String, dynamic>.from(row);
+          _userStore[cleanEmail] = userRecord;
+        }
+      } catch (e) {
+        debugPrint('Supabase linkArtisan query note: $e');
+      }
+    }
+
+    // Dynamic initialization if record is absent
+    if (userRecord == null) {
+      userRecord = {
+        'id': 'usr-${DateTime.now().millisecondsSinceEpoch}',
+        'email': cleanEmail,
+        'username': cleanEmail.split('@').first,
+        'displayName': cleanEmail.split('@').first,
+        'role': 'Artisan & Tourist',
+        'roles': ['Tourist', 'Artisan'],
+        'status': 'PENDING_APPROVAL',
+        'studioName': studioName,
+        'craftCategory': craftCategory,
+        'ssmNumber': ssmNumber,
+        'joinedDate': 'Feb 2026',
+        'isSuspended': false,
+      };
+      _userStore[cleanEmail] = userRecord;
+    }
+
+    // Update user record with pending artisan credentials
     userRecord['studioName'] = studioName;
     userRecord['craftCategory'] = craftCategory;
     userRecord['ssmNumber'] = ssmNumber;
     userRecord['status'] = 'PENDING_APPROVAL';
+    userRecord['role'] = 'Artisan & Tourist';
+    userRecord['roles'] = ['Tourist', 'Artisan'];
 
-    final client = _client;
     if (client != null) {
       try {
-        await client.from('users').update({
+        await client.from('users').upsert({
+          'email': cleanEmail,
+          'studio_name': studioName,
+          'craft_category': craftCategory,
+          'ssm_number': ssmNumber,
           'status': 'PENDING_APPROVAL',
+          'role': 'Artisan & Tourist',
           'updated_at': DateTime.now().toIso8601String(),
-        }).eq('email', cleanEmail);
+        });
       } catch (e) {
         debugPrint('Supabase linkArtisanRoleToTourist note: $e');
       }
