@@ -1052,22 +1052,34 @@ class SupabaseService {
     final client = _client;
     if (client != null) {
       try {
-        final res = await client.from('users').select().eq('status', 'PENDING_APPROVAL');
+        final res = await client.from('users').select().ilike('status', '%PENDING%');
         if (res.isNotEmpty) {
           for (final row in res) {
             results.add(Map<String, dynamic>.from(row));
           }
         }
       } catch (e) {
-        debugPrint('Supabase getPendingArtisans note: $e');
+        debugPrint('Supabase getPendingArtisans ilike note: $e');
+        try {
+          final res2 = await client.from('users').select().eq('status', 'PENDING_APPROVAL');
+          if (res2.isNotEmpty) {
+            for (final row in res2) {
+              results.add(Map<String, dynamic>.from(row));
+            }
+          }
+        } catch (e2) {
+          debugPrint('Supabase getPendingArtisans eq note: $e2');
+        }
       }
     }
 
     // Merge with in-memory _userStore
     for (final entry in _userStore.entries) {
       final user = entry.value;
-      if (user['status'] == 'PENDING_APPROVAL') {
-        if (!results.any((r) => (r['email'] ?? '').toString().toLowerCase() == (user['email'] ?? '').toString().toLowerCase())) {
+      final status = (user['status'] ?? '').toString().toUpperCase();
+      if (status.contains('PENDING')) {
+        final userEmail = (user['email'] ?? entry.key).toString().toLowerCase();
+        if (!results.any((r) => (r['email'] ?? '').toString().toLowerCase() == userEmail)) {
           results.add(Map<String, dynamic>.from(user));
         }
       }

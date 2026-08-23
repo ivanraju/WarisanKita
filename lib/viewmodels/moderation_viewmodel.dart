@@ -6,12 +6,12 @@ import 'package:warisan_kita/domain/models/pending_artisan_profile.dart';
 import 'package:warisan_kita/domain/models/user.dart';
 
 class ModerationViewModel extends ChangeNotifier {
-  final UserRepository? _repository;
-  final SupabaseService? _service;
+  final UserRepository _repository;
+  final SupabaseService _service;
 
   ModerationViewModel({UserRepository? repository, SupabaseService? service})
-      : _repository = repository,
-        _service = service {
+      : _repository = repository ?? UserRepository(),
+        _service = service ?? SupabaseService() {
     fetchPendingArtisans();
   }
 
@@ -411,18 +411,14 @@ class ModerationViewModel extends ChangeNotifier {
 
   Future<void> fetchPendingArtisans() async {
     try {
-      final repo = _repository;
-      final service = _service;
-      final List<Map<String, dynamic>> dbPending = repo != null
-          ? await repo.getPendingArtisans()
-          : (service != null ? await service.getPendingArtisans() : []);
+      final List<Map<String, dynamic>> dbPending = await _repository.getPendingArtisans();
 
       for (final raw in dbPending) {
         final email = (raw['email'] ?? '').toString();
         if (email.isEmpty) continue;
 
         final id = raw['id']?.toString() ?? 'p_${email.hashCode}';
-        final name = (raw['studio_name'] ?? raw['full_name'] ?? raw['displayName'] ?? raw['username'] ?? 'Artisan Studio').toString();
+        final name = (raw['studio_name'] ?? raw['studioName'] ?? raw['full_name'] ?? raw['displayName'] ?? raw['username'] ?? 'Artisan Studio').toString();
         final craft = (raw['craft_category'] ?? raw['craftCategory'] ?? 'Handicraft & Heritage').toString();
         final state = (raw['state'] ?? 'Malaysia').toString();
         final role = (raw['role'] ?? '').toString();
@@ -440,8 +436,8 @@ class ModerationViewModel extends ChangeNotifier {
           experience: (raw['experience'] ?? 'Verified Studio').toString(),
           phone: (raw['phone'] ?? raw['phone_number'] ?? '+60 12-345 6789').toString(),
           ssmNumber: (raw['ssm_number'] ?? raw['ssmNumber'] ?? '202601004821 (SSM Verified)').toString(),
-          ssmFileName: (raw['ssm_file'] ?? raw['ssmFileName'] ?? 'SSM_Registration_Cert.pdf').toString(),
-          certFileName: (raw['cert_file'] ?? raw['certFileName'] ?? 'Kraftangan_Master_Cert.pdf').toString(),
+          ssmFileName: (raw['ssm_file'] ?? raw['ssm_file_name'] ?? raw['ssmFileName'] ?? 'SSM_Registration_Cert.pdf').toString(),
+          certFileName: (raw['cert_file'] ?? raw['cert_file_name'] ?? raw['certFileName'] ?? 'Kraftangan_Master_Cert.pdf').toString(),
           photos: (raw['photos'] is List) ? List<String>.from(raw['photos']) : const ['Studio_Workshop_Photo_1.jpg'],
           bio: raw['bio']?.toString(),
           isUpgradeFromTourist: isUpgrade,
