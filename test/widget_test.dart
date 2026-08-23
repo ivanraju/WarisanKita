@@ -317,8 +317,10 @@ void main() {
     });
 
     test('AuthViewModel.updateProfile updates current user username dynamically', () async {
-      final vm = AuthViewModel();
-      expect(vm.currentUser?.effectiveUsername, equals('Aiman Haziq'));
+      final vm = AuthViewModel(repository: repository);
+      final res = await vm.login('user@warisankita.my', 'password123');
+      expect(res.success, isTrue);
+      expect(vm.currentUser?.effectiveUsername, equals('Siti Explorer'));
 
       await vm.updateProfile(
         username: 'Tengku Iskandar',
@@ -331,8 +333,9 @@ void main() {
     });
 
     test('AuthViewModel.logout clears session and resets auth state', () async {
-      final vm = AuthViewModel();
-      await vm.login('tourist@warisankita.my', 'password123');
+      final vm = AuthViewModel(repository: repository);
+      final res = await vm.login('user@warisankita.my', 'password123');
+      expect(res.success, isTrue);
       expect(vm.isAuthenticated, isTrue);
       expect(vm.currentUser, isNotNull);
 

@@ -30,14 +30,11 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final authVM = context.read<AuthViewModel>();
-      UserModel? user = authVM.currentUser;
-      if (user == null) {
-        user = await authVM.restoreSession();
-      }
+      UserModel? user = authVM.currentUser ?? await authVM.restoreSession();
 
       if (!mounted) return;
 
-      if (user == null || user.role != 'Admin') {
+      if (user == null || !user.isAdmin) {
         Navigator.of(context).pushReplacementNamed('/login');
         return;
       }
@@ -231,7 +228,7 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
       );
     }
 
-    if (authVM.currentUser?.role != 'Admin') {
+    if (authVM.currentUser == null || !authVM.currentUser!.isAdmin) {
       return const LoginScreen();
     }
 
