@@ -327,9 +327,9 @@ class ModerationViewModel extends ChangeNotifier {
 
   final List<String> userRoles = const [
     'All Roles',
-    'Cultural Tourist',
-    'Master Artisan',
-    'Dual Role',
+    'Tourist',
+    'Artisan',
+    'Admin',
   ];
 
   final List<String> userStatuses = const [
@@ -347,14 +347,15 @@ class ModerationViewModel extends ChangeNotifier {
           (user.username ?? '').toLowerCase().contains(_userSearchQuery.toLowerCase()) ||
           user.email.toLowerCase().contains(_userSearchQuery.toLowerCase());
 
+      final r = user.role.toLowerCase();
       final matchesRole = _userRoleFilter == 'All Roles' ||
-          (_userRoleFilter == 'Cultural Tourist' && user.role == 'Tourist') ||
-          (_userRoleFilter == 'Master Artisan' && user.role == 'Artisan') ||
-          (_userRoleFilter == 'Dual Role' && user.isDualRole);
+          ((_userRoleFilter == 'Tourist' || _userRoleFilter == 'Cultural Tourist') && (r.contains('tourist') || user.isTourist)) ||
+          ((_userRoleFilter == 'Artisan' || _userRoleFilter == 'Master Artisan') && (r.contains('artisan') || user.isArtisan)) ||
+          (_userRoleFilter == 'Admin' && r.contains('admin'));
 
       final matchesStatus = _userStatusFilter == 'All Statuses' ||
-          (_userStatusFilter == 'Active' && !user.isSuspended) ||
-          (_userStatusFilter == 'Suspended' && user.isSuspended);
+          (_userStatusFilter == 'Active' && !user.isSuspended && user.status.toUpperCase() != 'SUSPENDED') ||
+          (_userStatusFilter == 'Suspended' && (user.isSuspended || user.status.toUpperCase() == 'SUSPENDED'));
 
       return matchesSearch && matchesRole && matchesStatus;
     }).toList();
@@ -665,6 +666,10 @@ class ModerationViewModel extends ChangeNotifier {
     final idx = _registeredUsers.indexWhere((u) => u.id == id);
     if (idx != -1) {
       final user = _registeredUsers[idx];
+      if (user.role.toLowerCase().contains('admin') || user.isAdmin) {
+        debugPrint('Cannot suspend an Administrator account.');
+        return;
+      }
       _registeredUsers[idx] = user.copyWith(isSuspended: true, status: 'SUSPENDED');
 
       await _repository.updateArtisanStatus(

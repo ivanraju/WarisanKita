@@ -423,14 +423,14 @@ class AdminModerationDashboardView extends StatelessWidget {
             ),
             _buildMetricCard(
               title: 'Tourists',
-              value: viewModel.registeredUsers.where((u) => u.role == 'Tourist').length.toString(),
+              value: viewModel.registeredUsers.where((u) => u.role.toLowerCase().contains('tourist')).length.toString(),
               subtitle: 'Cultural explorers',
               icon: Icons.explore_outlined,
               accentColor: const Color(0xFF10B981),
             ),
             _buildMetricCard(
               title: 'Artisans',
-              value: viewModel.registeredUsers.where((u) => u.role == 'Artisan').length.toString(),
+              value: viewModel.registeredUsers.where((u) => u.role.toLowerCase().contains('artisan')).length.toString(),
               subtitle: 'Verified studio masters',
               icon: Icons.storefront_outlined,
               accentColor: const Color(0xFFD97706),
