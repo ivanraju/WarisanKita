@@ -130,7 +130,6 @@ DECLARE
     v_username TEXT;
     v_fullname TEXT;
     v_role TEXT;
-    v_roles TEXT[];
     v_status TEXT;
     v_studio TEXT;
     v_craft TEXT;
@@ -141,19 +140,10 @@ BEGIN
     v_role := COALESCE(NEW.raw_user_meta_data->>'role', 'Tourist');
     v_status := COALESCE(NEW.raw_user_meta_data->>'status', CASE WHEN v_role LIKE '%Artisan%' THEN 'PENDING_APPROVAL' ELSE 'ACTIVE' END);
     v_studio := NEW.raw_user_meta_data->>'studio_name';
-    v_craft := NEW.raw_user_meta_data->>'craft_category';
+    v_craft := COALESCE(NEW.raw_user_meta_data->>'craft_category', 'Pottery & Ceramics');
     v_ssm := NEW.raw_user_meta_data->>'ssm_number';
 
-    IF v_role = 'Artisan & Tourist' OR v_role = 'Tourist & Artisan' THEN
-        v_roles := ARRAY['Tourist', 'Artisan']::TEXT[];
-    ELSIF v_role = 'Artisan' OR v_role = 'Master Artisan' THEN
-        v_roles := ARRAY['Artisan']::TEXT[];
-    ELSIF v_role = 'Admin' THEN
-        v_roles := ARRAY['Admin']::TEXT[];
-    ELSE
-        v_roles := ARRAY['Tourist']::TEXT[];
-    END IF;
-
+    -- 1. Insert core identity into public.users
     INSERT INTO public.users (
         id,
         email,
@@ -161,12 +151,7 @@ BEGIN
         full_name,
         display_name,
         role,
-        roles,
         status,
-        studio_name,
-        craft_category,
-        ssm_number,
-        is_suspended,
         created_at,
         updated_at
     ) VALUES (
@@ -176,12 +161,7 @@ BEGIN
         v_fullname,
         v_fullname,
         v_role,
-        v_roles,
         v_status,
-        v_studio,
-        v_craft,
-        v_ssm,
-        FALSE,
         now(),
         now()
     )
@@ -191,12 +171,36 @@ BEGIN
         full_name = COALESCE(EXCLUDED.full_name, public.users.full_name),
         display_name = COALESCE(EXCLUDED.display_name, public.users.display_name),
         role = EXCLUDED.role,
-        roles = EXCLUDED.roles,
         status = EXCLUDED.status,
-        studio_name = COALESCE(EXCLUDED.studio_name, public.users.studio_name),
-        craft_category = COALESCE(EXCLUDED.craft_category, public.users.craft_category),
-        ssm_number = COALESCE(EXCLUDED.ssm_number, public.users.ssm_number),
         updated_at = now();
+
+    -- 2. If Artisan, insert professional details into public.artisan_profiles
+    IF v_role LIKE '%Artisan%' OR (v_studio IS NOT NULL AND v_studio != '') THEN
+        INSERT INTO public.artisan_profiles (
+            user_id,
+            studio_name,
+            craft_category,
+            ssm_number,
+            bio,
+            address,
+            state,
+            status,
+            created_at,
+            updated_at
+        ) VALUES (
+            NEW.id,
+            COALESCE(v_studio, v_fullname, 'Master Artisan Studio'),
+            v_craft,
+            v_ssm,
+            'Master artisan dedicated to traditional Malaysian craft.',
+            'Malaysia',
+            'Melaka',
+            v_status,
+            now(),
+            now()
+        )
+        ON CONFLICT DO NOTHING;
+    END IF;
 
     RETURN NEW;
 END;
@@ -207,54 +211,19 @@ CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_auth_user();
 
--- 7. Row Level Security (RLS) Configuration & Fix for Infinite Recursion (42P17)
-ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
-
--- Drop old policies to prevent recursion conflicts
-DROP POLICY IF EXISTS "Admins have full access" ON public.users;
-DROP POLICY IF EXISTS "Public users can view active profiles" ON public.users;
-DROP POLICY IF EXISTS "Users can view their own profile" ON public.users;
-DROP POLICY IF EXISTS "Users can update their own profile" ON public.users;
-DROP POLICY IF EXISTS "Users can insert their own profile" ON public.users;
-
--- Helper function with SECURITY DEFINER to bypass RLS recursion on public.users
+-- 7. Helper Function for Admin Check
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS BOOLEAN AS $$
 BEGIN
     RETURN EXISTS (
         SELECT 1 FROM public.users
         WHERE id = auth.uid()
-        AND (role = 'Admin' OR 'Admin' = ANY(roles))
+        AND role = 'Admin'
     );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Policy 1: Anyone can read active profiles (or own profile or admin)
-CREATE POLICY "Public users can view active profiles" 
-    ON public.users 
-    FOR SELECT 
-    USING (status != 'SUSPENDED' OR auth.uid() = id OR public.is_admin());
-
--- Policy 2: Users can insert their own profile upon signup
-CREATE POLICY "Users can insert their own profile" 
-    ON public.users 
-    FOR INSERT 
-    WITH CHECK (auth.uid() = id OR public.is_admin());
-
--- Policy 3: Users can update their own profile
-CREATE POLICY "Users can update their own profile" 
-    ON public.users 
-    FOR UPDATE 
-    USING (auth.uid() = id OR public.is_admin());
-
--- Policy 4: Admins have full control
-CREATE POLICY "Admins have full access" 
-    ON public.users 
-    FOR ALL 
-    USING (public.is_admin())
-    WITH CHECK (public.is_admin());
-
--- 8. Public Security-Definer RPC Function for Unauthenticated Registration Account Lookup
+-- 8. Public Security-Definer RPC Function for Registration Account Lookup
 CREATE OR REPLACE FUNCTION public.check_account_by_email(p_email text)
 RETURNS TABLE (
     user_id uuid,
@@ -263,7 +232,6 @@ RETURNS TABLE (
     full_name text,
     display_name text,
     role text,
-    roles text[],
     status text,
     studio_name text,
     craft_category text,
@@ -278,17 +246,19 @@ BEGIN
         u.full_name,
         u.display_name,
         u.role,
-        u.roles,
         u.status,
-        u.studio_name,
-        u.craft_category,
-        u.ssm_number
+        ap.studio_name,
+        ap.craft_category,
+        ap.ssm_number
     FROM public.users u
+    LEFT JOIN public.artisan_profiles ap ON ap.user_id = u.id
     WHERE lower(u.email) = lower(trim(p_email));
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Grant permissions to anonymous and authenticated users
 GRANT SELECT ON public.users TO anon, authenticated;
+GRANT SELECT ON public.artisan_profiles TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.check_account_by_email(text) TO anon, authenticated;
+
 
