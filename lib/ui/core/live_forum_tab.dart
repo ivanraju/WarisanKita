@@ -30,6 +30,14 @@ class _LiveForumTabState extends State<LiveForumTab> {
   final TextEditingController _messageController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ForumViewModel>().fetchThreads();
+    });
+  }
+
+  @override
   void dispose() {
     _messageController.dispose();
     super.dispose();
@@ -881,58 +889,67 @@ class _LiveForumTabState extends State<LiveForumTab> {
 
         // Main Feed Thread Cards
         Expanded(
-          child: filteredThreads.isEmpty
-              ? Center(
-                  child: Padding(
+          child: RefreshIndicator(
+            onRefresh: () => context.read<ForumViewModel>().fetchThreads(),
+            color: const Color(0xFF004D40),
+            child: filteredThreads.isEmpty
+                ? ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
                     padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF004D40).withOpacity(0.08),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.forum_outlined, size: 40, color: Color(0xFF004D40)),
+                    children: [
+                      const SizedBox(height: 40),
+                      Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF004D40).withValues(alpha: 0.08),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.forum_outlined, size: 40, color: Color(0xFF004D40)),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'No community questions yet',
+                              style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Be the first to start a conversation or ask heritage craft masters!',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.plusJakartaSans(fontSize: 13, color: Colors.grey[600]),
+                            ),
+                            const SizedBox(height: 18),
+                            FilledButton.icon(
+                              onPressed: () => _showCreateThreadModal(langVM),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: const Color(0xFF004D40),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                              ),
+                              icon: const Icon(Icons.add_comment_rounded, size: 16, color: Color(0xFFFFD54F)),
+                              label: Text(
+                                'Ask a Question',
+                                style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No community questions yet',
-                          style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          'Be the first to start a conversation or ask heritage craft masters!',
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.plusJakartaSans(fontSize: 13, color: Colors.grey[600]),
-                        ),
-                        const SizedBox(height: 18),
-                        FilledButton.icon(
-                          onPressed: () => _showCreateThreadModal(langVM),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFF004D40),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                          ),
-                          icon: const Icon(Icons.add_comment_rounded, size: 16, color: Color(0xFFFFD54F)),
-                          label: Text(
-                            'Ask a Question',
-                            style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
+                  )
+                : ListView.builder(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(12),
+                    itemCount: filteredThreads.length,
+                    itemBuilder: (context, index) {
+                      final thread = filteredThreads[index];
+                      return _buildRedditPostCard(thread);
+                    },
                   ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: filteredThreads.length,
-                  itemBuilder: (context, index) {
-                    final thread = filteredThreads[index];
-                    return _buildRedditPostCard(thread);
-                  },
-                ),
+          ),
         ),
       ],
     );
