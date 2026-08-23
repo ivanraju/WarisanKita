@@ -122,6 +122,9 @@ class ForumThread {
       'upvotes': upvotes,
       'is_solved': isSolved,
       'is_edited': isEdited,
+      'is_reported': isReported,
+      if (reportReason != null) 'report_reason': reportReason,
+      if (reportNotes != null) 'report_notes': reportNotes,
     };
     if (effectiveUid != null && effectiveUid.isNotEmpty) {
       map['user_id'] = effectiveUid;

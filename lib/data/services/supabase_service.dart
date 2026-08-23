@@ -1515,6 +1515,9 @@ class SupabaseService {
         'title': thread.title,
         'content': postContent,
         'upvotes': thread.upvotes,
+        'is_reported': thread.isReported,
+        if (thread.reportReason != null) 'report_reason': thread.reportReason,
+        if (thread.reportNotes != null) 'report_notes': thread.reportNotes,
       };
 
       try {
