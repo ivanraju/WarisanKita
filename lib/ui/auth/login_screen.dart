@@ -29,6 +29,19 @@ class _LoginScreenState extends State<LoginScreen> {
     _passwordController = TextEditingController(
       text: kIsWeb ? 'admin123' : 'password123',
     );
+
+    if (kIsWeb) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        final authVM = context.read<AuthViewModel>();
+        UserModel? user = authVM.currentUser;
+        if (user == null) {
+          user = await authVM.restoreSession();
+        }
+        if (mounted && user != null && user.role == 'Admin') {
+          Navigator.of(context).pushReplacementNamed('/admin');
+        }
+      });
+    }
   }
 
   @override
