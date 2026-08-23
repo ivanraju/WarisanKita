@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:warisan_kita/ui/auth/login_screen.dart';
 import 'package:warisan_kita/ui/auth/widgets/password_strength_meter.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 
@@ -113,13 +114,16 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     // UC003 - M3: "PASSWORD RESET SUCCESSFUL: YOU MAY NOW LOGIN"
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('PASSWORD RESET SUCCESSFUL: YOU MAY NOW LOGIN'),
+        content: Text('PASSWORD RESET SUCCESSFUL: You may now sign in with your new password'),
         backgroundColor: Color(0xFF10B981),
         behavior: SnackBarBehavior.floating,
       ),
     );
 
-    Navigator.of(context).pop();
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (route) => false,
+    );
   }
 
   @override
