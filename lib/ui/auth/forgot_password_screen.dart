@@ -197,21 +197,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         const SizedBox(height: 8),
 
         Text(
-          'PLEASE ENTER YOUR REGISTERED EMAIL ADDRESS',
+          'Enter your registered email address to receive a password reset link.',
           textAlign: TextAlign.center,
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 11,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0.8,
-            color: const Color(0xFF004D40),
-          ),
-        ),
-        const SizedBox(height: 6),
-
-        Text(
-          'We will dispatch a secure, single-use password recovery link valid for 15 minutes [C1].',
-          textAlign: TextAlign.center,
-          style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.black54, height: 1.4),
+          style: GoogleFonts.plusJakartaSans(fontSize: 13, color: Colors.black54, height: 1.4),
         ),
 
         const SizedBox(height: 20),
@@ -242,6 +230,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           keyboardType: TextInputType.emailAddress,
           decoration: InputDecoration(
             labelText: 'Registered Email Address',
+            hintText: 'e.g. user@example.com',
             prefixIcon: const Icon(Icons.email_outlined, size: 20),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
           ),
@@ -264,7 +253,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
                 )
               : Text(
-                  'DISPATCH RESET LINK [M1]',
+                  'SEND RESET LINK',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
@@ -276,7 +265,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     );
   }
 
-  // Step 2: Token Inbox Notice (UC003 Step 5-8)
+  // Step 2: Token Inbox Notice
   Widget _buildTokenInboxView() {
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -322,7 +311,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Token Constraint: Expires in 15 minutes [C1]. Strictly single-use [C4].',
+                  'Reset link expires in 15 minutes. Check your spam folder if you do not see it.',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
@@ -336,11 +325,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
         const SizedBox(height: 24),
 
-        // Action 1: Open Reset Link / Proceed to Step 3 (Simulates clicking email reset link)
+        // Action 1: Open Reset Link / Proceed to Step 3
         FilledButton.icon(
           onPressed: () => setState(() => _currentStep = 3),
           icon: const Icon(Icons.password_rounded, size: 18),
-          label: const Text('OPEN RESET FORM & ENTER NEW PASSWORD (STEP 8-9)'),
+          label: const Text('ENTER NEW PASSWORD'),
           style: FilledButton.styleFrom(
             backgroundColor: const Color(0xFF004D40),
             foregroundColor: Colors.white,
@@ -359,7 +348,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     );
   }
 
-  // Step 3: Set New Password Form (UC003 Step 9-13)
+  // Step 3: Set New Password Form
   Widget _buildNewPasswordFormView(AuthViewModel authVM) {
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -385,13 +374,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         const SizedBox(height: 6),
 
         Text(
-          'ENTER NEW CREDENTIALS (UC003 STEP 9-10)',
+          'Please choose a strong password for your account',
           textAlign: TextAlign.center,
           style: GoogleFonts.plusJakartaSans(
-            fontSize: 11,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0.8,
-            color: const Color(0xFF004D40),
+            fontSize: 12,
+            color: Colors.black54,
           ),
         ),
 
@@ -423,7 +410,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           controller: _newPasswordController,
           obscureText: !_isPasswordVisible,
           decoration: InputDecoration(
-            labelText: 'New Password (> 7 characters) [C2]',
+            labelText: 'New Password',
+            hintText: 'Must be at least 8 characters',
             prefixIcon: const Icon(Icons.lock_outline, size: 20),
             suffixIcon: IconButton(
               icon: Icon(_isPasswordVisible ? Icons.visibility_off : Icons.visibility, size: 20),
@@ -443,7 +431,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           controller: _confirmPasswordController,
           obscureText: !_isPasswordVisible,
           decoration: InputDecoration(
-            labelText: 'Confirm New Password [C3]',
+            labelText: 'Confirm New Password',
             prefixIcon: const Icon(Icons.lock_reset_outlined, size: 20),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
           ),
@@ -466,7 +454,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
                 )
               : Text(
-                  'UPDATE ENCRYPTED PASSWORD IN DB [M3]',
+                  'RESET PASSWORD',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
