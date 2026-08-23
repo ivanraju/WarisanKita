@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
-import 'package:warisan_kita/ui/auth/auth_view.dart';
 class ArtisanDashboardScreen extends StatelessWidget {
   const ArtisanDashboardScreen({super.key});
 

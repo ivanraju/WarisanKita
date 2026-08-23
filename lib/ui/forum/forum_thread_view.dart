@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:warisan_kita/domain/models/forum_post.dart';
+import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/forum_viewmodel.dart';
 
 class ForumThreadScreen extends StatefulWidget {
@@ -365,7 +366,15 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
                 icon: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
                 onPressed: () {
                   if (_replyController.text.trim().isNotEmpty) {
-                    forumVM.postReply(widget.thread.id, _replyController.text.trim());
+                    final authVM = context.read<AuthViewModel>();
+                    final user = authVM.currentUser;
+                    forumVM.postReply(
+                      threadId: widget.thread.id,
+                      text: _replyController.text.trim(),
+                      authorName: user?.displayName ?? user?.effectiveUsername ?? 'Community Member',
+                      authorEmail: user?.email ?? '',
+                      isArtisan: user?.isArtisan ?? false,
+                    );
                     _replyController.clear();
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(

@@ -14,8 +14,8 @@ class _AdminSystemSettingsTabState extends State<AdminSystemSettingsTab> {
   bool _enableAuditTrailLogging = true;
   bool _autoFlagForumSpam = true;
 
-  double _maxFileSizeMb = 5.0;
-  int _minDeletionReasonLength = 10;
+  final double _maxFileSizeMb = 5.0;
+  final int _minDeletionReasonLength = 10;
 
   void _saveSettings() {
     ScaffoldMessenger.of(context).showSnackBar(

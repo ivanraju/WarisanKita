@@ -327,6 +327,36 @@ class AuthViewModel extends ChangeNotifier {
     }
   }
 
+  // Generic signUp handler for legacy/direct views
+  Future<AuthResult> signUp(String email, String password, String role, {String? username, String? displayName}) async {
+    final cleanEmail = email.trim();
+    final cleanPassword = password.trim();
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final user = await _repository.signUp(
+        email: cleanEmail,
+        password: cleanPassword,
+        role: role,
+        username: username?.trim(),
+        displayName: displayName?.trim(),
+      );
+      _currentUser = user;
+      _activeRole = role;
+      _statusMessage = 'REGISTRATION SUCCESSFUL';
+      _isLoading = false;
+      notifyListeners();
+      return AuthResult(success: true, user: user, message: _statusMessage);
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return AuthResult(success: false, message: _errorMessage);
+    }
+  }
+
   // UC002_USER_REGISTRATION: Master Artisan
   Future<AuthResult> registerArtisan({
     required String email,
