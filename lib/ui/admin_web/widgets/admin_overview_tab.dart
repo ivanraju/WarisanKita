@@ -256,6 +256,87 @@ class AdminOverviewTab extends StatelessWidget {
     );
   }
 
+  Widget _buildAuditFeedCard() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.06)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Recent Audit Log & Activity',
+                style: GoogleFonts.dmSerifDisplay(fontSize: 18, color: const Color(0xFF0F172A)),
+              ),
+              TextButton(
+                onPressed: () {},
+                child: const Text('View All Logs'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildAuditTile(
+            icon: Icons.verified_user_rounded,
+            color: const Color(0xFF10B981),
+            title: 'Master Artisan Pak Mat Profile Verified',
+            time: '10 mins ago',
+            subtitle: 'Plaque #MP-2026-088 issued to Kampung Morten Ceramic Studio',
+          ),
+          _buildAuditTile(
+            icon: Icons.stars_rounded,
+            color: const Color(0xFFD97706),
+            title: 'Songket Weaving AR Quest Approved',
+            time: '45 mins ago',
+            subtitle: 'Created by Cik Siti Wan Kembang • 250 XP reward enabled',
+          ),
+          _buildAuditTile(
+            icon: Icons.block_rounded,
+            color: const Color(0xFFEF4444),
+            title: 'User Account Suspended',
+            time: '2 hours ago',
+            subtitle: 'Spam listing report confirmed against user @faketourist99',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStateDistributionCard() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.06)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Artisan State Distribution',
+            style: GoogleFonts.dmSerifDisplay(fontSize: 18, color: const Color(0xFF0F172A)),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Regional representation across Malaysia',
+            style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[600]),
+          ),
+          const SizedBox(height: 20),
+          _buildStateRow('Kelantan (Songket & Batik)', 0.35, '6 Studios', const Color(0xFFD97706)),
+          _buildStateRow('Perak (Labu Sayong Pottery)', 0.28, '5 Studios', const Color(0xFF004D40)),
+          _buildStateRow('Melaka (Ceramics & Woodwork)', 0.22, '4 Studios', const Color(0xFF3B82F6)),
+          _buildStateRow('Terengganu (Batik Weaving)', 0.15, '3 Studios', const Color(0xFF8B5CF6)),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMetricCard({
     required String title,
     required String value,
