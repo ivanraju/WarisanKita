@@ -15,8 +15,40 @@ import 'package:warisan_kita/ui/admin_web/widgets/pending_artisans_table.dart';
 import 'package:warisan_kita/ui/admin_web/widgets/user_management_table.dart';
 import 'package:warisan_kita/ui/auth/login_screen.dart';
 
-class AdminModerationDashboardView extends StatelessWidget {
+class AdminModerationDashboardView extends StatefulWidget {
   const AdminModerationDashboardView({super.key});
+
+  @override
+  State<AdminModerationDashboardView> createState() => _AdminModerationDashboardViewState();
+}
+
+class _AdminModerationDashboardViewState extends State<AdminModerationDashboardView> {
+  bool _isVerifyingSession = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final authVM = context.read<AuthViewModel>();
+      UserModel? user = authVM.currentUser;
+      if (user == null) {
+        user = await authVM.restoreSession();
+      }
+
+      if (!mounted) return;
+
+      if (user == null || user.role != 'Admin') {
+        Navigator.of(context).pushReplacementNamed('/login');
+        return;
+      }
+
+      setState(() {
+        _isVerifyingSession = false;
+      });
+
+      context.read<ModerationViewModel>().refreshAllData();
+    });
+  }
 
   void _handleApprove(BuildContext context, PendingArtisanProfile artisan) {
     final vm = context.read<ModerationViewModel>();
@@ -187,6 +219,18 @@ class AdminModerationDashboardView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authVM = context.watch<AuthViewModel>();
+
+    if (_isVerifyingSession) {
+      return const Scaffold(
+        backgroundColor: Color(0xFFF8FAFC),
+        body: Center(
+          child: CircularProgressIndicator(
+            color: Color(0xFF10B981),
+          ),
+        ),
+      );
+    }
+
     if (authVM.currentUser?.role != 'Admin') {
       return const LoginScreen();
     }

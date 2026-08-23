@@ -140,11 +140,11 @@ class _WarisanKitaAppState extends State<WarisanKitaApp> {
       debugShowCheckedModeBanner: false,
       themeMode: themeVM.themeMode,
       theme: ThemeViewModel.lightTheme,
-      initialRoute: kIsWeb ? '/login' : '/',
+      initialRoute: kIsWeb ? '/admin' : '/',
       onGenerateInitialRoutes: (initialRoute) {
         if (kIsWeb) {
           // On Web, strictly restrict access: /admin or /login only.
-          if (initialRoute == '/admin') {
+          if (initialRoute == '/admin' || initialRoute == '/' || initialRoute.isEmpty) {
             return [
               MaterialPageRoute(
                 settings: const RouteSettings(name: '/admin'),

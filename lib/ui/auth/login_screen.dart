@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:warisan_kita/domain/models/user.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 import 'package:warisan_kita/ui/artisan/artisan_application_pending_screen.dart';
 import 'package:warisan_kita/ui/auth/forgot_password_screen.dart';
@@ -29,6 +30,16 @@ class _LoginScreenState extends State<LoginScreen> {
     _passwordController = TextEditingController(
       text: kIsWeb ? 'admin123' : 'password123',
     );
+
+    if (kIsWeb) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        final authVM = context.read<AuthViewModel>();
+        final UserModel? user = authVM.currentUser ?? await authVM.restoreSession();
+        if (mounted && user != null && user.role == 'Admin') {
+          Navigator.of(context).pushReplacementNamed('/admin');
+        }
+      });
+    }
   }
 
   @override
