@@ -1,10 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:warisan_kita/ui/auth/login_screen.dart';
+import 'package:warisan_kita/ui/auth/widgets/password_strength_meter.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
-  const ForgotPasswordScreen({super.key});
+  final int initialStep;
+  final String? initialEmail;
+
+  const ForgotPasswordScreen({
+    super.key,
+    this.initialStep = 1,
+    this.initialEmail,
+  });
 
   @override
   State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
@@ -16,11 +25,26 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
-  int _currentStep = 1; // 1: Email Form, 2: Token Inbox Notice, 3: Set New Password Form
+  late int _currentStep;
   bool _isPasswordVisible = false;
 
   @override
+  void initState() {
+    super.initState();
+    _currentStep = widget.initialStep;
+    if (widget.initialEmail != null && widget.initialEmail!.isNotEmpty) {
+      _emailController.text = widget.initialEmail!;
+    }
+    _newPasswordController.addListener(_onPasswordChanged);
+  }
+
+  void _onPasswordChanged() {
+    setState(() {});
+  }
+
+  @override
   void dispose() {
+    _newPasswordController.removeListener(_onPasswordChanged);
     _emailController.dispose();
     _tokenController.dispose();
     _newPasswordController.dispose();
@@ -90,13 +114,16 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     // UC003 - M3: "PASSWORD RESET SUCCESSFUL: YOU MAY NOW LOGIN"
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('PASSWORD RESET SUCCESSFUL: YOU MAY NOW LOGIN'),
+        content: Text('PASSWORD RESET SUCCESSFUL: You may now sign in with your new password'),
         backgroundColor: Color(0xFF10B981),
         behavior: SnackBarBehavior.floating,
       ),
     );
 
-    Navigator.of(context).pop();
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (route) => false,
+    );
   }
 
   @override
@@ -174,21 +201,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         const SizedBox(height: 8),
 
         Text(
-          'PLEASE ENTER YOUR REGISTERED EMAIL ADDRESS',
+          'Enter your registered email address to receive a password reset link.',
           textAlign: TextAlign.center,
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 11,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0.8,
-            color: const Color(0xFF004D40),
-          ),
-        ),
-        const SizedBox(height: 6),
-
-        Text(
-          'We will dispatch a secure, single-use password recovery link valid for 15 minutes [C1].',
-          textAlign: TextAlign.center,
-          style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.black54, height: 1.4),
+          style: GoogleFonts.plusJakartaSans(fontSize: 13, color: Colors.black54, height: 1.4),
         ),
 
         const SizedBox(height: 20),
@@ -219,6 +234,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           keyboardType: TextInputType.emailAddress,
           decoration: InputDecoration(
             labelText: 'Registered Email Address',
+            hintText: 'e.g. user@example.com',
             prefixIcon: const Icon(Icons.email_outlined, size: 20),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
           ),
@@ -241,7 +257,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
                 )
               : Text(
-                  'DISPATCH RESET LINK [M1]',
+                  'SEND RESET LINK',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
@@ -253,7 +269,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     );
   }
 
-  // Step 2: Token Inbox Notice (UC003 Step 5-8)
+  // Step 2: Token Inbox Notice
   Widget _buildTokenInboxView() {
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -299,7 +315,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Token Constraint: Expires in 15 minutes [C1]. Strictly single-use [C4].',
+                  'Reset link expires in 15 minutes. Check your spam folder if you do not see it.',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
@@ -313,11 +329,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
         const SizedBox(height: 24),
 
-        // Action 1: Open Reset Link / Proceed to Step 3 (Simulates clicking email reset link)
+        // Back to Sign In
         FilledButton.icon(
-          onPressed: () => setState(() => _currentStep = 3),
-          icon: const Icon(Icons.password_rounded, size: 18),
-          label: const Text('OPEN RESET FORM & ENTER NEW PASSWORD (STEP 8-9)'),
+          onPressed: () => Navigator.of(context).pop(),
+          icon: const Icon(Icons.arrow_back_rounded, size: 18),
+          label: const Text('BACK TO SIGN IN'),
           style: FilledButton.styleFrom(
             backgroundColor: const Color(0xFF004D40),
             foregroundColor: Colors.white,
@@ -330,13 +346,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
         TextButton(
           onPressed: () => setState(() => _currentStep = 1),
-          child: const Text('Resend / Change Email'),
+          child: const Text('Resend / Change Email Address'),
         ),
       ],
     );
   }
 
-  // Step 3: Set New Password Form (UC003 Step 9-13)
+  // Step 3: Set New Password Form
   Widget _buildNewPasswordFormView(AuthViewModel authVM) {
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -362,13 +378,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         const SizedBox(height: 6),
 
         Text(
-          'ENTER NEW CREDENTIALS (UC003 STEP 9-10)',
+          'Please choose a strong password for your account',
           textAlign: TextAlign.center,
           style: GoogleFonts.plusJakartaSans(
-            fontSize: 11,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0.8,
-            color: const Color(0xFF004D40),
+            fontSize: 12,
+            color: Colors.black54,
           ),
         ),
 
@@ -400,7 +414,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           controller: _newPasswordController,
           obscureText: !_isPasswordVisible,
           decoration: InputDecoration(
-            labelText: 'New Password (> 7 characters) [C2]',
+            labelText: 'New Password',
+            hintText: 'Must be at least 8 characters',
             prefixIcon: const Icon(Icons.lock_outline, size: 20),
             suffixIcon: IconButton(
               icon: Icon(_isPasswordVisible ? Icons.visibility_off : Icons.visibility, size: 20),
@@ -410,6 +425,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           ),
         ),
 
+        // 📊 Interactive Password Strength Meter & Live Checklist
+        PasswordStrengthMeter(password: _newPasswordController.text),
+
         const SizedBox(height: 16),
 
         // Confirm Password Input
@@ -417,7 +435,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           controller: _confirmPasswordController,
           obscureText: !_isPasswordVisible,
           decoration: InputDecoration(
-            labelText: 'Confirm New Password [C3]',
+            labelText: 'Confirm New Password',
             prefixIcon: const Icon(Icons.lock_reset_outlined, size: 20),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
           ),
@@ -440,7 +458,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
                 )
               : Text(
-                  'UPDATE ENCRYPTED PASSWORD IN DB [M3]',
+                  'RESET PASSWORD',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,

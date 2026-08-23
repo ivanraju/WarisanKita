@@ -70,6 +70,11 @@ class AuthViewModel extends ChangeNotifier {
     return _repository.isUsernameAvailable(username.trim());
   }
 
+  Future<bool> isUsernameAvailable(String username, {String? excludeEmail}) async {
+    if (username.trim().isEmpty) return false;
+    return _repository.isUsernameAvailable(username.trim(), excludeEmail: excludeEmail);
+  }
+
   Future<ExistingAccountCheck> checkExistingAccount(String email) async {
     if (email.trim().isEmpty) return const ExistingAccountCheck(exists: false);
     return _repository.checkExistingAccount(email.trim());

@@ -683,9 +683,30 @@ class SupabaseService {
     final cleanEmail = email.trim().toLowerCase();
     await Future.delayed(const Duration(milliseconds: 400));
 
-    // UC003 - A1: Email not found
-    if (!_userStore.containsKey(cleanEmail)) {
+    // 1. Verify existence in local store or Supabase DB
+    final accountCheck = await checkExistingAccount(cleanEmail);
+    final existsLocally = _userStore.containsKey(cleanEmail);
+    final existsInDb = accountCheck.exists;
+
+    final client = _client;
+
+    if (!existsLocally && !existsInDb && client == null) {
       throw Exception('EMAIL NOT FOUND: No account registered with this email.');
+    }
+
+    // Populate local store if discovered via DB
+    if (!existsLocally && existsInDb) {
+      _userStore[cleanEmail] = {
+        'id': 'usr-${DateTime.now().millisecondsSinceEpoch}',
+        'email': cleanEmail,
+        'username': accountCheck.username ?? cleanEmail.split('@').first,
+        'displayName': accountCheck.displayName ?? cleanEmail.split('@').first,
+        'password': 'password123',
+        'role': accountCheck.existingRole ?? 'Tourist',
+        'roles': accountCheck.existingRoles,
+        'status': 'ACTIVE',
+        'isSuspended': false,
+      };
     }
 
     // UC003 - C1: Password reset tokens must expire after 15 minutes
@@ -698,12 +719,20 @@ class SupabaseService {
       'isUsed': false,
     };
 
-    final client = _client;
     if (client != null) {
       try {
-        await client.auth.resetPasswordForEmail(cleanEmail);
+        await client.auth.resetPasswordForEmail(
+          cleanEmail,
+          redirectTo: 'io.supabase.warisankita://reset-callback',
+        );
       } catch (e) {
         debugPrint('Supabase resetPasswordForEmail note: $e');
+        final errStr = e.toString().toLowerCase();
+        if (errStr.contains('user not found') || errStr.contains('email not found')) {
+          if (!existsLocally && !existsInDb) {
+            throw Exception('EMAIL NOT FOUND: No account registered with this email.');
+          }
+        }
       }
     }
 
@@ -719,8 +748,28 @@ class SupabaseService {
     await Future.delayed(const Duration(milliseconds: 500));
 
     // Validate email exists
-    if (!_userStore.containsKey(cleanEmail)) {
+    final accountCheck = await checkExistingAccount(cleanEmail);
+    final existsLocally = _userStore.containsKey(cleanEmail);
+    final existsInDb = accountCheck.exists;
+
+    if (!existsLocally && !existsInDb && _client == null) {
       throw Exception('EMAIL NOT FOUND: Account does not exist.');
+    }
+
+    if (!existsLocally) {
+      _userStore[cleanEmail] = {
+        'id': 'usr-${DateTime.now().millisecondsSinceEpoch}',
+        'email': cleanEmail,
+        'username': accountCheck.username ?? cleanEmail.split('@').first,
+        'displayName': accountCheck.displayName ?? cleanEmail.split('@').first,
+        'password': newPassword,
+        'role': accountCheck.existingRole ?? 'Tourist',
+        'roles': accountCheck.existingRoles,
+        'status': 'ACTIVE',
+        'isSuspended': false,
+      };
+    } else {
+      _userStore[cleanEmail]!['password'] = newPassword;
     }
 
     // UC003 - A4: Expired or invalid token check
@@ -736,9 +785,6 @@ class SupabaseService {
       // UC003 - C4: Token single-use - invalidate immediately
       tokenInfo['isUsed'] = true;
     }
-
-    // Update password in DB
-    _userStore[cleanEmail]!['password'] = newPassword;
 
     final client = _client;
     if (client != null) {

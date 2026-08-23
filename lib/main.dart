@@ -1,6 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:warisan_kita/data/repositories/artisan_repository.dart';
 import 'package:warisan_kita/data/repositories/forum_repository.dart';
@@ -30,6 +31,8 @@ import 'package:warisan_kita/ui/tourist/apply_artisan_screen.dart';
 import 'package:warisan_kita/ui/artisan/artisan_main_scaffold.dart';
 import 'package:warisan_kita/ui/artisan/artisan_application_pending_screen.dart';
 import 'package:warisan_kita/ui/admin_web/admin_moderation_dashboard_view.dart';
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -74,14 +77,48 @@ void main() async {
   );
 }
 
-class WarisanKitaApp extends StatelessWidget {
+class WarisanKitaApp extends StatefulWidget {
   const WarisanKitaApp({super.key});
+
+  @override
+  State<WarisanKitaApp> createState() => _WarisanKitaAppState();
+}
+
+class _WarisanKitaAppState extends State<WarisanKitaApp> {
+  late final StreamSubscription<AuthState> _authSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    // 🔗 Listen to Deep Link / Auth Recovery Event to link back directly to the app
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      final AuthChangeEvent event = data.event;
+      if (event == AuthChangeEvent.passwordRecovery) {
+        final email = data.session?.user.email;
+        navigatorKey.currentState?.push(
+          MaterialPageRoute(
+            builder: (_) => ForgotPasswordScreen(
+              initialStep: 3,
+              initialEmail: email,
+            ),
+          ),
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _authSubscription.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final themeVM = context.watch<ThemeViewModel>();
 
     return MaterialApp(
+      navigatorKey: navigatorKey,
       title: 'WarisanKita Marketplace',
       debugShowCheckedModeBanner: false,
       themeMode: themeVM.themeMode,
