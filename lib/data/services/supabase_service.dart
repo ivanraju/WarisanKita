@@ -760,15 +760,33 @@ class SupabaseService {
                 _userStore[cleanEmail] = upgraded;
                 return UserModel.fromMap(upgraded);
               } else if (currentRole.contains('tourist') && isTargetArtisan) {
-                // Link Tourist to Artisan with PENDING_APPROVAL
+                // 1. Update users table (role & status only)
                 await client.from('users').update({
                   'role': 'Artisan & Tourist',
                   'status': 'PENDING_APPROVAL',
-                  'studio_name': studioName,
-                  'craft_category': craftCategory,
-                  'ssm_number': ssmNumber,
                   'updated_at': DateTime.now().toIso8601String(),
                 }).ilike('email', cleanEmail);
+
+                // 2. Upsert artisan_profiles table
+                final String? effectiveUid = existingRow?['id']?.toString() ?? loginRes.user?.id;
+                if (effectiveUid != null) {
+                  try {
+                    await client.from('artisan_profiles').upsert({
+                      'user_id': effectiveUid,
+                      'studio_name': studioName ?? resolvedDisplayName,
+                      'craft_category': craftCategory ?? 'Pottery & Ceramics',
+                      'ssm_number': ssmNumber,
+                      'bio': 'Master artisan dedicated to traditional Malaysian craft.',
+                      'address': 'Malaysia',
+                      'state': 'Melaka',
+                      'status': 'PENDING_APPROVAL',
+                      'created_at': DateTime.now().toIso8601String(),
+                      'updated_at': DateTime.now().toIso8601String(),
+                    });
+                  } catch (apErr) {
+                    debugPrint('Supabase link artisan_profiles note: $apErr');
+                  }
+                }
 
                 try {
                   await client.auth.updateUser(
@@ -1045,30 +1063,43 @@ class SupabaseService {
         } catch (_) {}
 
         final existing = await client.from('users').select('id').ilike('email', cleanEmail).maybeSingle();
+        final String userId = existing?['id']?.toString() ?? client.auth.currentUser?.id ?? userRecord['id'] ?? '00000000-0000-4000-8000-000000000001';
+
         if (existing != null) {
           await client.from('users').update({
-            'studio_name': studioName,
-            'craft_category': craftCategory,
-            'ssm_number': ssmNumber,
             'status': 'PENDING_APPROVAL',
             'role': 'Artisan & Tourist',
             'updated_at': DateTime.now().toIso8601String(),
           }).ilike('email', cleanEmail);
         } else {
-          final userId = client.auth.currentUser?.id ?? userRecord['id'] ?? 'usr_${DateTime.now().millisecondsSinceEpoch}';
           await client.from('users').insert({
             'id': userId,
             'email': cleanEmail,
             'username': userRecord['username'] ?? cleanEmail.split('@').first,
             'full_name': userRecord['displayName'] ?? studioName,
-            'studio_name': studioName,
-            'craft_category': craftCategory,
-            'ssm_number': ssmNumber,
             'status': 'PENDING_APPROVAL',
             'role': 'Artisan & Tourist',
             'created_at': DateTime.now().toIso8601String(),
             'updated_at': DateTime.now().toIso8601String(),
           });
+        }
+
+        // Upsert into artisan_profiles
+        try {
+          await client.from('artisan_profiles').upsert({
+            'user_id': userId,
+            'studio_name': studioName,
+            'craft_category': craftCategory,
+            'ssm_number': ssmNumber,
+            'bio': 'Master artisan dedicated to traditional Malaysian craft.',
+            'address': 'Malaysia',
+            'state': 'Melaka',
+            'status': 'PENDING_APPROVAL',
+            'created_at': DateTime.now().toIso8601String(),
+            'updated_at': DateTime.now().toIso8601String(),
+          });
+        } catch (apErr) {
+          debugPrint('Supabase linkArtisanRoleToTourist artisan_profiles note: $apErr');
         }
       } catch (e) {
         debugPrint('Supabase linkArtisanRoleToTourist note: $e');
@@ -1655,7 +1686,7 @@ class SupabaseService {
       try {
         await client.from('forum_posts').delete().eq('id', threadId);
         try {
-          await client.from('forum_replies').delete().eq('thread_id', threadId);
+          await client.from('forum_replies').delete().eq('post_id', threadId);
         } catch (_) {}
       } catch (e) {
         debugPrint('Supabase deleteThread note: $e');
