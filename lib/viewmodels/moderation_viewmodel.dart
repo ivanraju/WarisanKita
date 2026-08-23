@@ -327,9 +327,8 @@ class ModerationViewModel extends ChangeNotifier {
 
   final List<String> userRoles = const [
     'All Roles',
-    'Cultural Tourist',
-    'Master Artisan',
-    'Dual Role (Artisan & Tourist)',
+    'Tourist',
+    'Artisan',
     'Admin',
   ];
 
@@ -350,9 +349,8 @@ class ModerationViewModel extends ChangeNotifier {
 
       final r = user.role.toLowerCase();
       final matchesRole = _userRoleFilter == 'All Roles' ||
-          (_userRoleFilter == 'Cultural Tourist' && (r == 'tourist' || r == 'cultural tourist')) ||
-          (_userRoleFilter == 'Master Artisan' && (r == 'artisan' || r == 'master artisan')) ||
-          (_userRoleFilter.contains('Dual') && (user.isDualRole || r.contains('&') || (r.contains('artisan') && r.contains('tourist')))) ||
+          ((_userRoleFilter == 'Tourist' || _userRoleFilter == 'Cultural Tourist') && (r.contains('tourist') || user.isTourist)) ||
+          ((_userRoleFilter == 'Artisan' || _userRoleFilter == 'Master Artisan') && (r.contains('artisan') || user.isArtisan)) ||
           (_userRoleFilter == 'Admin' && r.contains('admin'));
 
       final matchesStatus = _userStatusFilter == 'All Statuses' ||
