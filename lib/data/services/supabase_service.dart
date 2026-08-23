@@ -265,9 +265,13 @@ class SupabaseService {
 
       if (res == null) {
         try {
-          res = await client.from('users').select().ilike('email', cleanEmail).maybeSingle();
+          res = await client.from('users').select('*, artisan_profiles(*)').ilike('email', cleanEmail).maybeSingle();
         } catch (e) {
-          debugPrint('Supabase checkExistingAccount note: $e');
+          try {
+            res = await client.from('users').select().ilike('email', cleanEmail).maybeSingle();
+          } catch (e2) {
+            debugPrint('Supabase checkExistingAccount note: $e2');
+          }
         }
       }
 
@@ -275,8 +279,17 @@ class SupabaseService {
         final role = (res['role'] ?? '').toString();
         final rawRoles = res['roles'];
         final roles = (rawRoles is List) ? List<String>.from(rawRoles) : <String>[role];
-        final studioName = (res['studio_name'] ?? res['studioName']) as String?;
-        final ssm = (res['ssm_number'] ?? res['ssmNumber']) as String?;
+
+        Map<String, dynamic>? artisanMap;
+        if (res['artisan_profiles'] is Map) {
+          artisanMap = Map<String, dynamic>.from(res['artisan_profiles']);
+        } else if (res['artisan_profiles'] is List && (res['artisan_profiles'] as List).isNotEmpty) {
+          artisanMap = Map<String, dynamic>.from((res['artisan_profiles'] as List).first);
+        }
+
+        final studioName = (res['studio_name'] ?? res['studioName'] ?? artisanMap?['studio_name']) as String?;
+        final ssm = (res['ssm_number'] ?? res['ssmNumber'] ?? artisanMap?['ssm_number']) as String?;
+        final craftCat = (res['craft_category'] ?? res['craftCategory'] ?? artisanMap?['craft_category']) as String?;
 
         final cleanRole = role.trim().toLowerCase();
         final rolesLower = roles.map((r) => r.trim().toLowerCase()).toList();
@@ -311,7 +324,7 @@ class SupabaseService {
           displayName: res['full_name'] ?? res['display_name'] ?? res['displayName'],
           username: res['username'],
           studioName: studioName,
-          craftCategory: res['craft_category'] ?? res['craftCategory'],
+          craftCategory: craftCat,
         );
       }
     }
@@ -407,11 +420,14 @@ class SupabaseService {
         if (authRes.user != null) {
           Map<String, dynamic>? profileData;
           try {
-            profileData = await client.from('users').select().eq('id', authRes.user!.id).maybeSingle();
+            profileData = await client.from('users').select('*, artisan_profiles(*)').eq('id', authRes.user!.id).maybeSingle();
             if (profileData == null) {
-              profileData = await client.from('users').select().ilike('email', cleanEmail).maybeSingle();
+              profileData = await client.from('users').select('*, artisan_profiles(*)').ilike('email', cleanEmail).maybeSingle();
             }
           } catch (e) {
+            try {
+              profileData = await client.from('users').select().eq('id', authRes.user!.id).maybeSingle();
+            } catch (_) {}
             debugPrint('Supabase table select note: $e');
           }
 
@@ -1146,34 +1162,39 @@ class SupabaseService {
         updateMap['updated_at'] = DateTime.now().toIso8601String();
 
         if (updateMap.isNotEmpty) {
-          // 1. Update Supabase Postgres 'users' table
+          // 1. Update Supabase Postgres 'users' table (Core identity columns only)
           try {
-            await client.from('users').update({
+            final userUpdates = <String, dynamic>{
               if (username != null) 'username': username.trim().replaceAll('@', ''),
               if (displayName != null || username != null) 'display_name': displayName ?? username,
               if (displayName != null || username != null) 'full_name': displayName ?? username,
-              if (updateMap.containsKey('studio_name')) 'studio_name': updateMap['studio_name'],
-              if (bio != null) 'bio': bio,
-              if (state != null) 'state': state,
-              if (craftCategory != null) 'craft_category': craftCategory,
               if (phone != null) 'phone_number': phone,
               'updated_at': DateTime.now().toIso8601String(),
-            }).eq('email', cleanEmail);
+            };
+            if (userUpdates.length > 1) {
+              await client.from('users').update(userUpdates).ilike('email', cleanEmail);
+            }
           } catch (e) {
             debugPrint('Supabase updateUserProfile users table note: $e');
           }
 
-          // 2. Update Supabase Postgres 'artisan_profiles' table (if linked)
+          // 2. Update Supabase Postgres 'artisan_profiles' table (Professional columns only, by user_id)
           if (isArtisanAccount) {
             try {
-              await client.from('artisan_profiles').update({
-                if (updateMap.containsKey('studio_name')) 'studio_name': updateMap['studio_name'],
-                if (displayName != null || username != null) 'full_name': displayName ?? username,
-                if (bio != null) 'bio': bio,
-                if (state != null) 'state': state,
-                if (craftCategory != null) 'craft_category': craftCategory,
-                'updated_at': DateTime.now().toIso8601String(),
-              }).eq('email', cleanEmail);
+              final userRow = await client.from('users').select('id').ilike('email', cleanEmail).maybeSingle();
+              final String? effectiveUid = userRow?['id']?.toString() ?? client.auth.currentUser?.id;
+              if (effectiveUid != null) {
+                final artisanUpdates = <String, dynamic>{
+                  if (studioName != null && studioName.trim().isNotEmpty) 'studio_name': studioName.trim(),
+                  if (bio != null) 'bio': bio,
+                  if (state != null) 'state': state,
+                  if (craftCategory != null) 'craft_category': craftCategory,
+                  'updated_at': DateTime.now().toIso8601String(),
+                };
+                if (artisanUpdates.length > 1) {
+                  await client.from('artisan_profiles').update(artisanUpdates).eq('user_id', effectiveUid);
+                }
+              }
             } catch (e) {
               debugPrint('Supabase updateUserProfile artisan_profiles table note: $e');
             }
@@ -1201,24 +1222,36 @@ class SupabaseService {
     final client = _client;
     if (client != null) {
       try {
-        final res = await client.from('users').select().ilike('status', '%PENDING%');
+        final res = await client.from('users').select('*, artisan_profiles(*)').ilike('status', '%PENDING%');
         if (res.isNotEmpty) {
           for (final row in res) {
-            results.add(Map<String, dynamic>.from(row));
+            final rowMap = Map<String, dynamic>.from(row);
+            if (rowMap['artisan_profiles'] is Map) {
+              final ap = Map<String, dynamic>.from(rowMap['artisan_profiles']);
+              rowMap['studio_name'] ??= ap['studio_name'];
+              rowMap['craft_category'] ??= ap['craft_category'];
+              rowMap['ssm_number'] ??= ap['ssm_number'];
+              rowMap['bio'] ??= ap['bio'];
+            } else if (rowMap['artisan_profiles'] is List && (rowMap['artisan_profiles'] as List).isNotEmpty) {
+              final ap = Map<String, dynamic>.from((rowMap['artisan_profiles'] as List).first);
+              rowMap['studio_name'] ??= ap['studio_name'];
+              rowMap['craft_category'] ??= ap['craft_category'];
+              rowMap['ssm_number'] ??= ap['ssm_number'];
+              rowMap['bio'] ??= ap['bio'];
+            }
+            results.add(rowMap);
           }
         }
       } catch (e) {
-        debugPrint('Supabase getPendingArtisans ilike note: $e');
+        debugPrint('Supabase getPendingArtisans note: $e');
         try {
-          final res2 = await client.from('users').select().eq('status', 'PENDING_APPROVAL');
+          final res2 = await client.from('users').select().ilike('status', '%PENDING%');
           if (res2.isNotEmpty) {
             for (final row in res2) {
               results.add(Map<String, dynamic>.from(row));
             }
           }
-        } catch (e2) {
-          debugPrint('Supabase getPendingArtisans eq note: $e2');
-        }
+        } catch (_) {}
       }
     }
 
@@ -1261,12 +1294,17 @@ class SupabaseService {
           'role': newRole,
           'updated_at': DateTime.now().toIso8601String(),
         };
-        if (newRole == 'Artisan & Tourist') {
-          updatePayload['roles'] = ['Tourist', 'Artisan'];
-        } else if (newRole == 'Artisan') {
-          updatePayload['roles'] = ['Artisan'];
+        await client.from('users').update(updatePayload).ilike('email', cleanEmail);
+
+        // Update artisan_profiles status matching user_id
+        final userRow = await client.from('users').select('id').ilike('email', cleanEmail).maybeSingle();
+        if (userRow != null && userRow['id'] != null) {
+          final artisanStatus = (newStatus.toUpperCase() == 'ACTIVE' || newStatus.toUpperCase() == 'APPROVED') ? 'APPROVED' : newStatus;
+          await client.from('artisan_profiles').update({
+            'status': artisanStatus,
+            'updated_at': DateTime.now().toIso8601String(),
+          }).eq('user_id', userRow['id']);
         }
-        await client.from('users').update(updatePayload).eq('email', cleanEmail);
       } catch (e) {
         debugPrint('Supabase updateArtisanStatusInDb note: $e');
       }
@@ -1355,9 +1393,19 @@ class SupabaseService {
     final client = _client;
     if (client != null) {
       try {
-        final res = await client.from('forum_posts').select('*, users(id, full_name, username, avatar_url, role)');
+        dynamic res;
+        try {
+          res = await client.from('forum_posts').select('*, users!forum_posts_user_id_fkey(id, full_name, username, avatar_url, role)');
+        } catch (_) {
+          try {
+            res = await client.from('forum_posts').select('*, users(id, full_name, username, avatar_url, role)');
+          } catch (_) {
+            res = await client.from('forum_posts').select();
+          }
+        }
+
         final List<ForumThread> remote = [];
-        if (res.isNotEmpty) {
+        if (res is List && res.isNotEmpty) {
           for (final row in res) {
             final threadMap = Map<String, dynamic>.from(row);
             threadMap['userVote'] = _sessionThreadVotes[threadMap['id']] ?? (threadMap['user_vote'] as int?) ?? 0;
@@ -1365,12 +1413,24 @@ class SupabaseService {
             final localMatch = _forumStore.where((l) => l.id == threadMap['id']).firstOrNull;
 
             try {
-              final repliesRes = await client.from('forum_replies').select('*, users(id, full_name, username, avatar_url, role)').eq('post_id', threadMap['id']);
+              dynamic repliesRes;
+              try {
+                repliesRes = await client.from('forum_replies').select('*, users!forum_replies_user_id_fkey(id, full_name, username, avatar_url, role)').eq('post_id', threadMap['id']);
+              } catch (_) {
+                try {
+                  repliesRes = await client.from('forum_replies').select('*, users(id, full_name, username, avatar_url, role)').eq('post_id', threadMap['id']);
+                } catch (_) {
+                  repliesRes = await client.from('forum_replies').select().eq('post_id', threadMap['id']);
+                }
+              }
+
               final List<Map<String, dynamic>> processedReplies = [];
-              for (final r in repliesRes) {
-                final rMap = Map<String, dynamic>.from(r);
-                rMap['userVote'] = _sessionReplyVotes[rMap['id']] ?? (rMap['user_vote'] as int?) ?? 0;
-                processedReplies.add(rMap);
+              if (repliesRes is List) {
+                for (final r in repliesRes) {
+                  final rMap = Map<String, dynamic>.from(r);
+                  rMap['userVote'] = _sessionReplyVotes[rMap['id']] ?? (rMap['user_vote'] as int?) ?? 0;
+                  processedReplies.add(rMap);
+                }
               }
               if (processedReplies.isNotEmpty) {
                 threadMap['replies'] = processedReplies;
