@@ -746,6 +746,24 @@ class AdminModerationDashboardView extends StatelessWidget {
       ),
     );
 
+    final addAdminButton = FilledButton.icon(
+      onPressed: () => _showAddAdminDialog(context, viewModel),
+      style: FilledButton.styleFrom(
+        backgroundColor: const Color(0xFF6D28D9),
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+      icon: const Icon(Icons.person_add_rounded, size: 16),
+      label: Text(
+        'Add Admin',
+        style: GoogleFonts.plusJakartaSans(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -762,9 +780,12 @@ class AdminModerationDashboardView extends StatelessWidget {
                 Wrap(
                   spacing: 12,
                   runSpacing: 12,
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     roleDropdown,
                     statusDropdown,
+                    addAdminButton,
                   ],
                 ),
               ],
@@ -776,8 +797,147 @@ class AdminModerationDashboardView extends StatelessWidget {
                 roleDropdown,
                 const SizedBox(width: 16),
                 statusDropdown,
+                const SizedBox(width: 16),
+                addAdminButton,
               ],
             ),
+    );
+  }
+
+  void _showAddAdminDialog(BuildContext context, ModerationViewModel viewModel) {
+    final nameCtrl = TextEditingController();
+    final emailCtrl = TextEditingController();
+    final passCtrl = TextEditingController();
+    bool obscurePass = true;
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (dialogCtx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF5F3FF),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.shield_rounded, color: Color(0xFF6D28D9), size: 22),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Add Administrator',
+                style: GoogleFonts.dmSerifDisplay(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF0F172A),
+                ),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: 440,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Create an administrator account with access to moderation and settings.',
+                  style: GoogleFonts.plusJakartaSans(fontSize: 12, color: const Color(0xFF64748B)),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: nameCtrl,
+                  decoration: InputDecoration(
+                    labelText: 'Full Name',
+                    hintText: 'e.g. Encik Farhan',
+                    prefixIcon: const Icon(Icons.person_outline_rounded, size: 18),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: emailCtrl,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: InputDecoration(
+                    labelText: 'Email Address',
+                    hintText: 'e.g. admin.farhan@warisankita.my',
+                    prefixIcon: const Icon(Icons.email_outlined, size: 18),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: passCtrl,
+                  obscureText: obscurePass,
+                  decoration: InputDecoration(
+                    labelText: 'Initial Password',
+                    hintText: 'Minimum 8 characters',
+                    prefixIcon: const Icon(Icons.lock_outline_rounded, size: 18),
+                    suffixIcon: IconButton(
+                      icon: Icon(obscurePass ? Icons.visibility_off : Icons.visibility, size: 18),
+                      onPressed: () => setDialogState(() => obscurePass = !obscurePass),
+                    ),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: const Text('Cancel'),
+            ),
+            FilledButton.icon(
+              onPressed: () async {
+                final name = nameCtrl.text.trim();
+                final email = emailCtrl.text.trim();
+                final pass = passCtrl.text;
+
+                if (name.isEmpty || email.isEmpty || pass.length < 8) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please fill all fields. Password must be at least 8 characters.'),
+                      backgroundColor: Color(0xFFEF4444),
+                    ),
+                  );
+                  return;
+                }
+
+                Navigator.pop(dialogCtx);
+                try {
+                  await viewModel.createAdminAccount(
+                    email: email,
+                    password: pass,
+                    displayName: name,
+                  );
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Administrator account ($email) created successfully!'),
+                      backgroundColor: const Color(0xFF10B981),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                } catch (e) {
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error creating admin: $e'),
+                      backgroundColor: const Color(0xFFEF4444),
+                    ),
+                  );
+                }
+              },
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF6D28D9)),
+              icon: const Icon(Icons.check_circle_outline_rounded, size: 16),
+              label: const Text('Create Admin Account'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

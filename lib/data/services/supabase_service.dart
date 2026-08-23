@@ -632,9 +632,13 @@ class SupabaseService {
         role == 'Dual Role';
     final isArtisan = isDual || role == 'Artisan' || role == 'Master Artisan';
 
+    final bool isAdmin = role.toLowerCase().contains('admin');
     final String finalRole;
     final List<String> finalRoles;
-    if (isDual) {
+    if (isAdmin) {
+      finalRole = 'Admin';
+      finalRoles = ['Admin'];
+    } else if (isDual) {
       finalRole = 'Artisan & Tourist';
       finalRoles = ['Tourist', 'Artisan'];
     } else if (isArtisan) {

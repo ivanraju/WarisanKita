@@ -262,31 +262,56 @@ class UserManagementTable extends StatelessWidget {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              user.isSuspended
-                  ? ElevatedButton.icon(
-                      onPressed: () => onReactivate(user),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF10B981),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        minimumSize: const Size(0, 32),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              if (user.role.toLowerCase().contains('admin') || user.isAdmin)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.shield_outlined, size: 13, color: Color(0xFF64748B)),
+                      const SizedBox(width: 5),
+                      Text(
+                        'Admin (Protected)',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF64748B),
+                        ),
                       ),
-                      icon: const Icon(Icons.check_circle_outline_rounded, size: 14),
-                      label: const Text('Reactivate', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                    )
-                  : OutlinedButton.icon(
-                      onPressed: () => onSuspend(user),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFFEF4444),
-                        side: const BorderSide(color: Color(0xFFEF4444), width: 1.5),
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        minimumSize: const Size(0, 32),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                      icon: const Icon(Icons.block_rounded, size: 14),
-                      label: const Text('Suspend', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                    ),
+                    ],
+                  ),
+                )
+              else if (user.isSuspended)
+                ElevatedButton.icon(
+                  onPressed: () => onReactivate(user),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF10B981),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    minimumSize: const Size(0, 32),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  icon: const Icon(Icons.check_circle_outline_rounded, size: 14),
+                  label: const Text('Reactivate', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                )
+              else
+                OutlinedButton.icon(
+                  onPressed: () => onSuspend(user),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFFEF4444),
+                    side: const BorderSide(color: Color(0xFFEF4444), width: 1.5),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    minimumSize: const Size(0, 32),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  icon: const Icon(Icons.block_rounded, size: 14),
+                  label: const Text('Suspend', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                ),
               const SizedBox(width: 8),
               IconButton(
                 icon: const Icon(Icons.lock_reset_rounded, size: 18, color: Color(0xFF64748B)),
