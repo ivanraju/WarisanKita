@@ -247,7 +247,7 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    // 🌐 Web Guard: If running on Web browser (Vercel) and user is NOT an Admin
+    // 🌐 Web Notice: Provide option to explore in Web Preview mode
     if (kIsWeb && result.user?.role != 'Admin') {
       showDialog(
         context: context,
@@ -259,21 +259,37 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Mobile App Required',
+                  'Mobile Experience',
                   style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
                 ),
               ),
             ],
           ),
           content: Text(
-            'This Web Portal is exclusively for Administrators.\n\nCultural Tourist & Artisan features (AR Heritage Quests, Crafts Catalog, Studio Directory) require the Warisan Kita Mobile App.\n\nPlease open the application on your Android or iOS mobile device.',
+            'Tourist & Artisan features (AR Heritage Quests, Studio Directory, Crafts) are optimized for mobile devices.\n\nWould you like to continue to the Web Preview mode?',
             style: GoogleFonts.plusJakartaSans(fontSize: 13, height: 1.5, color: Colors.black87),
           ),
           actions: [
-            FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF004D40)),
+            TextButton(
               onPressed: () => Navigator.pop(dialogCtx),
-              child: const Text('OK'),
+              child: const Text('DISMISS'),
+            ),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF004D40)),
+              icon: const Icon(Icons.preview_rounded, size: 18),
+              label: const Text('CONTINUE TO WEB PREVIEW'),
+              onPressed: () {
+                Navigator.pop(dialogCtx);
+                if (result.user?.role == 'Artisan' || result.user?.role == 'Master Artisan') {
+                  if (result.user?.isApprovedArtisan != true) {
+                    Navigator.of(context).pushReplacementNamed('/pending-artisan');
+                  } else {
+                    Navigator.of(context).pushReplacementNamed('/artisan');
+                  }
+                } else {
+                  Navigator.of(context).pushReplacementNamed('/tourist');
+                }
+              },
             ),
           ],
         ),
