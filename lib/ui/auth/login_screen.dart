@@ -247,7 +247,7 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    // 🌐 Web Notice: Provide option to explore in Web Preview mode
+    // 🌐 Web Guard: If running on Web browser (Vercel) and user is NOT an Admin
     if (kIsWeb && result.user?.role != 'Admin') {
       showDialog(
         context: context,
@@ -259,37 +259,21 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Mobile Experience',
+                  'Mobile App Required',
                   style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
                 ),
               ),
             ],
           ),
           content: Text(
-            'Tourist & Artisan features (AR Heritage Quests, Studio Directory, Crafts) are optimized for mobile devices.\n\nWould you like to continue to the Web Preview mode?',
+            'This Web Portal is exclusively for Administrators.\n\nCultural Tourist & Artisan features (AR Heritage Quests, Crafts Catalog, Studio Directory) require the Warisan Kita Mobile App.\n\nPlease open the application on your Android or iOS mobile device.',
             style: GoogleFonts.plusJakartaSans(fontSize: 13, height: 1.5, color: Colors.black87),
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogCtx),
-              child: const Text('DISMISS'),
-            ),
-            FilledButton.icon(
+            FilledButton(
               style: FilledButton.styleFrom(backgroundColor: const Color(0xFF004D40)),
-              icon: const Icon(Icons.preview_rounded, size: 18),
-              label: const Text('CONTINUE TO WEB PREVIEW'),
-              onPressed: () {
-                Navigator.pop(dialogCtx);
-                if (result.user?.role == 'Artisan' || result.user?.role == 'Master Artisan') {
-                  if (result.user?.isApprovedArtisan != true) {
-                    Navigator.of(context).pushReplacementNamed('/pending-artisan');
-                  } else {
-                    Navigator.of(context).pushReplacementNamed('/artisan');
-                  }
-                } else {
-                  Navigator.of(context).pushReplacementNamed('/tourist');
-                }
-              },
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: const Text('OK'),
             ),
           ],
         ),
