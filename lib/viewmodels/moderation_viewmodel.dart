@@ -329,7 +329,8 @@ class ModerationViewModel extends ChangeNotifier {
     'All Roles',
     'Cultural Tourist',
     'Master Artisan',
-    'Dual Role',
+    'Dual Role (Artisan & Tourist)',
+    'Admin',
   ];
 
   final List<String> userStatuses = const [
@@ -347,14 +348,16 @@ class ModerationViewModel extends ChangeNotifier {
           (user.username ?? '').toLowerCase().contains(_userSearchQuery.toLowerCase()) ||
           user.email.toLowerCase().contains(_userSearchQuery.toLowerCase());
 
+      final r = user.role.toLowerCase();
       final matchesRole = _userRoleFilter == 'All Roles' ||
-          (_userRoleFilter == 'Cultural Tourist' && user.role == 'Tourist') ||
-          (_userRoleFilter == 'Master Artisan' && user.role == 'Artisan') ||
-          (_userRoleFilter == 'Dual Role' && user.isDualRole);
+          (_userRoleFilter == 'Cultural Tourist' && (r == 'tourist' || r == 'cultural tourist')) ||
+          (_userRoleFilter == 'Master Artisan' && (r == 'artisan' || r == 'master artisan')) ||
+          (_userRoleFilter.contains('Dual') && (user.isDualRole || r.contains('&') || (r.contains('artisan') && r.contains('tourist')))) ||
+          (_userRoleFilter == 'Admin' && r.contains('admin'));
 
       final matchesStatus = _userStatusFilter == 'All Statuses' ||
-          (_userStatusFilter == 'Active' && !user.isSuspended) ||
-          (_userStatusFilter == 'Suspended' && user.isSuspended);
+          (_userStatusFilter == 'Active' && !user.isSuspended && user.status.toUpperCase() != 'SUSPENDED') ||
+          (_userStatusFilter == 'Suspended' && (user.isSuspended || user.status.toUpperCase() == 'SUSPENDED'));
 
       return matchesSearch && matchesRole && matchesStatus;
     }).toList();
