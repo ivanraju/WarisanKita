@@ -661,7 +661,7 @@ class SupabaseService {
         if (authRes.user != null) {
           newUser['id'] = authRes.user!.id;
           
-          // Upsert into Supabase database table (public.users)
+          // 1. Insert Core Identity into normalized public.users
           try {
             await client.from('users').upsert({
               'id': authRes.user!.id,
@@ -670,29 +670,30 @@ class SupabaseService {
               'full_name': resolvedDisplayName,
               'role': finalRole,
               'status': initialStatus,
-              'studio_name': studioName,
-              'craft_category': craftCategory,
-              'ssm_number': ssmNumber,
               'created_at': DateTime.now().toIso8601String(),
               'updated_at': DateTime.now().toIso8601String(),
             });
           } catch (tableErr) {
-            // Fallback without username column if not yet added in Supabase schema
+            debugPrint('Supabase public.users table insert note: $tableErr');
+          }
+
+          // 2. If Artisan, insert professional details into public.artisan_profiles
+          if (finalRole.contains('Artisan') || (studioName != null && studioName.trim().isNotEmpty)) {
             try {
-              await client.from('users').upsert({
-                'id': authRes.user!.id,
-                'email': cleanEmail,
-                'full_name': resolvedDisplayName,
-                'role': finalRole,
-                'status': initialStatus,
-                'studio_name': studioName,
-                'craft_category': craftCategory,
+              await client.from('artisan_profiles').upsert({
+                'user_id': authRes.user!.id,
+                'studio_name': studioName ?? resolvedDisplayName,
+                'craft_category': craftCategory ?? 'Pottery & Ceramics',
                 'ssm_number': ssmNumber,
+                'bio': 'Master artisan dedicated to traditional Malaysian craft.',
+                'address': 'Malaysia',
+                'state': 'Melaka',
+                'status': initialStatus,
                 'created_at': DateTime.now().toIso8601String(),
                 'updated_at': DateTime.now().toIso8601String(),
               });
-            } catch (fallbackErr) {
-              debugPrint('Supabase public.users table insert note: $fallbackErr');
+            } catch (artisanErr) {
+              debugPrint('Supabase public.artisan_profiles table insert note: $artisanErr');
             }
           }
         }
@@ -1354,7 +1355,7 @@ class SupabaseService {
     final client = _client;
     if (client != null) {
       try {
-        final res = await client.from('forum_posts').select();
+        final res = await client.from('forum_posts').select('*, users(id, full_name, username, avatar_url, role)');
         final List<ForumThread> remote = [];
         if (res.isNotEmpty) {
           for (final row in res) {
@@ -1364,7 +1365,7 @@ class SupabaseService {
             final localMatch = _forumStore.where((l) => l.id == threadMap['id']).firstOrNull;
 
             try {
-              final repliesRes = await client.from('forum_replies').select().eq('thread_id', threadMap['id']);
+              final repliesRes = await client.from('forum_replies').select('*, users(id, full_name, username, avatar_url, role)').eq('post_id', threadMap['id']);
               final List<Map<String, dynamic>> processedReplies = [];
               for (final r in repliesRes) {
                 final rMap = Map<String, dynamic>.from(r);
@@ -1403,7 +1404,6 @@ class SupabaseService {
       final String? authUid = client.auth.currentUser?.id;
       final String? userStoreUid = _userStore[thread.authorEmail]?['id']?.toString();
       final String effectiveUid = thread.userId ?? authUid ?? userStoreUid ?? '00000000-0000-4000-8000-000000000001';
-      final String authorRole = thread.isArtisan ? 'Master Artisan' : 'Tourist';
       final String postContent = thread.replies.isNotEmpty ? thread.replies.first.text : thread.title;
       final String tagValue = thread.community.replaceAll('c/', '');
 
@@ -1411,66 +1411,31 @@ class SupabaseService {
         'id': thread.id,
         'user_id': effectiveUid,
         'tag': tagValue,
+        'community': thread.community,
         'title': thread.title,
         'content': postContent,
-        'author_name': thread.authorName,
-        'author_role': authorRole,
-        'is_artisan': thread.isArtisan,
         'upvotes': thread.upvotes,
-        'timestamp': thread.timestamp,
-      };
-
-      final Map<String, dynamic> fullMap = {
-        ...verifiedDbMap,
-        if (thread.isReported) ...{
-          'is_reported': thread.isReported,
-          if (thread.reportReason != null) 'report_reason': thread.reportReason,
-          if (thread.reportNotes != null) 'report_notes': thread.reportNotes,
-        },
       };
 
       try {
-        await client.from('forum_posts').insert(fullMap);
+        await client.from('forum_posts').insert(verifiedDbMap);
       } catch (e) {
-        debugPrint('Supabase createThread full insert note: $e');
-        try {
-          // Fallback to verified columns without optional report fields
-          await client.from('forum_posts').insert(verifiedDbMap);
-        } catch (e2) {
-          debugPrint('Supabase createThread verifiedDbMap fallback error: $e2');
-          try {
-            // Ultra-minimal fallback for legacy/basic forum_posts table
-            await client.from('forum_posts').insert({
-              'id': thread.id,
-              'user_id': effectiveUid,
-              'author_name': thread.authorName,
-              'author_role': authorRole,
-              'tag': tagValue,
-              'title': thread.title,
-              'content': postContent,
-            });
-          } catch (e3) {
-            debugPrint('Supabase createThread ultra-minimal fallback error: $e3');
-          }
-        }
+        debugPrint('Supabase createThread insert note: $e');
       }
 
       for (final reply in thread.replies) {
         try {
-          await client.from('forum_replies').insert(reply.toDbMap(thread.id));
+          await client.from('forum_replies').insert({
+            'id': reply.id,
+            'post_id': thread.id,
+            'user_id': effectiveUid,
+            'content': reply.text,
+            'upvotes': reply.upvotes,
+            'is_verified_answer': reply.isVerifiedAnswer,
+            'is_edited': reply.isEdited,
+          });
         } catch (re) {
-          try {
-            await client.from('forum_replies').insert({
-              'id': reply.id,
-              'thread_id': thread.id,
-              'sender': reply.sender,
-              'author_email': reply.authorEmail,
-              'text': reply.text,
-              'timestamp': reply.timestamp,
-            });
-          } catch (re2) {
-            debugPrint('Supabase createThread initial reply note: $re2');
-          }
+          debugPrint('Supabase createThread initial reply note: $re');
         }
       }
     }
@@ -1492,31 +1457,24 @@ class SupabaseService {
     }
     final client = _client;
     if (client != null) {
+      final String? authUid = client.auth.currentUser?.id;
+      final String? userStoreUid = _userStore[reply.authorEmail]?['id']?.toString();
+      final String effectiveUid = authUid ?? userStoreUid ?? '00000000-0000-4000-8000-000000000001';
+
       final Map<String, dynamic> verifiedReplyMap = {
         'id': reply.id,
-        'thread_id': threadId,
-        'sender': reply.sender,
-        'author_email': reply.authorEmail,
-        'is_artisan': reply.isArtisan,
+        'post_id': threadId,
+        'user_id': effectiveUid,
+        'content': reply.text,
         'upvotes': reply.upvotes,
-        'timestamp': reply.timestamp,
-        'text': reply.text,
+        'is_verified_answer': reply.isVerifiedAnswer,
+        'is_edited': reply.isEdited,
       };
 
       try {
         await client.from('forum_replies').insert(verifiedReplyMap);
       } catch (e) {
-        debugPrint('Supabase postReply verified insert note: $e');
-        try {
-          await client.from('forum_replies').insert({
-            'id': reply.id,
-            'thread_id': threadId,
-            'sender': reply.sender,
-            'text': reply.text,
-          });
-        } catch (e2) {
-          debugPrint('Supabase postReply fallback error: $e2');
-        }
+        debugPrint('Supabase postReply insert note: $e');
       }
     }
   }
@@ -1660,17 +1618,11 @@ class SupabaseService {
     if (client != null) {
       try {
         await client.from('forum_replies').update({
-          'text': newText,
+          'content': newText,
           'is_edited': true,
         }).eq('id', replyId);
       } catch (e) {
-        try {
-          await client.from('forum_replies').update({
-            'content': newText,
-          }).eq('id', replyId);
-        } catch (e2) {
-          debugPrint('Supabase editReply note: $e2');
-        }
+        debugPrint('Supabase editReply note: $e');
       }
     }
   }
