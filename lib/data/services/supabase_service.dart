@@ -376,11 +376,16 @@ class SupabaseService {
           Map<String, dynamic>? profileData;
           try {
             profileData = await client.from('users').select().eq('id', authRes.user!.id).maybeSingle();
+            if (profileData == null) {
+              profileData = await client.from('users').select().ilike('email', cleanEmail).maybeSingle();
+            }
           } catch (e) {
             debugPrint('Supabase table select note: $e');
           }
 
           if (profileData != null) {
+            // Keep in-memory store in sync with database row
+            _userStore[cleanEmail] = profileData;
             return UserModel.fromMap(profileData);
           }
 
@@ -557,6 +562,9 @@ class SupabaseService {
               'full_name': resolvedDisplayName,
               'role': finalRole,
               'status': initialStatus,
+              'studio_name': studioName,
+              'craft_category': craftCategory,
+              'ssm_number': ssmNumber,
               'created_at': DateTime.now().toIso8601String(),
               'updated_at': DateTime.now().toIso8601String(),
             });
@@ -569,6 +577,9 @@ class SupabaseService {
                 'full_name': resolvedDisplayName,
                 'role': finalRole,
                 'status': initialStatus,
+                'studio_name': studioName,
+                'craft_category': craftCategory,
+                'ssm_number': ssmNumber,
                 'created_at': DateTime.now().toIso8601String(),
                 'updated_at': DateTime.now().toIso8601String(),
               });
@@ -896,15 +907,44 @@ class SupabaseService {
 
     if (client != null) {
       try {
-        await client.from('users').upsert({
-          'email': cleanEmail,
-          'studio_name': studioName,
-          'craft_category': craftCategory,
-          'ssm_number': ssmNumber,
-          'status': 'PENDING_APPROVAL',
-          'role': 'Artisan & Tourist',
-          'updated_at': DateTime.now().toIso8601String(),
-        });
+        try {
+          await client.auth.updateUser(
+            UserAttributes(data: {
+              'status': 'PENDING_APPROVAL',
+              'role': 'Artisan & Tourist',
+              'studio_name': studioName,
+              'craft_category': craftCategory,
+              'ssm_number': ssmNumber,
+            }),
+          );
+        } catch (_) {}
+
+        final existing = await client.from('users').select('id').ilike('email', cleanEmail).maybeSingle();
+        if (existing != null) {
+          await client.from('users').update({
+            'studio_name': studioName,
+            'craft_category': craftCategory,
+            'ssm_number': ssmNumber,
+            'status': 'PENDING_APPROVAL',
+            'role': 'Artisan & Tourist',
+            'updated_at': DateTime.now().toIso8601String(),
+          }).ilike('email', cleanEmail);
+        } else {
+          final userId = client.auth.currentUser?.id ?? userRecord['id'] ?? 'usr_${DateTime.now().millisecondsSinceEpoch}';
+          await client.from('users').insert({
+            'id': userId,
+            'email': cleanEmail,
+            'username': userRecord['username'] ?? cleanEmail.split('@').first,
+            'full_name': userRecord['displayName'] ?? studioName,
+            'studio_name': studioName,
+            'craft_category': craftCategory,
+            'ssm_number': ssmNumber,
+            'status': 'PENDING_APPROVAL',
+            'role': 'Artisan & Tourist',
+            'created_at': DateTime.now().toIso8601String(),
+            'updated_at': DateTime.now().toIso8601String(),
+          });
+        }
       } catch (e) {
         debugPrint('Supabase linkArtisanRoleToTourist note: $e');
       }
