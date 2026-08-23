@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:warisan_kita/domain/models/artisan_profile.dart';
+import 'package:warisan_kita/domain/models/active_artisan_master.dart';
 import 'package:warisan_kita/domain/models/forum_post.dart';
 import 'package:warisan_kita/domain/models/badge.dart';
 import 'package:warisan_kita/domain/models/user.dart';
@@ -1304,6 +1305,100 @@ class SupabaseService {
         if (!results.any((r) => (r['email'] ?? '').toString().toLowerCase() == userEmail)) {
           results.add(Map<String, dynamic>.from(user));
         }
+      }
+    }
+
+    return results;
+  }
+
+  Future<List<ActiveArtisanMaster>> getActiveArtisans() async {
+    final List<ActiveArtisanMaster> results = [];
+    final client = _client;
+    if (client != null) {
+      try {
+        dynamic res;
+        try {
+          res = await client
+              .from('users')
+              .select('*, artisan_profiles!artisan_profiles_user_id_fkey(*)')
+              .ilike('role', '%Artisan%')
+              .neq('status', 'PENDING_APPROVAL');
+        } catch (_) {
+          try {
+            res = await client
+                .from('users')
+                .select('*, artisan_profiles(*)')
+                .ilike('role', '%Artisan%')
+                .neq('status', 'PENDING_APPROVAL');
+          } catch (_) {
+            res = await client.from('users').select().ilike('role', '%Artisan%').neq('status', 'PENDING_APPROVAL');
+          }
+        }
+
+        if (res is List && res.isNotEmpty) {
+          for (final row in res) {
+            results.add(ActiveArtisanMaster.fromMap(Map<String, dynamic>.from(row)));
+          }
+        }
+      } catch (e) {
+        debugPrint('Supabase getActiveArtisans note: $e');
+      }
+    }
+
+    // Merge in-memory active artisans
+    for (final entry in _userStore.entries) {
+      final user = entry.value;
+      final role = (user['role'] ?? '').toString();
+      final status = (user['status'] ?? '').toString().toUpperCase();
+      if (role.contains('Artisan') && !status.contains('PENDING')) {
+        final email = (user['email'] ?? entry.key).toString().toLowerCase();
+        if (!results.any((a) => a.email.toLowerCase() == email)) {
+          results.add(ActiveArtisanMaster.fromMap(Map<String, dynamic>.from(user)));
+        }
+      }
+    }
+
+    return results;
+  }
+
+  Future<List<UserModel>> getAllUsers() async {
+    final List<UserModel> results = [];
+    final client = _client;
+    if (client != null) {
+      try {
+        dynamic res;
+        try {
+          res = await client
+              .from('users')
+              .select('*, artisan_profiles!artisan_profiles_user_id_fkey(*)')
+              .order('created_at', ascending: false);
+        } catch (_) {
+          try {
+            res = await client
+                .from('users')
+                .select('*, artisan_profiles(*)')
+                .order('created_at', ascending: false);
+          } catch (_) {
+            res = await client.from('users').select().order('created_at', ascending: false);
+          }
+        }
+
+        if (res is List && res.isNotEmpty) {
+          for (final row in res) {
+            results.add(UserModel.fromMap(Map<String, dynamic>.from(row)));
+          }
+        }
+      } catch (e) {
+        debugPrint('Supabase getAllUsers note: $e');
+      }
+    }
+
+    // Merge in-memory users
+    for (final entry in _userStore.entries) {
+      final user = entry.value;
+      final email = (user['email'] ?? entry.key).toString().toLowerCase();
+      if (!results.any((u) => u.email.toLowerCase() == email)) {
+        results.add(UserModel.fromMap(Map<String, dynamic>.from(user)));
       }
     }
 

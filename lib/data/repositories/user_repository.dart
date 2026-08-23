@@ -1,4 +1,5 @@
 import 'package:warisan_kita/data/services/supabase_service.dart';
+import 'package:warisan_kita/domain/models/active_artisan_master.dart';
 import 'package:warisan_kita/domain/models/user.dart';
 
 class UserRepository {
@@ -110,6 +111,14 @@ class UserRepository {
 
   Future<List<Map<String, dynamic>>> getPendingArtisans() {
     return _service.getPendingArtisans();
+  }
+
+  Future<List<ActiveArtisanMaster>> getActiveArtisans() {
+    return _service.getActiveArtisans();
+  }
+
+  Future<List<UserModel>> getAllUsers() {
+    return _service.getAllUsers();
   }
 
   Future<void> updateArtisanStatus({
