@@ -185,6 +185,11 @@ class AdminModerationDashboardView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final authVM = context.watch<AuthViewModel>();
+    if (authVM.currentUser?.role != 'Admin') {
+      return const LoginScreen();
+    }
+
     ModerationViewModel? globalVM;
     try {
       globalVM = context.watch<ModerationViewModel>();
