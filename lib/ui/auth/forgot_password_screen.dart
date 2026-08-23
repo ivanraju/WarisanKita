@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:warisan_kita/ui/auth/widgets/password_strength_meter.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
@@ -20,7 +21,18 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   bool _isPasswordVisible = false;
 
   @override
+  void initState() {
+    super.initState();
+    _newPasswordController.addListener(_onPasswordChanged);
+  }
+
+  void _onPasswordChanged() {
+    setState(() {});
+  }
+
+  @override
   void dispose() {
+    _newPasswordController.removeListener(_onPasswordChanged);
     _emailController.dispose();
     _tokenController.dispose();
     _newPasswordController.dispose();
@@ -409,6 +421,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
           ),
         ),
+
+        // 📊 Interactive Password Strength Meter & Live Checklist
+        PasswordStrengthMeter(password: _newPasswordController.text),
 
         const SizedBox(height: 16),
 

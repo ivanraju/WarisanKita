@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:warisan_kita/domain/models/user.dart';
+import 'package:warisan_kita/ui/auth/widgets/password_strength_meter.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -23,10 +25,68 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscureConfirmPassword = true;
   ExistingAccountCheck? _existingAccountCheck;
 
+  bool _isCheckingUsername = false;
+  bool? _isUsernameAvailable;
+  String? _usernameMessage;
+  Timer? _usernameDebounce;
+
   @override
   void initState() {
     super.initState();
     _emailController.addListener(_onEmailChanged);
+    _usernameController.addListener(_onUsernameChanged);
+    _passwordController.addListener(_onPasswordChanged);
+  }
+
+  void _onPasswordChanged() {
+    setState(() {});
+  }
+
+  void _onUsernameChanged() {
+    _usernameDebounce?.cancel();
+    final raw = _usernameController.text.trim().replaceAll('@', '');
+    if (raw.isEmpty) {
+      setState(() {
+        _isCheckingUsername = false;
+        _isUsernameAvailable = null;
+        _usernameMessage = null;
+      });
+      return;
+    }
+
+    if (raw.length < 3) {
+      setState(() {
+        _isCheckingUsername = false;
+        _isUsernameAvailable = false;
+        _usernameMessage = 'Handle must be at least 3 characters';
+      });
+      return;
+    }
+
+    final handleRegex = RegExp(r'^[a-zA-Z0-9_]+$');
+    if (!handleRegex.hasMatch(raw)) {
+      setState(() {
+        _isCheckingUsername = false;
+        _isUsernameAvailable = false;
+        _usernameMessage = 'Letters, numbers, and underscores only';
+      });
+      return;
+    }
+
+    setState(() {
+      _isCheckingUsername = true;
+    });
+
+    _usernameDebounce = Timer(const Duration(milliseconds: 300), () async {
+      final authVM = context.read<AuthViewModel>();
+      final isAvailable = await authVM.isUsernameAvailable(raw);
+      if (!mounted) return;
+      setState(() {
+        _isCheckingUsername = false;
+        _isUsernameAvailable = isAvailable;
+        _usernameMessage = isAvailable ? '@$raw is available' : '@$raw is already taken';
+      });
+    });
   }
 
   void _onEmailChanged() {
@@ -50,7 +110,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   void dispose() {
+    _usernameDebounce?.cancel();
     _emailController.removeListener(_onEmailChanged);
+    _usernameController.removeListener(_onUsernameChanged);
+    _passwordController.removeListener(_onPasswordChanged);
     _fullNameController.dispose();
     _usernameController.dispose();
     _emailController.dispose();
@@ -61,6 +124,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _handleRegister() async {
     if (!_formKey.currentState!.validate()) return;
+
+    if (_isUsernameAvailable == false) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_usernameMessage ?? 'USERNAME ALREADY TAKEN'),
+          backgroundColor: const Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
 
     if (_existingAccountCheck != null && _existingAccountCheck!.exists) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -108,7 +182,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         behavior: SnackBarBehavior.floating,
       ),
     );
-
     Navigator.of(context).pushNamedAndRemoveUntil('/tourist', (route) => false);
   }
 
@@ -138,13 +211,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           child: Container(
             width: isDesktop ? 480 : double.infinity,
-            padding: const EdgeInsets.all(32.0),
+            padding: const EdgeInsets.all(28),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(28),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.06),
+                  color: Colors.black.withOpacity(0.04),
                   blurRadius: 24,
                   offset: const Offset(0, 8),
                 )
@@ -156,38 +229,37 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // App Logo & Brand
+                  // Cultural Explorer Welcome Icon
                   Center(
                     child: Container(
-                      padding: const EdgeInsets.all(16),
+                      width: 64,
+                      height: 64,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF004D40).withValues(alpha: 0.08),
+                        color: const Color(0xFF004D40).withOpacity(0.08),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
                         Icons.explore_rounded,
-                        size: 38,
                         color: Color(0xFF004D40),
+                        size: 32,
                       ),
                     ),
                   ),
+                  const SizedBox(height: 20),
 
-                  const SizedBox(height: 16),
-
+                  // Header Title
                   Text(
                     'Create Account',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.dmSerifDisplay(
                       fontSize: 26,
                       color: const Color(0xFF004D40),
-                      letterSpacing: 0.2,
                     ),
                   ),
-
                   const SizedBox(height: 6),
 
                   Text(
-                    'Join Warisan Kita as a Cultural Explorer to discover master artisans, collect passport stamps, and participate in quests.',
+                    'Join the cultural preservation movement to discover traditional crafts & artisan studios across Malaysia.',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 12.5,
@@ -217,6 +289,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       if (v == null || v.trim().isEmpty) {
                         return 'Please enter your full name';
                       }
+                      if (v.trim().length < 2) {
+                        return 'Full name must be at least 2 characters';
+                      }
                       return null;
                     },
                   ),
@@ -230,6 +305,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       labelText: 'Unique Username / Handle',
                       hintText: 'e.g. siticrafts',
                       prefixIcon: const Icon(Icons.alternate_email_rounded, color: Color(0xFF004D40)),
+                      suffixIcon: _isCheckingUsername
+                          ? const Padding(
+                              padding: EdgeInsets.all(12),
+                              child: SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF004D40)),
+                              ),
+                            )
+                          : (_isUsernameAvailable != null
+                              ? Icon(
+                                  _isUsernameAvailable! ? Icons.check_circle_rounded : Icons.cancel_rounded,
+                                  color: _isUsernameAvailable! ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                                )
+                              : null),
+                      helperText: _usernameMessage,
+                      helperStyle: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: _isUsernameAvailable == true
+                            ? const Color(0xFF10B981)
+                            : (_isUsernameAvailable == false ? const Color(0xFFEF4444) : Colors.grey[600]),
+                      ),
                       filled: true,
                       fillColor: const Color(0xFFF8F9FA),
                       border: OutlineInputBorder(
@@ -241,8 +339,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       if (v == null || v.trim().isEmpty) {
                         return 'Please choose a username handle';
                       }
-                      if (v.trim().length < 3) {
+                      final raw = v.trim().replaceAll('@', '');
+                      if (raw.length < 3) {
                         return 'Username must be at least 3 characters';
+                      }
+                      final handleRegex = RegExp(r'^[a-zA-Z0-9_]+$');
+                      if (!handleRegex.hasMatch(raw)) {
+                        return 'Only letters, numbers, and underscores are allowed';
+                      }
+                      if (_isUsernameAvailable == false) {
+                        return 'This username is already taken';
                       }
                       return null;
                     },
@@ -367,6 +473,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       return null;
                     },
                   ),
+
+                  // 📊 Interactive Password Strength Meter & Live Checklist
+                  PasswordStrengthMeter(password: _passwordController.text),
 
                   const SizedBox(height: 16),
 
