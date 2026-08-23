@@ -701,7 +701,10 @@ class SupabaseService {
     final client = _client;
     if (client != null) {
       try {
-        await client.auth.resetPasswordForEmail(cleanEmail);
+        await client.auth.resetPasswordForEmail(
+          cleanEmail,
+          redirectTo: 'io.supabase.warisankita://reset-callback',
+        );
       } catch (e) {
         debugPrint('Supabase resetPasswordForEmail note: $e');
       }

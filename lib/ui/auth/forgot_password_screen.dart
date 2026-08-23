@@ -5,7 +5,14 @@ import 'package:warisan_kita/ui/auth/widgets/password_strength_meter.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
-  const ForgotPasswordScreen({super.key});
+  final int initialStep;
+  final String? initialEmail;
+
+  const ForgotPasswordScreen({
+    super.key,
+    this.initialStep = 1,
+    this.initialEmail,
+  });
 
   @override
   State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
@@ -17,12 +24,16 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
-  int _currentStep = 1; // 1: Email Form, 2: Token Inbox Notice, 3: Set New Password Form
+  late int _currentStep;
   bool _isPasswordVisible = false;
 
   @override
   void initState() {
     super.initState();
+    _currentStep = widget.initialStep;
+    if (widget.initialEmail != null && widget.initialEmail!.isNotEmpty) {
+      _emailController.text = widget.initialEmail!;
+    }
     _newPasswordController.addListener(_onPasswordChanged);
   }
 
