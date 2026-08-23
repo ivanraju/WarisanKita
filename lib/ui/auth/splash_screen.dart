@@ -51,16 +51,26 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       }
 
       if (user != null) {
-        if (user.role == 'Admin') {
-          Navigator.of(context).pushReplacementNamed('/admin');
-        } else if (user.role == 'Artisan' || user.role == 'Master Artisan') {
-          if (!user.isApprovedArtisan) {
-            Navigator.of(context).pushReplacementNamed('/pending-artisan');
+        if (kIsWeb) {
+          if (user.role == 'Admin') {
+            Navigator.of(context).pushReplacementNamed('/admin');
           } else {
-            Navigator.of(context).pushReplacementNamed('/artisan');
+            Navigator.of(context).pushReplacementNamed('/login');
           }
         } else {
-          Navigator.of(context).pushReplacementNamed('/tourist');
+          // Native Mobile & Desktop Client (Android, iOS, Windows)
+          if (user.role == 'Admin') {
+            // Admin accounts must access web portal (UC001 A7)
+            Navigator.of(context).pushReplacementNamed('/login');
+          } else if (user.role == 'Artisan' || user.role == 'Master Artisan') {
+            if (!user.isApprovedArtisan) {
+              Navigator.of(context).pushReplacementNamed('/pending-artisan');
+            } else {
+              Navigator.of(context).pushReplacementNamed('/artisan');
+            }
+          } else {
+            Navigator.of(context).pushReplacementNamed('/tourist');
+          }
         }
       } else {
         Navigator.of(context).pushReplacementNamed('/login');
