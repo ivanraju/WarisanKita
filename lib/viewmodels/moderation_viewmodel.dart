@@ -7,11 +7,9 @@ import 'package:warisan_kita/domain/models/user.dart';
 
 class ModerationViewModel extends ChangeNotifier {
   final UserRepository _repository;
-  final SupabaseService _service;
 
   ModerationViewModel({UserRepository? repository, SupabaseService? service})
-      : _repository = repository ?? UserRepository(),
-        _service = service ?? SupabaseService() {
+      : _repository = repository ?? UserRepository(service: service) {
     fetchPendingArtisans();
   }
 
@@ -536,21 +534,11 @@ class ModerationViewModel extends ChangeNotifier {
       );
 
       // Persist to DB
-      final repo = _repository;
-      final service = _service;
-      if (repo != null) {
-        await repo.updateArtisanStatus(
-          email: artisan.email,
-          newStatus: 'ACTIVE',
-          newRole: targetRole,
-        );
-      } else if (service != null) {
-        await service.updateArtisanStatusInDb(
-          email: artisan.email,
-          newStatus: 'ACTIVE',
-          newRole: targetRole,
-        );
-      }
+      await _repository.updateArtisanStatus(
+        email: artisan.email,
+        newStatus: 'ACTIVE',
+        newRole: targetRole,
+      );
 
       notifyListeners();
     }
@@ -571,21 +559,11 @@ class ModerationViewModel extends ChangeNotifier {
       final artisan = _activeArtisanMasters[idx];
       _activeArtisanMasters[idx] = artisan.copyWith(isSuspended: true, isLiveOpen: false);
 
-      final repo = _repository;
-      final service = _service;
-      if (repo != null) {
-        await repo.updateArtisanStatus(
-          email: artisan.email,
-          newStatus: 'SUSPENDED',
-          newRole: 'Artisan',
-        );
-      } else if (service != null) {
-        await service.updateArtisanStatusInDb(
-          email: artisan.email,
-          newStatus: 'SUSPENDED',
-          newRole: 'Artisan',
-        );
-      }
+      await _repository.updateArtisanStatus(
+        email: artisan.email,
+        newStatus: 'SUSPENDED',
+        newRole: 'Artisan',
+      );
 
       notifyListeners();
     }
@@ -597,21 +575,11 @@ class ModerationViewModel extends ChangeNotifier {
       final artisan = _activeArtisanMasters[idx];
       _activeArtisanMasters[idx] = artisan.copyWith(isSuspended: false, isLiveOpen: true);
 
-      final repo = _repository;
-      final service = _service;
-      if (repo != null) {
-        await repo.updateArtisanStatus(
-          email: artisan.email,
-          newStatus: 'ACTIVE',
-          newRole: 'Artisan',
-        );
-      } else if (service != null) {
-        await service.updateArtisanStatusInDb(
-          email: artisan.email,
-          newStatus: 'ACTIVE',
-          newRole: 'Artisan',
-        );
-      }
+      await _repository.updateArtisanStatus(
+        email: artisan.email,
+        newStatus: 'ACTIVE',
+        newRole: 'Artisan',
+      );
 
       notifyListeners();
     }
@@ -630,21 +598,11 @@ class ModerationViewModel extends ChangeNotifier {
         );
       }
 
-      final repo = _repository;
-      final service = _service;
-      if (repo != null) {
-        await repo.updateArtisanStatus(
-          email: artisan.email,
-          newStatus: 'REJECTED',
-          newRole: 'Artisan',
-        );
-      } else if (service != null) {
-        await service.updateArtisanStatusInDb(
-          email: artisan.email,
-          newStatus: 'REJECTED',
-          newRole: 'Artisan',
-        );
-      }
+      await _repository.updateArtisanStatus(
+        email: artisan.email,
+        newStatus: 'REJECTED',
+        newRole: 'Artisan',
+      );
 
       notifyListeners();
     }
@@ -656,21 +614,11 @@ class ModerationViewModel extends ChangeNotifier {
       final user = _registeredUsers[idx];
       _registeredUsers[idx] = user.copyWith(isSuspended: true, status: 'SUSPENDED');
 
-      final repo = _repository;
-      final service = _service;
-      if (repo != null) {
-        await repo.updateArtisanStatus(
-          email: user.email,
-          newStatus: 'SUSPENDED',
-          newRole: user.role,
-        );
-      } else if (service != null) {
-        await service.updateArtisanStatusInDb(
-          email: user.email,
-          newStatus: 'SUSPENDED',
-          newRole: user.role,
-        );
-      }
+      await _repository.updateArtisanStatus(
+        email: user.email,
+        newStatus: 'SUSPENDED',
+        newRole: user.role,
+      );
 
       notifyListeners();
     }
@@ -682,21 +630,11 @@ class ModerationViewModel extends ChangeNotifier {
       final user = _registeredUsers[idx];
       _registeredUsers[idx] = user.copyWith(isSuspended: false, status: 'ACTIVE');
 
-      final repo = _repository;
-      final service = _service;
-      if (repo != null) {
-        await repo.updateArtisanStatus(
-          email: user.email,
-          newStatus: 'ACTIVE',
-          newRole: user.role,
-        );
-      } else if (service != null) {
-        await service.updateArtisanStatusInDb(
-          email: user.email,
-          newStatus: 'ACTIVE',
-          newRole: user.role,
-        );
-      }
+      await _repository.updateArtisanStatus(
+        email: user.email,
+        newStatus: 'ACTIVE',
+        newRole: user.role,
+      );
 
       notifyListeners();
     }
@@ -704,10 +642,7 @@ class ModerationViewModel extends ChangeNotifier {
 
   Future<void> sendPasswordResetEmail(String email) async {
     try {
-      final service = _service;
-      if (service != null) {
-        await service.sendPasswordResetEmail(email);
-      }
+      await _repository.sendPasswordResetEmail(email);
     } catch (e) {
       debugPrint('Error sending password reset email: $e');
     }

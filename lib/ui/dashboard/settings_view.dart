@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
-import 'package:warisan_kita/ui/auth/auth_view.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});

@@ -12,7 +12,7 @@ class GamificationViewModel extends ChangeNotifier {
   double _rankProgress = 0.65;
   double get rankProgress => _rankProgress;
 
-  TierStatus _currentTier = TierStatus.apprentice;
+  final TierStatus _currentTier = TierStatus.apprentice;
   TierStatus get currentTier => _currentTier;
 
   GamificationViewModel() {
@@ -68,10 +68,7 @@ class GamificationViewModel extends ChangeNotifier {
   }
 
   Future<void> verifyQRCode(String code) async {
-    // Logic to verify QR and unlock stamps/tasks
     await Future.delayed(const Duration(seconds: 1));
-    
-    // Simulating unlocking a new stamp
     for (int i = 0; i < _stamps.length; i++) {
       if (!_stamps[i].isUnlocked) {
         _stamps[i] = HeritageStamp(
@@ -83,7 +80,6 @@ class GamificationViewModel extends ChangeNotifier {
         break;
       }
     }
-    
     _rankProgress = 0.85;
     notifyListeners();
   }

@@ -126,4 +126,3 @@ class UserRepository {
 
   Future<void> signOut() => _service.signOut();
 }
-

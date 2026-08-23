@@ -43,20 +43,6 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
     );
   }
 
-  void _sendRadarInvite() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          '⚡ Educational Cultural Invitation Broadcasted to 3 Nearby Tourists in Kampung Morten!',
-          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: const Color(0xFF004D40),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final authVM = context.watch<AuthViewModel>();

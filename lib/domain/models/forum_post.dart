@@ -37,6 +37,16 @@ class ForumThread {
     this.replies = const [],
   });
 
+  String get authorAvatar => 'https://api.dicebear.com/7.x/bottts/png?seed=${Uri.encodeComponent(authorName.isNotEmpty ? authorName : "User")}';
+  List<String> get tags => [community.replaceAll('c/', '')];
+  DateTime get createdAt {
+    try {
+      return DateTime.parse(timestamp);
+    } catch (_) {
+      return DateTime.now();
+    }
+  }
+
   ForumThread copyWith({
     String? id,
     String? userId,
@@ -194,6 +204,17 @@ class ThreadReply {
     required this.timestamp,
     required this.text,
   });
+
+  String get authorName => sender;
+  String get content => text;
+  String get authorAvatar => 'https://api.dicebear.com/7.x/bottts/png?seed=${Uri.encodeComponent(sender.isNotEmpty ? sender : "User")}';
+  DateTime get createdAt {
+    try {
+      return DateTime.parse(timestamp);
+    } catch (_) {
+      return DateTime.now();
+    }
+  }
 
   ThreadReply copyWith({
     String? id,

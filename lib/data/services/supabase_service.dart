@@ -320,7 +320,6 @@ class SupabaseService {
   }
   
   Future<UserModel> signIn(String emailOrUsername, String password) async {
-    final cleanInput = emailOrUsername.trim().toLowerCase().replaceAll('@', '');
     final normInput = emailOrUsername.trim().toLowerCase().replaceAll('@', '').replaceAll(' ', '').replaceAll('_', '').replaceAll('-', '');
     final rawInput = emailOrUsername.trim().toLowerCase();
     
