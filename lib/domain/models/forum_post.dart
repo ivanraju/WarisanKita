@@ -109,30 +109,22 @@ class ForumThread {
     };
   }
 
-  Map<String, dynamic> toDbMap() {
+  Map<String, dynamic> toDbMap({String? authorUserId}) {
     final String bodyContent = replies.isNotEmpty ? replies.first.text : title;
     final String tagValue = community.replaceAll('c/', '');
+    final String? effectiveUid = userId ?? authorUserId;
     final Map<String, dynamic> map = {
       'id': id,
       'community': community,
       'tag': tagValue,
       'title': title,
       'content': bodyContent,
-      'author_name': authorName,
-      'author_email': authorEmail,
-      'is_artisan': isArtisan,
       'upvotes': upvotes,
-      'user_vote': userVote,
-      'replies_count': replies.length,
-      'timestamp': timestamp,
       'is_solved': isSolved,
       'is_edited': isEdited,
-      'is_reported': isReported,
-      'report_reason': reportReason,
-      'report_notes': reportNotes,
     };
-    if (userId != null && userId!.isNotEmpty) {
-      map['user_id'] = userId;
+    if (effectiveUid != null && effectiveUid.isNotEmpty) {
+      map['user_id'] = effectiveUid;
     }
     return map;
   }
@@ -140,34 +132,47 @@ class ForumThread {
   factory ForumThread.fromMap(Map<String, dynamic> map) {
     final List<dynamic> msgList = map['messages'] ?? map['replies'] ?? [];
     final String comm = map['community'] ?? (map['tag'] != null ? 'c/${map['tag']}' : 'c/TravelQnA');
-    final String? contentText = map['content'] as String?;
+    final String? contentText = (map['content'] ?? map['text']) as String?;
+    
+    // Extract dynamic user profile if joined via users(id, full_name, username, avatar_url, role)
+    final userMap = map['users'] is Map<String, dynamic> ? map['users'] as Map<String, dynamic> : null;
+    final String resolvedAuthor = userMap?['display_name'] ??
+        userMap?['full_name'] ??
+        userMap?['username'] ??
+        map['authorName'] ??
+        map['author_name'] ??
+        'Anonymous';
+    final String resolvedEmail = userMap?['email'] ?? map['authorEmail'] ?? map['author_email'] ?? '';
+    final bool resolvedIsArtisan = (userMap?['role']?.toString().toLowerCase().contains('artisan') == true) ||
+        (map['isArtisan'] ?? map['is_artisan'] ?? false);
+
     final List<ThreadReply> parsedReplies = msgList.map((r) => ThreadReply.fromMap(Map<String, dynamic>.from(r))).toList();
     if (parsedReplies.isEmpty && contentText != null && contentText.isNotEmpty && contentText != map['title']) {
       parsedReplies.add(
         ThreadReply(
           id: '${map['id']}_content',
-          sender: map['author_name'] ?? map['authorName'] ?? 'Anonymous',
-          authorEmail: map['author_email'] ?? map['authorEmail'] ?? '',
+          sender: resolvedAuthor,
+          authorEmail: resolvedEmail,
           isMe: false,
-          isArtisan: map['is_artisan'] ?? map['isArtisan'] ?? false,
-          timestamp: map['timestamp'] ?? 'Just now',
+          isArtisan: resolvedIsArtisan,
+          timestamp: map['created_at']?.toString() ?? map['timestamp'] ?? 'Just now',
           text: contentText,
         ),
       );
     }
 
     return ForumThread(
-      id: map['id'] ?? '',
+      id: map['id']?.toString() ?? '',
       userId: map['userId'] ?? map['user_id'],
       community: comm,
       title: map['title'] ?? '',
-      authorName: map['authorName'] ?? map['author_name'] ?? 'Anonymous',
-      authorEmail: map['authorEmail'] ?? map['author_email'] ?? '',
-      isArtisan: map['isArtisan'] ?? map['is_artisan'] ?? false,
+      authorName: resolvedAuthor,
+      authorEmail: resolvedEmail,
+      isArtisan: resolvedIsArtisan,
       upvotes: map['upvotes'] ?? 0,
       userVote: map['userVote'] ?? map['user_vote'] ?? 0,
       replyCount: map['repliesCount'] ?? map['replies_count'] ?? parsedReplies.length,
-      timestamp: map['timestamp'] ?? 'Just now',
+      timestamp: map['created_at']?.toString() ?? map['timestamp'] ?? 'Just now',
       isSolved: map['isSolved'] ?? map['is_solved'] ?? false,
       isEdited: map['isEdited'] ?? map['is_edited'] ?? false,
       isReported: map['isReported'] ?? map['is_reported'] ?? false,
@@ -260,36 +265,44 @@ class ThreadReply {
     };
   }
 
-  Map<String, dynamic> toDbMap(String threadId) {
+  Map<String, dynamic> toDbMap(String threadId, {String? userId}) {
     return {
       'id': id,
-      'thread_id': threadId,
-      'sender': sender,
-      'author_email': authorEmail,
-      'is_me': isMe,
-      'is_artisan': isArtisan,
+      'post_id': threadId,
+      if (userId != null && userId.isNotEmpty) 'user_id': userId,
+      'content': text,
       'upvotes': upvotes,
-      'user_vote': userVote,
       'is_verified_answer': isVerifiedAnswer,
       'is_edited': isEdited,
-      'timestamp': timestamp,
-      'text': text,
     };
   }
 
   factory ThreadReply.fromMap(Map<String, dynamic> map) {
+    // Extract dynamic user profile if joined via users(id, full_name, username, avatar_url, role)
+    final userMap = map['users'] is Map<String, dynamic> ? map['users'] as Map<String, dynamic> : null;
+    final String senderName = userMap?['display_name'] ??
+        userMap?['full_name'] ??
+        userMap?['username'] ??
+        map['sender'] ??
+        map['authorName'] ??
+        map['author_name'] ??
+        'Anonymous';
+    final String userEmail = userMap?['email'] ?? map['authorEmail'] ?? map['author_email'] ?? '';
+    final bool isArtisanUser = (userMap?['role']?.toString().toLowerCase().contains('artisan') == true) ||
+        (map['isArtisan'] ?? map['is_artisan'] ?? false);
+
     return ThreadReply(
-      id: map['id'] ?? '',
-      sender: map['sender'] ?? map['authorName'] ?? map['author_name'] ?? 'Anonymous',
-      authorEmail: map['authorEmail'] ?? map['author_email'] ?? '',
+      id: map['id']?.toString() ?? '',
+      sender: senderName,
+      authorEmail: userEmail,
       isMe: map['isMe'] ?? map['is_me'] ?? false,
-      isArtisan: map['isArtisan'] ?? map['is_artisan'] ?? false,
+      isArtisan: isArtisanUser,
       upvotes: map['upvotes'] ?? 0,
       userVote: map['userVote'] ?? map['user_vote'] ?? 0,
       isVerifiedAnswer: map['isVerifiedAnswer'] ?? map['is_verified_answer'] ?? false,
       isEdited: map['isEdited'] ?? map['is_edited'] ?? false,
-      timestamp: map['time'] ?? map['timestamp'] ?? 'Just now',
-      text: map['text'] ?? map['content'] ?? '',
+      timestamp: map['created_at']?.toString() ?? map['time'] ?? map['timestamp'] ?? 'Just now',
+      text: map['content'] ?? map['text'] ?? '',
     );
   }
 }

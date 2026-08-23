@@ -186,6 +186,13 @@ class UserModel {
         ? List<String>.from(map['roles'])
         : (map['role'] != null ? [map['role'] as String] : ['Tourist']);
 
+    Map<String, dynamic>? artisanMap;
+    if (map['artisan_profiles'] is Map) {
+      artisanMap = Map<String, dynamic>.from(map['artisan_profiles']);
+    } else if (map['artisan_profiles'] is List && (map['artisan_profiles'] as List).isNotEmpty) {
+      artisanMap = Map<String, dynamic>.from((map['artisan_profiles'] as List).first);
+    }
+
     return UserModel(
       id: map['id'] ?? '',
       email: map['email'] ?? '',
@@ -193,16 +200,16 @@ class UserModel {
       role: map['role'] ?? 'Tourist',
       roles: roleList,
       status: map['status'] ?? 'ACTIVE',
-      displayName: map['displayName'] ?? map['full_name'],
+      displayName: map['displayName'] ?? map['display_name'] ?? map['full_name'],
       avatarUrl: map['avatarUrl'] ?? map['avatar_url'],
       joinedDate: map['joinedDate'] ?? 'Jan 2026',
       isSuspended: map['isSuspended'] ?? (map['status'] == 'SUSPENDED'),
-      studioName: map['studioName'] ?? map['studio_name'],
-      ssmNumber: map['ssmNumber'] ?? map['ssm_number'],
-      craftCategory: map['craftCategory'] ?? map['craft_category'],
-      bio: map['bio'],
-      address: map['address'],
-      state: map['state'],
+      studioName: map['studioName'] ?? map['studio_name'] ?? artisanMap?['studio_name'],
+      ssmNumber: map['ssmNumber'] ?? map['ssm_number'] ?? artisanMap?['ssm_number'],
+      craftCategory: map['craftCategory'] ?? map['craft_category'] ?? artisanMap?['craft_category'],
+      bio: map['bio'] ?? artisanMap?['bio'],
+      address: map['address'] ?? artisanMap?['address'],
+      state: map['state'] ?? artisanMap?['state'],
       phone: map['phone'] ?? map['phone_number'],
     );
   }
