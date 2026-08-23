@@ -123,6 +123,7 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
       };
     }).toList();
 
+    final allReported = [...dynamicReported, ..._staticReportedPosts];
     final isMobile = MediaQuery.of(context).size.width < 768;
 
     return Padding(
