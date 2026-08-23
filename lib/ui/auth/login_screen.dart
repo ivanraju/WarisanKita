@@ -23,7 +23,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void initState() {
     super.initState();
     _emailController = TextEditingController(
-      text: kIsWeb ? 'admin@warisankita.my' : 'tourist@warisankita.my',
+      text: kIsWeb ? 'admin' : 'tourist@warisankita.my',
     );
     _passwordController = TextEditingController(
       text: kIsWeb ? 'admin123' : 'password123',
@@ -441,7 +441,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         runSpacing: 6,
                         children: kIsWeb
                             ? [
-                                _buildAutofillChip('👑 Super Admin (Full Access)', 'admin@warisankita.my', 'admin123'),
+                                _buildAutofillChip('👑 Super Admin (admin / admin123)', 'admin', 'admin123'),
                               ]
                             : [
                                 _buildAutofillChip('🧳 Tourist', 'tourist@warisankita.my', 'password123'),
@@ -494,16 +494,19 @@ class _LoginScreenState extends State<LoginScreen> {
                       // Email / Username Input
                       TextFormField(
                         controller: _emailController,
-                        keyboardType: TextInputType.emailAddress,
+                        keyboardType: kIsWeb ? TextInputType.text : TextInputType.emailAddress,
                         decoration: InputDecoration(
-                          labelText: kIsWeb ? 'Admin Email / Username' : 'Username / Email Address',
-                          hintText: kIsWeb ? 'admin@warisankita.my' : 'e.g. siticrafts or user@example.com',
-                          prefixIcon: const Icon(Icons.person_outline_rounded, size: 20),
+                          labelText: kIsWeb ? 'Admin Username' : 'Username / Email Address',
+                          hintText: kIsWeb ? 'admin' : 'e.g. siticrafts or user@example.com',
+                          prefixIcon: Icon(
+                            kIsWeb ? Icons.admin_panel_settings_rounded : Icons.person_outline_rounded,
+                            size: 20,
+                          ),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                         ),
                         validator: (v) {
                           if (v == null || v.trim().isEmpty) {
-                            return 'Please enter your username or email address';
+                            return kIsWeb ? 'Please enter your admin username' : 'Please enter your username or email address';
                           }
                           return null;
                         },

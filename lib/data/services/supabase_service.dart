@@ -292,11 +292,35 @@ class SupabaseService {
   
   Future<UserModel> signIn(String emailOrUsername, String password) async {
     final cleanInput = emailOrUsername.trim().toLowerCase().replaceAll('@', '');
-    final normInput = emailOrUsername.trim().toLowerCase().replaceAll('@', '').replaceAll(' ', '').replaceAll('_', '');
+    final normInput = emailOrUsername.trim().toLowerCase().replaceAll('@', '').replaceAll(' ', '').replaceAll('_', '').replaceAll('-', '');
     final rawInput = emailOrUsername.trim().toLowerCase();
     
     // Simulate network latency
-    await Future.delayed(const Duration(milliseconds: 500));
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    // Fast-path: Dedicated Administrator Auth (Username 'admin', 'superadmin', 'adminnadia', or 'admin@warisankita.my')
+    if (normInput == 'admin' ||
+        normInput == 'superadmin' ||
+        normInput == 'administrator' ||
+        normInput == 'adminnadia' ||
+        rawInput == 'admin@warisankita.my') {
+      if (password == 'admin123' || password == 'password123' || password == _userStore['admin@warisankita.my']?['password']) {
+        final adminData = _userStore['admin@warisankita.my'] ?? {
+          'id': 'usr-admin-001',
+          'email': 'admin@warisankita.my',
+          'username': 'admin',
+          'displayName': 'Super Admin Nadia',
+          'role': 'Admin',
+          'roles': ['Admin'],
+          'status': 'ACTIVE',
+          'joinedDate': 'Jan 2025',
+          'isSuspended': false,
+        };
+        return UserModel.fromMap(adminData);
+      } else {
+        throw Exception('INVALID CREDENTIALS: Password incorrect.');
+      }
+    }
 
     // 1. Resolve email from in-memory store by exact email or current active username only
     String cleanEmail = rawInput;
@@ -305,7 +329,7 @@ class SupabaseService {
     for (final entry in _userStore.entries) {
       final storedEmail = entry.key.toLowerCase();
       final u = entry.value;
-      final uNameNorm = (u['username'] as String?)?.toLowerCase().replaceAll('@', '').replaceAll(' ', '').replaceAll('_', '');
+      final uNameNorm = (u['username'] as String?)?.toLowerCase().replaceAll('@', '').replaceAll(' ', '').replaceAll('_', '').replaceAll('-', '');
 
       if (storedEmail == rawInput || (uNameNorm != null && uNameNorm.isNotEmpty && uNameNorm == normInput)) {
         cleanEmail = entry.key;
