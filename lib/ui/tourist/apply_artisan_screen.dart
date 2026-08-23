@@ -206,9 +206,12 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
     final effectivePhotos = _uploadedPhotos.isNotEmpty
         ? _uploadedPhotos.map((p) => p['name']!).toList()
         : ['Studio_Workshop_Photo_1.jpg'];
+    final effectiveEmail = (user?.email != null && user!.email.trim().isNotEmpty)
+        ? user.email.trim()
+        : 'tourist@warisankita.my';
 
     final result = await authVM.linkArtisanToExistingTourist(
-      email: user?.email ?? '',
+      email: effectiveEmail,
       studioName: studioName,
       craftCategory: _selectedCraftCategory,
       ssmNumber: ssm,
