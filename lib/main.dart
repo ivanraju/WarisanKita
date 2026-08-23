@@ -10,6 +10,8 @@ import 'package:warisan_kita/data/repositories/forum_repository.dart';
 import 'package:warisan_kita/data/repositories/matchmaker_repository.dart';
 import 'package:warisan_kita/data/repositories/user_repository.dart';
 import 'package:warisan_kita/data/services/supabase_service.dart';
+import 'package:warisan_kita/data/services/location_service.dart';
+import 'package:warisan_kita/data/repositories/location_repository.dart';
 
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/navigation_viewmodel.dart';
@@ -18,6 +20,7 @@ import 'package:warisan_kita/viewmodels/itinerary_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/forum_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/gamification_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/matchmaker_viewmodel.dart';
+import 'package:warisan_kita/viewmodels/map_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/moderation_viewmodel.dart';
 
 import 'package:warisan_kita/viewmodels/theme_viewmodel.dart';
@@ -50,27 +53,62 @@ void main() async {
     MultiProvider(
       providers: [
         Provider(create: (_) => SupabaseService()),
-        Provider(create: (context) => UserRepository(service: context.read<SupabaseService>())),
-        Provider(create: (context) => ArtisanRepository(service: context.read<SupabaseService>())),
-        Provider(create: (context) => ForumRepository(service: context.read<SupabaseService>())),
+        Provider<LocationService>(
+          create: (_) => const LocationService(),
+        ),
+        Provider<LocationRepository>(
+          create: (context) =>
+              LocationRepository(
+                service:
+                context.read<LocationService>(),
+              ),
+        ),
+        Provider(
+          create: (context) =>
+              UserRepository(service: context.read<SupabaseService>()),
+        ),
+        Provider(
+          create: (context) =>
+              ArtisanRepository(service: context.read<SupabaseService>()),
+        ),
+        Provider(
+          create: (context) =>
+              ForumRepository(service: context.read<SupabaseService>()),
+        ),
         Provider(create: (_) => const MatchmakerRepository()),
         ChangeNotifierProvider(create: (_) => ThemeViewModel()),
         ChangeNotifierProvider(create: (_) => LanguageViewModel()),
         ChangeNotifierProvider(
-          create: (context) => AuthViewModel(repository: context.read<UserRepository>()),
+          create: (context) =>
+              AuthViewModel(repository: context.read<UserRepository>()),
         ),
         ChangeNotifierProvider(
-          create: (context) => DirectoryViewModel(repository: context.read<ArtisanRepository>()),
+          create: (context) =>
+              DirectoryViewModel(repository: context.read<ArtisanRepository>()),
         ),
         ChangeNotifierProvider(
-          create: (context) => ForumViewModel(repository: context.read<ForumRepository>()),
+          create: (context) =>
+              ForumViewModel(repository: context.read<ForumRepository>()),
         ),
         ChangeNotifierProvider(create: (_) => GamificationViewModel()),
         ChangeNotifierProvider(
-          create: (context) => MatchmakerViewModel(repository: context.read<MatchmakerRepository>()),
+          create: (context) => MatchmakerViewModel(
+            repository: context.read<MatchmakerRepository>(),
+          ),
         ),
+        ChangeNotifierProvider<MapViewModel>(
+          create: (context) => MapViewModel(
+            artisanRepository:
+            context.read<ArtisanRepository>(),
+
+            locationRepository:
+            context.read<LocationRepository>(),
+          ),
+        ),
+
         ChangeNotifierProvider(
-          create: (context) => ModerationViewModel(repository: context.read<UserRepository>()),
+          create: (context) =>
+              ModerationViewModel(repository: context.read<UserRepository>()),
         ),
         ChangeNotifierProvider(create: (_) => NavigationViewModel()),
         ChangeNotifierProvider(create: (_) => ItineraryViewModel()),
@@ -94,16 +132,16 @@ class _WarisanKitaAppState extends State<WarisanKitaApp> {
   void initState() {
     super.initState();
     // 🔗 Listen to Deep Link / Auth Recovery Event to link back directly to the app
-    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((
+      data,
+    ) {
       final AuthChangeEvent event = data.event;
       if (event == AuthChangeEvent.passwordRecovery) {
         final email = data.session?.user.email;
         navigatorKey.currentState?.push(
           MaterialPageRoute(
-            builder: (_) => ForgotPasswordScreen(
-              initialStep: 3,
-              initialEmail: email,
-            ),
+            builder: (_) =>
+                ForgotPasswordScreen(initialStep: 3, initialEmail: email),
           ),
         );
       }
@@ -119,14 +157,21 @@ class _WarisanKitaAppState extends State<WarisanKitaApp> {
   static final Map<String, WidgetBuilder> _appRoutes = {
     '/': (context) => kIsWeb ? const LoginScreen() : const SplashScreen(),
     '/login': (context) => const LoginScreen(),
-    '/register': (context) => kIsWeb ? const LoginScreen() : const RegisterScreen(),
-    '/role-selection': (context) => kIsWeb ? const LoginScreen() : const RoleSelectionScreen(),
+    '/register': (context) =>
+        kIsWeb ? const LoginScreen() : const RegisterScreen(),
+    '/role-selection': (context) =>
+        kIsWeb ? const LoginScreen() : const RoleSelectionScreen(),
     '/forgot-password': (context) => const ForgotPasswordScreen(),
-    '/tourist': (context) => kIsWeb ? const LoginScreen() : const TouristMainScaffold(),
-    '/apply-artisan': (context) => kIsWeb ? const LoginScreen() : const ApplyArtisanScreen(),
-    '/artisan': (context) => kIsWeb ? const LoginScreen() : const ArtisanMainScaffold(),
-    '/pending-artisan': (context) => kIsWeb ? const LoginScreen() : const ArtisanApplicationPendingScreen(),
-    'pending_artisan': (context) => kIsWeb ? const LoginScreen() : const ArtisanApplicationPendingScreen(),
+    '/tourist': (context) =>
+        kIsWeb ? const LoginScreen() : const TouristMainScaffold(),
+    '/apply-artisan': (context) =>
+        kIsWeb ? const LoginScreen() : const ApplyArtisanScreen(),
+    '/artisan': (context) =>
+        kIsWeb ? const LoginScreen() : const ArtisanMainScaffold(),
+    '/pending-artisan': (context) =>
+        kIsWeb ? const LoginScreen() : const ArtisanApplicationPendingScreen(),
+    'pending_artisan': (context) =>
+        kIsWeb ? const LoginScreen() : const ArtisanApplicationPendingScreen(),
     '/admin': (context) => const AdminModerationDashboardView(),
   };
 
@@ -144,7 +189,9 @@ class _WarisanKitaAppState extends State<WarisanKitaApp> {
       onGenerateInitialRoutes: (initialRoute) {
         if (kIsWeb) {
           // On Web, strictly restrict access: /admin or /login only.
-          if (initialRoute == '/admin' || initialRoute == '/' || initialRoute.isEmpty) {
+          if (initialRoute == '/admin' ||
+              initialRoute == '/' ||
+              initialRoute.isEmpty) {
             return [
               MaterialPageRoute(
                 settings: const RouteSettings(name: '/admin'),
