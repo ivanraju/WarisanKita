@@ -126,10 +126,9 @@ class _WarisanKitaAppState extends State<WarisanKitaApp> {
       debugShowCheckedModeBanner: false,
       themeMode: themeVM.themeMode,
       theme: ThemeViewModel.lightTheme,
-      darkTheme: ThemeViewModel.darkTheme,
-      initialRoute: kIsWeb ? '/login' : '/',
+      initialRoute: '/',
       routes: {
-        '/': (context) => kIsWeb ? const LoginScreen() : const SplashScreen(),
+        '/': (context) => const SplashScreen(),
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
         '/role-selection': (context) => const RoleSelectionScreen(),

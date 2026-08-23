@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:warisan_kita/domain/models/artisan_profile.dart';
 import 'package:warisan_kita/domain/models/forum_post.dart';
@@ -7,6 +9,33 @@ import 'package:warisan_kita/domain/models/badge.dart';
 import 'package:warisan_kita/domain/models/user.dart';
 
 class SupabaseService {
+  // Session Persistence Keys
+  static const String _keyAuthUser = 'wk_last_auth_user';
+  static const String _keyAuthEmail = 'wk_last_auth_email';
+  static const String _keyActiveRole = 'wk_last_active_role';
+
+  static Future<void> _saveAuthSession(UserModel user) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_keyAuthEmail, user.email);
+      await prefs.setString(_keyAuthUser, jsonEncode(user.toMap()));
+      await prefs.setString(_keyActiveRole, user.role);
+    } catch (e) {
+      debugPrint('saveAuthSession note: $e');
+    }
+  }
+
+  static Future<void> _clearAuthSession() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_keyAuthEmail);
+      await prefs.remove(_keyAuthUser);
+      await prefs.remove(_keyActiveRole);
+    } catch (e) {
+      debugPrint('clearAuthSession note: $e');
+    }
+  }
+
   // Generates standard UUID v4 for PostgreSQL uuid column compatibility
   static String _generateUuidV4() {
     final random = Random();
@@ -298,6 +327,8 @@ class SupabaseService {
     // Simulate network latency
     await Future.delayed(const Duration(milliseconds: 300));
 
+    UserModel? authenticatedUser;
+
     // Fast-path: Dedicated Administrator Auth (Username 'admin', 'superadmin', 'adminnadia', or 'admin@warisankita.my')
     if (normInput == 'admin' ||
         normInput == 'superadmin' ||
@@ -316,7 +347,9 @@ class SupabaseService {
           'joinedDate': 'Jan 2025',
           'isSuspended': false,
         };
-        return UserModel.fromMap(adminData);
+        authenticatedUser = UserModel.fromMap(adminData);
+        await _saveAuthSession(authenticatedUser);
+        return authenticatedUser;
       } else {
         throw Exception('INVALID CREDENTIALS: Password incorrect.');
       }
@@ -386,7 +419,9 @@ class SupabaseService {
           if (profileData != null) {
             // Keep in-memory store in sync with database row
             _userStore[cleanEmail] = profileData;
-            return UserModel.fromMap(profileData);
+            authenticatedUser = UserModel.fromMap(profileData);
+            await _saveAuthSession(authenticatedUser);
+            return authenticatedUser;
           }
 
           final meta = authRes.user!.userMetadata ?? {};
@@ -398,7 +433,7 @@ class SupabaseService {
             throw Exception('ACCOUNT SUSPENDED BY ADMINISTRATOR: Contact support.');
           }
 
-          return UserModel(
+          authenticatedUser = UserModel(
             id: authRes.user!.id,
             email: authRes.user!.email ?? cleanEmail,
             username: meta['username'] as String?,
@@ -411,6 +446,8 @@ class SupabaseService {
             ssmNumber: meta['ssm_number'] as String?,
             bio: meta['bio'] as String?,
           );
+          await _saveAuthSession(authenticatedUser);
+          return authenticatedUser;
         }
       } catch (e) {
         final errString = e.toString();
@@ -441,7 +478,79 @@ class SupabaseService {
       throw Exception('ACCOUNT SUSPENDED BY ADMINISTRATOR: Contact support.');
     }
 
-    return UserModel.fromMap(userData);
+    authenticatedUser = UserModel.fromMap(userData);
+    await _saveAuthSession(authenticatedUser);
+    return authenticatedUser;
+  }
+
+  // --- Session & Current User Retrieval ---
+  Future<UserModel?> getCurrentUser() async {
+    final client = _client;
+    if (client != null) {
+      final session = client.auth.currentSession;
+      final authUser = client.auth.currentUser;
+      if (session != null && authUser != null) {
+        final email = authUser.email?.toLowerCase();
+        try {
+          final profileData = await client
+              .from('users')
+              .select()
+              .eq('id', authUser.id)
+              .maybeSingle();
+          if (profileData != null) {
+            if (email != null) {
+              _userStore[email] = profileData;
+            }
+            final u = UserModel.fromMap(profileData);
+            await _saveAuthSession(u);
+            return u;
+          }
+        } catch (e) {
+          debugPrint('getCurrentUser DB lookup note: $e');
+        }
+
+        final meta = authUser.userMetadata ?? {};
+        final role = (meta['role'] as String?) ?? 'Tourist';
+        final roles = meta['roles'] != null ? List<String>.from(meta['roles']) : [role];
+        final status = (meta['status'] as String?) ?? 'ACTIVE';
+
+        final u = UserModel(
+          id: authUser.id,
+          email: authUser.email ?? '',
+          username: meta['username'] as String?,
+          displayName: (meta['display_name'] ?? meta['full_name'] ?? meta['username']) as String?,
+          role: role,
+          roles: roles,
+          status: status,
+          studioName: meta['studio_name'] as String?,
+          craftCategory: meta['craft_category'] as String?,
+          ssmNumber: meta['ssm_number'] as String?,
+          bio: meta['bio'] as String?,
+        );
+        await _saveAuthSession(u);
+        return u;
+      }
+    }
+
+    // Local / Cached Session Fallback from SharedPreferences
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final rawUser = prefs.getString(_keyAuthUser);
+      if (rawUser != null && rawUser.isNotEmpty) {
+        final map = jsonDecode(rawUser) as Map<String, dynamic>;
+        final user = UserModel.fromMap(map);
+        final email = user.email.toLowerCase();
+        if (_userStore.containsKey(email)) {
+          final storeData = _userStore[email]!;
+          return UserModel.fromMap(storeData);
+        }
+        return user;
+      }
+    } catch (e) {
+      debugPrint('getCurrentUser prefs fallback note: $e');
+    }
+
+    return null;
   }
 
   Future<UserModel> signUp({
@@ -1166,6 +1275,7 @@ class SupabaseService {
 
   Future<void> signOut() async {
     await Future.delayed(const Duration(milliseconds: 200));
+    await _clearAuthSession();
     final client = _client;
     if (client != null) {
       try {

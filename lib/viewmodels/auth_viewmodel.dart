@@ -59,6 +59,29 @@ class AuthViewModel extends ChangeNotifier {
   List<String> _availableRoles = [];
   List<String> get availableRoles => _availableRoles;
 
+  Future<UserModel?> restoreSession() async {
+    try {
+      final user = await _repository.getCurrentUser();
+      if (user != null) {
+        if (user.status != 'SUSPENDED' && !user.isSuspended) {
+          _currentUser = user;
+          _activeRole = user.role;
+          notifyListeners();
+          return user;
+        }
+      }
+      _currentUser = null;
+      _activeRole = null;
+      notifyListeners();
+    } catch (e) {
+      debugPrint('restoreSession note: $e');
+      _currentUser = null;
+      _activeRole = null;
+      notifyListeners();
+    }
+    return null;
+  }
+
   void clearError() {
     _errorMessage = null;
     _statusMessage = null;
