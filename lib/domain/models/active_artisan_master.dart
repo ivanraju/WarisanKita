@@ -70,4 +70,43 @@ class ActiveArtisanMaster {
       isSuspended: isSuspended ?? this.isSuspended,
     );
   }
+
+  factory ActiveArtisanMaster.fromMap(Map<String, dynamic> map) {
+    final ap = (map['artisan_profiles'] is Map)
+        ? Map<String, dynamic>.from(map['artisan_profiles'])
+        : ((map['artisan_profiles'] is List && (map['artisan_profiles'] as List).isNotEmpty)
+            ? Map<String, dynamic>.from((map['artisan_profiles'] as List).first)
+            : null);
+
+    final String name = (ap?['studio_name'] ?? map['studio_name'] ?? map['studioName'] ?? map['full_name'] ?? map['display_name'] ?? map['displayName'] ?? map['username'] ?? 'Artisan Studio').toString();
+    final String category = (ap?['craft_category'] ?? map['craft_category'] ?? map['craftCategory'] ?? 'Handicraft & Heritage').toString();
+    final String state = (ap?['state'] ?? map['state'] ?? 'Malaysia').toString();
+    final String exp = ap?['years_experience'] != null ? '${ap!['years_experience']} Years' : (map['experience'] ?? 'Verified Studio').toString();
+    final String license = (ap?['ssm_number'] ?? map['ssm_number'] ?? map['ssmNumber'] ?? 'SSM Verified').toString();
+    final String bio = (ap?['bio'] ?? map['bio'] ?? 'Master artisan dedicated to traditional Malaysian craft.').toString();
+    final String phone = (map['phone_number'] ?? map['phone'] ?? '+60 12-345 6789').toString();
+    final String verifiedDate = (ap?['verified_at'] ?? map['created_at'] ?? '2026-01-01').toString().split('T').first;
+    final String role = (map['role'] ?? '').toString();
+    final String status = (map['status'] ?? '').toString().toUpperCase();
+    final bool isSuspended = status == 'SUSPENDED' || map['is_suspended'] == true;
+    final bool isDual = role.contains('Tourist') || role.contains('&') || (map['roles'] is List && (map['roles'] as List).contains('Tourist'));
+
+    return ActiveArtisanMaster(
+      id: (map['id'] ?? ap?['id'] ?? '').toString(),
+      name: name,
+      email: (map['email'] ?? '').toString(),
+      category: category,
+      state: state,
+      experience: exp,
+      plaques: (map['plaques'] as int?) ?? (ap?['workshop_count'] as int?) ?? 1,
+      isLiveOpen: map['is_live_open'] ?? true,
+      licenseNo: license,
+      verifiedDate: verifiedDate,
+      imageUrl: (map['avatar_url'] ?? map['imageUrl'] ?? 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600').toString(),
+      bio: bio,
+      phone: phone,
+      isDualRole: isDual,
+      isSuspended: isSuspended,
+    );
+  }
 }

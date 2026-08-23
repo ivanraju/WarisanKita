@@ -15,6 +15,14 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
   String _searchQuery = '';
   String _selectedCategory = 'All Categories';
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ModerationViewModel>().fetchActiveArtisans();
+    });
+  }
+
   final List<String> _categories = const [
     'All Categories',
     'Pottery & Ceramics',

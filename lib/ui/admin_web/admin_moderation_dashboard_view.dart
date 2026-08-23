@@ -354,13 +354,13 @@ class AdminModerationDashboardView extends StatelessWidget {
             children: [
               IconButton(
                 icon: const Icon(Icons.refresh_rounded, color: Color(0xFF64748B)),
-                tooltip: 'Fetch Latest Applications',
+                tooltip: 'Refresh Moderation & User Data',
                 onPressed: () async {
-                  await context.read<ModerationViewModel>().fetchPendingArtisans();
+                  await context.read<ModerationViewModel>().refreshAllData();
                   if (!context.mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Artisan applications queue refreshed!'),
+                      content: Text('All artisan, user, and moderation data refreshed!'),
                       duration: Duration(seconds: 1),
                       behavior: SnackBarBehavior.floating,
                     ),

@@ -10,7 +10,7 @@ class ModerationViewModel extends ChangeNotifier {
 
   ModerationViewModel({UserRepository? repository, SupabaseService? service})
       : _repository = repository ?? UserRepository(service: service) {
-    fetchPendingArtisans();
+    refreshAllData();
   }
 
   String _activeTab = 'Pending Approvals';
@@ -451,6 +451,59 @@ class ModerationViewModel extends ChangeNotifier {
     } catch (e) {
       debugPrint('Error fetching pending artisans: $e');
     }
+  }
+
+  Future<void> fetchActiveArtisans() async {
+    try {
+      final dbArtisans = await _repository.getActiveArtisans();
+      if (dbArtisans.isNotEmpty) {
+        for (final art in dbArtisans) {
+          final idx = _activeArtisanMasters.indexWhere(
+            (a) => a.email.toLowerCase() == art.email.toLowerCase() ||
+                   a.id == art.id ||
+                   a.name.toLowerCase() == art.name.toLowerCase(),
+          );
+          if (idx == -1) {
+            _activeArtisanMasters.insert(0, art);
+          } else {
+            _activeArtisanMasters[idx] = art;
+          }
+        }
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error fetching active artisans: $e');
+    }
+  }
+
+  Future<void> fetchAllUsers() async {
+    try {
+      final dbUsers = await _repository.getAllUsers();
+      if (dbUsers.isNotEmpty) {
+        for (final u in dbUsers) {
+          final idx = _registeredUsers.indexWhere(
+            (existing) => existing.email.toLowerCase() == u.email.toLowerCase() ||
+                          existing.id == u.id,
+          );
+          if (idx == -1) {
+            _registeredUsers.insert(0, u);
+          } else {
+            _registeredUsers[idx] = u;
+          }
+        }
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error fetching all users: $e');
+    }
+  }
+
+  Future<void> refreshAllData() async {
+    await Future.wait([
+      fetchPendingArtisans(),
+      fetchActiveArtisans(),
+      fetchAllUsers(),
+    ]);
   }
 
   void addPendingArtisan(PendingArtisanProfile profile) {
