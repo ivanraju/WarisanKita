@@ -682,28 +682,6 @@ class ModerationViewModel extends ChangeNotifier {
     }
   }
 
-  Future<void> createAdminAccount({
-    required String email,
-    required String password,
-    required String displayName,
-  }) async {
-    final cleanEmail = email.trim().toLowerCase();
-    final newAdmin = await _repository.signUp(
-      email: cleanEmail,
-      password: password,
-      role: 'Admin',
-      displayName: displayName,
-      username: cleanEmail.split('@').first,
-    );
-    final idx = _registeredUsers.indexWhere((u) => u.email.toLowerCase() == cleanEmail);
-    if (idx == -1) {
-      _registeredUsers.insert(0, newAdmin);
-    } else {
-      _registeredUsers[idx] = newAdmin;
-    }
-    notifyListeners();
-  }
-
   Future<void> reactivateUser(String id) async {
     final idx = _registeredUsers.indexWhere((u) => u.id == id);
     if (idx != -1) {
