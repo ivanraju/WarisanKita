@@ -89,60 +89,66 @@ class PendingArtisansTable extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
-        child: DataTable(
-          headingRowHeight: 52,
-          dataRowMinHeight: 72,
-          dataRowMaxHeight: 72,
-          horizontalMargin: 24,
-          columnSpacing: 24,
-          headingRowColor: MaterialStateProperty.all(const Color(0xFFF8FAFC)),
-          columns: [
-            DataColumn(
-              label: Text(
-                'ARTISAN NAME',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  color: const Color(0xFF64748B),
-                  letterSpacing: 0.8,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 800),
+            child: DataTable(
+              headingRowHeight: 52,
+              dataRowMinHeight: 72,
+              dataRowMaxHeight: 72,
+              horizontalMargin: 24,
+              columnSpacing: 24,
+              headingRowColor: MaterialStateProperty.all(const Color(0xFFF8FAFC)),
+              columns: [
+                DataColumn(
+                  label: Text(
+                    'ARTISAN NAME',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF64748B),
+                      letterSpacing: 0.8,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            DataColumn(
-              label: Text(
-                'CRAFT CATEGORY',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  color: const Color(0xFF64748B),
-                  letterSpacing: 0.8,
+                DataColumn(
+                  label: Text(
+                    'CRAFT CATEGORY',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF64748B),
+                      letterSpacing: 0.8,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            DataColumn(
-              label: Text(
-                'DATE SUBMITTED',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  color: const Color(0xFF64748B),
-                  letterSpacing: 0.8,
+                DataColumn(
+                  label: Text(
+                    'DATE SUBMITTED',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF64748B),
+                      letterSpacing: 0.8,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            DataColumn(
-              label: Text(
-                'ACTIONS',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  color: const Color(0xFF64748B),
-                  letterSpacing: 0.8,
+                DataColumn(
+                  label: Text(
+                    'ACTIONS',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF64748B),
+                      letterSpacing: 0.8,
+                    ),
+                  ),
                 ),
-              ),
+              ],
+              rows: artisans.map((artisan) => _buildRow(context, artisan)).toList(),
             ),
-          ],
-          rows: artisans.map((artisan) => _buildRow(context, artisan)).toList(),
+          ),
         ),
       ),
     );

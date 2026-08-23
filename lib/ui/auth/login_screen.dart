@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -14,9 +15,20 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController(text: 'tourist@warisankita.my');
-  final _passwordController = TextEditingController(text: 'password123');
+  late final TextEditingController _emailController;
+  late final TextEditingController _passwordController;
   bool _isPasswordVisible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _emailController = TextEditingController(
+      text: kIsWeb ? 'admin@warisankita.my' : 'tourist@warisankita.my',
+    );
+    _passwordController = TextEditingController(
+      text: kIsWeb ? 'admin123' : 'password123',
+    );
+  }
 
   @override
   void dispose() {
@@ -234,6 +246,91 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
+    // 🌐 Web Guard: If running on Web browser (Vercel) and user is NOT an Admin
+    if (kIsWeb && result.user?.role != 'Admin') {
+      showDialog(
+        context: context,
+        builder: (dialogCtx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              const Icon(Icons.phone_android_rounded, color: Color(0xFF004D40), size: 26),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Mobile App Required',
+                  style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            'This Web Portal is exclusively for Administrators.\n\nCultural Tourist & Artisan features (AR Heritage Quests, Crafts Catalog, Studio Directory) require the Warisan Kita Mobile App.\n\nPlease open the application on your Android or iOS mobile device.',
+            style: GoogleFonts.plusJakartaSans(fontSize: 13, height: 1.5, color: Colors.black87),
+          ),
+          actions: [
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF004D40)),
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    // 📱 Mobile Guard: If logging in as Administrator on a mobile viewport (< 800px on mobile native)
+    if (!kIsWeb && result.user?.role == 'Admin') {
+      final isMobileScreen = MediaQuery.of(context).size.width < 800;
+      if (isMobileScreen) {
+        showDialog(
+          context: context,
+          builder: (dialogCtx) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Row(
+              children: [
+                const Icon(Icons.laptop_chromebook_rounded, color: Color(0xFF004D40), size: 26),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Admin Web Portal',
+                    style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
+                  ),
+                ),
+              ],
+            ),
+            content: Text(
+              'Administrator features and moderation tables are optimized for Desktop Web.\n\nPlease access the admin portal on your computer browser at:\nhttps://warisan-kita.vercel.app',
+              style: GoogleFonts.plusJakartaSans(fontSize: 13, height: 1.5, color: Colors.black87),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogCtx),
+                child: const Text('CANCEL'),
+              ),
+              FilledButton(
+                style: FilledButton.styleFrom(backgroundColor: const Color(0xFF004D40)),
+                onPressed: () {
+                  Navigator.pop(dialogCtx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('LOGIN SUCCESSFUL: Authenticated as Admin'),
+                      backgroundColor: Color(0xFF10B981),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                  Navigator.of(context).pushReplacementNamed('/admin');
+                },
+                child: const Text('CONTINUE ON MOBILE'),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+    }
+
     // Handle Regular RBAC Routes [M2]
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -286,32 +383,31 @@ class _LoginScreenState extends State<LoginScreen> {
                       color: const Color(0xFF004D40).withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
-                      Icons.auto_awesome_mosaic_rounded,
+                    child: Icon(
+                      kIsWeb ? Icons.security_rounded : Icons.auto_awesome_mosaic_rounded,
                       size: 36,
-                      color: Color(0xFF004D40),
+                      color: const Color(0xFF004D40),
                     ),
                   ),
                 ),
                 const SizedBox(height: 16),
 
                 Text(
-                  'WarisanKita',
+                  kIsWeb ? 'Warisan Kita • Admin Portal' : 'WarisanKita',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.dmSerifDisplay(
-                    fontSize: 28,
+                    fontSize: 26,
                     color: const Color(0xFF004D40),
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 6),
 
-                // UC001 - M1: "PLEASE ENTER LOGIN CREDENTIALS"
                 Text(
-                  'PLEASE ENTER LOGIN CREDENTIALS',
+                  kIsWeb ? 'MALAYSIAN HERITAGE MODERATION CONSOLE' : 'PLEASE ENTER LOGIN CREDENTIALS',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.plusJakartaSans(
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0.8,
                     color: const Color(0xFF004D40),
@@ -320,7 +416,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 20),
 
-                // Quick Persona Autofill Selector (for effortless testing & grading)
+                // Quick Persona Autofill Selector
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
@@ -331,7 +427,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '⚡ QUICK TEST PERSONAS:',
+                        kIsWeb ? '⚡ ADMIN LOGIN SHORTCUT:' : '⚡ QUICK TEST PERSONAS:',
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 9,
                           fontWeight: FontWeight.w800,
@@ -343,13 +439,17 @@ class _LoginScreenState extends State<LoginScreen> {
                       Wrap(
                         spacing: 6,
                         runSpacing: 6,
-                        children: [
-                          _buildAutofillChip('🧳 Tourist', 'tourist@warisankita.my', 'password123'),
-                          _buildAutofillChip('🎨 Master Artisan', 'artisan@warisankita.my', 'password123'),
-                          _buildAutofillChip('⏳ Pending Artisan', 'pending.artisan@warisankita.my', 'password123'),
-                          _buildAutofillChip('👑 Super Admin', 'admin@warisankita.my', 'password123'),
-                          _buildAutofillChip('🚫 Suspended', 'suspended@warisankita.my', 'password123'),
-                        ],
+                        children: kIsWeb
+                            ? [
+                                _buildAutofillChip('👑 Super Admin (Full Access)', 'admin@warisankita.my', 'admin123'),
+                              ]
+                            : [
+                                _buildAutofillChip('🧳 Tourist', 'tourist@warisankita.my', 'password123'),
+                                _buildAutofillChip('🎨 Master Artisan', 'artisan@warisankita.my', 'password123'),
+                                _buildAutofillChip('⏳ Pending Artisan', 'pending.artisan@warisankita.my', 'password123'),
+                                _buildAutofillChip('👑 Super Admin', 'admin@warisankita.my', 'admin123'),
+                                _buildAutofillChip('🚫 Suspended', 'suspended@warisankita.my', 'password123'),
+                              ],
                       ),
                     ],
                   ),
@@ -396,8 +496,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
                         decoration: InputDecoration(
-                          labelText: 'Username / Email Address',
-                          hintText: 'e.g. siticrafts or user@example.com',
+                          labelText: kIsWeb ? 'Admin Email / Username' : 'Username / Email Address',
+                          hintText: kIsWeb ? 'admin@warisankita.my' : 'e.g. siticrafts or user@example.com',
                           prefixIcon: const Icon(Icons.person_outline_rounded, size: 20),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                         ),
@@ -444,7 +544,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 8),
 
-                // Forgot Password Button -> UC003
+                // Forgot Password Button
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
@@ -487,7 +587,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
                         )
                       : Text(
-                          'SIGN IN',
+                          kIsWeb ? 'ADMIN SIGN IN' : 'SIGN IN',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
@@ -498,28 +598,56 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 16),
 
-                // Register Link
-                Wrap(
-                  alignment: WrapAlignment.center,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(
-                      "Don't have an account? ",
-                      style: GoogleFonts.plusJakartaSans(fontSize: 13, color: Colors.black54),
+                // Bottom Footer: Web Mobile App Notice vs Mobile Registration Link
+                if (kIsWeb) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFECFDF5),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFA7F3D0)),
                     ),
-                    GestureDetector(
-                      onTap: () => Navigator.of(context).pushNamed('/register'),
-                      child: Text(
-                        'Register / Join Us',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF004D40),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.phone_android_rounded, size: 20, color: Color(0xFF047857)),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Cultural Tourists & Artisans: Please sign in via the Warisan Kita Mobile App.',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF065F46),
+                              height: 1.3,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ] else ...[
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(
+                        "Don't have an account? ",
+                        style: GoogleFonts.plusJakartaSans(fontSize: 13, color: Colors.black54),
+                      ),
+                      GestureDetector(
+                        onTap: () => Navigator.of(context).pushNamed('/register'),
+                        child: Text(
+                          'Register / Join Us',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF004D40),
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),

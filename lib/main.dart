@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:provider/provider.dart';
@@ -121,14 +122,14 @@ class _WarisanKitaAppState extends State<WarisanKitaApp> {
 
     return MaterialApp(
       navigatorKey: navigatorKey,
-      title: 'WarisanKita Marketplace',
+      title: kIsWeb ? 'Warisan Kita • Admin Portal' : 'Warisan Kita',
       debugShowCheckedModeBanner: false,
       themeMode: themeVM.themeMode,
       theme: ThemeViewModel.lightTheme,
       darkTheme: ThemeViewModel.darkTheme,
-      initialRoute: '/',
+      initialRoute: kIsWeb ? '/login' : '/',
       routes: {
-        '/': (context) => const SplashScreen(),
+        '/': (context) => kIsWeb ? const LoginScreen() : const SplashScreen(),
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
         '/role-selection': (context) => const RoleSelectionScreen(),
