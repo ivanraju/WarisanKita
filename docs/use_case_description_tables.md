@@ -19,12 +19,13 @@
 | **MESSAGE** | |
 | M1 : "PLEASE ENTER LOGIN CREDENTIALS"<br>M2 : "LOGIN SUCCESSFUL"<br>M3 : "PASSWORD MUST BE AT LEAST 8 CHARACTERS"<br>M4 : "INVALID CREDENTIALS"<br>M5 : "ACCOUNT SUSPENDED BY ADMINISTRATOR: CONTACT SUPPORT"<br>M6 : "ARTISAN APPLICATION SUBMITTED: PENDING ADMIN APPROVAL"<br>M7 : "ARTISAN ACCOUNT DETECTED: PLEASE SELECT YOUR ACTIVE SESSION MODE"<br>M8 : "ADMIN WEB PORTAL ONLY: PLEASE ACCESS VIA WEB BROWSER" | |
 | **CONSTRAINTS** | |
-| C1 : Password length $\ge$ 8 characters<br>C2 : Unapproved Artisan roles (status == 'PENDING_APPROVAL' or 'PENDING') MUST route to the Application Status Screen when Master Artisan mode is selected<br>C3 : User status == 'SUSPENDED' MUST strictly block authentication<br>C4 : Accounts with Artisan privileges MUST be offered session mode selection (Artisan Studio vs Tourist Explorer) upon login | |
+| C1 : Password length $\ge$ 8 characters<br>C2 : Unapproved Artisan roles (status == 'PENDING_APPROVAL' or 'PENDING') MUST route to the Application Status Screen when Master Artisan mode is selected<br>C3 : User status == 'SUSPENDED' MUST strictly block authentication<br>C4 : Accounts with Artisan privileges MUST be offered session mode selection (Artisan Studio vs Tourist Explorer) upon login<br>C5 : Administrator accounts attempting authentication on mobile MUST be blocked from mobile entry and directed to the Web Portal | |
 | **FUNCTIONAL REQUIREMENTS** | |
 | **FR001_1** | System prompt user to enter login credentials (supporting both username/handle and email) on mobile app |
 | **FR001_2** | System validate form fields in real-time, enforce min 8 character password constraint, and resolve handle identifiers to account email |
 | **FR001_3** | System verify RBAC role and account approval status, routing user to the designated UI |
 | **FR001_4** | System allow artisans to choose between Master Artisan Studio Mode and Cultural Tourist Exploration Mode |
+| **FR001_5** | System detect administrator accounts attempting login on mobile devices and provide direct redirection to the live Web Portal (Refer to UC102_ADMIN_PORTAL_LOGIN) |
 
 ---
 
