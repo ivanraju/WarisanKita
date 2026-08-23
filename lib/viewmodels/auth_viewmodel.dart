@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:warisan_kita/data/repositories/user_repository.dart';
 import 'package:warisan_kita/domain/models/user.dart';
@@ -191,6 +192,20 @@ class AuthViewModel extends ChangeNotifier {
         _isLoading = false;
         notifyListeners();
         return AuthResult(success: false, message: _errorMessage);
+      }
+
+      // 🌐 UC102: Web Moderation Portal Strict RBAC Guard
+      if (kIsWeb && user.role != 'Admin') {
+        _errorMessage = 'ACCESS DENIED: The Web Portal is exclusively for Administrators.';
+        _isLoading = false;
+        _currentUser = null;
+        _activeRole = null;
+        notifyListeners();
+        return AuthResult(
+          success: false,
+          user: user,
+          message: _errorMessage,
+        );
       }
 
       _currentUser = user;

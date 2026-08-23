@@ -210,6 +210,39 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
 
     if (!result.success) {
+      if (kIsWeb && (result.message?.contains('ACCESS DENIED') == true || result.user?.role != 'Admin')) {
+        showDialog(
+          context: context,
+          builder: (dialogCtx) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Row(
+              children: [
+                const Icon(Icons.phonelink_lock_rounded, color: Color(0xFFEF4444), size: 26),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Access Denied: Mobile App Required',
+                    style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF991B1B)),
+                  ),
+                ),
+              ],
+            ),
+            content: Text(
+              'This Web Portal is exclusively for Administrators.\n\nArtisan Studio & Cultural Explorer accounts cannot log in to the Web Portal. Please use the Warisan Kita Mobile App on your Android or iOS device.',
+              style: GoogleFonts.plusJakartaSans(fontSize: 13, height: 1.5, color: Colors.black87),
+            ),
+            actions: [
+              FilledButton(
+                style: FilledButton.styleFrom(backgroundColor: const Color(0xFF004D40)),
+                onPressed: () => Navigator.pop(dialogCtx),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result.message ?? 'Authentication failed'),
@@ -242,40 +275,6 @@ class _LoginScreenState extends State<LoginScreen> {
             craftCategory: result.user?.craftCategory ?? 'Pottery & Ceramics',
             ssmNumber: result.user?.ssmNumber ?? '202601004821 (SSM Verified)',
           ),
-        ),
-      );
-      return;
-    }
-
-    // 🌐 Web Guard: If running on Web browser (Vercel) and user is NOT an Admin
-    if (kIsWeb && result.user?.role != 'Admin') {
-      showDialog(
-        context: context,
-        builder: (dialogCtx) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Row(
-            children: [
-              const Icon(Icons.phone_android_rounded, color: Color(0xFF004D40), size: 26),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Mobile App Required',
-                  style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
-                ),
-              ),
-            ],
-          ),
-          content: Text(
-            'This Web Portal is exclusively for Administrators.\n\nCultural Tourist & Artisan features (AR Heritage Quests, Crafts Catalog, Studio Directory) require the Warisan Kita Mobile App.\n\nPlease open the application on your Android or iOS mobile device.',
-            style: GoogleFonts.plusJakartaSans(fontSize: 13, height: 1.5, color: Colors.black87),
-          ),
-          actions: [
-            FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF004D40)),
-              onPressed: () => Navigator.pop(dialogCtx),
-              child: const Text('OK'),
-            ),
-          ],
         ),
       );
       return;
