@@ -296,6 +296,8 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<ModerationViewModel>();
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 768;
 
     final filteredList = vm.activeArtisanMasters.where((artisan) {
       final matchesSearch = _searchQuery.isEmpty ||
@@ -313,24 +315,59 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
 
     final liveCount = vm.activeArtisanMasters.where((a) => !a.isSuspended).length;
 
+    final searchField = TextField(
+      onChanged: (val) => setState(() => _searchQuery = val),
+      decoration: InputDecoration(
+        hintText: 'Search by master name, SSM license #, craft, or state...',
+        prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF64748B)),
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: Colors.black.withValues(alpha: 0.08)),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      ),
+    );
+
+    final categoryDropdown = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.08)),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: _selectedCategory,
+          onChanged: (val) {
+            if (val != null) setState(() => _selectedCategory = val);
+          },
+          items: _categories.map((cat) {
+            return DropdownMenuItem(
+              value: cat,
+              child: Text(cat, style: GoogleFonts.plusJakartaSans(fontSize: 13)),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(32.0),
+      padding: EdgeInsets.all(isMobile ? 16.0 : 32.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header Row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Column(
+          // Header Row (Responsive)
+          isMobile
+              ? Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'Verified Master Artisans Directory',
                       softWrap: true,
                       style: GoogleFonts.dmSerifDisplay(
-                        fontSize: 30,
+                        fontSize: 24,
                         fontWeight: FontWeight.bold,
                         color: const Color(0xFF0F172A),
                       ),
@@ -340,86 +377,110 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
                       'Monitor, inspect, and manage verified traditional craft masters actively published on WarisanKita.',
                       softWrap: true,
                       style: GoogleFonts.plusJakartaSans(
-                        fontSize: 13,
+                        fontSize: 12,
                         color: const Color(0xFF64748B),
                       ),
                     ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFECFDF5),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF10B981)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.verified_rounded, color: Color(0xFF10B981), size: 18),
+                          const SizedBox(width: 8),
+                          Text(
+                            '$liveCount Verified Masters Live',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF047857),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
-                ),
-              ),
-              const SizedBox(width: 16),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFECFDF5),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFF10B981)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Icon(Icons.verified_rounded, color: Color(0xFF10B981), size: 20),
-                    const SizedBox(width: 8),
-                    Text(
-                      '$liveCount Verified Masters Live',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF047857),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Verified Master Artisans Directory',
+                            softWrap: true,
+                            style: GoogleFonts.dmSerifDisplay(
+                              fontSize: 30,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF0F172A),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Monitor, inspect, and manage verified traditional craft masters actively published on WarisanKita.',
+                            softWrap: true,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 13,
+                              color: const Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFECFDF5),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFF10B981)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.verified_rounded, color: Color(0xFF10B981), size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            '$liveCount Verified Masters Live',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF047857),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-              ),
-            ],
-          ),
 
-          const SizedBox(height: 28),
+          const SizedBox(height: 24),
 
           // Filters Row (Search + Category Filter)
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  onChanged: (val) => setState(() => _searchQuery = val),
-                  decoration: InputDecoration(
-                    hintText: 'Search by master name, SSM license #, craft, or location state...',
-                    prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF64748B)),
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(color: Colors.black.withValues(alpha: 0.08)),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  ),
+          isMobile
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    searchField,
+                    const SizedBox(height: 12),
+                    categoryDropdown,
+                  ],
+                )
+              : Row(
+                  children: [
+                    Expanded(child: searchField),
+                    const SizedBox(width: 16),
+                    categoryDropdown,
+                  ],
                 ),
-              ),
-              const SizedBox(width: 16),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.black.withValues(alpha: 0.08)),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: _selectedCategory,
-                    onChanged: (val) {
-                      if (val != null) setState(() => _selectedCategory = val);
-                    },
-                    items: _categories.map((cat) {
-                      return DropdownMenuItem(
-                        value: cat,
-                        child: Text(cat, style: GoogleFonts.plusJakartaSans(fontSize: 13)),
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ),
-            ],
-          ),
 
           const SizedBox(height: 24),
 

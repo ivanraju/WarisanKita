@@ -70,62 +70,71 @@ class AdminSidebar extends StatelessWidget {
             ],
           ),
 
-          const SizedBox(height: 28),
+          const SizedBox(height: 24),
 
-          // Navigation Links
-          _buildNavItem(
-            context,
-            icon: Icons.dashboard_rounded,
-            tabId: 'Overview',
-            label: 'Overview & Analytics',
-          ),
-          const SizedBox(height: 4),
-          _buildNavItem(
-            context,
-            icon: Icons.verified_user_rounded,
-            tabId: 'Pending Approvals',
-            label: 'Artisan Verification',
-            badgeText: pendingCount > 0 ? '$pendingCount PENDING' : 'CLEAR',
-          ),
-          const SizedBox(height: 4),
-          _buildNavItem(
-            context,
-            icon: Icons.storefront_rounded,
-            tabId: 'Active Artisans',
-            label: 'Active Artisans',
-          ),
-          const SizedBox(height: 4),
-          _buildNavItem(
-            context,
-            icon: Icons.manage_accounts_rounded,
-            tabId: 'User Management',
-            label: 'User Management',
-          ),
-          const SizedBox(height: 4),
-          _buildNavItem(
-            context,
-            icon: Icons.stars_rounded,
-            tabId: 'Quest Approvals',
-            label: 'Quest Moderation',
-            badgeText: '2 NEW',
-          ),
-          const SizedBox(height: 4),
-          _buildNavItem(
-            context,
-            icon: Icons.forum_rounded,
-            tabId: 'Forum Moderation',
-            label: 'Community Forum',
-            badgeText: 'FLAGGED',
-          ),
-          const SizedBox(height: 4),
-          _buildNavItem(
-            context,
-            icon: Icons.settings_rounded,
-            tabId: 'Settings',
-            label: 'System Settings',
+          // Scrollable Navigation Links
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildNavItem(
+                    context,
+                    icon: Icons.dashboard_rounded,
+                    tabId: 'Overview',
+                    label: 'Overview & Analytics',
+                  ),
+                  const SizedBox(height: 4),
+                  _buildNavItem(
+                    context,
+                    icon: Icons.verified_user_rounded,
+                    tabId: 'Pending Approvals',
+                    label: 'Artisan Verification',
+                    badgeText: pendingCount > 0 ? '$pendingCount PENDING' : 'CLEAR',
+                  ),
+                  const SizedBox(height: 4),
+                  _buildNavItem(
+                    context,
+                    icon: Icons.storefront_rounded,
+                    tabId: 'Active Artisans',
+                    label: 'Active Artisans',
+                  ),
+                  const SizedBox(height: 4),
+                  _buildNavItem(
+                    context,
+                    icon: Icons.manage_accounts_rounded,
+                    tabId: 'User Management',
+                    label: 'User Management',
+                  ),
+                  const SizedBox(height: 4),
+                  _buildNavItem(
+                    context,
+                    icon: Icons.stars_rounded,
+                    tabId: 'Quest Approvals',
+                    label: 'Quest Moderation',
+                    badgeText: '2 NEW',
+                  ),
+                  const SizedBox(height: 4),
+                  _buildNavItem(
+                    context,
+                    icon: Icons.forum_rounded,
+                    tabId: 'Forum Moderation',
+                    label: 'Community Forum',
+                    badgeText: 'FLAGGED',
+                  ),
+                  const SizedBox(height: 4),
+                  _buildNavItem(
+                    context,
+                    icon: Icons.settings_rounded,
+                    tabId: 'Settings',
+                    label: 'System Settings',
+                  ),
+                ],
+              ),
+            ),
           ),
 
-          const Spacer(),
+          const SizedBox(height: 12),
 
           // Bottom Admin Profile Card
           Container(
@@ -153,9 +162,12 @@ class AdminSidebar extends StatelessWidget {
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
                         username,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.plusJakartaSans(
                           color: Colors.white,
                           fontSize: 13,
@@ -165,7 +177,7 @@ class AdminSidebar extends StatelessWidget {
                       Text(
                         email,
                         maxLines: 1,
-                        softWrap: true,
+                        overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.plusJakartaSans(
                           color: const Color(0xFF94A3B8),
                           fontSize: 10,
