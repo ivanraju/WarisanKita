@@ -1913,4 +1913,28 @@ class SupabaseService {
       ),
     ];
   }
+
+  Future<List<Map<String, dynamic>>> fetchWorkshopLocations() async {
+    final client = _client;
+
+    if (client == null) {
+      return [];
+    }
+
+    try {
+      final response = await client
+          .from('artisan_profiles')
+          .select(
+        'id, studio_name, craft_category, address, state, latitude, longitude',
+      )
+          .eq('status', 'APPROVED')
+          .not('latitude', 'is', null)
+          .not('longitude', 'is', null);
+
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      debugPrint('Supabase fetchWorkshopLocations error: $e');
+      return [];
+    }
+  }
 }
