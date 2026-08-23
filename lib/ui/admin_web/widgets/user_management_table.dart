@@ -33,71 +33,77 @@ class UserManagementTable extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
-        child: DataTable(
-          headingRowHeight: 52,
-          dataRowMinHeight: 68,
-          dataRowMaxHeight: 68,
-          horizontalMargin: 24,
-          columnSpacing: 32,
-          headingRowColor: MaterialStateProperty.all(const Color(0xFFF8FAFC)),
-          columns: [
-            DataColumn(
-              label: Text(
-                'USER NAME',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  color: const Color(0xFF64748B),
-                  letterSpacing: 0.8,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 800),
+            child: DataTable(
+              headingRowHeight: 52,
+              dataRowMinHeight: 68,
+              dataRowMaxHeight: 68,
+              horizontalMargin: 24,
+              columnSpacing: 32,
+              headingRowColor: MaterialStateProperty.all(const Color(0xFFF8FAFC)),
+              columns: [
+                DataColumn(
+                  label: Text(
+                    'USER NAME',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF64748B),
+                      letterSpacing: 0.8,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            DataColumn(
-              label: Text(
-                'ROLE',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  color: const Color(0xFF64748B),
-                  letterSpacing: 0.8,
+                DataColumn(
+                  label: Text(
+                    'ROLE',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF64748B),
+                      letterSpacing: 0.8,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            DataColumn(
-              label: Text(
-                'EMAIL ADDRESS',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  color: const Color(0xFF64748B),
-                  letterSpacing: 0.8,
+                DataColumn(
+                  label: Text(
+                    'EMAIL ADDRESS',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF64748B),
+                      letterSpacing: 0.8,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            DataColumn(
-              label: Text(
-                'STATUS',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  color: const Color(0xFF64748B),
-                  letterSpacing: 0.8,
+                DataColumn(
+                  label: Text(
+                    'STATUS',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF64748B),
+                      letterSpacing: 0.8,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            DataColumn(
-              label: Text(
-                'ACTIONS',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  color: const Color(0xFF64748B),
-                  letterSpacing: 0.8,
+                DataColumn(
+                  label: Text(
+                    'ACTIONS',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF64748B),
+                      letterSpacing: 0.8,
+                    ),
+                  ),
                 ),
-              ),
+              ],
+              rows: users.map((user) => _buildRow(user)).toList(),
             ),
-          ],
-          rows: users.map((user) => _buildRow(user)).toList(),
+          ),
         ),
       ),
     );

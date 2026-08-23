@@ -190,33 +190,46 @@ class AdminModerationDashboardView extends StatelessWidget {
       globalVM = context.watch<ModerationViewModel>();
     } catch (_) {}
 
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth >= 900;
+    final isMobile = screenWidth < 650;
+
     return ChangeNotifierProvider.value(
       value: globalVM ?? ModerationViewModel(),
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF8FAFC),
-        body: Consumer<ModerationViewModel>(
-          builder: (context, viewModel, child) {
-            final isUserManagementTab = viewModel.activeTab == 'User Management';
+      child: Consumer<ModerationViewModel>(
+        builder: (context, viewModel, child) {
+          final isUserManagementTab = viewModel.activeTab == 'User Management';
 
-            return Row(
+          return Scaffold(
+            backgroundColor: const Color(0xFFF8FAFC),
+            drawer: !isDesktop
+                ? Drawer(
+                    child: AdminSidebar(
+                      activeTab: viewModel.activeTab,
+                      onTabSelected: (tab) => viewModel.setActiveTab(tab),
+                    ),
+                  )
+                : null,
+            body: Row(
               children: [
-                // Left side: 20% width persistent sidebar
-                SizedBox(
-                  width: MediaQuery.of(context).size.width * 0.20,
-                  child: AdminSidebar(
-                    activeTab: viewModel.activeTab,
-                    onTabSelected: (tab) => viewModel.setActiveTab(tab),
+                // Left side: Persistent sidebar on Desktop
+                if (isDesktop)
+                  SizedBox(
+                    width: 240,
+                    child: AdminSidebar(
+                      activeTab: viewModel.activeTab,
+                      onTabSelected: (tab) => viewModel.setActiveTab(tab),
+                    ),
                   ),
-                ),
 
-                // Right side: 80% width main content area
+                // Right side: Main content area
                 Expanded(
                   child: Container(
                     color: const Color(0xFFF8FAFC),
                     child: Column(
                       children: [
                         // Top Navbar / User bar
-                        _buildTopHeaderBar(context),
+                        _buildTopHeaderBar(context, isDesktop),
 
                         // Main Scrollable Area
                         Expanded(
@@ -231,7 +244,7 @@ class AdminModerationDashboardView extends StatelessWidget {
                                           : viewModel.activeTab == 'Forum Moderation'
                                               ? const AdminForumModerationTab()
                                               : SingleChildScrollView(
-                                  padding: const EdgeInsets.all(32.0),
+                                  padding: EdgeInsets.all(isMobile ? 16.0 : 32.0),
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
@@ -239,7 +252,7 @@ class AdminModerationDashboardView extends StatelessWidget {
                                       Text(
                                         isUserManagementTab ? 'Registered User Management' : 'Pending Artisan Profiles',
                                         style: GoogleFonts.dmSerifDisplay(
-                                          fontSize: 32,
+                                          fontSize: isMobile ? 24 : 32,
                                           fontWeight: FontWeight.bold,
                                           color: const Color(0xFF0F172A),
                                         ),
@@ -250,17 +263,17 @@ class AdminModerationDashboardView extends StatelessWidget {
                                             ? 'Manage, monitor, and suspend active tourist and artisan accounts.'
                                             : 'Review, verify, and approve traditional Malaysian artisan profile submissions.',
                                         style: GoogleFonts.plusJakartaSans(
-                                          fontSize: 14,
+                                          fontSize: isMobile ? 12 : 14,
                                           color: const Color(0xFF64748B),
                                         ),
                                       ),
 
-                                      const SizedBox(height: 28),
+                                      const SizedBox(height: 24),
 
                                       // Summary Metric Cards Row
-                                      _buildMetricsRow(viewModel, isUserManagementTab),
+                                      _buildMetricsRow(context, viewModel, isUserManagementTab),
 
-                                      const SizedBox(height: 32),
+                                      const SizedBox(height: 28),
 
                                       // Controls Row
                                       if (isUserManagementTab)
@@ -291,17 +304,17 @@ class AdminModerationDashboardView extends StatelessWidget {
                   ),
                 ),
               ],
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildTopHeaderBar(BuildContext context) {
+  Widget _buildTopHeaderBar(BuildContext context, bool isDesktop) {
     return Container(
       height: 64,
-      padding: const EdgeInsets.symmetric(horizontal: 32),
+      padding: EdgeInsets.symmetric(horizontal: isDesktop ? 32 : 16),
       decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
@@ -311,6 +324,14 @@ class AdminModerationDashboardView extends StatelessWidget {
         children: [
           Row(
             children: [
+              if (!isDesktop)
+                Builder(
+                  builder: (scaffoldCtx) => IconButton(
+                    icon: const Icon(Icons.menu_rounded, color: Color(0xFF334155)),
+                    onPressed: () => Scaffold.of(scaffoldCtx).openDrawer(),
+                    tooltip: 'Open Menu',
+                  ),
+                ),
               const Icon(Icons.admin_panel_settings_rounded, color: Color(0xFF10B981), size: 20),
               const SizedBox(width: 8),
               Text(
@@ -340,19 +361,15 @@ class AdminModerationDashboardView extends StatelessWidget {
                   );
                 },
               ),
-              const SizedBox(width: 8),
-              IconButton(
-                icon: const Icon(Icons.notifications_none_rounded, color: Color(0xFF64748B)),
-                onPressed: () {},
-                tooltip: 'Notifications',
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                icon: const Icon(Icons.help_outline_rounded, color: Color(0xFF64748B)),
-                onPressed: () {},
-                tooltip: 'Moderation Guidelines',
-              ),
-              const SizedBox(width: 16),
+              if (isDesktop) ...[
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.notifications_none_rounded, color: Color(0xFF64748B)),
+                  onPressed: () {},
+                  tooltip: 'Notifications',
+                ),
+              ],
+              const SizedBox(width: 12),
               OutlinedButton.icon(
                 onPressed: () async {
                   await context.read<AuthViewModel>().logout();
@@ -372,7 +389,7 @@ class AdminModerationDashboardView extends StatelessWidget {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: const Color(0xFFEF4444),
                   side: const BorderSide(color: Color(0xFFEF4444), width: 1.5),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
                 icon: const Icon(Icons.logout_rounded, size: 16),
@@ -385,75 +402,78 @@ class AdminModerationDashboardView extends StatelessWidget {
     );
   }
 
-  Widget _buildMetricsRow(ModerationViewModel viewModel, bool isUserManagement) {
-    if (isUserManagement) {
-      return Row(
-        children: [
-          Expanded(
-            child: _buildMetricCard(
+  Widget _buildMetricsRow(BuildContext context, ModerationViewModel viewModel, bool isUserManagement) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isCompact = screenWidth < 800;
+
+    final cards = isUserManagement
+        ? [
+            _buildMetricCard(
               title: 'Total Users',
               value: viewModel.registeredUsers.length.toString(),
               subtitle: 'Active platform accounts',
               icon: Icons.people_outline_rounded,
               accentColor: const Color(0xFF2563EB),
             ),
-          ),
-          const SizedBox(width: 20),
-          Expanded(
-            child: _buildMetricCard(
+            _buildMetricCard(
               title: 'Tourists',
               value: viewModel.registeredUsers.where((u) => u.role == 'Tourist').length.toString(),
               subtitle: 'Cultural explorers',
               icon: Icons.explore_outlined,
               accentColor: const Color(0xFF10B981),
             ),
-          ),
-          const SizedBox(width: 20),
-          Expanded(
-            child: _buildMetricCard(
+            _buildMetricCard(
               title: 'Artisans',
               value: viewModel.registeredUsers.where((u) => u.role == 'Artisan').length.toString(),
               subtitle: 'Verified studio masters',
               icon: Icons.storefront_outlined,
               accentColor: const Color(0xFFD97706),
             ),
-          ),
-        ],
+          ]
+        : [
+            _buildMetricCard(
+              title: 'Pending Applications',
+              value: viewModel.totalPendingCount.toString(),
+              subtitle: 'Requires admin review',
+              icon: Icons.pending_actions_rounded,
+              accentColor: const Color(0xFFF59E0B),
+            ),
+            _buildMetricCard(
+              title: 'Approved Today',
+              value: '12',
+              subtitle: '+24% from yesterday',
+              icon: Icons.check_circle_rounded,
+              accentColor: const Color(0xFF10B981),
+            ),
+            _buildMetricCard(
+              title: 'Avg. Review Time',
+              value: '1.4 days',
+              subtitle: 'Target: < 2.0 days',
+              icon: Icons.timer_outlined,
+              accentColor: const Color(0xFF3B82F6),
+            ),
+          ];
+
+    if (isCompact) {
+      return Column(
+        children: cards
+            .map((c) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: c,
+                ))
+            .toList(),
       );
     }
 
     return Row(
-      children: [
-        Expanded(
-          child: _buildMetricCard(
-            title: 'Pending Applications',
-            value: viewModel.totalPendingCount.toString(),
-            subtitle: 'Requires admin review',
-            icon: Icons.pending_actions_rounded,
-            accentColor: const Color(0xFFF59E0B),
-          ),
-        ),
-        const SizedBox(width: 20),
-        Expanded(
-          child: _buildMetricCard(
-            title: 'Approved Today',
-            value: '12',
-            subtitle: '+24% from yesterday',
-            icon: Icons.check_circle_rounded,
-            accentColor: const Color(0xFF10B981),
-          ),
-        ),
-        const SizedBox(width: 20),
-        Expanded(
-          child: _buildMetricCard(
-            title: 'Avg. Review Time',
-            value: '1.4 days',
-            subtitle: 'Target: < 2.0 days',
-            icon: Icons.timer_outlined,
-            accentColor: const Color(0xFF3B82F6),
-          ),
-        ),
-      ],
+      children: cards
+          .map((c) => Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: c,
+                ),
+              ))
+          .toList(),
     );
   }
 
@@ -518,92 +538,75 @@ class AdminModerationDashboardView extends StatelessWidget {
   }
 
   Widget _buildFilterControlsRow(BuildContext context, ModerationViewModel viewModel) {
-    return Container(
-      padding: const EdgeInsets.all(16),
+    final isMobile = MediaQuery.of(context).size.width < 768;
+
+    final searchInput = SizedBox(
+      height: 44,
+      child: TextField(
+        onChanged: (val) => viewModel.setSearchQuery(val),
+        decoration: InputDecoration(
+          hintText: 'Search by artisan name, state, or email...',
+          hintStyle: GoogleFonts.plusJakartaSans(
+            fontSize: 13,
+            color: const Color(0xFF94A3B8),
+          ),
+          prefixIcon: const Icon(Icons.search_rounded, size: 20, color: Color(0xFF64748B)),
+          filled: true,
+          fillColor: const Color(0xFFF8FAFC),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: Color(0xFF10B981)),
+          ),
+        ),
+      ),
+    );
+
+    final categoryDropdown = Container(
+      height: 44,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Row(
+        mainAxisSize: isMobile ? MainAxisSize.max : MainAxisSize.min,
         children: [
-          // Search Input Bar
-          Expanded(
-            child: SizedBox(
-              height: 44,
-              child: TextField(
-                onChanged: (val) => viewModel.setSearchQuery(val),
-                decoration: InputDecoration(
-                  hintText: 'Search by artisan name, state, or email...',
-                  hintStyle: GoogleFonts.plusJakartaSans(
-                    fontSize: 13,
-                    color: const Color(0xFF94A3B8),
-                  ),
-                  prefixIcon: const Icon(Icons.search_rounded, size: 20, color: Color(0xFF64748B)),
-                  filled: true,
-                  fillColor: const Color(0xFFF8FAFC),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: Color(0xFF10B981)),
-                  ),
-                ),
+          const Icon(Icons.filter_list_rounded, size: 18, color: Color(0xFF64748B)),
+          const SizedBox(width: 8),
+          DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: viewModel.selectedCategory,
+              icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B)),
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF1E293B),
               ),
-            ),
-          ),
-
-          const SizedBox(width: 16),
-
-          // Craft Category Dropdown Filter
-          Container(
-            height: 44,
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.filter_list_rounded, size: 18, color: Color(0xFF64748B)),
-                const SizedBox(width: 8),
-                DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: viewModel.selectedCategory,
-                    icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B)),
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF1E293B),
-                    ),
-                    onChanged: (val) {
-                      if (val != null) viewModel.setSelectedCategory(val);
-                    },
-                    items: viewModel.categories.map((cat) {
-                      return DropdownMenuItem<String>(
-                        value: cat,
-                        child: Text(cat),
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ],
+              onChanged: (val) {
+                if (val != null) viewModel.setSelectedCategory(val);
+              },
+              items: viewModel.categories.map((cat) {
+                return DropdownMenuItem<String>(
+                  value: cat,
+                  child: Text(cat),
+                );
+              }).toList(),
             ),
           ),
         ],
       ),
     );
-  }
 
-  Widget _buildUserFilterControlsRow(BuildContext context, ModerationViewModel viewModel) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -611,120 +614,164 @@ class AdminModerationDashboardView extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
+      child: isMobile
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                searchInput,
+                const SizedBox(height: 12),
+                categoryDropdown,
+              ],
+            )
+          : Row(
+              children: [
+                Expanded(child: searchInput),
+                const SizedBox(width: 16),
+                categoryDropdown,
+              ],
+            ),
+    );
+  }
+
+  Widget _buildUserFilterControlsRow(BuildContext context, ModerationViewModel viewModel) {
+    final isMobile = MediaQuery.of(context).size.width < 768;
+
+    final searchInput = SizedBox(
+      height: 44,
+      child: TextField(
+        onChanged: (val) => viewModel.setUserSearchQuery(val),
+        decoration: InputDecoration(
+          hintText: 'Search by user name, email, or @handle...',
+          hintStyle: GoogleFonts.plusJakartaSans(
+            fontSize: 13,
+            color: const Color(0xFF94A3B8),
+          ),
+          prefixIcon: const Icon(Icons.search_rounded, size: 20, color: Color(0xFF64748B)),
+          filled: true,
+          fillColor: const Color(0xFFF8FAFC),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: Color(0xFF10B981)),
+          ),
+        ),
+      ),
+    );
+
+    final roleDropdown = Container(
+      height: 44,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
       child: Row(
+        mainAxisSize: isMobile ? MainAxisSize.max : MainAxisSize.min,
         children: [
-          // Search Input Bar
-          Expanded(
-            child: SizedBox(
-              height: 44,
-              child: TextField(
-                onChanged: (val) => viewModel.setUserSearchQuery(val),
-                decoration: InputDecoration(
-                  hintText: 'Search by user name, email, or @handle...',
-                  hintStyle: GoogleFonts.plusJakartaSans(
-                    fontSize: 13,
-                    color: const Color(0xFF94A3B8),
-                  ),
-                  prefixIcon: const Icon(Icons.search_rounded, size: 20, color: Color(0xFF64748B)),
-                  filled: true,
-                  fillColor: const Color(0xFFF8FAFC),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: Color(0xFF10B981)),
-                  ),
-                ),
+          const Icon(Icons.badge_outlined, size: 18, color: Color(0xFF64748B)),
+          const SizedBox(width: 8),
+          DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: viewModel.userRoleFilter,
+              icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B)),
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF1E293B),
               ),
-            ),
-          ),
-
-          const SizedBox(width: 16),
-
-          // Role Filter Dropdown
-          Container(
-            height: 44,
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.badge_outlined, size: 18, color: Color(0xFF64748B)),
-                const SizedBox(width: 8),
-                DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: viewModel.userRoleFilter,
-                    icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B)),
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF1E293B),
-                    ),
-                    onChanged: (val) {
-                      if (val != null) viewModel.setUserRoleFilter(val);
-                    },
-                    items: viewModel.userRoles.map((role) {
-                      return DropdownMenuItem<String>(
-                        value: role,
-                        child: Text(role),
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(width: 16),
-
-          // Status Filter Dropdown
-          Container(
-            height: 44,
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.verified_user_outlined, size: 18, color: Color(0xFF64748B)),
-                const SizedBox(width: 8),
-                DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: viewModel.userStatusFilter,
-                    icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B)),
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF1E293B),
-                    ),
-                    onChanged: (val) {
-                      if (val != null) viewModel.setUserStatusFilter(val);
-                    },
-                    items: viewModel.userStatuses.map((status) {
-                      return DropdownMenuItem<String>(
-                        value: status,
-                        child: Text(status),
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ],
+              onChanged: (val) {
+                if (val != null) viewModel.setUserRoleFilter(val);
+              },
+              items: viewModel.userRoles.map((role) {
+                return DropdownMenuItem<String>(
+                  value: role,
+                  child: Text(role),
+                );
+              }).toList(),
             ),
           ),
         ],
       ),
+    );
+
+    final statusDropdown = Container(
+      height: 44,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Row(
+        mainAxisSize: isMobile ? MainAxisSize.max : MainAxisSize.min,
+        children: [
+          const Icon(Icons.verified_user_outlined, size: 18, color: Color(0xFF64748B)),
+          const SizedBox(width: 8),
+          DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: viewModel.userStatusFilter,
+              icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B)),
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF1E293B),
+              ),
+              onChanged: (val) {
+                if (val != null) viewModel.setUserStatusFilter(val);
+              },
+              items: viewModel.userStatuses.map((status) {
+                return DropdownMenuItem<String>(
+                  value: status,
+                  child: Text(status),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: isMobile
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                searchInput,
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    roleDropdown,
+                    statusDropdown,
+                  ],
+                ),
+              ],
+            )
+          : Row(
+              children: [
+                Expanded(child: searchInput),
+                const SizedBox(width: 16),
+                roleDropdown,
+                const SizedBox(width: 16),
+                statusDropdown,
+              ],
+            ),
     );
   }
 }

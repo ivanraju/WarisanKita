@@ -234,6 +234,57 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
+    // If logging in as Administrator on a mobile viewport (< 800px)
+    if (result.user?.role == 'Admin') {
+      final isMobileScreen = MediaQuery.of(context).size.width < 800;
+      if (isMobileScreen) {
+        showDialog(
+          context: context,
+          builder: (dialogCtx) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Row(
+              children: [
+                const Icon(Icons.laptop_chromebook_rounded, color: Color(0xFF004D40), size: 26),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Admin Web Portal',
+                    style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
+                  ),
+                ),
+              ],
+            ),
+            content: Text(
+              'Administrator features and moderation tables are optimized for Desktop Web.\n\nPlease access the admin portal on your computer browser at:\nhttps://warisankita.vercel.app',
+              style: GoogleFonts.plusJakartaSans(fontSize: 13, height: 1.5, color: Colors.black87),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogCtx),
+                child: const Text('CANCEL'),
+              ),
+              FilledButton(
+                style: FilledButton.styleFrom(backgroundColor: const Color(0xFF004D40)),
+                onPressed: () {
+                  Navigator.pop(dialogCtx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('LOGIN SUCCESSFUL: Authenticated as Admin'),
+                      backgroundColor: Color(0xFF10B981),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                  Navigator.of(context).pushReplacementNamed('/admin');
+                },
+                child: const Text('CONTINUE ON MOBILE'),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+    }
+
     // Handle Regular RBAC Routes [M2]
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

@@ -74,12 +74,14 @@ class AdminSidebar extends StatelessWidget {
 
           // Navigation Links
           _buildNavItem(
+            context,
             icon: Icons.dashboard_rounded,
             tabId: 'Overview',
             label: 'Overview & Analytics',
           ),
           const SizedBox(height: 4),
           _buildNavItem(
+            context,
             icon: Icons.verified_user_rounded,
             tabId: 'Pending Approvals',
             label: 'Artisan Verification',
@@ -87,18 +89,21 @@ class AdminSidebar extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           _buildNavItem(
+            context,
             icon: Icons.storefront_rounded,
             tabId: 'Active Artisans',
             label: 'Active Artisans',
           ),
           const SizedBox(height: 4),
           _buildNavItem(
+            context,
             icon: Icons.manage_accounts_rounded,
             tabId: 'User Management',
             label: 'User Management',
           ),
           const SizedBox(height: 4),
           _buildNavItem(
+            context,
             icon: Icons.stars_rounded,
             tabId: 'Quest Approvals',
             label: 'Quest Moderation',
@@ -106,6 +111,7 @@ class AdminSidebar extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           _buildNavItem(
+            context,
             icon: Icons.forum_rounded,
             tabId: 'Forum Moderation',
             label: 'Community Forum',
@@ -113,6 +119,7 @@ class AdminSidebar extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           _buildNavItem(
+            context,
             icon: Icons.settings_rounded,
             tabId: 'Settings',
             label: 'System Settings',
@@ -194,7 +201,8 @@ class AdminSidebar extends StatelessWidget {
     );
   }
 
-  Widget _buildNavItem({
+  Widget _buildNavItem(
+    BuildContext context, {
     required IconData icon,
     required String tabId,
     required String label,
@@ -208,7 +216,12 @@ class AdminSidebar extends StatelessWidget {
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
-          onTap: () => onTabSelected(tabId),
+          onTap: () {
+            if (Scaffold.maybeOf(context)?.isDrawerOpen ?? false) {
+              Navigator.of(context).pop();
+            }
+            onTabSelected(tabId);
+          },
           borderRadius: BorderRadius.circular(12),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 150),
