@@ -1,6 +1,9 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -32,9 +35,30 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
     _controller.forward();
 
-    // 2-second delay timer then route to LoginScreen
-    Timer(const Duration(seconds: 2), () {
-      if (mounted) {
+    // 1.4-second splash timer: restore active session & route dynamically
+    Timer(const Duration(milliseconds: 1400), () async {
+      if (!mounted) return;
+      final authVM = context.read<AuthViewModel>();
+      final user = await authVM.restoreSession();
+
+      if (!mounted) return;
+      if (user != null) {
+        if (user.role == 'Admin') {
+          if (kIsWeb) {
+            Navigator.of(context).pushReplacementNamed('/admin');
+          } else {
+            Navigator.of(context).pushReplacementNamed('/login');
+          }
+        } else if (user.role == 'Artisan' || user.role == 'Master Artisan') {
+          if (!user.isApprovedArtisan) {
+            Navigator.of(context).pushReplacementNamed('/pending-artisan');
+          } else {
+            Navigator.of(context).pushReplacementNamed('/artisan');
+          }
+        } else {
+          Navigator.of(context).pushReplacementNamed('/tourist');
+        }
+      } else {
         Navigator.of(context).pushReplacementNamed('/login');
       }
     });

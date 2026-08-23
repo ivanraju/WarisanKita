@@ -18,6 +18,10 @@ class UserRepository {
     return _service.signIn(email, password);
   }
 
+  Future<UserModel?> getCurrentUser() {
+    return _service.getCurrentUser();
+  }
+
   Future<UserModel> signUp({
     required String email,
     required String password,

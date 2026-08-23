@@ -1,7 +1,14 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:warisan_kita/data/services/supabase_service.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
   group('Username Update & Authentication Tests', () {
     test('Changing username prevents old username from logging in and allows new username', () async {
       final service = SupabaseService();

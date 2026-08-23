@@ -22,6 +22,9 @@ flutter pub get
 echo "🏗️ Building Flutter Web (Release)..."
 flutter build web --release --base-href /
 
+# Ensure vercel.json is in build/web
+cp vercel.json build/web/vercel.json || true
+
 echo "================================================="
 echo "✅ Flutter Web build complete! Output in build/web"
 echo "================================================="

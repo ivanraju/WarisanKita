@@ -11,20 +11,21 @@
 | 2. User enter username/handle or email, and password [A6: Forgot password] | |
 | | 3. System perform real-time form validation (non-empty fields, email/handle regex check, password min 8 characters) [C1: Password length] [A1: Invalid format] [FR001_2] |
 | | 4. System resolve username to registered email if handle provided, query DB, authenticate credentials, and verify Role-Based Access Control (RBAC) [A2: Authentication failed] [A3: Account suspended] [FR001_3] |
-| | 5. System verify user role and active mode options [M2: Login successful] [A4: Artisan pending approval] [A5: Artisan active mode selection] |
-| | 6. System display designated user dashboard (Admin Dashboard, Artisan Studio Dashboard, or Tourist Exploration Dashboard) |
+| | 5. System verify user role and active mode options [M2: Login successful] [A4: Artisan pending approval] [A5: Artisan active mode selection] [A7: Admin account detected on mobile] |
+| | 6. System display designated user dashboard (Artisan Studio Dashboard or Tourist Exploration Dashboard) |
 | | 7. Use case ends |
 | **ALTERNATE FLOW** | |
-| **A1: Invalid format**<br>A1.1 System prompt inline validation error [M3: Password must be at least 8 characters / Please enter valid handle or email]<br>A1.2 Return to Step 2<br><br>**A2: Authentication failed**<br>A2.1 System prompt error message [M4: Invalid credentials]<br>A2.2 Return to Step 2<br><br>**A3: Account suspended**<br>A3.1 System detect status == 'SUSPENDED'<br>A3.2 System prompt error message [M5: Account suspended by administrator]<br>A3.3 Return to Step 2<br><br>**A4: Artisan pending approval**<br>A4.1 System detects artisan account status is 'PENDING_APPROVAL' or 'PENDING'<br>A4.2 System route artisan to Application Status Screen [M6: Pending admin review]<br>A4.3 System display 3-stage review timeline and lock studio editing controls<br>A4.4 User can click "Explore as Cultural Tourist while waiting" to browse crafts<br>A4.5 Use case ends<br><br>**A5: Artisan active mode selection (Master Artisan vs Cultural Tourist)**<br>A5.1 System detects account has Artisan privileges (or pending application)<br>A5.2 System display Role Selection Dialog [M7: Select active session mode] [FR001_4]<br>A5.3 User selects desired active session mode:<br>&nbsp;&nbsp;&nbsp;&nbsp;• If **Master Artisan** selected & status is **'APPROVED'**: System set active session and route user to Artisan Studio Dashboard [Return to Step 6]<br>&nbsp;&nbsp;&nbsp;&nbsp;• If **Master Artisan** selected & status is **'PENDING_APPROVAL'**: System route user directly to Application Status Screen [A4]<br>&nbsp;&nbsp;&nbsp;&nbsp;• If **Cultural Tourist** selected: System set active session and route user to Tourist Exploration Dashboard [Return to Step 6]<br>A5.4 Use case ends<br><br>**A6: Forgot password**<br>A6.1 User select "Forgot Password" on login screen<br>A6.2 System initiate Password Recovery Flow (Refer to **UC003_RESET_PASSWORD**)<br>A6.3 Use case ends | |
+| **A1: Invalid format**<br>A1.1 System prompt inline validation error [M3: Password must be at least 8 characters / Please enter valid handle or email]<br>A1.2 Return to Step 2<br><br>**A2: Authentication failed**<br>A2.1 System prompt error message [M4: Invalid credentials]<br>A2.2 Return to Step 2<br><br>**A3: Account suspended**<br>A3.1 System detect status == 'SUSPENDED'<br>A3.2 System prompt error message [M5: Account suspended by administrator]<br>A3.3 Return to Step 2<br><br>**A4: Artisan pending approval**<br>A4.1 System detects artisan account status is 'PENDING_APPROVAL' or 'PENDING'<br>A4.2 System route artisan to Application Status Screen [M6: Pending admin review]<br>A4.3 System display 3-stage review timeline and lock studio editing controls<br>A4.4 User can click "Explore as Cultural Tourist while waiting" to browse crafts<br>A4.5 Use case ends<br><br>**A5: Artisan active mode selection (Master Artisan vs Cultural Tourist)**<br>A5.1 System detects account has Artisan privileges (or pending application)<br>A5.2 System display Role Selection Dialog [M7: Select active session mode] [FR001_4]<br>A5.3 User selects desired active session mode:<br>&nbsp;&nbsp;&nbsp;&nbsp;• If **Master Artisan** selected & status is **'APPROVED'**: System set active session and route user to Artisan Studio Dashboard [Return to Step 6]<br>&nbsp;&nbsp;&nbsp;&nbsp;• If **Master Artisan** selected & status is **'PENDING_APPROVAL'**: System route user directly to Application Status Screen [A4]<br>&nbsp;&nbsp;&nbsp;&nbsp;• If **Cultural Tourist** selected: System set active session and route user to Tourist Exploration Dashboard [Return to Step 6]<br>A5.4 Use case ends<br><br>**A6: Forgot password**<br>A6.1 User select "Forgot Password" on mobile login screen<br>A6.2 System initiate Password Recovery Flow (Refer to **UC003_RESET_PASSWORD**)<br>A6.3 Use case ends<br><br>**A7: Administrator account detected on mobile**<br>A7.1 System detect administrator login attempt on Mobile Native App<br>A7.2 System display modal dialog: "Admin Web Portal Only — Administrator moderation console is hosted exclusively on Desktop Web"<br>A7.3 System provide direct 1-tap "OPEN WEB PORTAL" button launching `https://warisan-kita.vercel.app` (Refer to **UC102_ADMIN_PORTAL_LOGIN**)<br>A7.4 Use case ends | |
 | **MESSAGE** | |
-| M1 : "PLEASE ENTER LOGIN CREDENTIALS"<br>M2 : "LOGIN SUCCESSFUL"<br>M3 : "PASSWORD MUST BE AT LEAST 8 CHARACTERS"<br>M4 : "INVALID CREDENTIALS"<br>M5 : "ACCOUNT SUSPENDED BY ADMINISTRATOR: CONTACT SUPPORT"<br>M6 : "ARTISAN APPLICATION SUBMITTED: PENDING ADMIN APPROVAL"<br>M7 : "ARTISAN ACCOUNT DETECTED: PLEASE SELECT YOUR ACTIVE SESSION MODE" | |
+| M1 : "PLEASE ENTER LOGIN CREDENTIALS"<br>M2 : "LOGIN SUCCESSFUL"<br>M3 : "PASSWORD MUST BE AT LEAST 8 CHARACTERS"<br>M4 : "INVALID CREDENTIALS"<br>M5 : "ACCOUNT SUSPENDED BY ADMINISTRATOR: CONTACT SUPPORT"<br>M6 : "ARTISAN APPLICATION SUBMITTED: PENDING ADMIN APPROVAL"<br>M7 : "ARTISAN ACCOUNT DETECTED: PLEASE SELECT YOUR ACTIVE SESSION MODE"<br>M8 : "ADMIN WEB PORTAL ONLY: PLEASE ACCESS VIA WEB BROWSER" | |
 | **CONSTRAINTS** | |
-| C1 : Password length $\ge$ 8 characters<br>C2 : Unapproved Artisan roles (status == 'PENDING_APPROVAL' or 'PENDING') MUST route to the Application Status Screen when Master Artisan mode is selected<br>C3 : User status == 'SUSPENDED' MUST strictly block authentication<br>C4 : Accounts with Artisan privileges MUST be offered session mode selection (Artisan Studio vs Tourist Explorer) upon login | |
+| C1 : Password length $\ge$ 8 characters<br>C2 : Unapproved Artisan roles (status == 'PENDING_APPROVAL' or 'PENDING') MUST route to the Application Status Screen when Master Artisan mode is selected<br>C3 : User status == 'SUSPENDED' MUST strictly block authentication<br>C4 : Accounts with Artisan privileges MUST be offered session mode selection (Artisan Studio vs Tourist Explorer) upon login<br>C5 : Administrator accounts attempting authentication on mobile MUST be blocked from mobile entry and directed to the Web Portal | |
 | **FUNCTIONAL REQUIREMENTS** | |
-| **FR001_1** | System prompt user to enter login credentials (supporting both username/handle and email) with multilingual UI support |
+| **FR001_1** | System prompt user to enter login credentials (supporting both username/handle and email) on mobile app |
 | **FR001_2** | System validate form fields in real-time, enforce min 8 character password constraint, and resolve handle identifiers to account email |
 | **FR001_3** | System verify RBAC role and account approval status, routing user to the designated UI |
 | **FR001_4** | System allow artisans to choose between Master Artisan Studio Mode and Cultural Tourist Exploration Mode |
+| **FR001_5** | System detect administrator accounts attempting login on mobile devices and provide direct redirection to the live Web Portal (Refer to UC102_ADMIN_PORTAL_LOGIN) |
 
 ---
 
@@ -64,9 +65,9 @@
 | BASIC FLOW | |
 | :---: | :---: |
 | **USER** | **SYSTEM** |
-| | 1. Use case begins when user select "Forgot Password" on login screen [FR003_1] |
+| | 1. Use case begins when user select "Forgot Password" on mobile login screen [FR003_1] |
 | | 2. System prompt user to enter registered email address [M1: Enter registered email] |
-| 3. User enter registered email address and submit | |
+| 3. User enter registered email address and submit [A5: Administrator reset restriction] | |
 | | 4. System validate email format and query DB for existing account [A1: Email not found] [FR003_2] |
 | | 5. System generate secure single-use password reset token with expiration timestamp [C1: Token validity 15 mins] |
 | | 6. System dispatch password reset link to user's email [M2: Reset link sent] [FR003_3] |
@@ -79,16 +80,17 @@
 | | 13. System redirect user to Login Screen |
 | | 14. Use case ends |
 | **ALTERNATE FLOW** | |
-| **A1: Email not found**<br>A1.1 System prompt error message [M4: Email not registered]<br>A1.2 Return to Step 2<br><br>**A2: Invalid format**<br>A2.1 System prompt error message [M5: Password must be at least 8 characters]<br>A2.2 Return to Step 9<br><br>**A3: Mismatched passwords**<br>A3.1 System prompt error message [M6: Passwords do not match]<br>A3.2 Return to Step 9<br><br>**A4: Expired or invalid token**<br>A4.1 System detect token is expired (> 15 mins) or already consumed<br>A4.2 System prompt error message [M7: Reset link expired]<br>A4.3 System redirect to Step 2 | |
+| **A1: Email not found**<br>A1.1 System prompt error message [M4: Email not registered]<br>A1.2 Return to Step 2<br><br>**A2: Invalid format**<br>A2.1 System prompt error message [M5: Password must be at least 8 characters]<br>A2.2 Return to Step 9<br><br>**A3: Mismatched passwords**<br>A3.1 System prompt error message [M6: Passwords do not match]<br>A3.2 Return to Step 9<br><br>**A4: Expired or invalid token**<br>A4.1 System detect token is expired (> 15 mins) or already consumed<br>A4.2 System prompt error message [M7: Reset link expired]<br>A4.3 System redirect to Step 2<br><br>**A5: Administrator reset restriction**<br>A5.1 System detect email belongs to Administrator account<br>A5.2 System block self-service reset [M8: Admin security restriction]<br>A5.3 Return to Step 2 | |
 | **MESSAGE** | |
-| M1 : "PLEASE ENTER YOUR REGISTERED EMAIL ADDRESS"<br>M2 : "PASSWORD RESET LINK HAS BEEN SENT TO YOUR EMAIL"<br>M3 : "PASSWORD RESET SUCCESSFUL: YOU MAY NOW LOGIN"<br>M4 : "EMAIL ADDRESS NOT FOUND IN SYSTEM"<br>M5 : "PASSWORD MUST BE AT LEAST 8 CHARACTERS"<br>M6 : "PASSWORDS DO NOT MATCH"<br>M7 : "PASSWORD RESET LINK IS EXPIRED OR INVALID: PLEASE REQUEST A NEW ONE" | |
+| M1 : "PLEASE ENTER YOUR REGISTERED EMAIL ADDRESS"<br>M2 : "PASSWORD RESET LINK HAS BEEN SENT TO YOUR EMAIL"<br>M3 : "PASSWORD RESET SUCCESSFUL: YOU MAY NOW LOGIN"<br>M4 : "EMAIL ADDRESS NOT FOUND IN SYSTEM"<br>M5 : "PASSWORD MUST BE AT LEAST 8 CHARACTERS"<br>M6 : "PASSWORDS DO NOT MATCH"<br>M7 : "PASSWORD RESET LINK IS EXPIRED OR INVALID: PLEASE REQUEST A NEW ONE"<br>M8 : "ADMIN SECURITY RESTRICTION: ADMINISTRATOR CREDENTIALS CANNOT BE RESET VIA SELF-SERVICE" | |
 | **CONSTRAINTS** | |
-| C1 : Password reset tokens must expire after 15 minutes<br>C2 : Password length $\ge$ 8 characters evaluated with live strength meter<br>C3 : Password input string == Confirm Password input string<br>C4 : Tokens must be strictly single-use and invalidated immediately upon password update | |
+| C1 : Password reset tokens must expire after 15 minutes<br>C2 : Password length $\ge$ 8 characters evaluated with live strength meter<br>C3 : Password input string == Confirm Password input string<br>C4 : Tokens must be strictly single-use and invalidated immediately upon password update<br>C5 : Administrator accounts cannot be reset via self-service password recovery | |
 | **FUNCTIONAL REQUIREMENTS** | |
-| **FR003_1** | System provide a password recovery entry point on the authentication screen |
+| **FR003_1** | System provide a password recovery entry point on the consumer mobile authentication screen |
 | **FR003_2** | System verify existence of registered email in DB |
 | **FR003_3** | System generate cryptographic tokens and dispatch recovery emails |
 | **FR003_4** | System validate new password complexity with Password Strength Meter and update hashed credentials in DB |
+| **FR003_5** | System enforce security restriction blocking self-service password resets for Administrator credentials |
 
 ---
 
@@ -97,7 +99,7 @@
 | BASIC FLOW | |
 | :---: | :---: |
 | **ADMINISTRATOR** | **SYSTEM** |
-| | 1. Use case begins when system retrieve and display pending artisan profile applications from DB [FR100_1] |
+| | 1. Use case begins when system retrieve and display pending artisan profile applications dynamically synchronized from Cloud DB [FR100_1] |
 | 2. Administrator select an artisan application to review | |
 | | 3. System display artisan profile details, SSM business registration number & optional PDF, Kraftangan Master Certificate, and studio workshop photos |
 | 4. Administrator select "Approve" menu [A1: Reject profile] [A2: Suspend user] | |
@@ -113,7 +115,7 @@
 | **CONSTRAINTS** | |
 | C1 : Profile status column in DB must be explicitly updated to 'APPROVED', 'REJECTED', or 'SUSPENDED' | |
 | **FUNCTIONAL REQUIREMENTS** | |
-| **FR100_1** | System retrieve and display pending artisan profiles and verification documents |
+| **FR100_1** | System dynamically retrieve and display live pending artisan profiles and verification documents from Cloud DB |
 | **FR100_2** | System perform verification, CRUD, and status moderation operations on artisan profiles |
 
 ---
@@ -141,3 +143,29 @@
 | **FUNCTIONAL REQUIREMENTS** | |
 | **FR101_1** | System retrieve, search, and filter all registered users by role and status |
 | **FR101_2** | System allow administrators to suspend, reactivate, and manage user security states in DB |
+
+---
+
+### USE CASE : UC102_ADMIN_PORTAL_LOGIN
+
+| BASIC FLOW | |
+| :---: | :---: |
+| **ADMINISTRATOR** | **SYSTEM** |
+| | 1. Use case begins when administrator accesses Web Moderation Console (`https://warisan-kita.vercel.app`) and system prompt for Administrator Credentials [M1: Enter admin credentials] [FR102_1] |
+| 2. Administrator enter Admin Username (or Admin ID) and Master Password | |
+| | 3. System perform real-time field validation (non-empty fields, password min 8 characters) [C1: Password length] [A1: Invalid format] [FR102_2] |
+| | 4. System query database, verify administrator cryptographic credentials, and enforce Administrator RBAC role [A2: Authentication failed] [A3: Non-admin account rejected] [FR102_3] |
+| | 5. System establish secure administrator session token and route administrator to Moderation Dashboard (Overview, Artisan Verification Queue, User Management, Audit Logs) [M2: Admin login successful] [FR102_4] |
+| | 6. System display Admin Moderation Center with real-time statistics and pending verification counts |
+| | 7. Use case ends |
+| **ALTERNATE FLOW** | |
+| **A1: Invalid format**<br>A1.1 System prompt inline validation error [M3: Password must be at least 8 characters / Please enter admin username]<br>A1.2 Return to Step 2<br><br>**A2: Authentication failed**<br>A2.1 System detect invalid credentials or incorrect master password<br>A2.2 System prompt error message [M4: Invalid administrator credentials: Access denied]<br>A2.3 Return to Step 2<br><br>**A3: Non-admin account rejected**<br>A3.1 System detect authenticated account does not possess 'Admin' role (e.g. Tourist or Artisan account)<br>A3.2 System display modal dialog: "Mobile App Required — Tourist and Artisan features require the Warisan Kita Mobile App"<br>A3.3 System deny web console access and return to Step 2 | |
+| **MESSAGE** | |
+| M1 : "MALAYSIAN HERITAGE MODERATION CONSOLE: PLEASE ENTER ADMIN CREDENTIALS"<br>M2 : "LOGIN SUCCESSFUL: AUTHENTICATED AS SYSTEM ADMINISTRATOR"<br>M3 : "PASSWORD MUST BE AT LEAST 8 CHARACTERS"<br>M4 : "INVALID ADMINISTRATOR CREDENTIALS: ACCESS DENIED"<br>M5 : "MOBILE APP REQUIRED: TOURIST AND ARTISAN FEATURES REQUIRE THE WARISAN KITA MOBILE APP" | |
+| **CONSTRAINTS** | |
+| C1 : Password length $\ge$ 8 characters<br>C2 : Login access to the Moderation Web Portal is strictly restricted to accounts with role 'Admin'<br>C3 : Self-service password recovery is strictly disabled on the administrative web console<br>C4 : Non-admin users attempting web access MUST be blocked and directed to the mobile native application | |
+| **FUNCTIONAL REQUIREMENTS** | |
+| **FR102_1** | System provide dedicated desktop web authentication interface for System Administrators with enterprise security branding |
+| **FR102_2** | System validate administrative credentials in real-time and enforce role-based access control (RBAC) |
+| **FR102_3** | System restrict portal access strictly to authorized administrator roles and reject consumer accounts |
+| **FR102_4** | System initialize administrative session and render the multi-tab Moderation Dashboard |

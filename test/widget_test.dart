@@ -11,12 +11,16 @@ import 'package:warisan_kita/ui/admin_web/widgets/artisan_review_dialog.dart';
 import 'package:warisan_kita/ui/admin_web/widgets/admin_sidebar.dart';
 import 'package:warisan_kita/ui/admin_web/widgets/admin_active_artisans_tab.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   late SupabaseService service;
   late UserRepository repository;
   late AuthViewModel authVM;
 
   setUp(() {
+    SharedPreferences.setMockInitialValues({});
     service = SupabaseService();
     repository = UserRepository(service: service);
     authVM = AuthViewModel(repository: repository);
@@ -599,6 +603,38 @@ void main() {
       await tester.tap(find.text('Close Profile'));
       await tester.pumpAndSettle();
       expect(find.text('SSM & Kraftangan Verified Master Artisan'), findsNothing);
+    });
+  });
+
+  group('Session Persistence & Auto-Login Tests', () {
+    test('Successful login saves session to storage and restoreSession retrieves it on launch', () async {
+      final loginResult = await authVM.login('admin', 'admin123');
+      expect(loginResult.success, isTrue);
+      expect(loginResult.user?.role, 'Admin');
+
+      // Create new AuthViewModel instance simulating app restart / reopen
+      final freshAuthVM = AuthViewModel(repository: repository);
+      final restoredUser = await freshAuthVM.restoreSession();
+
+      expect(restoredUser, isNotNull);
+      expect(restoredUser?.email, 'admin@warisankita.my');
+      expect(restoredUser?.role, 'Admin');
+      expect(freshAuthVM.currentUser?.email, 'admin@warisankita.my');
+      expect(freshAuthVM.isAuthenticated, isTrue);
+    });
+
+    test('Logout clears persisted session from storage so restoreSession returns null', () async {
+      await authVM.login('admin', 'admin123');
+      expect(authVM.isAuthenticated, isTrue);
+
+      await authVM.logout();
+      expect(authVM.isAuthenticated, isFalse);
+
+      final freshAuthVM = AuthViewModel(repository: repository);
+      final restoredUser = await freshAuthVM.restoreSession();
+
+      expect(restoredUser, isNull);
+      expect(freshAuthVM.isAuthenticated, isFalse);
     });
   });
 }
