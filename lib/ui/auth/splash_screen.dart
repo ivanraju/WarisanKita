@@ -38,17 +38,21 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     // 1.4-second splash timer: restore active session & route dynamically
     Timer(const Duration(milliseconds: 1400), () async {
       if (!mounted) return;
+      if (ModalRoute.of(context)?.isCurrent != true) {
+        return;
+      }
+
       final authVM = context.read<AuthViewModel>();
       final user = await authVM.restoreSession();
 
       if (!mounted) return;
+      if (ModalRoute.of(context)?.isCurrent != true) {
+        return;
+      }
+
       if (user != null) {
         if (user.role == 'Admin') {
-          if (kIsWeb) {
-            Navigator.of(context).pushReplacementNamed('/admin');
-          } else {
-            Navigator.of(context).pushReplacementNamed('/login');
-          }
+          Navigator.of(context).pushReplacementNamed('/admin');
         } else if (user.role == 'Artisan' || user.role == 'Master Artisan') {
           if (!user.isApprovedArtisan) {
             Navigator.of(context).pushReplacementNamed('/pending-artisan');

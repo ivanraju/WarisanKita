@@ -116,6 +116,20 @@ class _WarisanKitaAppState extends State<WarisanKitaApp> {
     super.dispose();
   }
 
+  static final Map<String, WidgetBuilder> _appRoutes = {
+    '/': (context) => const SplashScreen(),
+    '/login': (context) => const LoginScreen(),
+    '/register': (context) => const RegisterScreen(),
+    '/role-selection': (context) => const RoleSelectionScreen(),
+    '/forgot-password': (context) => const ForgotPasswordScreen(),
+    '/tourist': (context) => const TouristMainScaffold(),
+    '/apply-artisan': (context) => const ApplyArtisanScreen(),
+    '/artisan': (context) => const ArtisanMainScaffold(),
+    '/pending-artisan': (context) => const ArtisanApplicationPendingScreen(),
+    'pending_artisan': (context) => const ArtisanApplicationPendingScreen(),
+    '/admin': (context) => const AdminModerationDashboardView(),
+  };
+
   @override
   Widget build(BuildContext context) {
     final themeVM = context.watch<ThemeViewModel>();
@@ -127,19 +141,24 @@ class _WarisanKitaAppState extends State<WarisanKitaApp> {
       themeMode: themeVM.themeMode,
       theme: ThemeViewModel.lightTheme,
       initialRoute: '/',
-      routes: {
-        '/': (context) => const SplashScreen(),
-        '/login': (context) => const LoginScreen(),
-        '/register': (context) => const RegisterScreen(),
-        '/role-selection': (context) => const RoleSelectionScreen(),
-        '/forgot-password': (context) => const ForgotPasswordScreen(),
-        '/tourist': (context) => const TouristMainScaffold(),
-        '/apply-artisan': (context) => const ApplyArtisanScreen(),
-        '/artisan': (context) => const ArtisanMainScaffold(),
-        '/pending-artisan': (context) => const ArtisanApplicationPendingScreen(),
-        'pending_artisan': (context) => const ArtisanApplicationPendingScreen(),
-        '/admin': (context) => const AdminModerationDashboardView(),
+      onGenerateInitialRoutes: (initialRoute) {
+        if (initialRoute == '/' || initialRoute.isEmpty) {
+          return [
+            MaterialPageRoute(
+              settings: const RouteSettings(name: '/'),
+              builder: (context) => const SplashScreen(),
+            ),
+          ];
+        }
+        final builder = _appRoutes[initialRoute] ?? _appRoutes['/']!;
+        return [
+          MaterialPageRoute(
+            settings: RouteSettings(name: initialRoute),
+            builder: builder,
+          ),
+        ];
       },
+      routes: _appRoutes,
     );
   }
 }
