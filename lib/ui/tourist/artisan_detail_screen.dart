@@ -8,6 +8,7 @@ class ArtisanDetailScreen extends StatefulWidget {
   final String craftCategory;
   final String state;
   final String imageUrl;
+  final List<String>? imageUrls;
   final String bio;
   final double rating;
   final String experience;
@@ -18,6 +19,7 @@ class ArtisanDetailScreen extends StatefulWidget {
     this.craftCategory = 'Pottery & Ceramics',
     this.state = 'Melaka',
     this.imageUrl = 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&auto=format&fit=crop&q=80',
+    this.imageUrls,
     this.bio = 'Master Pak Mat has been hand-crafting traditional clay labu sayong and ceramic vessels for over 25 years in Kampung Morten. Each piece is hand-spun and natural clay kilned.',
     this.rating = 4.9,
     this.experience = '25+ Years Experience',
@@ -32,11 +34,13 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
   int _currentCarouselIndex = 0;
   bool _isPlayingAudioLore = false;
 
-  late final List<String> _carouselImages = [
-    widget.imageUrl,
-    'https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=600&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80',
-  ];
+  late final List<String> _carouselImages = widget.imageUrls != null && widget.imageUrls!.isNotEmpty
+      ? widget.imageUrls!
+      : [
+          widget.imageUrl,
+          'https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=600&auto=format&fit=crop&q=80',
+          'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80',
+        ];
 
   @override
   void dispose() {
