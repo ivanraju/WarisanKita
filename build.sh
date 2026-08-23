@@ -1,23 +1,27 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
 
-echo "🚀 Starting Flutter Web Build for Vercel..."
+echo "================================================="
+echo "🚀 Starting Flutter Web Build on Vercel"
+echo "================================================="
 
-# Check if Flutter SDK is installed; if not, clone the stable release
+# Clone Flutter stable SDK if not cached
 if [ ! -d "flutter" ]; then
-  echo "📥 Cloning Flutter stable repository..."
-  git clone https://github.com/flutter/flutter.git -b stable --depth 1
+  echo "📥 Cloning Flutter SDK (stable branch)..."
+  git clone https://github.com/flutter/flutter.git -b stable --depth 1 flutter
 fi
 
-export PATH="$PATH:`pwd`/flutter/bin"
+export PATH="$PATH:$PWD/flutter/bin"
 
-echo "🔧 Flutter Version:"
+echo "🔧 Checking Flutter Installation:"
 flutter --version
 
-echo "📦 Getting Flutter dependencies..."
+echo "📦 Running flutter pub get..."
 flutter pub get
 
-echo "🏗️ Building Flutter Web Release..."
+echo "🏗️ Building Flutter Web (Release)..."
 flutter build web --release --base-href /
 
-echo "✅ Flutter Web build finished successfully! Output located in build/web"
+echo "================================================="
+echo "✅ Flutter Web build complete! Output in build/web"
+echo "================================================="
