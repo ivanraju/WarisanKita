@@ -265,12 +265,16 @@ class SupabaseService {
 
       if (res == null) {
         try {
-          res = await client.from('users').select('*, artisan_profiles(*)').ilike('email', cleanEmail).maybeSingle();
+          res = await client.from('users').select('*, artisan_profiles!artisan_profiles_user_id_fkey(*)').ilike('email', cleanEmail).maybeSingle();
         } catch (e) {
           try {
-            res = await client.from('users').select().ilike('email', cleanEmail).maybeSingle();
-          } catch (e2) {
-            debugPrint('Supabase checkExistingAccount note: $e2');
+            res = await client.from('users').select('*, artisan_profiles(*)').ilike('email', cleanEmail).maybeSingle();
+          } catch (_) {
+            try {
+              res = await client.from('users').select().ilike('email', cleanEmail).maybeSingle();
+            } catch (e2) {
+              debugPrint('Supabase checkExistingAccount note: $e2');
+            }
           }
         }
       }
@@ -420,14 +424,18 @@ class SupabaseService {
         if (authRes.user != null) {
           Map<String, dynamic>? profileData;
           try {
-            profileData = await client.from('users').select('*, artisan_profiles(*)').eq('id', authRes.user!.id).maybeSingle();
+            profileData = await client.from('users').select('*, artisan_profiles!artisan_profiles_user_id_fkey(*)').eq('id', authRes.user!.id).maybeSingle();
             if (profileData == null) {
-              profileData = await client.from('users').select('*, artisan_profiles(*)').ilike('email', cleanEmail).maybeSingle();
+              profileData = await client.from('users').select('*, artisan_profiles!artisan_profiles_user_id_fkey(*)').ilike('email', cleanEmail).maybeSingle();
             }
           } catch (e) {
             try {
-              profileData = await client.from('users').select().eq('id', authRes.user!.id).maybeSingle();
-            } catch (_) {}
+              profileData = await client.from('users').select('*, artisan_profiles(*)').eq('id', authRes.user!.id).maybeSingle();
+            } catch (_) {
+              try {
+                profileData = await client.from('users').select().eq('id', authRes.user!.id).maybeSingle();
+              } catch (_) {}
+            }
             debugPrint('Supabase table select note: $e');
           }
 
@@ -1253,8 +1261,17 @@ class SupabaseService {
     final client = _client;
     if (client != null) {
       try {
-        final res = await client.from('users').select('*, artisan_profiles(*)').ilike('status', '%PENDING%');
-        if (res.isNotEmpty) {
+        dynamic res;
+        try {
+          res = await client.from('users').select('*, artisan_profiles!artisan_profiles_user_id_fkey(*)').ilike('status', '%PENDING%');
+        } catch (_) {
+          try {
+            res = await client.from('users').select('*, artisan_profiles(*)').ilike('status', '%PENDING%');
+          } catch (_) {
+            res = await client.from('users').select().ilike('status', '%PENDING%');
+          }
+        }
+        if (res is List && res.isNotEmpty) {
           for (final row in res) {
             final rowMap = Map<String, dynamic>.from(row);
             if (rowMap['artisan_profiles'] is Map) {
@@ -1275,14 +1292,6 @@ class SupabaseService {
         }
       } catch (e) {
         debugPrint('Supabase getPendingArtisans note: $e');
-        try {
-          final res2 = await client.from('users').select().ilike('status', '%PENDING%');
-          if (res2.isNotEmpty) {
-            for (final row in res2) {
-              results.add(Map<String, dynamic>.from(row));
-            }
-          }
-        } catch (_) {}
       }
     }
 
