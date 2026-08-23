@@ -32,15 +32,7 @@ class AuthViewModel extends ChangeNotifier {
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
-  UserModel? _currentUser = const UserModel(
-    id: 'usr-tourist-001',
-    email: 'tourist@warisankita.my',
-    username: 'Aiman Haziq',
-    displayName: 'Aiman Haziq',
-    role: 'Tourist',
-    roles: ['Tourist'],
-    status: 'ACTIVE',
-  );
+  UserModel? _currentUser;
   UserModel? get currentUser => _currentUser;
 
   bool get isAuthenticated => _currentUser != null;

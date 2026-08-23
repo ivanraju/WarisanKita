@@ -36,7 +36,7 @@ class UserManagementTable extends StatelessWidget {
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: 800),
+            constraints: const BoxConstraints(minWidth: 880),
             child: DataTable(
               headingRowHeight: 52,
               dataRowMinHeight: 68,

@@ -61,8 +61,8 @@ class UserModel {
       roles.contains('Tourist');
 
   bool get isAdmin =>
-      role == 'Admin' ||
-      roles.contains('Admin');
+      role.toLowerCase().contains('admin') ||
+      roles.any((r) => r.toLowerCase().contains('admin'));
 
   bool get hasMultipleRoles =>
       isDualRole ||

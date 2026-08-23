@@ -77,18 +77,26 @@ class _AdminQuestApprovalsTabState extends State<AdminQuestApprovalsTab> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 768;
+
     return Padding(
-      padding: const EdgeInsets.all(32.0),
+      padding: EdgeInsets.all(isMobile ? 16.0 : 32.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Text(
                 'Pending Quest Approvals Queue',
-                style: GoogleFonts.dmSerifDisplay(fontSize: 26, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+                style: GoogleFonts.dmSerifDisplay(
+                  fontSize: isMobile ? 22 : 26,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF0F172A),
+                ),
               ),
-              const SizedBox(width: 12),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(color: const Color(0xFFFEF3C7), borderRadius: BorderRadius.circular(10)),
@@ -129,7 +137,7 @@ class _AdminQuestApprovalsTabState extends State<AdminQuestApprovalsTab> {
 
                   return Container(
                     margin: const EdgeInsets.only(bottom: 16),
-                    padding: const EdgeInsets.all(24),
+                    padding: EdgeInsets.all(isMobile ? 16 : 24),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
@@ -139,7 +147,10 @@ class _AdminQuestApprovalsTabState extends State<AdminQuestApprovalsTab> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 8,
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -152,13 +163,11 @@ class _AdminQuestApprovalsTabState extends State<AdminQuestApprovalsTab> {
                                 style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF2563EB)),
                               ),
                             ),
-                            const SizedBox(width: 10),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(6)),
                               child: Text(quest['type'], style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
                             ),
-                            const Spacer(),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(color: const Color(0xFFFEF3C7), borderRadius: BorderRadius.circular(8)),
@@ -174,7 +183,7 @@ class _AdminQuestApprovalsTabState extends State<AdminQuestApprovalsTab> {
 
                         Text(
                           quest['title'],
-                          style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF0F172A)),
+                          style: GoogleFonts.dmSerifDisplay(fontSize: isMobile ? 18 : 20, color: const Color(0xFF0F172A)),
                         ),
 
                         const SizedBox(height: 4),
@@ -191,13 +200,15 @@ class _AdminQuestApprovalsTabState extends State<AdminQuestApprovalsTab> {
                           style: GoogleFonts.plusJakartaSans(fontSize: 13, color: const Color(0xFF334155)),
                         ),
 
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 16),
                         const Divider(),
                         const SizedBox(height: 12),
 
                         // Action Buttons: Approve / Reject
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 10,
+                          alignment: WrapAlignment.end,
                           children: [
                             OutlinedButton.icon(
                               onPressed: () => _rejectQuest(quest),
@@ -208,7 +219,6 @@ class _AdminQuestApprovalsTabState extends State<AdminQuestApprovalsTab> {
                               icon: const Icon(Icons.close_rounded, size: 16),
                               label: const Text('Reject Quest'),
                             ),
-                            const SizedBox(width: 12),
                             FilledButton.icon(
                               onPressed: () => _approveQuest(quest),
                               style: FilledButton.styleFrom(backgroundColor: const Color(0xFF10B981)),

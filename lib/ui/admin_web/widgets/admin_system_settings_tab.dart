@@ -32,18 +32,26 @@ class _AdminSystemSettingsTabState extends State<AdminSystemSettingsTab> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 768;
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(32.0),
+      padding: EdgeInsets.all(isMobile ? 16.0 : 32.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Text(
                 'Admin System Settings',
-                style: GoogleFonts.dmSerifDisplay(fontSize: 28, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+                style: GoogleFonts.dmSerifDisplay(
+                  fontSize: isMobile ? 22 : 28,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF0F172A),
+                ),
               ),
-              const SizedBox(width: 12),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(10)),
@@ -57,7 +65,7 @@ class _AdminSystemSettingsTabState extends State<AdminSystemSettingsTab> {
           const SizedBox(height: 6),
           Text(
             'Configure platform moderation constraints, security session rules, and database API services.',
-            style: GoogleFonts.plusJakartaSans(fontSize: 14, color: const Color(0xFF64748B)),
+            style: GoogleFonts.plusJakartaSans(fontSize: isMobile ? 12 : 14, color: const Color(0xFF64748B)),
           ),
 
           const SizedBox(height: 32),
@@ -214,12 +222,14 @@ class _AdminSystemSettingsTabState extends State<AdminSystemSettingsTab> {
             children: [
               Icon(icon, color: const Color(0xFF10B981), size: 22),
               const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: GoogleFonts.dmSerifDisplay(fontSize: 18, color: const Color(0xFF0F172A))),
-                  Text(subtitle, style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[600])),
-                ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: GoogleFonts.dmSerifDisplay(fontSize: 18, color: const Color(0xFF0F172A))),
+                    Text(subtitle, style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[600])),
+                  ],
+                ),
               ),
             ],
           ),

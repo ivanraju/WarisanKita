@@ -35,7 +35,7 @@ class _LoginScreenState extends State<LoginScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         final authVM = context.read<AuthViewModel>();
         final UserModel? user = authVM.currentUser ?? await authVM.restoreSession();
-        if (mounted && user != null && user.role == 'Admin') {
+        if (mounted && user != null && user.isAdmin) {
           Navigator.of(context).pushReplacementNamed('/admin');
         }
       });

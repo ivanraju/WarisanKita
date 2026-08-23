@@ -30,14 +30,11 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final authVM = context.read<AuthViewModel>();
-      UserModel? user = authVM.currentUser;
-      if (user == null) {
-        user = await authVM.restoreSession();
-      }
+      UserModel? user = authVM.currentUser ?? await authVM.restoreSession();
 
       if (!mounted) return;
 
-      if (user == null || user.role != 'Admin') {
+      if (user == null || !user.isAdmin) {
         Navigator.of(context).pushReplacementNamed('/login');
         return;
       }
@@ -231,7 +228,7 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
       );
     }
 
-    if (authVM.currentUser?.role != 'Admin') {
+    if (authVM.currentUser == null || !authVM.currentUser!.isAdmin) {
       return const LoginScreen();
     }
 
@@ -372,29 +369,36 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            children: [
-              if (!isDesktop)
-                Builder(
-                  builder: (scaffoldCtx) => IconButton(
-                    icon: const Icon(Icons.menu_rounded, color: Color(0xFF334155)),
-                    onPressed: () => Scaffold.of(scaffoldCtx).openDrawer(),
-                    tooltip: 'Open Menu',
+          Expanded(
+            child: Row(
+              children: [
+                if (!isDesktop)
+                  Builder(
+                    builder: (scaffoldCtx) => IconButton(
+                      icon: const Icon(Icons.menu_rounded, color: Color(0xFF334155)),
+                      onPressed: () => Scaffold.of(scaffoldCtx).openDrawer(),
+                      tooltip: 'Open Menu',
+                    ),
+                  ),
+                const Icon(Icons.admin_panel_settings_rounded, color: Color(0xFF10B981), size: 20),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    'Moderation Center',
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF334155),
+                    ),
                   ),
                 ),
-              const Icon(Icons.admin_panel_settings_rounded, color: Color(0xFF10B981), size: 20),
-              const SizedBox(width: 8),
-              Text(
-                'Moderation Center',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF334155),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
+          const SizedBox(width: 8),
           Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               IconButton(
                 icon: const Icon(Icons.refresh_rounded, color: Color(0xFF64748B)),
@@ -419,7 +423,7 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
                   tooltip: 'Notifications',
                 ),
               ],
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               OutlinedButton.icon(
                 onPressed: () async {
                   await context.read<AuthViewModel>().logout();
@@ -439,7 +443,7 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
                 style: OutlinedButton.styleFrom(
                   foregroundColor: const Color(0xFFEF4444),
                   side: const BorderSide(color: Color(0xFFEF4444), width: 1.5),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
                 icon: const Icon(Icons.logout_rounded, size: 16),
@@ -552,35 +556,44 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
             child: Icon(icon, color: accentColor, size: 24),
           ),
           const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF64748B),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF64748B),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                style: GoogleFonts.dmSerifDisplay(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF0F172A),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.dmSerifDisplay(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF0F172A),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 11,
-                  color: const Color(0xFF94A3B8),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11,
+                    color: const Color(0xFF94A3B8),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),

@@ -124,22 +124,26 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
     }).toList();
 
     final allReported = [...dynamicReported, ..._staticReportedPosts];
+    final isMobile = MediaQuery.of(context).size.width < 768;
 
     return Padding(
-      padding: const EdgeInsets.all(32.0),
+      padding: EdgeInsets.all(isMobile ? 16.0 : 32.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Expanded(
-                child: Text(
-                  'Reported Content Queue',
-                  softWrap: true,
-                  style: GoogleFonts.dmSerifDisplay(fontSize: 26, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+              Text(
+                'Reported Content Queue',
+                style: GoogleFonts.dmSerifDisplay(
+                  fontSize: isMobile ? 22 : 26,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF0F172A),
                 ),
               ),
-              const SizedBox(width: 12),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
@@ -178,7 +182,7 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
 
                   return Container(
                     margin: const EdgeInsets.only(bottom: 16),
-                    padding: const EdgeInsets.all(24),
+                    padding: EdgeInsets.all(isMobile ? 16 : 24),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
@@ -188,34 +192,25 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 8,
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             CircleAvatar(
                               radius: 16,
                               backgroundColor: const Color(0xFFEF4444).withOpacity(0.12),
                               child: const Icon(Icons.flag_rounded, size: 16, color: Color(0xFFEF4444)),
                             ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Row(
-                                children: [
-                                  Flexible(
-                                    child: Text(
-                                      post['author'].toString(),
-                                      softWrap: true,
-                                      style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 14),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                    decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(6)),
-                                    child: Text(post['role'].toString(), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                                  ),
-                                ],
-                              ),
+                            Text(
+                              post['author'].toString(),
+                              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 14),
                             ),
-                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(6)),
+                              child: Text(post['role'].toString(), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                            ),
                             Text(post['timestamp'].toString(), style: TextStyle(fontSize: 11, color: Colors.grey[500])),
                           ],
                         ),
