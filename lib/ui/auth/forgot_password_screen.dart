@@ -325,11 +325,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
         const SizedBox(height: 24),
 
-        // Action 1: Open Reset Link / Proceed to Step 3
+        // Back to Sign In
         FilledButton.icon(
-          onPressed: () => setState(() => _currentStep = 3),
-          icon: const Icon(Icons.password_rounded, size: 18),
-          label: const Text('ENTER NEW PASSWORD'),
+          onPressed: () => Navigator.of(context).pop(),
+          icon: const Icon(Icons.arrow_back_rounded, size: 18),
+          label: const Text('BACK TO SIGN IN'),
           style: FilledButton.styleFrom(
             backgroundColor: const Color(0xFF004D40),
             foregroundColor: Colors.white,
@@ -342,7 +342,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
         TextButton(
           onPressed: () => setState(() => _currentStep = 1),
-          child: const Text('Resend / Change Email'),
+          child: const Text('Resend / Change Email Address'),
         ),
       ],
     );
