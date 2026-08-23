@@ -301,7 +301,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ],
             ),
             content: Text(
-              'Administrator features and moderation tables are optimized for Desktop Web.\n\nPlease access the admin portal on your computer browser at:\nhttps://warisankita.vercel.app',
+              'Administrator features and moderation tables are optimized for Desktop Web.\n\nPlease access the admin portal on your computer browser at:\nhttps://warisan-kita.vercel.app',
               style: GoogleFonts.plusJakartaSans(fontSize: 13, height: 1.5, color: Colors.black87),
             ),
             actions: [
