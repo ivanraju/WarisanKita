@@ -23,39 +23,82 @@ class ArtisanMatchCard extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return AnimatedContainer(
+    return AnimatedScale(
       duration: const Duration(milliseconds: 250),
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: isSelected
-            ? (isDark
-            ? const Color(0xFF1E3A8A).withValues(alpha: 0.3)
-            : const Color(0xFFFEF3C7))
-            : (isDark ? const Color(0xFF1E293B) : Colors.white),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: isSelected
-              ? const Color(0xFFD97706)
-              : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06)),
-          width: isSelected ? 2 : 1,
+      curve: Curves.easeOutCubic,
+      scale: isSelected ? 1.015 : 1.0,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOutCubic,
+        margin: EdgeInsets.only(
+          top: isSelected ? 6 : 0,
+          bottom: isSelected ? 22 : 16,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: isSelected
-                ? const Color(0xFFD97706).withValues(alpha: 0.15)
-                : Colors.black.withValues(alpha: 0.04),
-            blurRadius: isSelected ? 16 : 10,
-            offset: const Offset(0, 4),
-          )
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(24),
-        child: InkWell(
-          onTap: onTap,
+        decoration: BoxDecoration(
+          color: isSelected
+              ? (isDark
+              ? const Color(0xFF78350F).withValues(alpha: 0.32)
+              : const Color(0xFFFFF8E1))
+              : (isDark ? const Color(0xFF1E293B) : Colors.white),
           borderRadius: BorderRadius.circular(24),
-          child: Padding(
+          border: Border.all(
+            color: isSelected
+                ? const Color(0xFFF59E0B)
+                : (isDark
+                ? Colors.white10
+                : Colors.black.withValues(alpha: 0.06)),
+            width: isSelected ? 2.5 : 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: isSelected
+                  ? const Color(0xFFF59E0B).withValues(alpha: 0.25)
+                  : Colors.black.withValues(alpha: 0.04),
+              blurRadius: isSelected ? 20 : 10,
+              spreadRadius: isSelected ? 1 : 0,
+              offset: Offset(0, isSelected ? 7 : 4),
+            )
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(22),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(22),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (isSelected)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                    color: const Color(0xFFD97706),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.location_on_rounded,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'SELECTED WORKSHOP',
+                          style: GoogleFonts.plusJakartaSans(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.1,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                Padding(
             padding: const EdgeInsets.all(14.0),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -337,6 +380,9 @@ class ArtisanMatchCard extends StatelessWidget {
                     ],
                   ),
                 ),
+              ],
+            ),
+          ),
               ],
             ),
           ),

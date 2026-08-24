@@ -17,13 +17,6 @@ class TouristMainScaffold extends StatefulWidget {
 class _TouristMainScaffoldState extends State<TouristMainScaffold> {
   int _currentIndex = 0;
 
-  final List<Widget> _tabs = const [
-    TouristDirectoryTab(),
-    TouristMatchmakerView(),
-    LiveForumTab(),
-    TouristProfileTab(),
-  ];
-
   @override
   Widget build(BuildContext context) {
     final langVM = context.watch<LanguageViewModel>();
@@ -32,7 +25,12 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
       extendBody: true,
       body: IndexedStack(
         index: _currentIndex,
-        children: _tabs,
+        children: [
+          const TouristDirectoryTab(),
+          TouristMatchmakerView(isActive: _currentIndex == 1),
+          const LiveForumTab(),
+          const TouristProfileTab(),
+        ],
       ),
       bottomNavigationBar: SafeArea(
         child: Container(

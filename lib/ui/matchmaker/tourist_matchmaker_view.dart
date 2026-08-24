@@ -22,7 +22,12 @@ import 'package:warisan_kita/ui/tourist/quest_completion_screen.dart';
 import 'package:warisan_kita/ui/tourist/artisan_detail_screen.dart';
 
 class TouristMatchmakerView extends StatefulWidget {
-  const TouristMatchmakerView({super.key});
+  final bool isActive;
+
+  const TouristMatchmakerView({
+    super.key,
+    this.isActive = true,
+  });
 
   @override
   State<TouristMatchmakerView> createState() => _TouristMatchmakerViewState();
@@ -31,6 +36,10 @@ class TouristMatchmakerView extends StatefulWidget {
 class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
   final DraggableScrollableController _sheetController =
   DraggableScrollableController();
+
+  ScrollController? _sheetScrollController;
+  final Map<String, GlobalKey> _artisanCardKeys = {};
+  int _revealRequestId = 0;
 
   MapViewModel? _mapVM;
   bool _locationTrackingStarted = false;
@@ -70,7 +79,112 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
       BuildContext context,
       WorkshopLocation workshop,
       ) {
-    context.read<MapViewModel>().selectWorkshop(workshop);
+    final mapVM = context.read<MapViewModel>();
+    mapVM.selectWorkshop(workshop);
+
+    if (mapVM.selectedWorkshop?.id == workshop.id) {
+      _revealWorkshopCard(workshop.id);
+    } else {
+      _revealRequestId++;
+    }
+  }
+
+  Future<void> _revealWorkshopCard(String workshopId) async {
+    final requestId = ++_revealRequestId;
+
+    if (_sheetController.isAttached) {
+      await _sheetController.animateTo(
+        0.50,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+      );
+    }
+
+    if (!mounted || requestId != _revealRequestId) {
+      return;
+    }
+
+    await WidgetsBinding.instance.endOfFrame;
+
+    if (requestId != _revealRequestId ||
+        await _ensureWorkshopCardVisible(workshopId)) {
+      return;
+    }
+
+    // SliverList builds lazily. Move near the expected card first so its
+    // GlobalKey obtains a context, then use ensureVisible for exact alignment.
+    final mapVM = _mapVM;
+    final scrollController = _sheetScrollController;
+
+    if (mapVM == null ||
+        scrollController == null ||
+        !scrollController.hasClients) {
+      return;
+    }
+
+    const double sheetHeaderExtent = 135;
+    const double sectionHeaderExtent = 80;
+    const double estimatedCardExtent = 175;
+    const double otherSectionDividerExtent = 115;
+
+    final nearbyIndex = mapVM.nearbyArtisans.indexWhere(
+      (artisan) => artisan.id == workshopId,
+    );
+    final otherIndex = mapVM.otherArtisans.indexWhere(
+      (artisan) => artisan.id == workshopId,
+    );
+
+    double? estimatedOffset;
+
+    if (nearbyIndex >= 0) {
+      estimatedOffset = sheetHeaderExtent +
+          sectionHeaderExtent +
+          (nearbyIndex * estimatedCardExtent);
+    } else if (otherIndex >= 0) {
+      estimatedOffset = sheetHeaderExtent +
+          sectionHeaderExtent +
+          (mapVM.nearbyArtisans.length * estimatedCardExtent) +
+          otherSectionDividerExtent +
+          (otherIndex * estimatedCardExtent);
+    }
+
+    if (estimatedOffset == null) {
+      return;
+    }
+
+    final targetOffset = estimatedOffset
+        .clamp(0.0, scrollController.position.maxScrollExtent)
+        .toDouble();
+
+    await scrollController.animateTo(
+      targetOffset,
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeOutCubic,
+    );
+
+    if (!mounted || requestId != _revealRequestId) {
+      return;
+    }
+
+    await WidgetsBinding.instance.endOfFrame;
+    await _ensureWorkshopCardVisible(workshopId);
+  }
+
+  Future<bool> _ensureWorkshopCardVisible(String workshopId) async {
+    final cardContext = _artisanCardKeys[workshopId]?.currentContext;
+
+    if (cardContext == null) {
+      return false;
+    }
+
+    await Scrollable.ensureVisible(
+      cardContext,
+      alignment: 0.12,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOutCubic,
+    );
+
+    return true;
   }
 
   // ============================================================
@@ -82,6 +196,7 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
       NearbyArtisan artisan,
       ) {
     final mapVM = context.read<MapViewModel>();
+    _revealRequestId++;
 
     WorkshopLocation? matchingWorkshop;
 
@@ -126,6 +241,23 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
       BuildContext context,
       NearbyArtisan artisan,
       ) {
+    final mapVM = context.read<MapViewModel>();
+    final workshop = artisan.workshop;
+
+    if (workshop == null ||
+        !mapVM.isWorkshopWithinInteractionRange(workshop)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Move closer to ${artisan.name}. Quests unlock within '
+                '${mapVM.questInteractionRadiusMeters.toStringAsFixed(0)} m.',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => QuestCompletionScreen(
@@ -135,6 +267,114 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
           // Real GPS distance in metres calculated by MapViewModel
           distanceMeters: artisan.distanceMeters,
         ),
+      ),
+    );
+  }
+
+  Widget _buildArtisanCard(
+      BuildContext context,
+      MapViewModel mapVM,
+      NearbyArtisan artisan,
+      ) {
+    return ArtisanMatchCard(
+      key: _artisanCardKeys.putIfAbsent(
+        artisan.id,
+        () => GlobalKey(debugLabel: 'artisan_card_${artisan.id}'),
+      ),
+      artisan: artisan,
+      isSelected: mapVM.selectedWorkshop?.id == artisan.id,
+      onTap: () {
+        _onNearbyArtisanSelected(context, artisan);
+      },
+      onViewProfile: () {
+        _handleViewProfile(context, artisan);
+      },
+      onViewQuest: () {
+        _handleViewQuest(context, artisan);
+      },
+    );
+  }
+
+  Widget _buildStudioSectionHeader({
+    required String title,
+    required String subtitle,
+    required int count,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: GoogleFonts.dmSerifDisplay(
+                    fontSize: 19,
+                    color: const Color(0xFF004D40),
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 9,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF004D40).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '$count',
+                  style: GoogleFonts.plusJakartaSans(
+                    color: const Color(0xFF004D40),
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 2),
+          Text(
+            subtitle,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 11,
+              color: Colors.grey[600],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInlineStudioMessage(String message) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 0, 20, 18),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.info_outline_rounded,
+            color: Color(0xFF64748B),
+            size: 19,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                color: const Color(0xFF475569),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -239,6 +479,9 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
               // only after permission has been granted.
               myLocationEnabled: mapVM.hasLocationPermission,
               userLocation: mapVM.userLocation,
+              interactionRadiusMeters:
+                  mapVM.questInteractionRadiusMeters,
+              isActive: widget.isActive,
               isLoading: mapVM.isLoading,
             ),
           ),
@@ -483,6 +726,8 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
               0.88,
             ],
             builder: (context, scrollController) {
+              _sheetScrollController = scrollController;
+
               return Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -538,7 +783,7 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
                                       children: [
                                         Text(
                                           langVM.translate(
-                                            'Nearby Master Studios',
+                                            'Master Studios',
                                           ),
                                           softWrap: true,
                                           style: GoogleFonts.dmSerifDisplay(
@@ -623,45 +868,124 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
                       )
 
                     // ==========================================
-                    // EMPTY NEARBY LIST
+                    // NO APPROVED WORKSHOPS IN DATABASE
                     // ==========================================
-                    else if (mapVM.nearbyArtisans.isEmpty)
-                      SliverToBoxAdapter(
-                        child: EmptyMatchmakerWidget(
-                          onReset: () {
-                            mapVM.expandNearbyRadius();
-                          },
-                        ),
-                      )
+                    else if (mapVM.workshops.isEmpty)
+                      const SliverToBoxAdapter(
+                        child: EmptyMatchmakerWidget(),
+                      ),
 
                     // ==========================================
-                    // NEARBY ARTISANS
+                    // NEARBY MASTER STUDIOS
                     // ==========================================
-                    else
+                    if (!mapVM.isLoading && mapVM.workshops.isNotEmpty)
+                      SliverToBoxAdapter(
+                        child: _buildStudioSectionHeader(
+                          title: langVM.translate(
+                            'Nearby Master Studios',
+                          ),
+                          subtitle: langVM.translate(
+                            'Within 5 km of your current location',
+                          ),
+                          count: mapVM.nearbyArtisans.length,
+                        ),
+                      ),
+
+                    if (!mapVM.isLoading &&
+                        mapVM.workshops.isNotEmpty &&
+                        mapVM.nearbyArtisans.isEmpty)
+                      SliverToBoxAdapter(
+                        child: _buildInlineStudioMessage(
+                          mapVM.userLocation == null
+                              ? langVM.translate(
+                                  'Waiting for your location to calculate studio distances.',
+                                )
+                              : langVM.translate(
+                                  'No studios within 5 km of your current location.',
+                                ),
+                        ),
+                      ),
+
+                    if (!mapVM.isLoading &&
+                        mapVM.workshops.isNotEmpty &&
+                        mapVM.nearbyArtisans.isNotEmpty)
                       SliverPadding(
                         padding: const EdgeInsets.symmetric(horizontal: 20),
                         sliver: SliverList(
                           delegate: SliverChildBuilderDelegate(
                                 (context, index) {
                               final artisan = mapVM.nearbyArtisans[index];
-                              final isSelected =
-                                  mapVM.selectedWorkshop?.id == artisan.id;
 
-                              return ArtisanMatchCard(
-                                artisan: artisan,
-                                isSelected: isSelected,
-                                onTap: () {
-                                  _onNearbyArtisanSelected(context, artisan);
-                                },
-                                onViewProfile: () {
-                                  _handleViewProfile(context, artisan);
-                                },
-                                onViewQuest: () {
-                                  _handleViewQuest(context, artisan);
-                                },
+                              return _buildArtisanCard(
+                                context,
+                                mapVM,
+                                artisan,
                               );
                             },
                             childCount: mapVM.nearbyArtisans.length,
+                          ),
+                        ),
+                      ),
+
+                    // ==========================================
+                    // OTHER MASTER STUDIOS
+                    // ==========================================
+                    if (!mapVM.isLoading && mapVM.workshops.isNotEmpty)
+                      SliverToBoxAdapter(
+                        child: Column(
+                          children: [
+                            const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 20),
+                              child: Divider(
+                                height: 24,
+                                color: Color(0xFFE2E8F0),
+                              ),
+                            ),
+                            _buildStudioSectionHeader(
+                              title: langVM.translate(
+                                'Other Master Studios',
+                              ),
+                              subtitle: langVM.translate(
+                                'Explore artisan studios across Malaysia',
+                              ),
+                              count: mapVM.otherArtisans.length,
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    if (!mapVM.isLoading &&
+                        mapVM.workshops.isNotEmpty &&
+                        mapVM.otherArtisans.isEmpty)
+                      SliverToBoxAdapter(
+                        child: _buildInlineStudioMessage(
+                          mapVM.userLocation == null
+                              ? langVM.translate(
+                                  'Waiting for your location to classify other studios.',
+                                )
+                              : langVM.translate(
+                                  'All available studios are within 5 km of you.',
+                                ),
+                        ),
+                      ),
+
+                    if (!mapVM.isLoading &&
+                        mapVM.workshops.isNotEmpty &&
+                        mapVM.otherArtisans.isNotEmpty)
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                                (context, index) {
+                              final artisan = mapVM.otherArtisans[index];
+
+                              return _buildArtisanCard(
+                                context,
+                                mapVM,
+                                artisan,
+                              );
+                            },
+                            childCount: mapVM.otherArtisans.length,
                           ),
                         ),
                       ),

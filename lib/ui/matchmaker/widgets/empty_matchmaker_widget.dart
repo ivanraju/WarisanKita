@@ -2,11 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class EmptyMatchmakerWidget extends StatelessWidget {
-  final VoidCallback onReset;
-
   const EmptyMatchmakerWidget({
     super.key,
-    required this.onReset,
   });
 
   @override
@@ -31,7 +28,7 @@ class EmptyMatchmakerWidget extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             Text(
-              'No artisans found nearby',
+              'No master studios available',
               style: GoogleFonts.dmSerifDisplay(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
@@ -40,27 +37,12 @@ class EmptyMatchmakerWidget extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              'No master artisan workshops were found within your current location radius. Try expanding your search distance.',
+              'There are currently no approved artisan workshops to display.',
               textAlign: TextAlign.center,
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 13,
                 color: Colors.grey[600],
                 height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: onReset,
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF0F3D3E),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              ),
-              icon: const Icon(Icons.zoom_out_map_rounded, size: 18),
-              label: Text(
-                'Expand Search Radius',
-                style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 13),
               ),
             ),
           ],

@@ -34,18 +34,24 @@ class MapViewModel extends ChangeNotifier {
   List<NearbyArtisan> _nearbyArtisans = [];
   List<NearbyArtisan> get nearbyArtisans => _nearbyArtisans;
 
+  List<NearbyArtisan> _otherArtisans = [];
+  List<NearbyArtisan> get otherArtisans => _otherArtisans;
+
   WorkshopLocation? _selectedWorkshop;
   WorkshopLocation? get selectedWorkshop => _selectedWorkshop;
 
   // ============================================================
-  // SEARCH RADIUS STATE
+  // PROXIMITY RADII
   // ============================================================
 
-  static const double defaultNearbyRadiusMeters = 5000;
-  static const List<double> radiusSteps = [5000, 10000, 20000, 50000];
+  // Fixed discovery classification radius.
+  static const double nearbySearchRadiusMeters = 5000.0;
 
-  double _nearbyRadiusMeters = defaultNearbyRadiusMeters;
-  double get nearbyRadiusMeters => _nearbyRadiusMeters;
+  // Application-defined gameplay radius. This is independent from both the
+  // nearby-workshop search radius and GPS accuracy.
+  static const double _questInteractionRadiusMeters = 50.0;
+  double get questInteractionRadiusMeters =>
+      _questInteractionRadiusMeters;
 
   // ============================================================
   // LIVE GPS STATE
@@ -78,12 +84,13 @@ class MapViewModel extends ChangeNotifier {
 
       debugPrint('Loaded workshops: ${_workshops.length}');
 
-      // Synchronisation: Recalculate nearby artisans if GPS was already available
-      _updateNearbyArtisans();
+      // Recalculate both groups if GPS was already available.
+      _updateArtisanDistances();
     } catch (e) {
       debugPrint('MapViewModel loadWorkshops error: $e');
       _workshops = [];
       _nearbyArtisans = [];
+      _otherArtisans = [];
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -118,7 +125,7 @@ class MapViewModel extends ChangeNotifier {
       );
 
       // Recalculate immediately with the initial GPS position.
-      _updateNearbyArtisans();
+      _updateArtisanDistances();
       notifyListeners();
 
       // 2. Continue listening for live movement updates.
@@ -131,7 +138,7 @@ class MapViewModel extends ChangeNotifier {
                 '${location.latitude}, ${location.longitude}',
           );
 
-          _updateNearbyArtisans();
+          _updateArtisanDistances();
           notifyListeners();
         },
         onError: (error) {
@@ -151,93 +158,77 @@ class MapViewModel extends ChangeNotifier {
   }
 
   // ============================================================
-  // DISTANCE CALCULATION & NEARBY FILTERING
+  // DISTANCE CALCULATION & WORKSHOP CLASSIFICATION
   // ============================================================
 
-  void _updateNearbyArtisans() {
+  /// Returns the straight-line geographic distance from the tourist to a
+  /// workshop, or null while a live GPS position is unavailable.
+  double? getDistanceToWorkshop(WorkshopLocation workshop) {
+    final location = _userLocation;
+
+    if (location == null) {
+      return null;
+    }
+
+    return _locationRepository.calculateDistance(
+      startLatitude: location.latitude,
+      startLongitude: location.longitude,
+      endLatitude: workshop.latitude,
+      endLongitude: workshop.longitude,
+    );
+  }
+
+  /// Whether the workshop is inside the real quest interaction radius.
+  bool isWorkshopWithinInteractionRange(WorkshopLocation workshop) {
+    final distance = getDistanceToWorkshop(workshop);
+    return distance != null &&
+        distance <= _questInteractionRadiusMeters;
+  }
+
+  void _updateArtisanDistances() {
     final location = _userLocation;
 
     if (location == null || _workshops.isEmpty) {
       _nearbyArtisans = [];
+      _otherArtisans = [];
       return;
     }
 
     debugPrint('========================================');
     debugPrint('User GPS:');
     debugPrint('${location.latitude.toStringAsFixed(4)}, ${location.longitude.toStringAsFixed(4)}');
-    debugPrint('Search radius:');
-    debugPrint('${_nearbyRadiusMeters.toStringAsFixed(0)} m');
+    debugPrint('Nearby radius:');
+    debugPrint('${nearbySearchRadiusMeters.toStringAsFixed(0)} m');
+    debugPrint('Quest interaction radius:');
+    debugPrint('${_questInteractionRadiusMeters.toStringAsFixed(0)} m');
 
-    final results = <NearbyArtisan>[];
+    final nearby = <NearbyArtisan>[];
+    final others = <NearbyArtisan>[];
 
     for (final workshop in _workshops) {
-      final distance = _locationRepository.calculateDistance(
-        startLatitude: location.latitude,
-        startLongitude: location.longitude,
-        endLatitude: workshop.latitude,
-        endLongitude: workshop.longitude,
+      final distance = getDistanceToWorkshop(workshop)!;
+      final artisan = NearbyArtisan.fromWorkshop(
+        workshop: workshop,
+        distanceMeters: distance,
       );
 
-      final isNearby = distance <= _nearbyRadiusMeters;
-
-      debugPrint('Workshop:');
-      debugPrint(workshop.name);
-      debugPrint('Distance:');
-      debugPrint('${distance.toStringAsFixed(1)} m');
-      debugPrint('Nearby result:');
-      debugPrint(isNearby ? 'TRUE' : 'FALSE');
-
-      if (isNearby) {
-        results.add(
-          NearbyArtisan.fromWorkshop(
-            workshop: workshop,
-            distanceMeters: distance,
-          ),
-        );
+      if (distance <= nearbySearchRadiusMeters) {
+        nearby.add(artisan);
+      } else {
+        others.add(artisan);
       }
     }
 
-    // Sort nearest → farthest
-    results.sort((a, b) => a.distanceMeters.compareTo(b.distanceMeters));
+    nearby.sort((a, b) => a.distanceMeters.compareTo(b.distanceMeters));
+    others.sort((a, b) => a.distanceMeters.compareTo(b.distanceMeters));
 
-    _nearbyArtisans = results;
+    _nearbyArtisans = nearby;
+    _otherArtisans = others;
 
-    debugPrint('Nearby artisans:');
-    debugPrint('${_nearbyArtisans.length}');
+    debugPrint('Total workshops: ${_workshops.length}');
+    debugPrint('Nearby: ${_nearbyArtisans.length}');
+    debugPrint('Other: ${_otherArtisans.length}');
     debugPrint('========================================');
-  }
-
-  // ============================================================
-  // SEARCH RADIUS CONTROLS
-  // ============================================================
-
-  /// Expands search radius through progression: 5km -> 10km -> 20km -> 50km.
-  void expandNearbyRadius() {
-    for (final step in radiusSteps) {
-      if (step > _nearbyRadiusMeters) {
-        _nearbyRadiusMeters = step;
-        _updateNearbyArtisans();
-        notifyListeners();
-        return;
-      }
-    }
-    // Already at max radius (50 km); recalculate in case data changed.
-    _updateNearbyArtisans();
-    notifyListeners();
-  }
-
-  /// Sets custom search radius in metres.
-  void setNearbyRadius(double radiusMeters) {
-    _nearbyRadiusMeters = radiusMeters;
-    _updateNearbyArtisans();
-    notifyListeners();
-  }
-
-  /// Resets search radius back to default (5000 metres).
-  void resetNearbyRadius() {
-    _nearbyRadiusMeters = defaultNearbyRadiusMeters;
-    _updateNearbyArtisans();
-    notifyListeners();
   }
 
   // ============================================================
