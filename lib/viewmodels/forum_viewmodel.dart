@@ -15,6 +15,16 @@ class ForumViewModel extends ChangeNotifier {
   List<ForumThread> _threads = [];
   List<ForumThread> get threads => _threads;
 
+  List<Map<String, dynamic>> _reportQueue = [];
+
+  List<Map<String, dynamic>> get reportQueue =>
+      List.unmodifiable(_reportQueue);
+
+  List<Map<String, dynamic>> _moderationHistory = [];
+
+  List<Map<String, dynamic>> get moderationHistory =>
+      _moderationHistory;
+
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
@@ -32,6 +42,45 @@ class ForumViewModel extends ChangeNotifier {
 
     _isLoading = false;
     notifyListeners();
+  }
+
+  Future<void> fetchForumReportQueue() async {
+    try {
+      _reportQueue =
+      await _repository.fetchForumReportQueue();
+
+      debugPrint(
+        'Forum report queue loaded: '
+            '${_reportQueue.length} reported items',
+      );
+
+      notifyListeners();
+    } catch (e) {
+      debugPrint(
+        'ForumViewModel fetchForumReportQueue error: $e',
+      );
+
+      _reportQueue = [];
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchForumModerationHistory() async {
+    try {
+      _moderationHistory =
+      await _repository.fetchForumModerationHistory();
+
+      debugPrint(
+        'ViewModel moderation history: '
+            '${_moderationHistory.length}',
+      );
+
+      notifyListeners();
+    } catch (e) {
+      debugPrint(
+        'fetchForumModerationHistory error: $e',
+      );
+    }
   }
 
   Future<ContentSafetyResult> createThread({
@@ -95,6 +144,7 @@ class ForumViewModel extends ChangeNotifier {
     required String authorName,
     required String authorEmail,
     required bool isArtisan,
+    String? parentReplyId,
   }) async {
     final safety = ContentSafetyService.evaluate(title: text);
     if (safety.isBlocked) {
@@ -110,14 +160,16 @@ class ForumViewModel extends ChangeNotifier {
       upvotes: 1,
       userVote: 1,
       isVerifiedAnswer: isArtisan,
+      parentReplyId: parentReplyId,
       timestamp: 'Just now',
       text: text,
     );
 
     await _repository.postReply(threadId, reply);
     if (safety.isAutoFlagged) {
-      await _repository.reportThread(
+      await _repository.reportReply(
         threadId,
+        reply.id,
         safety.flagReason ?? 'Automated reply flag',
         'Flagged reply posted by $authorName: "$text"',
       );
@@ -160,6 +212,44 @@ class ForumViewModel extends ChangeNotifier {
     await fetchThreads();
   }
 
+  // ========================================
+// Admin Moderation Delete
+// ========================================
+
+  Future<void> adminDeleteForumPost(
+      String postId,
+      String deletionReason,
+      ) async {
+    await _repository.adminDeleteForumPost(
+      postId,
+      deletionReason,
+    );
+
+    // Refresh forum + moderation queue
+    await fetchThreads();
+    await fetchForumReportQueue();
+
+    notifyListeners();
+  }
+
+  Future<void> adminDeleteForumReply(
+      String threadId,
+      String replyId,
+      String deletionReason,
+      ) async {
+    await _repository.adminDeleteForumReply(
+      threadId,
+      replyId,
+      deletionReason,
+    );
+
+    // Refresh forum + moderation queue
+    await fetchThreads();
+    await fetchForumReportQueue();
+
+    notifyListeners();
+  }
+
   Future<ContentSafetyResult> editReply(String threadId, String replyId, String newText) async {
     final safety = ContentSafetyService.evaluate(title: newText);
     if (safety.isBlocked) {
@@ -167,8 +257,9 @@ class ForumViewModel extends ChangeNotifier {
     }
     await _repository.editReply(threadId, replyId, newText);
     if (safety.isAutoFlagged) {
-      await _repository.reportThread(
+      await _repository.reportReply(
         threadId,
+        replyId,
         safety.flagReason ?? 'Automated reply edit flag',
         'Reply edited with sensitive keywords.',
       );
@@ -182,13 +273,57 @@ class ForumViewModel extends ChangeNotifier {
     await fetchThreads();
   }
 
-  Future<void> reportThread(String threadId, String reason, String notes) async {
-    await _repository.reportThread(threadId, reason, notes);
-    await fetchThreads();
+  Future<Map<String, dynamic>> reportReply(
+      String threadId,
+      String replyId,
+      String reason,
+      String notes,
+      ) async {
+    final result = await _repository.reportReply(
+      threadId,
+      replyId,
+      reason,
+      notes,
+    );
+
+    notifyListeners();
+
+    return result;
+  }
+
+  Future<void> dismissReplyReport(
+      String threadId,
+      String replyId,
+      ) async {
+    await _repository.dismissReplyReport(
+      threadId,
+      replyId,
+    );
+
+    // Refresh moderation queue after dismiss
+    await fetchForumReportQueue();
+  }
+
+  Future<Map<String, dynamic>> reportThread(
+      String threadId,
+      String reason,
+      String notes,
+      ) async {
+    final result = await _repository.reportThread(
+      threadId,
+      reason,
+      notes,
+    );
+
+    notifyListeners();
+
+    return result;
   }
 
   Future<void> dismissReport(String threadId) async {
     await _repository.dismissReport(threadId);
-    await fetchThreads();
+
+    // Refresh moderation queue after dismiss
+    await fetchForumReportQueue();
   }
 }

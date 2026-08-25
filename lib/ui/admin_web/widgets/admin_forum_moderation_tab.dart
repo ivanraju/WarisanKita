@@ -11,20 +11,52 @@ class AdminForumModerationTab extends StatefulWidget {
 }
 
 class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
-  // FR400_6: Flagged threads and reported reply moderation queue
+  bool _showHistory = false;
   final List<Map<String, dynamic>> _staticReportedPosts = [];
 
-  void _dismissFlag(Map<String, dynamic> post) {
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final forumVM = context.read<ForumViewModel>();
+
+      await forumVM.fetchThreads();
+      await forumVM.fetchForumReportQueue();
+      await forumVM.fetchForumModerationHistory();
+    });
+  }
+
+  void _dismissFlag(Map<String, dynamic> post) async {
     if (post['isDynamic'] == true) {
-      context.read<ForumViewModel>().dismissReport(post['id'].toString());
+      if (post['type'] == 'reply') {
+        await context.read<ForumViewModel>().dismissReplyReport(
+          post['threadId'].toString(),
+          post['id'].toString(),
+        );
+      } else {
+        await context.read<ForumViewModel>().dismissReport(
+          post['id'].toString(),
+        );
+      }
     } else {
       setState(() {
-        _staticReportedPosts.removeWhere((p) => p['id'] == post['id']);
+        _staticReportedPosts.removeWhere(
+              (p) => p['id'] == post['id'],
+        );
       });
     }
+
+    if (!mounted) return;
+
+    final typeLabel =
+    post['type'] == 'reply' ? 'reply' : 'post';
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Flag dismissed for post by ${post['author']}.'),
+        content: Text(
+          'Flag dismissed for $typeLabel by ${post['author']}.',
+        ),
         backgroundColor: const Color(0xFF004D40),
       ),
     );
@@ -39,7 +71,14 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
       builder: (dialogContext) {
         return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Text('Delete Forum Post', style: GoogleFonts.dmSerifDisplay(color: const Color(0xFFEF4444))),
+          title: Text(
+            post['type'] == 'reply'
+                ? 'Delete Forum Reply'
+                : 'Delete Forum Post',
+            style: GoogleFonts.dmSerifDisplay(
+              color: const Color(0xFFEF4444),
+            ),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -62,40 +101,93 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
           actions: [
             TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Cancel')),
             FilledButton(
-              onPressed: () {
+              onPressed: () async {
                 final reason = reasonController.text.trim();
-                // C2: Reason Required = deletion_reason.length >= 10 AND deletion_reason.length <= 255
+
+                // C2: Reason Required
                 if (reason.length < 10 || reason.length > 255) {
                   ScaffoldMessenger.of(dialogContext).showSnackBar(
                     const SnackBar(
-                      content: Text('Deletion reason must be between 10 and 255 characters.'),
+                      content: Text(
+                        'Deletion reason must be between 10 and 255 characters.',
+                      ),
                       backgroundColor: Color(0xFFEF4444),
                     ),
                   );
                   return;
                 }
 
-                Navigator.of(dialogContext).pop();
+                final forumVM = context.read<ForumViewModel>();
 
-                if (post['isDynamic'] == true) {
-                  context.read<ForumViewModel>().deleteThread(post['id'].toString());
-                } else {
-                  setState(() {
-                    _staticReportedPosts.removeWhere((p) => p['id'] == post['id']);
-                  });
-                }
+                try {
+                  if (post['isDynamic'] == true) {
 
-                // M1: Action Logged
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Forum content successfully moderated ($reason) and author notified.',
-                      style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold),
+                    // ============================
+                    // Admin delete reported REPLY
+                    // ============================
+                    if (post['type'] == 'reply') {
+                      await forumVM.adminDeleteForumReply(
+                        post['threadId'].toString(),
+                        post['id'].toString(),
+                        reason,
+                      );
+                    }
+
+                    // ============================
+                    // Admin delete reported POST
+                    // ============================
+                    else {
+                      await forumVM.adminDeleteForumPost(
+                        post['id'].toString(),
+                        reason,
+                      );
+                    }
+                  } else {
+                    if (!mounted) return;
+
+                    setState(() {
+                      _staticReportedPosts.removeWhere(
+                            (p) => p['id'] == post['id'],
+                      );
+                    });
+                  }
+
+                  if (!dialogContext.mounted) return;
+                  Navigator.of(dialogContext).pop();
+
+                  if (!mounted) return;
+
+                  final String typeLabel =
+                  post['type'] == 'reply'
+                      ? 'reply'
+                      : 'post';
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Forum $typeLabel deleted successfully. '
+                            'Deletion reason stored in moderation history.',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      backgroundColor: const Color(0xFF10B981),
+                      behavior: SnackBarBehavior.floating,
                     ),
-                    backgroundColor: const Color(0xFF10B981),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
+                  );
+                } catch (e) {
+                  if (!dialogContext.mounted) return;
+
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Failed to delete forum content: $e',
+                      ),
+                      backgroundColor: const Color(0xFFEF4444),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
               },
               style: FilledButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),
               child: const Text('CONFIRM DELETION'),
@@ -106,24 +198,261 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
     );
   }
 
+  void _showReportsDialog(Map<String, dynamic> item) {
+    final List<Map<String, dynamic>> reports =
+    List<Map<String, dynamic>>.from(
+      item['reports'] ?? [],
+    );
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Text(
+            '${reports.length} Reports',
+            style: GoogleFonts.dmSerifDisplay(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: SizedBox(
+            width: 520,
+            child: reports.isEmpty
+                ? const Text('No report details available.')
+                : ListView.separated(
+              shrinkWrap: true,
+              itemCount: reports.length,
+              separatorBuilder: (_, __) =>
+              const Divider(height: 24),
+              itemBuilder: (context, index) {
+                final report = reports[index];
+
+                final reporterId =
+                    report['reporter_id']?.toString() ??
+                        'Unknown';
+
+                final reason =
+                    report['reason']?.toString() ??
+                        'No reason provided';
+
+                final notes =
+                report['notes']?.toString();
+
+                final createdAt =
+                    report['created_at']?.toString() ?? '';
+
+                return Column(
+                  crossAxisAlignment:
+                  CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Report ${index + 1}',
+                      style:
+                      GoogleFonts.plusJakartaSans(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    Text(
+                      'Reporter ID: $reporterId',
+                      style:
+                      GoogleFonts.plusJakartaSans(
+                        fontSize: 12,
+                      ),
+                    ),
+
+                    const SizedBox(height: 4),
+
+                    Text(
+                      'Reason: $reason',
+                      style:
+                      GoogleFonts.plusJakartaSans(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+
+                    if (notes != null &&
+                        notes.trim().isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Notes: $notes',
+                        style:
+                        GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: 4),
+
+                    Text(
+                      'Reported at: $createdAt',
+                      style:
+                      GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () =>
+                  Navigator.of(dialogContext).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final forumVM = context.watch<ForumViewModel>();
+    debugPrint(
+      'ADMIN REPORT QUEUE = ${forumVM.reportQueue}',
+    );
 
-    final dynamicReported = forumVM.threads.where((t) => t.isReported).map((t) {
-      return {
-        'id': t.id,
-        'author': t.authorName,
-        'role': t.isArtisan ? 'Master Artisan' : 'Tourist',
-        'content': t.title,
-        'reason': t.reportReason ?? 'User Reported Flag',
-        'reportsCount': 1,
-        'timestamp': t.timestamp,
-        'isDynamic': true,
-      };
-    }).toList();
+    final List<Map<String, dynamic>> dynamicReported = [];
 
-    final allReported = [...dynamicReported, ..._staticReportedPosts];
+    for (final item in forumVM.reportQueue) {
+      final String type = item['type']?.toString() ?? '';
+
+      final List<Map<String, dynamic>> reports =
+      List<Map<String, dynamic>>.from(
+        item['reports'] ?? [],
+      );
+
+      final int reportsCount =
+          (item['reportsCount'] as int?) ?? reports.length;
+
+      // =========================
+      // REPORTED POST
+      // =========================
+      if (type == 'post') {
+        final String postId =
+            item['postId']?.toString() ?? '';
+
+        dynamic foundThread;
+
+        for (final thread in forumVM.threads) {
+          if (thread.id == postId) {
+            foundThread = thread;
+            break;
+          }
+        }
+
+        if (foundThread == null) {
+          continue;
+        }
+
+        final latestReport =
+        reports.isNotEmpty ? reports.first : null;
+
+        dynamicReported.add({
+          'id': postId,
+          'type': 'post',
+
+          'author': foundThread.authorName,
+
+          'role': foundThread.isArtisan
+              ? 'Master Artisan'
+              : 'Tourist',
+
+          'content': foundThread.title,
+
+          'reason':
+          latestReport?['reason'] ??
+              'User Reported Content',
+
+          'reportsCount': reportsCount,
+
+          // ✅ All individual reports
+          'reports': reports,
+
+          'timestamp': foundThread.timestamp,
+
+          'isDynamic': true,
+        });
+      }
+
+      // =========================
+      // REPORTED REPLY
+      // =========================
+      else if (type == 'reply') {
+        final String replyId =
+            item['replyId']?.toString() ?? '';
+
+        dynamic foundThread;
+        dynamic foundReply;
+
+        for (final thread in forumVM.threads) {
+          for (final reply in thread.replies) {
+            if (reply.id == replyId) {
+              foundThread = thread;
+              foundReply = reply;
+              break;
+            }
+          }
+
+          if (foundReply != null) {
+            break;
+          }
+        }
+
+        if (foundReply == null) {
+          continue;
+        }
+
+        final latestReport =
+        reports.isNotEmpty ? reports.first : null;
+
+        dynamicReported.add({
+          'id': replyId,
+          'type': 'reply',
+
+          // Needed later for delete/dismiss reply
+          'threadId': foundThread.id,
+          'replyId': replyId,
+
+          'author': foundReply.sender,
+
+          'role': foundReply.isArtisan
+              ? 'Master Artisan'
+              : 'Tourist',
+
+          'content': foundReply.text,
+
+          'reason':
+          latestReport?['reason'] ??
+              'User Reported Reply',
+
+          'reportsCount': reportsCount,
+
+          // ✅ All individual reports
+          'reports': reports,
+
+          'timestamp': foundReply.timestamp,
+
+          'isDynamic': true,
+        });
+      }
+    }
+
+    final allReported = [
+      ...dynamicReported,
+      ..._staticReportedPosts,
+    ];
+
     final isMobile = MediaQuery.of(context).size.width < 768;
 
     return Padding(
@@ -131,28 +460,73 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text(
+            _showHistory
+                ? 'Moderation History'
+                : 'Reported Content Queue',
+            style: GoogleFonts.dmSerifDisplay(
+              fontSize: isMobile ? 22 : 26,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF0F172A),
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
           Wrap(
-            spacing: 12,
-            runSpacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 10,
+            runSpacing: 10,
             children: [
-              Text(
-                'Reported Content Queue',
-                style: GoogleFonts.dmSerifDisplay(
-                  fontSize: isMobile ? 22 : 26,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF0F172A),
+              FilledButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _showHistory = false;
+                  });
+                },
+                style: FilledButton.styleFrom(
+                  backgroundColor: !_showHistory
+                      ? const Color(0xFF004D40)
+                      : Colors.grey[300],
+                  foregroundColor: !_showHistory
+                      ? Colors.white
+                      : Colors.black87,
+                ),
+                icon: const Icon(
+                  Icons.flag_outlined,
+                  size: 18,
+                ),
+                label: Text(
+                  'Pending Reports (${allReported.length})',
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFEF2F2),
-                  borderRadius: BorderRadius.circular(10),
+
+              FilledButton.icon(
+                onPressed: () async {
+                  await context
+                      .read<ForumViewModel>()
+                      .fetchForumModerationHistory();
+
+                  if (!mounted) return;
+
+                  setState(() {
+                    _showHistory = true;
+                  });
+                },
+                style: FilledButton.styleFrom(
+                  backgroundColor: _showHistory
+                      ? const Color(0xFF004D40)
+                      : Colors.grey[300],
+                  foregroundColor: _showHistory
+                      ? Colors.white
+                      : Colors.black87,
                 ),
-                child: Text(
-                  '${allReported.length} Pending Flags',
-                  style: GoogleFonts.plusJakartaSans(color: const Color(0xFFEF4444), fontSize: 11, fontWeight: FontWeight.bold),
+                icon: const Icon(
+                  Icons.history_rounded,
+                  size: 18,
+                ),
+                label: Text(
+                  'Moderation History '
+                      '(${forumVM.moderationHistory.length})',
                 ),
               ),
             ],
@@ -160,7 +534,330 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
 
           const SizedBox(height: 20),
 
-          if (allReported.isEmpty)
+        if (_showHistory)
+    Expanded(
+        child: forumVM.moderationHistory.isEmpty
+            ? Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.history_rounded,
+                size: 56,
+                color: Colors.grey[400],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'No moderation history yet.',
+                style: GoogleFonts.dmSerifDisplay(
+                  fontSize: 20,
+                ),
+              ),
+            ],
+          ),
+        )
+            : ListView.builder(
+          itemCount: forumVM.moderationHistory.length,
+          itemBuilder: (context, index) {
+            final record =
+            forumVM.moderationHistory[index];
+
+            final status =
+                record['status']?.toString() ??
+                    'unknown';
+
+            final bool isActioned =
+                status == 'actioned';
+
+            final bool isPost =
+                record['post_id'] != null;
+
+            final String type =
+            isPost ? 'Post' : 'Reply';
+
+            final String targetId =
+            isPost
+                ? record['post_id']?.toString() ?? ''
+                : record['reply_id']?.toString() ?? '';
+
+            final String reportReason =
+                record['reason']?.toString() ??
+                    'No reason provided';
+
+            final String? reportNotes =
+            record['notes']?.toString();
+
+            final String? deletionReason =
+            record['deletion_reason']?.toString();
+
+            final String? contentSnapshot =
+            record['content_snapshot']?.toString();
+
+            final String authorName =
+                record['target_author_name']?.toString() ??
+                    record['author_name']?.toString() ??
+                    'Unknown User';
+
+            final String reporterId =
+                record['reporter_id']?.toString() ??
+                    'Unknown';
+
+            final String resolvedAt =
+                record['resolved_at']?.toString() ??
+                    '';
+
+            final Color statusColor =
+            isActioned
+                ? const Color(0xFFEF4444)
+                : const Color(0xFF10B981);
+
+            return Container(
+              margin:
+              const EdgeInsets.only(bottom: 16),
+              padding:
+              EdgeInsets.all(isMobile ? 16 : 24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius:
+                BorderRadius.circular(20),
+                border: Border.all(
+                  color:
+                  Colors.black.withValues(alpha:0.06),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color:
+                    Colors.black.withValues(alpha:0.03),
+                    blurRadius: 10,
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment:
+                CrossAxisAlignment.start,
+                children: [
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 8,
+                    crossAxisAlignment:
+                    WrapCrossAlignment.center,
+                    children: [
+                      CircleAvatar(
+                        radius: 17,
+                        backgroundColor:
+                        statusColor.withValues(alpha:0.12),
+                        child: Icon(
+                          isActioned
+                              ? Icons.delete_outline_rounded
+                              : Icons.check_circle_outline_rounded,
+                          size: 18,
+                          color: statusColor,
+                        ),
+                      ),
+
+                      Text(
+                        '$type Moderation Record',
+                        style:
+                        GoogleFonts.plusJakartaSans(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color:
+                          const Color(0xFF0F172A),
+                        ),
+                      ),
+
+                      Container(
+                        padding:
+                        const EdgeInsets.symmetric(
+                          horizontal: 9,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color:
+                          statusColor.withValues(alpha:0.10),
+                          borderRadius:
+                          BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          status.toUpperCase(),
+                          style:
+                          GoogleFonts.plusJakartaSans(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: statusColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  Text(
+                    'Author',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+
+                  const SizedBox(height: 4),
+
+                  Text(
+                    authorName,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF0F172A),
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  if (contentSnapshot != null &&
+                      contentSnapshot.trim().isNotEmpty) ...[
+                    Text(
+                      'Content',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+
+                    const SizedBox(height: 4),
+
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        contentSnapshot,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 13,
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+                  ],
+
+                  Text(
+                    'Original Report Reason',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+
+                  const SizedBox(height: 4),
+
+                  Text(
+                    reportReason,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+
+                  if (reportNotes != null &&
+                      reportNotes.trim().isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      'Reporter Notes',
+                      style:
+                      GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      reportNotes,
+                      style:
+                      GoogleFonts.plusJakartaSans(
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+
+                  if (isActioned &&
+                      deletionReason != null &&
+                      deletionReason
+                          .trim()
+                          .isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      'Admin Deletion Reason',
+                      style:
+                      GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color:
+                        const Color(0xFFEF4444),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      deletionReason,
+                      style:
+                      GoogleFonts.plusJakartaSans(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color:
+                        const Color(0xFF991B1B),
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 16),
+                  const Divider(),
+                  const SizedBox(height: 8),
+
+                  Wrap(
+                    spacing: 18,
+                    runSpacing: 8,
+                    children: [
+                      Text(
+                        'Reporter: $reporterId',
+                        style:
+                        GoogleFonts.plusJakartaSans(
+                          fontSize: 10,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      Text(
+                        'Target ID: $targetId',
+                        style:
+                        GoogleFonts.plusJakartaSans(
+                          fontSize: 10,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      Text(
+                        'Resolved: $resolvedAt',
+                        style:
+                        GoogleFonts.plusJakartaSans(
+                          fontSize: 10,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        )
+    )
+        else if (allReported.isEmpty)
             Expanded(
               child: Center(
                 child: Column(
@@ -186,8 +883,8 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.black.withOpacity(0.06)),
-                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10)],
+                      border: Border.all(color: Colors.black.withValues(alpha:0.06)),
+                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha:0.03), blurRadius: 10)],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -199,24 +896,85 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                           children: [
                             CircleAvatar(
                               radius: 16,
-                              backgroundColor: const Color(0xFFEF4444).withOpacity(0.12),
-                              child: const Icon(Icons.flag_rounded, size: 16, color: Color(0xFFEF4444)),
+                              backgroundColor: const Color(0xFFEF4444).withValues(alpha:0.12),
+                              child: const Icon(
+                                Icons.flag_rounded,
+                                size: 16,
+                                color: Color(0xFFEF4444),
+                              ),
                             ),
+
+                            // NEW: Show whether it is a reported post or reply
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: post['type'] == 'reply'
+                                    ? const Color(0xFFE0F2FE)
+                                    : const Color(0xFFFEF2F2),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                post['type'] == 'reply'
+                                    ? 'REPORTED REPLY'
+                                    : 'REPORTED POST',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+
                             Text(
                               post['author'].toString(),
-                              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 14),
+                              style: GoogleFonts.plusJakartaSans(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
                             ),
+
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(6)),
-                              child: Text(post['role'].toString(), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                post['role'].toString(),
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
-                            Text(post['timestamp'].toString(), style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+
+                            Text(
+                              post['timestamp'].toString(),
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey[500],
+                              ),
+                            ),
                           ],
                         ),
 
                         const SizedBox(height: 12),
-
+                        if (post['type'] == 'reply') ...[
+                          Text(
+                            'Reply from thread: ${post['parentThread']}',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                        ],
                         Text(
                           '"${post['content']}"',
                           style: GoogleFonts.plusJakartaSans(fontSize: 13, fontStyle: FontStyle.italic, color: const Color(0xFF334155)),
@@ -237,6 +995,43 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                           ),
                         ),
 
+                        const SizedBox(height: 12),
+
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 8,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEEF2FF),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                '${post['reportsCount'] ?? 0} Reports',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF4338CA),
+                                ),
+                              ),
+                            ),
+
+                            OutlinedButton.icon(
+                              onPressed: () => _showReportsDialog(post),
+                              icon: const Icon(
+                                Icons.visibility_outlined,
+                                size: 16,
+                              ),
+                              label: const Text('View Reports'),
+                            ),
+                          ],
+                        ),
+
                         const SizedBox(height: 16),
 
                         // Action Buttons: Dismiss Flag, Edit Post, Delete Post (FR400_7)
@@ -254,7 +1049,11 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                               onPressed: () => _openDeletePostDialog(post),
                               style: FilledButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),
                               icon: const Icon(Icons.delete_forever_rounded, size: 16),
-                              label: const Text('Delete Post'),
+                              label: Text(
+                                post['type'] == 'reply'
+                                    ? 'Delete Reply'
+                                    : 'Delete Post',
+                              ),
                             ),
                           ],
                         ),
