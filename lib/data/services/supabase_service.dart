@@ -1425,25 +1425,44 @@ class SupabaseService {
 
     final client = _client;
     if (client != null) {
+      // 1. Try invoking PostgreSQL SECURITY DEFINER RPC
+      try {
+        await client.rpc('admin_update_user_status', params: {
+          'p_email': cleanEmail,
+          'p_status': newStatus,
+          'p_role': newRole,
+        });
+        debugPrint('Supabase RPC admin_update_user_status succeeded for $cleanEmail');
+      } catch (rpcError) {
+        debugPrint('Supabase RPC admin_update_user_status note: $rpcError');
+      }
+
+      // 2. Direct Table Updates Fallback
       try {
         final updatePayload = <String, dynamic>{
           'status': newStatus,
           'role': newRole,
           'updated_at': DateTime.now().toIso8601String(),
         };
+
         await client.from('users').update(updatePayload).ilike('email', cleanEmail);
 
-        // Update artisan_profiles status matching user_id
         final userRow = await client.from('users').select('id').ilike('email', cleanEmail).maybeSingle();
         if (userRow != null && userRow['id'] != null) {
-          final artisanStatus = (newStatus.toUpperCase() == 'ACTIVE' || newStatus.toUpperCase() == 'APPROVED') ? 'APPROVED' : newStatus;
+          final userId = userRow['id'];
+          await client.from('users').update(updatePayload).eq('id', userId);
+
+          final artisanStatus = (newStatus.toUpperCase() == 'ACTIVE' || newStatus.toUpperCase() == 'APPROVED')
+              ? 'APPROVED'
+              : newStatus;
+
           await client.from('artisan_profiles').update({
             'status': artisanStatus,
             'updated_at': DateTime.now().toIso8601String(),
-          }).eq('user_id', userRow['id']);
+          }).eq('user_id', userId);
         }
       } catch (e) {
-        debugPrint('Supabase updateArtisanStatusInDb note: $e');
+        debugPrint('Supabase direct updateArtisanStatusInDb note: $e');
       }
     }
   }

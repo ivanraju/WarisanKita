@@ -256,9 +256,92 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Grant permissions to anonymous and authenticated users
-GRANT SELECT ON public.users TO anon, authenticated;
-GRANT SELECT ON public.artisan_profiles TO anon, authenticated;
+-- 9. Public Security-Definer RPC Function for Moderation (Approve / Reject / Suspend)
+CREATE OR REPLACE FUNCTION public.admin_update_user_status(
+    p_email text,
+    p_status text,
+    p_role text DEFAULT NULL
+)
+RETURNS JSONB AS $$
+DECLARE
+    v_user_id uuid;
+    v_artisan_status text;
+BEGIN
+    -- 1. Find user id
+    SELECT id INTO v_user_id
+    FROM public.users
+    WHERE lower(trim(email)) = lower(trim(p_email));
+
+    IF v_user_id IS NULL THEN
+        RETURN jsonb_build_object('success', false, 'message', 'User not found');
+    END IF;
+
+    -- 2. Update public.users status and role
+    UPDATE public.users
+    SET 
+        status = p_status,
+        role = COALESCE(p_role, role),
+        updated_at = now()
+    WHERE id = v_user_id;
+
+    -- 3. Update auth.users user_metadata status and role if auth user exists
+    UPDATE auth.users
+    SET raw_user_meta_data = raw_user_meta_data || 
+        jsonb_build_object(
+            'status', p_status,
+            'role', COALESCE(p_role, raw_user_meta_data->>'role')
+        )
+    WHERE id = v_user_id;
+
+    -- 4. Update public.artisan_profiles status
+    IF upper(p_status) IN ('ACTIVE', 'APPROVED') THEN
+        v_artisan_status := 'APPROVED';
+    ELSE
+        v_artisan_status := p_status;
+    END IF;
+
+    UPDATE public.artisan_profiles
+    SET 
+        status = v_artisan_status,
+        updated_at = now()
+    WHERE user_id = v_user_id;
+
+    RETURN jsonb_build_object('success', true, 'user_id', v_user_id, 'status', p_status);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Grant permissions on tables and RPC functions
+GRANT SELECT, INSERT, UPDATE ON public.users TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE ON public.artisan_profiles TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE ON public.artisan_documents TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.check_account_by_email(text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_update_user_status(text, text, text) TO anon, authenticated;
+
+-- Policies for public.users and public.artisan_profiles
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.artisan_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.artisan_documents ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public select users" ON public.users;
+CREATE POLICY "Public select users" ON public.users FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Public update users" ON public.users;
+CREATE POLICY "Public update users" ON public.users FOR UPDATE USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public insert users" ON public.users;
+CREATE POLICY "Public insert users" ON public.users FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public select artisan_profiles" ON public.artisan_profiles;
+CREATE POLICY "Public select artisan_profiles" ON public.artisan_profiles FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Public update artisan_profiles" ON public.artisan_profiles;
+CREATE POLICY "Public update artisan_profiles" ON public.artisan_profiles FOR UPDATE USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public select artisan_documents" ON public.artisan_documents;
+CREATE POLICY "Public select artisan_documents" ON public.artisan_documents FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Public update artisan_documents" ON public.artisan_documents;
+CREATE POLICY "Public update artisan_documents" ON public.artisan_documents FOR UPDATE USING (true) WITH CHECK (true);
+
 
 
