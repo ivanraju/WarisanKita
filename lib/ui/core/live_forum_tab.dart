@@ -16,6 +16,115 @@ class _LiveForumTabState extends State<LiveForumTab> {
   Map<String, dynamic>? _activeThread;
   String _selectedCommunity = 'All';
   String _selectedSort = 'Hot';
+  String? _replyingToReplyId;
+  String? _replyingToName;
+  String? _replyingToText;
+
+  final Map<String, GlobalKey> _replyKeys = {};
+  final ScrollController _answersScrollController =
+  ScrollController();
+  Future<void> _scrollToReply(String replyId) async {
+    if (_activeThread == null) return;
+
+    final List<Map<String, dynamic>> messages =
+    List<Map<String, dynamic>>.from(
+      _activeThread!['messages'] ?? [],
+    );
+
+    final int targetIndex = messages.indexWhere(
+          (msg) => msg['id']?.toString() == replyId,
+    );
+
+    if (targetIndex == -1) {
+      debugPrint('Reply ID not found: $replyId');
+      return;
+    }
+
+    debugPrint(
+      'Target reply index: $targetIndex / ${messages.length}',
+    );
+
+    // ==================================
+    // Step 1: Check whether already built
+    // ==================================
+    var targetContext =
+        _replyKeys[replyId]?.currentContext;
+
+    if (targetContext != null) {
+      await Scrollable.ensureVisible(
+        targetContext,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOutCubic,
+        alignment: 0.08,
+      );
+
+      debugPrint('Direct scroll success');
+      return;
+    }
+
+    // ==================================
+    // Step 2: Scroll approximately there
+    // so Flutter builds that reply
+    // ==================================
+    if (!_answersScrollController.hasClients) {
+      debugPrint('Answers ScrollController not attached');
+      return;
+    }
+
+    final position = _answersScrollController.position;
+
+    final double maxScroll =
+        position.maxScrollExtent;
+
+    double approximateOffset = 0;
+
+    if (messages.length > 1) {
+      approximateOffset =
+          maxScroll *
+              (targetIndex / (messages.length - 1));
+    }
+
+    approximateOffset = approximateOffset.clamp(
+      0.0,
+      maxScroll,
+    );
+
+    await _answersScrollController.animateTo(
+      approximateOffset,
+      duration: const Duration(milliseconds: 450),
+      curve: Curves.easeInOut,
+    );
+
+    // Give Flutter time to build the target card
+    await Future.delayed(
+      const Duration(milliseconds: 150),
+    );
+
+    if (!mounted) return;
+
+    // ==================================
+    // Step 3: Precise scroll
+    // ==================================
+    final replyContext =
+        _replyKeys[replyId]?.currentContext;
+
+    if (replyContext != null && replyContext.mounted) {
+      await Scrollable.ensureVisible(
+        replyContext,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeInOutCubic,
+        alignment: 0.08,
+      );
+
+      debugPrint(
+        'Scrolled precisely to reply: $replyId',
+      );
+    } else {
+      debugPrint(
+        'Target still not built: $replyId',
+      );
+    }
+  }
 
   final List<String> _communities = [
     'All',
@@ -40,6 +149,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
   @override
   void dispose() {
     _messageController.dispose();
+    _answersScrollController.dispose();
     super.dispose();
   }
 
@@ -63,6 +173,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
       authorName: effectiveAuthor,
       authorEmail: user?.email ?? '',
       isArtisan: isUserArtisan,
+      parentReplyId: _replyingToReplyId,
     );
 
     if (result.isBlocked) {
@@ -101,6 +212,12 @@ class _LiveForumTabState extends State<LiveForumTab> {
     }
 
     _messageController.clear();
+
+    setState(() {
+      _replyingToReplyId = null;
+      _replyingToName = null;
+      _replyingToText = null;
+    });
 
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -157,7 +274,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
               Text('Select Moderation Reason:', style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[600])),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
-                value: selectedReason,
+                initialValue: selectedReason,
                 decoration: InputDecoration(
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -190,13 +307,44 @@ class _LiveForumTabState extends State<LiveForumTab> {
               child: const Text('CANCEL'),
             ),
             FilledButton.icon(
-              onPressed: () {
+              onPressed: () async {
                 final notes = notesController.text.trim();
-                context.read<ForumViewModel>().reportThread(threadId, selectedReason, notes);
+
+                final result =
+                await context.read<ForumViewModel>().reportThread(
+                  threadId,
+                  selectedReason,
+                  notes,
+                );
+
+                if (!dialogContext.mounted) return;
                 Navigator.pop(dialogContext);
+
+                if (!context.mounted) return;
+
+                // User already has a pending report
+                if (result['already_reported'] == true) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        '⚠️ You have already reported this post. '
+                            'Your report is still pending Admin review.',
+                      ),
+                      backgroundColor: Color(0xFFD97706),
+                      behavior: SnackBarBehavior.floating,
+                      duration: Duration(seconds: 4),
+                    ),
+                  );
+
+                  return;
+                }
+
+                // New report successfully submitted
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('🚩 Content reported to Admin Moderation Officers ($selectedReason)'),
+                    content: Text(
+                      '🚩 Report submitted successfully ($selectedReason)',
+                    ),
                     backgroundColor: const Color(0xFFEF4444),
                     behavior: SnackBarBehavior.floating,
                   ),
@@ -204,6 +352,186 @@ class _LiveForumTabState extends State<LiveForumTab> {
               },
               style: FilledButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),
               icon: const Icon(Icons.flag_rounded, size: 16),
+              label: const Text('SUBMIT REPORT'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showReplyReportModal(
+      BuildContext context,
+      String threadId,
+      String replyId,
+      String replyText,
+      ) {
+    String selectedReason = 'Inappropriate Content';
+    final notesController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          title: Row(
+            children: [
+              const Icon(
+                Icons.flag_rounded,
+                color: Color(0xFFEF4444),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Report Reply',
+                  style: GoogleFonts.dmSerifDisplay(
+                    fontSize: 20,
+                    color: const Color(0xFF004D40),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Report reply: "$replyText"',
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[800],
+                ),
+              ),
+
+              const SizedBox(height: 14),
+
+              Text(
+                'Select Moderation Reason:',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 11,
+                  color: Colors.grey[600],
+                ),
+              ),
+
+              const SizedBox(height: 8),
+
+              DropdownButtonFormField<String>(
+                initialValue: selectedReason,
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                ),
+                items: const [
+                  DropdownMenuItem(
+                    value: 'Inappropriate Content',
+                    child: Text('Inappropriate / Offensive Content'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'Misinformation',
+                    child: Text('Misinformation / Fake Heritage Claim'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'Spam/Off-topic',
+                    child: Text('Spam or Off-topic Advertisement'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'Harassment',
+                    child: Text('Harassment or Abusive Language'),
+                  ),
+                ],
+                onChanged: (val) {
+                  if (val != null) {
+                    setDialogState(() {
+                      selectedReason = val;
+                    });
+                  }
+                },
+              ),
+
+              const SizedBox(height: 14),
+
+              TextField(
+                controller: notesController,
+                maxLines: 2,
+                decoration: InputDecoration(
+                  labelText: 'Additional Notes for Admin (Optional)',
+                  hintText: 'Explain why this reply should be reviewed...',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('CANCEL'),
+            ),
+
+            FilledButton.icon(
+              onPressed: () async {
+                final notes = notesController.text.trim();
+
+                final result =
+                await context.read<ForumViewModel>().reportReply(
+                  threadId,
+                  replyId,
+                  selectedReason,
+                  notes,
+                );
+
+                if (!dialogContext.mounted) return;
+                Navigator.pop(dialogContext);
+
+                if (!context.mounted) return;
+
+                // Already has pending report
+                if (result['already_reported'] == true) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        '⚠️ You have already reported this reply. '
+                            'Your report is still pending Admin review.',
+                      ),
+                      backgroundColor: Color(0xFFD97706),
+                      behavior: SnackBarBehavior.floating,
+                      duration: Duration(seconds: 4),
+                    ),
+                  );
+
+                  return;
+                }
+
+                // New report success
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      '🚩 Reply report submitted successfully ($selectedReason)',
+                    ),
+                    backgroundColor: const Color(0xFFEF4444),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              },
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFEF4444),
+              ),
+              icon: const Icon(
+                Icons.flag_rounded,
+                size: 16,
+              ),
               label: const Text('SUBMIT REPORT'),
             ),
           ],
@@ -354,12 +682,22 @@ class _LiveForumTabState extends State<LiveForumTab> {
               final newText = editController.text.trim();
               if (newText.isEmpty) return;
 
-              final result = await context.read<ForumViewModel>().editReply(threadId, replyId, newText);
+              final forumVM = context.read<ForumViewModel>();
+
+              final result = await forumVM.editReply(
+                threadId,
+                replyId,
+                newText,
+              );
+
+              if (!mounted) return;
+
               if (result.isBlocked) {
-                if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('🚫 Edit Blocked: ${result.blockReason}'),
+                    content: Text(
+                      '🚫 Edit Blocked: ${result.blockReason}',
+                    ),
                     backgroundColor: const Color(0xFFEF4444),
                     behavior: SnackBarBehavior.floating,
                   ),
@@ -368,14 +706,21 @@ class _LiveForumTabState extends State<LiveForumTab> {
               }
 
               if (!dialogContext.mounted) return;
+
               Navigator.pop(dialogContext);
-              if (!context.mounted) return;
+
+              if (!mounted) return;
+
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(result.isAutoFlagged
-                      ? '⚠️ Answer updated and flagged for moderator review (${result.flagReason}).'
-                      : '✏️ Answer updated successfully.'),
-                  backgroundColor: result.isAutoFlagged ? const Color(0xFFD97706) : const Color(0xFF004D40),
+                  content: Text(
+                    result.isAutoFlagged
+                        ? '⚠️ Answer updated and flagged for moderator review (${result.flagReason}).'
+                        : '✏️ Answer updated successfully.',
+                  ),
+                  backgroundColor: result.isAutoFlagged
+                      ? const Color(0xFFD97706)
+                      : const Color(0xFF004D40),
                   behavior: SnackBarBehavior.floating,
                 ),
               );
@@ -430,12 +775,21 @@ class _LiveForumTabState extends State<LiveForumTab> {
               final newTitle = editTitleController.text.trim();
               if (newTitle.isEmpty) return;
 
-              final result = await context.read<ForumViewModel>().editThread(threadId, newTitle);
+              final forumVM = context.read<ForumViewModel>();
+
+              final result = await forumVM.editThread(
+                threadId,
+                newTitle,
+              );
+
+              if (!mounted) return;
+
               if (result.isBlocked) {
-                if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('🚫 Edit Blocked: ${result.blockReason}'),
+                    content: Text(
+                      '🚫 Edit Blocked: ${result.blockReason}',
+                    ),
                     backgroundColor: const Color(0xFFEF4444),
                     behavior: SnackBarBehavior.floating,
                   ),
@@ -444,14 +798,21 @@ class _LiveForumTabState extends State<LiveForumTab> {
               }
 
               if (!dialogContext.mounted) return;
+
               Navigator.pop(dialogContext);
-              if (!context.mounted) return;
+
+              if (!mounted) return;
+
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(result.isAutoFlagged
-                      ? '⚠️ Title updated and flagged for moderator review (${result.flagReason}).'
-                      : '✏️ Post title updated.'),
-                  backgroundColor: result.isAutoFlagged ? const Color(0xFFD97706) : const Color(0xFF004D40),
+                  content: Text(
+                    result.isAutoFlagged
+                        ? '⚠️ Title updated and flagged for moderator review (${result.flagReason}).'
+                        : '✏️ Post title updated.',
+                  ),
+                  backgroundColor: result.isAutoFlagged
+                      ? const Color(0xFFD97706)
+                      : const Color(0xFF004D40),
                   behavior: SnackBarBehavior.floating,
                 ),
               );
@@ -512,7 +873,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                     Text('Select Community Hub:', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
-                      value: selectedCommunity,
+                      initialValue: selectedCommunity,
                       decoration: InputDecoration(
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -623,7 +984,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                           if (!modalContext.mounted) return;
                           Navigator.of(modalContext).pop();
 
-                          if (!context.mounted) return;
+                          if (!mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(result.isAutoFlagged
@@ -778,8 +1139,40 @@ class _LiveForumTabState extends State<LiveForumTab> {
       filteredThreads = filteredThreads.where((t) => t['community'] == _selectedCommunity).toList();
     }
 
-    if (_selectedSort == 'New') {
-      filteredThreads = filteredThreads.reversed.toList();
+    if (_selectedSort == 'Hot') {
+      filteredThreads = List<Map<String, dynamic>>.from(filteredThreads)
+        ..sort((a, b) {
+          double hotScore(Map<String, dynamic> thread) {
+            final int upvotes = (thread['upvotes'] as int?) ?? 0;
+            final int replies = (thread['repliesCount'] as int?) ?? 0;
+
+            final DateTime createdAt =
+                DateTime.tryParse(thread['timestamp']?.toString() ?? '') ??
+                    DateTime.fromMillisecondsSinceEpoch(0);
+
+            final double ageHours =
+                DateTime.now().difference(createdAt).inMinutes / 60.0;
+
+            final double agePenalty = ageHours / 24.0;
+
+            return (upvotes * 2) + replies - agePenalty;
+          }
+
+          return hotScore(b).compareTo(hotScore(a));
+        });
+    } else if (_selectedSort == 'New') {
+      filteredThreads = List<Map<String, dynamic>>.from(filteredThreads)
+        ..sort((a, b) {
+          final aTime =
+              DateTime.tryParse(a['timestamp']?.toString() ?? '') ??
+                  DateTime.fromMillisecondsSinceEpoch(0);
+
+          final bTime =
+              DateTime.tryParse(b['timestamp']?.toString() ?? '') ??
+                  DateTime.fromMillisecondsSinceEpoch(0);
+
+          return bTime.compareTo(aTime); // newest first
+        });
     } else if (_selectedSort == 'Top') {
       filteredThreads = List.from(filteredThreads)..sort((a, b) => ((b['upvotes'] as int?) ?? 0).compareTo((a['upvotes'] as int?) ?? 0));
     } else if (_selectedSort == 'Verified Q&A') {
@@ -940,15 +1333,15 @@ class _LiveForumTabState extends State<LiveForumTab> {
                       ),
                     ],
                   )
-                : ListView.builder(
+                :  ListView.builder(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(12),
-                    itemCount: filteredThreads.length,
-                    itemBuilder: (context, index) {
-                      final thread = filteredThreads[index];
-                      return _buildRedditPostCard(thread);
-                    },
-                  ),
+    padding: const EdgeInsets.all(12),
+    itemCount: filteredThreads.length,
+    itemBuilder: (context, index) {
+    final thread = filteredThreads[index];
+    return _buildRedditPostCard(thread);
+    },
+    ),
           ),
         ),
       ],
@@ -965,28 +1358,35 @@ class _LiveForumTabState extends State<LiveForumTab> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.black.withOpacity(0.06)),
+        border: Border.all(
+          color: Colors.black.withValues(alpha:0.06),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha:0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
-          )
+          ),
         ],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: () => setState(() => _activeThread = thread),
+          onTap: () => setState(
+                () => _activeThread = thread,
+          ),
           child: Padding(
             padding: const EdgeInsets.all(14),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Reddit-Style Upvote / Downvote Vertical Column
+                // Reddit-style vote sidebar
                 Container(
-                  padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 6),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 4,
+                    horizontal: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF8F9FA),
                     borderRadius: BorderRadius.circular(12),
@@ -997,11 +1397,16 @@ class _LiveForumTabState extends State<LiveForumTab> {
                         icon: Icon(
                           Icons.arrow_upward_rounded,
                           size: 20,
-                          color: userVote == 1 ? const Color(0xFFF97316) : Colors.grey[400],
+                          color: userVote == 1
+                              ? const Color(0xFFF97316)
+                              : Colors.grey[400],
                         ),
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
-                        onPressed: () => _voteThread(thread, 1),
+                        onPressed: () => _voteThread(
+                          thread,
+                          1,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -1011,7 +1416,11 @@ class _LiveForumTabState extends State<LiveForumTab> {
                           fontWeight: FontWeight.bold,
                           color: userVote == 1
                               ? const Color(0xFFF97316)
-                              : (userVote == -1 ? const Color(0xFF6366F1) : const Color(0xFF1E293B)),
+                              : (
+                              userVote == -1
+                                  ? const Color(0xFF6366F1)
+                                  : const Color(0xFF1E293B)
+                          ),
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -1019,11 +1428,16 @@ class _LiveForumTabState extends State<LiveForumTab> {
                         icon: Icon(
                           Icons.arrow_downward_rounded,
                           size: 20,
-                          color: userVote == -1 ? const Color(0xFF6366F1) : Colors.grey[400],
+                          color: userVote == -1
+                              ? const Color(0xFF6366F1)
+                              : Colors.grey[400],
                         ),
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
-                        onPressed: () => _voteThread(thread, -1),
+                        onPressed: () => _voteThread(
+                          thread,
+                          -1,
+                        ),
                       ),
                     ],
                   ),
@@ -1031,21 +1445,25 @@ class _LiveForumTabState extends State<LiveForumTab> {
 
                 const SizedBox(width: 14),
 
-                // Post Content Header & Details
+                // Post content
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Subreddit & Author Info
+                      // Community / author / role / timestamp
                       Wrap(
                         crossAxisAlignment: WrapCrossAlignment.center,
                         spacing: 6,
                         runSpacing: 4,
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF004D40).withOpacity(0.08),
+                              color: const Color(0xFF004D40)
+                                  .withValues(alpha:0.08),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
@@ -1059,11 +1477,17 @@ class _LiveForumTabState extends State<LiveForumTab> {
                           ),
                           Text(
                             '• Posted by ${thread['displayName'] ?? thread['authorName']}',
-                            style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[600]),
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11,
+                              color: Colors.grey[600],
+                            ),
                           ),
                           if (isArtisan)
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 1,
+                              ),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFFEF3C7),
                                 borderRadius: BorderRadius.circular(4),
@@ -1082,13 +1506,21 @@ class _LiveForumTabState extends State<LiveForumTab> {
                             children: [
                               Text(
                                 thread['timestamp'].toString(),
-                                style: GoogleFonts.plusJakartaSans(fontSize: 10, color: Colors.grey[400]),
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 10,
+                                  color: Colors.grey[400],
+                                ),
                               ),
                               if (thread['isEdited'] == true) ...[
                                 const SizedBox(width: 4),
                                 Text(
                                   '(edited)',
-                                  style: GoogleFonts.plusJakartaSans(fontSize: 10, fontStyle: FontStyle.italic, color: const Color(0xFFD97706), fontWeight: FontWeight.bold),
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 10,
+                                    fontStyle: FontStyle.italic,
+                                    color: const Color(0xFFD97706),
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ],
                             ],
@@ -1110,69 +1542,198 @@ class _LiveForumTabState extends State<LiveForumTab> {
 
                       const SizedBox(height: 12),
 
-                      // Quora/Reddit Action Bar
+                      // Action bar
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          Icon(Icons.mode_comment_outlined, size: 14, color: Colors.grey[600]),
-                          const SizedBox(width: 6),
-                          Flexible(
-                            child: Text(
-                              '${thread['repliesCount']} Answers',
-                              softWrap: true,
-                              style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey[700]),
+                          // Left side: answers + verified badge
+                          Expanded(
+                            child: Wrap(
+                              spacing: 8,
+                              runSpacing: 6,
+                              crossAxisAlignment:
+                              WrapCrossAlignment.center,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 5,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF8FAFC),
+                                    borderRadius:
+                                    BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color:
+                                      const Color(0xFFE2E8F0),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.mode_comment_outlined,
+                                        size: 14,
+                                        color: Colors.grey[600],
+                                      ),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        '${thread['repliesCount']} '
+                                            '${thread['repliesCount'] == 1 ? 'Answer' : 'Answers'}',
+                                        maxLines: 1,
+                                        softWrap: false,
+                                        overflow:
+                                        TextOverflow.visible,
+                                        style:
+                                        GoogleFonts.plusJakartaSans(
+                                          fontSize: 10,
+                                          fontWeight:
+                                          FontWeight.bold,
+                                          color: Colors.grey[700],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                if (thread['isSolved'] == true)
+                                  Container(
+                                    padding:
+                                    const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 5,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color:
+                                      const Color(0xFFDCFCE7),
+                                      borderRadius:
+                                      BorderRadius.circular(8),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize:
+                                      MainAxisSize.min,
+                                      children: [
+                                        const Icon(
+                                          Icons
+                                              .check_circle_rounded,
+                                          size: 12,
+                                          color:
+                                          Color(0xFF166534),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          'Verified Answer',
+                                          maxLines: 1,
+                                          softWrap: false,
+                                          style: GoogleFonts
+                                              .plusJakartaSans(
+                                            fontSize: 9,
+                                            fontWeight:
+                                            FontWeight.bold,
+                                            color: const Color(
+                                              0xFF166534,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
-                          if (thread['isSolved'] == true) ...[
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFDCFCE7),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
+
+                          const SizedBox(width: 8),
+
+                          // Right side: fixed edit/delete/report area
+                          if (thread['isMe'] == true)
+                            SizedBox(
+                              width: 56,
+                              height: 28,
                               child: Row(
-                                mainAxisSize: MainAxisSize.min,
+                                mainAxisAlignment:
+                                MainAxisAlignment.end,
                                 children: [
-                                  const Icon(Icons.check_circle_rounded, size: 12, color: Color(0xFF166534)),
-                                  const SizedBox(width: 4),
-                                  Flexible(
-                                    child: Text(
-                                      'Verified Answer',
-                                      softWrap: true,
-                                      style: GoogleFonts.plusJakartaSans(fontSize: 9, fontWeight: FontWeight.bold, color: const Color(0xFF166534)),
+                                  Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: () =>
+                                          _showEditThreadDialog(
+                                            thread,
+                                          ),
+                                      borderRadius:
+                                      BorderRadius.circular(
+                                        14,
+                                      ),
+                                      child: const SizedBox(
+                                        width: 24,
+                                        height: 24,
+                                        child: Center(
+                                          child: Icon(
+                                            Icons.edit_outlined,
+                                            size: 16,
+                                            color: Color(
+                                              0xFF004D40,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: () =>
+                                          _confirmDeleteThread(
+                                            thread,
+                                          ),
+                                      borderRadius:
+                                      BorderRadius.circular(
+                                        14,
+                                      ),
+                                      child: const SizedBox(
+                                        width: 24,
+                                        height: 24,
+                                        child: Center(
+                                          child: Icon(
+                                            Icons
+                                                .delete_outline_rounded,
+                                            size: 16,
+                                            color: Color(
+                                              0xFFEF4444,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ],
                               ),
+                            )
+                          else
+                            SizedBox(
+                              width: 28,
+                              height: 28,
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () =>
+                                      _showFlagReportModal(
+                                        context,
+                                        thread['id'].toString(),
+                                        thread['title'].toString(),
+                                      ),
+                                  borderRadius:
+                                  BorderRadius.circular(14),
+                                  child: const Center(
+                                    child: Icon(
+                                      Icons.flag_outlined,
+                                      size: 16,
+                                      color: Color(0xFFEF4444),
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
-                          ],
-                          const Spacer(),
-
-                          if (thread['isMe'] == true) ...[
-                            IconButton(
-                              icon: const Icon(Icons.edit_outlined, size: 16, color: Color(0xFF004D40)),
-                              tooltip: 'Edit Title',
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                              onPressed: () => _showEditThreadDialog(thread),
-                            ),
-                            const SizedBox(width: 10),
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline_rounded, size: 16, color: Color(0xFFEF4444)),
-                              tooltip: 'Delete Post',
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                              onPressed: () => _confirmDeleteThread(thread),
-                            ),
-                          ] else ...[
-                            IconButton(
-                              icon: const Icon(Icons.flag_outlined, size: 16, color: Color(0xFFEF4444)),
-                              tooltip: 'Report Content',
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                              onPressed: () => _showFlagReportModal(context, thread['id'].toString(), thread['title'].toString()),
-                            ),
-                          ],
                         ],
                       ),
                     ],
@@ -1185,6 +1746,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
       ),
     );
   }
+
 
   // QUORA STYLE Q&A THREAD DETAIL VIEW
   Widget _buildQuoraThreadDetailView(LanguageViewModel langVM) {
@@ -1206,7 +1768,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF004D40).withOpacity(0.08),
+                        color: const Color(0xFF004D40).withValues(alpha:0.08),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
@@ -1358,77 +1920,206 @@ class _LiveForumTabState extends State<LiveForumTab> {
                     ),
                   ),
                 )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: messages.length,
-                  itemBuilder: (context, index) {
-                    final msg = messages[index];
-                    return _buildQuoraAnswerCard(msg, index);
-                  },
-                ),
+              : ListView(
+            controller: _answersScrollController,
+            padding: const EdgeInsets.all(16),
+            children: messages.asMap().entries.map((entry) {
+    final int index = entry.key;
+    final Map<String, dynamic> msg = entry.value;
+
+    final String replyId = msg['id'].toString();
+
+    final GlobalKey replyKey = _replyKeys.putIfAbsent(
+    replyId,
+    () => GlobalKey(),
+    );
+
+    return Container(
+    key: replyKey,
+    child: _buildQuoraAnswerCard(msg, index),
+    );
+    }).toList(),
+    ),
         ),
 
-        // Answer Bottom Input Bar
+// Answer Bottom Input Bar
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: 10,
+          ),
           decoration: BoxDecoration(
             color: Colors.white,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha:0.05),
                 blurRadius: 10,
                 offset: const Offset(0, -2),
-              )
+              ),
             ],
           ),
           child: SafeArea(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    maxLines: 4,
-                    minLines: 1,
-                    textInputAction: TextInputAction.send,
-                    onSubmitted: (_) => _sendMessage(context),
-                    decoration: InputDecoration(
-                      hintText: 'Write your answer or response...',
-                      hintStyle: GoogleFonts.plusJakartaSans(fontSize: 13, color: Colors.grey[400]),
-                      filled: true,
-                      fillColor: const Color(0xFFF8F9FA),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        borderSide: BorderSide(color: Colors.grey[200]!),
+
+                // ============================
+                // Replying To Banner
+                // ============================
+                if (_replyingToReplyId != null) ...[
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: const Color(0xFFBFDBFE),
                       ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        borderSide: BorderSide(color: Colors.grey[200]!),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        borderSide: const BorderSide(color: Color(0xFF004D40), width: 1.5),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.reply_rounded,
+                          size: 16,
+                          color: Color(0xFF1D4ED8),
+                        ),
+
+                        const SizedBox(width: 8),
+
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Replying to ${_replyingToName ?? 'User'}',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF1D4ED8),
+                                ),
+                              ),
+
+                              if (_replyingToText != null &&
+                                  _replyingToText!.isNotEmpty)
+                                Text(
+                                  _replyingToText!,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 10,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+
+                        IconButton(
+                          tooltip: 'Cancel reply',
+                          icon: const Icon(
+                            Icons.close_rounded,
+                            size: 16,
+                          ),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          onPressed: () {
+                            setState(() {
+                              _replyingToReplyId = null;
+                              _replyingToName = null;
+                              _replyingToText = null;
+                            });
+                          },
+                        ),
+                      ],
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                SizedBox(
-                  height: 42,
-                  child: FilledButton.icon(
-                    onPressed: () => _sendMessage(context),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF004D40),
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ],
+
+                // ============================
+                // Reply Input Row
+                // ============================
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _messageController,
+                        maxLines: 4,
+                        minLines: 1,
+                        textInputAction: TextInputAction.send,
+                        onSubmitted: (_) => _sendMessage(context),
+                        decoration: InputDecoration(
+                          hintText: _replyingToName != null
+                              ? 'Reply to $_replyingToName...'
+                              : 'Write your answer or response...',
+                          hintStyle: GoogleFonts.plusJakartaSans(
+                            fontSize: 13,
+                            color: Colors.grey[400],
+                          ),
+                          filled: true,
+                          fillColor: const Color(0xFFF8F9FA),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            borderSide: BorderSide(
+                              color: Colors.grey[200]!,
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            borderSide: BorderSide(
+                              color: Colors.grey[200]!,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF004D40),
+                              width: 1.5,
+                            ),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
+                        ),
+                      ),
                     ),
-                    icon: const Icon(Icons.send_rounded, size: 15, color: Color(0xFFFFD54F)),
-                    label: Text(
-                      'Reply',
-                      style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.bold),
+
+                    const SizedBox(width: 8),
+
+                    SizedBox(
+                      height: 42,
+                      child: FilledButton.icon(
+                        onPressed: () => _sendMessage(context),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF004D40),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        icon: const Icon(
+                          Icons.send_rounded,
+                          size: 15,
+                          color: Color(0xFFFFD54F),
+                        ),
+                        label: Text(
+                          'Reply',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ],
             ),
@@ -1445,6 +2136,42 @@ class _LiveForumTabState extends State<LiveForumTab> {
     final bool isVerifiedAnswer = msg['isVerifiedAnswer'] as bool? ?? false;
     final int userVote = (msg['userVote'] as int?) ?? 0;
 
+    // ============================
+    // Find parent reply
+    // ============================
+    final String? parentReplyId =
+    msg['parentReplyId']?.toString();
+
+    Map<String, dynamic>? parentReply;
+
+    if (parentReplyId != null &&
+        parentReplyId.isNotEmpty &&
+        _activeThread != null) {
+      final List<dynamic> allMessages =
+          (_activeThread!['messages'] as List?) ?? [];
+
+      for (final item in allMessages) {
+        if (item is Map) {
+          final map =
+          Map<String, dynamic>.from(item);
+
+          if (map['id']?.toString() == parentReplyId) {
+            parentReply = map;
+            break;
+          }
+        }
+      }
+    }
+
+    final String? replyingToName = parentReply == null
+        ? null
+        : (parentReply['displayName'] ??
+        parentReply['sender'])
+        ?.toString();
+
+    final String? replyingToText =
+    parentReply?['text']?.toString();
+
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(16),
@@ -1454,7 +2181,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
         border: Border.all(
           color: isVerifiedAnswer
               ? const Color(0xFFFDE68A)
-              : (isMe ? const Color(0xFF004D40).withOpacity(0.3) : Colors.black.withOpacity(0.05)),
+              : (isMe ? const Color(0xFF004D40).withValues(alpha:0.3) : Colors.black.withValues(alpha:0.05)),
           width: isVerifiedAnswer ? 1.5 : 1,
         ),
       ),
@@ -1554,12 +2281,102 @@ class _LiveForumTabState extends State<LiveForumTab> {
             ],
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
+
+          // ============================
+          // Replying To Parent
+          // ============================
+          if (replyingToName != null &&
+              parentReplyId != null) ...[
+            InkWell(
+              onTap: () {
+                _scrollToReply(parentReplyId);
+              },
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border(
+                    left: BorderSide(
+                      color: isArtisan
+                          ? const Color(0xFFD97706)
+                          : const Color(0xFF004D40),
+                      width: 3,
+                    ),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.reply_rounded,
+                          size: 14,
+                          color: isArtisan
+                              ? const Color(0xFFD97706)
+                              : const Color(0xFF004D40),
+                        ),
+                        const SizedBox(width: 5),
+                        Expanded(
+                          child: Text(
+                            'Replying to $replyingToName',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: isArtisan
+                                  ? const Color(0xFFB45309)
+                                  : const Color(0xFF004D40),
+                            ),
+                          ),
+                        ),
+
+                        // 提示用户这里可以点击
+                        const Icon(
+                          Icons.arrow_upward_rounded,
+                          size: 13,
+                          color: Colors.grey,
+                        ),
+                      ],
+                    ),
+
+                    if (replyingToText != null &&
+                        replyingToText.isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        replyingToText,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 10,
+                          color: Colors.grey[600],
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 10),
+          ] else
+            const SizedBox(height: 2),
 
           // Answer Text
           Text(
             msg['text'].toString(),
-            style: GoogleFonts.plusJakartaSans(fontSize: 13, color: const Color(0xFF1E293B), height: 1.5),
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 13,
+              color: const Color(0xFF1E293B),
+              height: 1.5,
+            ),
           ),
 
           const SizedBox(height: 14),
@@ -1567,80 +2384,139 @@ class _LiveForumTabState extends State<LiveForumTab> {
           // Quora Vote & Controls Bar
           Row(
             children: [
-              // Upvote Button
-              GestureDetector(
-                onTap: () => _voteMessage(msg, 1),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: userVote == 1 ? const Color(0xFFFFEDD5) : const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.arrow_upward_rounded,
-                        size: 14,
-                        color: userVote == 1 ? const Color(0xFFF97316) : Colors.grey[700],
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${msg['upvotes']}',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: userVote == 1 ? const Color(0xFFC2410C) : Colors.grey[700],
+              // 1. Vote 固定放最左边
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 6,
+                  vertical: 3,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    GestureDetector(
+                      onTap: () => _voteMessage(msg, 1),
+                      child: Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: Icon(
+                          Icons.arrow_upward_rounded,
+                          size: 14,
+                          color: userVote == 1
+                              ? const Color(0xFFF97316)
+                              : Colors.grey[700],
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+
+                    const SizedBox(width: 5),
+
+                    Text(
+                      '${msg['upvotes']}',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: userVote == 1
+                            ? const Color(0xFFC2410C)
+                            : userVote == -1
+                            ? const Color(0xFF4338CA)
+                            : Colors.grey[700],
+                      ),
+                    ),
+
+                    const SizedBox(width: 5),
+
+                    GestureDetector(
+                      onTap: () => _voteMessage(msg, -1),
+                      child: Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: Icon(
+                          Icons.arrow_downward_rounded,
+                          size: 14,
+                          color: userVote == -1
+                              ? const Color(0xFF4338CA)
+                              : Colors.grey[700],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
 
-              const SizedBox(width: 8),
-
-              // Downvote Button
-              GestureDetector(
-                onTap: () => _voteMessage(msg, -1),
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: userVote == -1 ? const Color(0xFFE0E7FF) : const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(
-                    Icons.arrow_downward_rounded,
-                    size: 14,
-                    color: userVote == -1 ? const Color(0xFF4338CA) : Colors.grey[700],
-                  ),
-                ),
-              ),
-
+              // 2. 这个 Spacer 一定是在 vote 后面
               const Spacer(),
+
+              // 3. Reply button
+              IconButton(
+                icon: const Icon(
+                  Icons.reply_rounded,
+                  size: 17,
+                  color: Color(0xFF004D40),
+                ),
+                tooltip:
+                'Reply to ${msg['displayName'] ?? msg['sender']}',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                onPressed: () {
+                  setState(() {
+                    _replyingToReplyId = msg['id'].toString();
+                    _replyingToName =
+                        (msg['displayName'] ?? msg['sender']).toString();
+                    _replyingToText = msg['text'].toString();
+                  });
+                },
+              ),
+
+              const SizedBox(width: 12),
 
               if (isMe) ...[
                 IconButton(
-                  icon: const Icon(Icons.edit_outlined, size: 16, color: Color(0xFF004D40)),
+                  icon: const Icon(
+                    Icons.edit_outlined,
+                    size: 16,
+                    color: Color(0xFF004D40),
+                  ),
                   tooltip: 'Edit Answer',
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
-                  onPressed: () => _showEditMessageDialog(msg['id'].toString(), msg['text'].toString()),
+                  onPressed: () => _showEditMessageDialog(
+                    msg['id'].toString(),
+                    msg['text'].toString(),
+                  ),
                 ),
+
                 const SizedBox(width: 12),
+
                 IconButton(
-                  icon: const Icon(Icons.delete_outline_rounded, size: 16, color: Color(0xFFEF4444)),
+                  icon: const Icon(
+                    Icons.delete_outline_rounded,
+                    size: 16,
+                    color: Color(0xFFEF4444),
+                  ),
                   tooltip: 'Delete Answer',
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
-                  onPressed: () => _confirmDeleteMessage(msg['id'].toString()),
+                  onPressed: () =>
+                      _confirmDeleteMessage(msg['id'].toString()),
                 ),
               ] else ...[
                 IconButton(
-                  icon: const Icon(Icons.flag_outlined, size: 16, color: Color(0xFFEF4444)),
+                  icon: const Icon(
+                    Icons.flag_outlined,
+                    size: 16,
+                    color: Color(0xFFEF4444),
+                  ),
                   tooltip: 'Report Content',
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
-                  onPressed: () => _showFlagReportModal(context, _activeThread!['id'].toString(), msg['text'].toString()),
+                  onPressed: () => _showReplyReportModal(
+                    context,
+                    _activeThread!['id'].toString(),
+                    msg['id'].toString(),
+                    msg['text'].toString(),
+                  ),
                 ),
               ],
             ],

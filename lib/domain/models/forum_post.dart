@@ -196,6 +196,10 @@ class ThreadReply {
   final int userVote;
   final bool isVerifiedAnswer;
   final bool isEdited;
+  final bool isReported;
+  final String? reportReason;
+  final String? reportNotes;
+  final String? parentReplyId;
   final String timestamp;
   final String text;
 
@@ -211,6 +215,10 @@ class ThreadReply {
     this.isEdited = false,
     required this.timestamp,
     required this.text,
+    this.isReported = false,
+    this.reportReason,
+    this.reportNotes,
+    this.parentReplyId,
   });
 
   String get authorName => sender;
@@ -236,6 +244,10 @@ class ThreadReply {
     bool? isEdited,
     String? timestamp,
     String? text,
+    bool? isReported,
+    String? reportReason,
+    String? reportNotes,
+    String? parentReplyId,
   }) {
     return ThreadReply(
       id: id ?? this.id,
@@ -249,6 +261,10 @@ class ThreadReply {
       isEdited: isEdited ?? this.isEdited,
       timestamp: timestamp ?? this.timestamp,
       text: text ?? this.text,
+      isReported: isReported ?? this.isReported,
+      reportReason: reportReason ?? this.reportReason,
+      reportNotes: reportNotes ?? this.reportNotes,
+      parentReplyId: parentReplyId ?? this.parentReplyId,
     );
   }
 
@@ -265,6 +281,10 @@ class ThreadReply {
       'isEdited': isEdited,
       'time': timestamp,
       'text': text,
+      'isReported': isReported,
+      'reportReason': reportReason,
+      'reportNotes': reportNotes,
+      'parentReplyId': parentReplyId,
     };
   }
 
@@ -277,6 +297,10 @@ class ThreadReply {
       'upvotes': upvotes,
       'is_verified_answer': isVerifiedAnswer,
       'is_edited': isEdited,
+      'is_reported': isReported,
+      if (reportReason != null) 'report_reason': reportReason,
+      if (reportNotes != null) 'report_notes': reportNotes,
+      if (parentReplyId != null) 'parent_reply_id': parentReplyId,
     };
   }
 
@@ -306,6 +330,10 @@ class ThreadReply {
       isEdited: map['isEdited'] ?? map['is_edited'] ?? false,
       timestamp: map['created_at']?.toString() ?? map['time'] ?? map['timestamp'] ?? 'Just now',
       text: map['content'] ?? map['text'] ?? '',
+      isReported: map['isReported'] ?? map['is_reported'] ?? false,
+      reportReason: map['reportReason'] ?? map['report_reason'],
+      reportNotes: map['reportNotes'] ?? map['report_notes'],
+      parentReplyId: map['parentReplyId'] ?? map['parent_reply_id'],
     );
   }
 }

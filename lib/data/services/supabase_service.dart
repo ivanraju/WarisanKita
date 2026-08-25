@@ -128,7 +128,7 @@ class SupabaseService {
       'isSuspended': true,
     },
     'admin@warisankita.my': {
-      'id': 'usr-admin-001',
+      'id': 'a0000000-0000-0000-0000-000000000001',
       'email': 'admin@warisankita.my',
       'username': 'admin',
       'displayName': 'Super Admin Nadia',
@@ -426,9 +426,7 @@ class SupabaseService {
           Map<String, dynamic>? profileData;
           try {
             profileData = await client.from('users').select('*, artisan_profiles!artisan_profiles_user_id_fkey(*)').eq('id', authRes.user!.id).maybeSingle();
-            if (profileData == null) {
-              profileData = await client.from('users').select('*, artisan_profiles!artisan_profiles_user_id_fkey(*)').ilike('email', cleanEmail).maybeSingle();
-            }
+            profileData ??= await client.from('users').select('*, artisan_profiles!artisan_profiles_user_id_fkey(*)').ilike('email', cleanEmail).maybeSingle();
           } catch (e) {
             try {
               profileData = await client.from('users').select('*, artisan_profiles(*)').eq('id', authRes.user!.id).maybeSingle();
@@ -1527,6 +1525,16 @@ class SupabaseService {
   static final Map<String, int> _sessionThreadVotes = {};
   static final Map<String, int> _sessionReplyVotes = {};
 
+  String _threadVoteKey(String threadId) {
+    final userId = _client?.auth.currentUser?.id ?? 'guest';
+    return '$userId:$threadId';
+  }
+
+  String _replyVoteKey(String replyId) {
+    final userId = _client?.auth.currentUser?.id ?? 'guest';
+    return '$userId:$replyId';
+  }
+
   Future<List<ForumThread>> fetchThreads() async {
     await Future.delayed(const Duration(milliseconds: 300));
     final client = _client;
@@ -1534,12 +1542,48 @@ class SupabaseService {
       try {
         dynamic res;
         try {
-          res = await client.from('forum_posts').select('*, users!forum_posts_user_id_fkey(id, full_name, username, avatar_url, role)');
+          res = await client.from('forum_posts').select('*, users!forum_posts_user_id_fkey(id, email, full_name, username, avatar_url, role)');
         } catch (_) {
           try {
-            res = await client.from('forum_posts').select('*, users(id, full_name, username, avatar_url, role)');
+            res = await client.from('forum_posts').select('*, users(id, email, full_name, username, avatar_url, role)');
           } catch (_) {
             res = await client.from('forum_posts').select();
+          }
+        }
+
+        // =====================================================
+// Load current user's persistent POST votes
+// =====================================================
+        final Map<String, int> persistedPostVotes = {};
+
+        final String? currentUserId =
+            client.auth.currentUser?.id;
+
+        if (currentUserId != null) {
+          try {
+            final voteRows = await client
+                .from('forum_post_votes')
+                .select('post_id, vote')
+                .eq('user_id', currentUserId);
+
+            for (final row in voteRows) {
+              final map =
+              Map<String, dynamic>.from(row);
+
+              final postId =
+              map['post_id']?.toString();
+
+              final vote =
+                  (map['vote'] as num?)?.toInt() ?? 0;
+
+              if (postId != null) {
+                persistedPostVotes[postId] = vote;
+              }
+            }
+                    } catch (e) {
+            debugPrint(
+              'fetch post votes error: $e',
+            );
           }
         }
 
@@ -1547,19 +1591,44 @@ class SupabaseService {
         if (res is List && res.isNotEmpty) {
           for (final row in res) {
             final threadMap = Map<String, dynamic>.from(row);
-            threadMap['userVote'] = _sessionThreadVotes[threadMap['id']] ?? (threadMap['user_vote'] as int?) ?? 0;
+            final threadId = threadMap['id'].toString();
 
+            final int persistedVote =
+                persistedPostVotes[threadId] ?? 0;
+
+// Keep session cache synchronized with database
+            _sessionThreadVotes[
+            _threadVoteKey(threadId)
+            ] = persistedVote;
+
+            threadMap['userVote'] = persistedVote;
             final localMatch = _forumStore.where((l) => l.id == threadMap['id']).firstOrNull;
 
             try {
               dynamic repliesRes;
               try {
-                repliesRes = await client.from('forum_replies').select('*, users!forum_replies_user_id_fkey(id, full_name, username, avatar_url, role)').eq('post_id', threadMap['id']);
+                repliesRes = await client
+                    .from('forum_replies')
+                    .select(
+                  '*, users!forum_replies_user_id_fkey(id, email, full_name, username, avatar_url, role)',
+                )
+                    .eq('post_id', threadMap['id'])
+                    .order('created_at', ascending: true);
               } catch (_) {
                 try {
-                  repliesRes = await client.from('forum_replies').select('*, users(id, full_name, username, avatar_url, role)').eq('post_id', threadMap['id']);
+                  repliesRes = await client
+                      .from('forum_replies')
+                      .select(
+                    '*, users(id, email, full_name, username, avatar_url, role)',
+                  )
+                      .eq('post_id', threadMap['id'])
+                      .order('created_at', ascending: true);
                 } catch (_) {
-                  repliesRes = await client.from('forum_replies').select().eq('post_id', threadMap['id']);
+                  repliesRes = await client
+                      .from('forum_replies')
+                      .select()
+                      .eq('post_id', threadMap['id'])
+                      .order('created_at', ascending: true);
                 }
               }
 
@@ -1567,15 +1636,20 @@ class SupabaseService {
               if (repliesRes is List) {
                 for (final r in repliesRes) {
                   final rMap = Map<String, dynamic>.from(r);
-                  rMap['userVote'] = _sessionReplyVotes[rMap['id']] ?? (rMap['user_vote'] as int?) ?? 0;
+                  final replyId = rMap['id'].toString();
+
+                  // fetchThreads
+                  rMap['userVote'] =
+                      _sessionReplyVotes[
+                      _replyVoteKey(replyId)
+                      ] ??
+                          (rMap['user_vote'] as int?) ??
+                          0;
                   processedReplies.add(rMap);
                 }
               }
-              if (processedReplies.isNotEmpty) {
-                threadMap['replies'] = processedReplies;
-              } else if (localMatch != null && localMatch.replies.isNotEmpty) {
-                threadMap['replies'] = localMatch.replies.map((r) => r.toMap()).toList();
-              }
+// Always trust Supabase result, even when there are 0 replies.
+              threadMap['replies'] = processedReplies;
             } catch (_) {
               if (localMatch != null && localMatch.replies.isNotEmpty) {
                 threadMap['replies'] = localMatch.replies.map((r) => r.toMap()).toList();
@@ -1594,9 +1668,124 @@ class SupabaseService {
     return List.from(_forumStore);
   }
 
+  Future<List<Map<String, dynamic>>> fetchForumReportQueue() async {
+    final client = _client;
+
+    if (client == null) {
+      return [];
+    }
+
+    try {
+      if (kDebugMode) {
+        print(
+        '🔐 CURRENT SUPABASE USER = '
+            '${client.auth.currentUser?.email} '
+            '(${client.auth.currentUser?.id})',
+      );
+      }
+      final response = await client
+          .from('forum_reports')
+          .select()
+          .eq('status', 'pending')
+          .order('created_at', ascending: false);
+
+      final reports =
+      List<Map<String, dynamic>>.from(response);
+
+      final Map<String, Map<String, dynamic>>
+      groupedReports = {};
+
+      for (final report in reports) {
+        final postId = report['post_id']?.toString();
+        final replyId = report['reply_id']?.toString();
+
+        final String key;
+
+        if (postId != null) {
+          key = 'post_$postId';
+        } else if (replyId != null) {
+          key = 'reply_$replyId';
+        } else {
+          continue;
+        }
+
+        if (!groupedReports.containsKey(key)) {
+          groupedReports[key] = {
+            'type': postId != null ? 'post' : 'reply',
+            'postId': postId,
+            'replyId': replyId,
+            'reports': <Map<String, dynamic>>[],
+          };
+        }
+
+        final reportList =
+        groupedReports[key]!['reports']
+        as List<Map<String, dynamic>>;
+
+        reportList.add(report);
+      }
+
+      final result = groupedReports.values.toList();
+
+      for (final item in result) {
+        final reports =
+        item['reports'] as List<Map<String, dynamic>>;
+
+        item['reportsCount'] = reports.length;
+      }
+
+      return result;
+    } catch (e) {
+      debugPrint(
+        'fetchForumReportQueue error: $e',
+      );
+
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> fetchForumModerationHistory() async {
+    final client = _client;
+
+    if (client == null) {
+      return [];
+    }
+
+    try {
+      final response = await client
+          .from('forum_reports')
+          .select()
+          .inFilter(
+        'status',
+        ['dismissed', 'actioned'],
+      )
+          .order(
+        'resolved_at',
+        ascending: false,
+      );
+
+      final history =
+      List<Map<String, dynamic>>.from(response);
+
+      debugPrint(
+        'MODERATION HISTORY = ${history.length} records',
+      );
+
+      return history;
+    } catch (e) {
+      debugPrint(
+        'fetchForumModerationHistory error: $e',
+      );
+
+      return [];
+    }
+  }
+
   Future<void> createThread(ForumThread thread) async {
     _forumStore.insert(0, thread);
-    _sessionThreadVotes[thread.id] = 1; // Author automatically upvotes own thread
+    _sessionThreadVotes[
+    _threadVoteKey(thread.id)
+    ] = 1; // Author automatically upvotes own thread
 
     final client = _client;
     if (client != null) {
@@ -1626,6 +1815,7 @@ class SupabaseService {
       }
 
       for (final reply in thread.replies) {
+        _sessionReplyVotes[_replyVoteKey(reply.id)] = 1;
         try {
           await client.from('forum_replies').insert({
             'id': reply.id,
@@ -1644,7 +1834,12 @@ class SupabaseService {
   }
 
   Future<void> postReply(String threadId, ThreadReply reply) async {
-    _sessionReplyVotes[reply.id] = 1;
+    final postVoteKey = _replyVoteKey(reply.id);
+
+    _sessionReplyVotes[postVoteKey] = 1;
+
+    debugPrint('🟢 POST REPLY voteKey = $postVoteKey');
+    debugPrint('🟢 POST REPLY votes = $_sessionReplyVotes');
 
     final idx = _forumStore.indexWhere((t) => t.id == threadId);
     if (idx != -1) {
@@ -1671,97 +1866,195 @@ class SupabaseService {
         'upvotes': reply.upvotes,
         'is_verified_answer': reply.isVerifiedAnswer,
         'is_edited': reply.isEdited,
+        if (reply.parentReplyId != null)
+          'parent_reply_id': reply.parentReplyId,
       };
 
       try {
-        await client.from('forum_replies').insert(verifiedReplyMap);
+        await client
+            .from('forum_replies')
+            .insert(verifiedReplyMap);
+
+        // If a verified Artisan replies,
+        // mark the thread as having a verified Artisan answer.
+        if (reply.isArtisan) {
+          await client
+              .from('forum_posts')
+              .update({
+            'is_solved': true,
+          })
+              .eq('id', threadId);
+        }
+
       } catch (e) {
-        debugPrint('Supabase postReply insert note: $e');
+        debugPrint('Supabase postReply insert/update note: $e');
       }
     }
   }
 
-  Future<void> voteThread(String threadId, int voteDirection) async {
-    final int currentVote = _sessionThreadVotes[threadId] ?? 0;
-    int newVote = 0;
-    int delta = 0;
+  Future<void> voteThread(
+      String threadId,
+      int voteDirection,
+      ) async {
+    final client = _client;
 
-    if (currentVote == voteDirection) {
-      // Toggle off
-      newVote = 0;
-      delta = -voteDirection;
-    } else {
-      newVote = voteDirection;
-      delta = voteDirection - currentVote;
+    if (client == null) return;
+
+    if (voteDirection != 1 &&
+        voteDirection != -1) {
+      return;
     }
 
-    _sessionThreadVotes[threadId] = newVote;
+    final int index =
+    _forumStore.indexWhere(
+          (thread) => thread.id == threadId,
+    );
 
-    final idx = _forumStore.indexWhere((t) => t.id == threadId);
-    if (idx != -1) {
-      final t = _forumStore[idx];
-      final int updatedUpvotes = t.upvotes + delta;
-      _forumStore[idx] = t.copyWith(
-        upvotes: updatedUpvotes,
-        userVote: newVote,
+    if (index == -1) return;
+
+    try {
+      final result = await client.rpc(
+        'vote_forum_post',
+        params: {
+          'p_post_id': threadId,
+          'p_vote': voteDirection,
+        },
       );
 
-      final client = _client;
-      if (client != null) {
-        try {
-          await client.from('forum_posts').update({
-            'upvotes': updatedUpvotes,
-          }).eq('id', threadId);
-        } catch (e) {
-          debugPrint('Supabase voteThread note: $e');
-        }
-      }
-    }
-  }
-
-  Future<void> voteReply(String threadId, String replyId, int voteDirection) async {
-    final int currentVote = _sessionReplyVotes[replyId] ?? 0;
-    int newVote = 0;
-    int delta = 0;
-
-    if (currentVote == voteDirection) {
-      // Toggle off
-      newVote = 0;
-      delta = -voteDirection;
-    } else {
-      newVote = voteDirection;
-      delta = voteDirection - currentVote;
-    }
-
-    _sessionReplyVotes[replyId] = newVote;
-
-    final tIdx = _forumStore.indexWhere((t) => t.id == threadId);
-    if (tIdx != -1) {
-      final t = _forumStore[tIdx];
-      final rIdx = t.replies.indexWhere((r) => r.id == replyId);
-      if (rIdx != -1) {
-        final r = t.replies[rIdx];
-        final int updatedUpvotes = r.upvotes + delta;
-        final updatedReply = r.copyWith(
-          upvotes: updatedUpvotes,
-          userVote: newVote,
+      if (result is! Map) {
+        debugPrint(
+          'voteThread unexpected result: $result',
         );
-        final updatedReplies = List<ThreadReply>.from(t.replies)..[rIdx] = updatedReply;
-        _forumStore[tIdx] = t.copyWith(replies: updatedReplies);
-
-        final client = _client;
-        if (client != null) {
-          try {
-            await client.from('forum_replies').update({
-              'upvotes': updatedUpvotes,
-            }).eq('id', replyId);
-          } catch (e) {
-            debugPrint('Supabase voteReply note: $e');
-          }
-        }
+        return;
       }
+
+      final Map<String, dynamic> resultMap =
+      Map<String, dynamic>.from(result);
+
+      final int finalUpvotes =
+          (resultMap['upvotes'] as num?)
+              ?.toInt() ??
+              0;
+
+      final int finalUserVote =
+          (resultMap['user_vote'] as num?)
+              ?.toInt() ??
+              0;
+
+      _sessionThreadVotes[
+      _threadVoteKey(threadId)
+      ] = finalUserVote;
+
+      final currentThread =
+      _forumStore[index];
+
+      _forumStore[index] =
+          currentThread.copyWith(
+            upvotes: finalUpvotes,
+            userVote: finalUserVote,
+          );
+
+      debugPrint(
+        'Post vote updated: '
+            'userVote=$finalUserVote, '
+            'upvotes=$finalUpvotes',
+      );
+    } catch (e) {
+      debugPrint(
+        'voteThread RPC error: $e',
+      );
     }
   }
+
+  Future<void> voteReply(
+      String threadId,
+      String replyId,
+      int voteDirection,
+      ) async {
+    final client = _client;
+
+    if (client == null) return;
+
+    // Only +1 upvote or -1 downvote
+    if (voteDirection != 1 && voteDirection != -1) {
+      return;
+    }
+
+    final int tIdx =
+    _forumStore.indexWhere((t) => t.id == threadId);
+
+    if (tIdx == -1) return;
+
+    final ForumThread thread = _forumStore[tIdx];
+
+    final int rIdx =
+    thread.replies.indexWhere((r) => r.id == replyId);
+
+    if (rIdx == -1) return;
+
+    try {
+      final result = await client.rpc(
+        'vote_forum_reply',
+        params: {
+          'p_reply_id': replyId,
+          'p_vote': voteDirection,
+        },
+      );
+
+      if (result is! Map) {
+        debugPrint(
+          'Supabase voteReply unexpected result: $result',
+        );
+        return;
+      }
+
+      final Map<String, dynamic> resultMap =
+      Map<String, dynamic>.from(result);
+
+      final int finalUpvotes =
+          (resultMap['upvotes'] as num?)?.toInt() ?? 0;
+
+      final int finalUserVote =
+          (resultMap['user_vote'] as num?)?.toInt() ?? 0;
+
+      // Save current user's vote locally
+      final String voteKey = _replyVoteKey(replyId);
+
+      _sessionReplyVotes[voteKey] = finalUserVote;
+
+      // Get latest thread state
+      final ForumThread currentThread =
+      _forumStore[tIdx];
+
+      final List<ThreadReply> updatedReplies =
+      List<ThreadReply>.from(
+        currentThread.replies,
+      );
+
+      updatedReplies[rIdx] =
+          updatedReplies[rIdx].copyWith(
+            upvotes: finalUpvotes,
+            userVote: finalUserVote,
+          );
+
+      _forumStore[tIdx] =
+          currentThread.copyWith(
+            replies: updatedReplies,
+          );
+
+      debugPrint(
+        'Reply vote RPC: '
+            'userVote=$finalUserVote, '
+            'upvotes=$finalUpvotes',
+      );
+    } catch (e) {
+      debugPrint(
+        'Supabase voteReply RPC error: $e',
+      );
+    }
+  }
+
+
 
   Future<void> editThread(String threadId, String newTitle) async {
     final idx = _forumStore.indexWhere((t) => t.id == threadId);
@@ -1802,6 +2095,91 @@ class SupabaseService {
       } catch (e) {
         debugPrint('Supabase deleteThread note: $e');
       }
+    }
+  }
+
+  Future<void> adminDeleteForumPost(
+      String postId,
+      String deletionReason,
+      ) async {
+    final client = _client;
+
+    if (client == null) return;
+
+    try {
+      final result = await client.rpc(
+        'admin_delete_forum_content',
+        params: {
+          'p_post_id': postId,
+          'p_reply_id': null,
+          'p_deletion_reason': deletionReason,
+        },
+      );
+
+      debugPrint(
+        'Admin deleted forum post: $result',
+      );
+
+      // Remove deleted post from local forum state
+      _forumStore.removeWhere(
+            (thread) => thread.id == postId,
+      );
+    } catch (e) {
+      debugPrint(
+        'adminDeleteForumPost error: $e',
+      );
+      rethrow;
+    }
+  }
+
+  Future<void> adminDeleteForumReply(
+      String threadId,
+      String replyId,
+      String deletionReason,
+      ) async {
+    final client = _client;
+
+    if (client == null) return;
+
+    try {
+      final result = await client.rpc(
+        'admin_delete_forum_content',
+        params: {
+          'p_post_id': null,
+          'p_reply_id': replyId,
+          'p_deletion_reason': deletionReason,
+        },
+      );
+
+      debugPrint(
+        'Admin deleted forum reply: $result',
+      );
+
+      // Remove deleted reply from local forum state
+      final threadIndex = _forumStore.indexWhere(
+            (thread) => thread.id == threadId,
+      );
+
+      if (threadIndex != -1) {
+        final thread = _forumStore[threadIndex];
+
+        final updatedReplies =
+        List<ThreadReply>.from(thread.replies)
+          ..removeWhere(
+                (reply) => reply.id == replyId,
+          );
+
+        _forumStore[threadIndex] =
+            thread.copyWith(
+              replies: updatedReplies,
+              replyCount: updatedReplies.length,
+            );
+      }
+    } catch (e) {
+      debugPrint(
+        'adminDeleteForumReply error: $e',
+      );
+      rethrow;
     }
   }
 
@@ -1846,49 +2224,210 @@ class SupabaseService {
     }
   }
 
-  Future<void> reportThread(String threadId, String reason, String notes) async {
-    final idx = _forumStore.indexWhere((t) => t.id == threadId);
-    if (idx != -1) {
-      _forumStore[idx] = _forumStore[idx].copyWith(
-        isReported: true,
-        reportReason: reason,
-        reportNotes: notes,
+  Future<Map<String, dynamic>> reportReply(
+      String threadId,
+      String replyId,
+      String reason,
+      String notes,
+      ) async {
+    // Update local store
+    final tIdx = _forumStore.indexWhere(
+          (t) => t.id == threadId,
+    );
+
+    if (tIdx != -1) {
+      final thread = _forumStore[tIdx];
+
+      final rIdx = thread.replies.indexWhere(
+            (r) => r.id == replyId,
       );
-    }
-    final client = _client;
-    if (client != null) {
-      try {
-        await client.from('forum_posts').update({
-          'is_reported': true,
-          'report_reason': reason,
-          'report_notes': notes,
-        }).eq('id', threadId);
-      } catch (e) {
-        debugPrint('Supabase reportThread note: $e');
+
+      if (rIdx != -1) {
+        final updatedReply = thread.replies[rIdx].copyWith(
+          isReported: true,
+          reportReason: reason,
+          reportNotes: notes,
+        );
+
+        final updatedReplies =
+        List<ThreadReply>.from(thread.replies);
+
+        updatedReplies[rIdx] = updatedReply;
+
+        _forumStore[tIdx] = thread.copyWith(
+          replies: updatedReplies,
+        );
       }
+    }
+
+    final client = _client;
+
+    if (client == null) {
+      return {
+        'success': false,
+        'already_reported': false,
+      };
+    }
+
+    try {
+      final result = await client.rpc(
+        'report_forum_reply',
+        params: {
+          'p_reply_id': replyId,
+          'p_reason': reason,
+          'p_notes': notes,
+        },
+      );
+
+      if (result is Map) {
+        final resultMap =
+        Map<String, dynamic>.from(result);
+
+        debugPrint(
+          '📌 Reply report result: $resultMap',
+        );
+
+        return resultMap;
+      }
+
+      return {
+        'success': true,
+        'already_reported': false,
+      };
+    } catch (e) {
+      final error = e.toString();
+
+      if (error.contains('23505') ||
+          error.toLowerCase().contains('duplicate key')) {
+        debugPrint(
+          '⚠️ User already has a pending report for this reply.',
+        );
+
+        return {
+          'success': false,
+          'already_reported': true,
+        };
+      }
+
+      debugPrint(
+        'Supabase reportReply RPC error: $e',
+      );
+
+      rethrow;
+    }
+  }
+
+  Future<void> dismissReplyReport(
+      String threadId,
+      String replyId,
+      ) async {
+    final client = _client;
+    if (client == null) return;
+
+    try {
+      final result = await client.rpc(
+        'dismiss_forum_reports',
+        params: {
+          'p_post_id': null,
+          'p_reply_id': replyId,
+        },
+      );
+
+      debugPrint(
+        'Reply reports dismissed: $result',
+      );
+    } catch (e) {
+      debugPrint(
+        'dismissReplyReport error: $e',
+      );
+      rethrow;
+    }
+  }
+
+
+  Future<Map<String, dynamic>> reportThread(
+      String threadId,
+      String reason,
+      String notes,
+      ) async {
+    final client = _client;
+
+    if (client == null) {
+      return {
+        'success': false,
+        'already_reported': false,
+      };
+    }
+
+    try {
+      final result = await client.rpc(
+        'report_forum_post',
+        params: {
+          'p_post_id': threadId,
+          'p_reason': reason,
+          'p_notes': notes,
+        },
+      );
+
+      if (result is Map) {
+        final resultMap =
+        Map<String, dynamic>.from(result);
+
+        debugPrint(
+          '📌 Post report result: $resultMap',
+        );
+
+        return resultMap;
+      }
+
+      return {
+        'success': true,
+        'already_reported': false,
+      };
+    } catch (e) {
+      final error = e.toString();
+
+      if (error.contains('23505') ||
+          error.toLowerCase().contains('duplicate key')) {
+        debugPrint(
+          '⚠️ User already has a pending report for this post.',
+        );
+
+        return {
+          'success': false,
+          'already_reported': true,
+        };
+      }
+
+      debugPrint(
+        'Supabase reportThread RPC error: $e',
+      );
+
+      rethrow;
     }
   }
 
   Future<void> dismissReport(String threadId) async {
-    final idx = _forumStore.indexWhere((t) => t.id == threadId);
-    if (idx != -1) {
-      _forumStore[idx] = _forumStore[idx].copyWith(
-        isReported: false,
-        reportReason: null,
-        reportNotes: null,
-      );
-    }
     final client = _client;
-    if (client != null) {
-      try {
-        await client.from('forum_posts').update({
-          'is_reported': false,
-          'report_reason': null,
-          'report_notes': null,
-        }).eq('id', threadId);
-      } catch (e) {
-        debugPrint('Supabase dismissReport note: $e');
-      }
+    if (client == null) return;
+
+    try {
+      final result = await client.rpc(
+        'dismiss_forum_reports',
+        params: {
+          'p_post_id': threadId,
+          'p_reply_id': null,
+        },
+      );
+
+      debugPrint(
+        'Post reports dismissed: $result',
+      );
+    } catch (e) {
+      debugPrint(
+        'dismissReport error: $e',
+      );
+      rethrow;
     }
   }
 
