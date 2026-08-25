@@ -20,6 +20,7 @@ class LocationRepository {
           latitude: position.latitude,
           longitude: position.longitude,
           accuracy: position.accuracy,
+          heading: position.heading,
         );
       },
     );
@@ -33,6 +34,7 @@ class LocationRepository {
       latitude: position.latitude,
       longitude: position.longitude,
       accuracy: position.accuracy,
+      heading: position.heading,
     );
   }
 

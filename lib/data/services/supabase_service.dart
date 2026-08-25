@@ -1063,13 +1063,15 @@ class SupabaseService {
       try {
         try {
           await client.auth.updateUser(
-            UserAttributes(data: {
-              'status': 'PENDING_APPROVAL',
-              'role': 'Artisan & Tourist',
-              'studio_name': studioName,
-              'craft_category': craftCategory,
-              'ssm_number': ssmNumber,
-            }),
+            UserAttributes(
+              data: {
+                'status': 'PENDING_APPROVAL',
+                'role': 'Artisan & Tourist',
+                'studio_name': studioName,
+                'craft_category': craftCategory,
+                'ssm_number': ssmNumber,
+              },
+            ),
           );
         } catch (_) {}
 
@@ -1110,7 +1112,9 @@ class SupabaseService {
             'updated_at': DateTime.now().toIso8601String(),
           });
         } catch (apErr) {
-          debugPrint('Supabase linkArtisanRoleToTourist artisan_profiles note: $apErr');
+          debugPrint(
+            'Supabase linkArtisanRoleToTourist artisan_profiles note: $apErr',
+          );
         }
       } catch (e) {
         debugPrint('Supabase linkArtisanRoleToTourist note: $e');
@@ -1444,22 +1448,91 @@ class SupabaseService {
           'role': newRole,
           'updated_at': DateTime.now().toIso8601String(),
         };
+        await client
+            .from('users')
+            .update(updatePayload)
+            .ilike('email', cleanEmail);
 
-        await client.from('users').update(updatePayload).ilike('email', cleanEmail);
-
-        final userRow = await client.from('users').select('id').ilike('email', cleanEmail).maybeSingle();
+        // Update artisan_profiles status matching user_id
+        final userRow = await client
+            .from('users')
+            .select('id')
+            .ilike('email', cleanEmail)
+            .maybeSingle();
         if (userRow != null && userRow['id'] != null) {
-          final userId = userRow['id'];
-          await client.from('users').update(updatePayload).eq('id', userId);
-
-          final artisanStatus = (newStatus.toUpperCase() == 'ACTIVE' || newStatus.toUpperCase() == 'APPROVED')
+          final artisanProfileBeforeUpdate = await client
+              .from('artisan_profiles')
+              .select('id, status')
+              .eq('user_id', userRow['id'])
+              .maybeSingle();
+          final artisanStatus =
+              (newStatus.toUpperCase() == 'ACTIVE' ||
+                  newStatus.toUpperCase() == 'APPROVED')
               ? 'APPROVED'
               : newStatus;
+          await client
+              .from('artisan_profiles')
+              .update({
+                'status': artisanStatus,
+                'updated_at': DateTime.now().toIso8601String(),
+              })
+              .eq('user_id', userRow['id']);
 
-          await client.from('artisan_profiles').update({
-            'status': artisanStatus,
-            'updated_at': DateTime.now().toIso8601String(),
-          }).eq('user_id', userId);
+          final previousArtisanStatus = artisanProfileBeforeUpdate?['status']
+              ?.toString()
+              .toUpperCase();
+          final isInitialApproval =
+              artisanStatus == 'APPROVED' &&
+              (previousArtisanStatus == 'PENDING_APPROVAL' ||
+                  previousArtisanStatus == 'REJECTED');
+
+          if (isInitialApproval && artisanProfileBeforeUpdate != null) {
+            final artisanProfileId = artisanProfileBeforeUpdate['id']
+                .toString();
+
+            final questRows = List<Map<String, dynamic>>.from(
+              await client
+                  .from('quests')
+                  .select('id')
+                  .eq('artisan_id', artisanProfileId),
+            );
+            final questIds = questRows
+                .map((row) => row['id']?.toString())
+                .whereType<String>()
+                .toList(growable: false);
+
+            await client
+                .from('quests')
+                .update({'status': 'APPROVED'})
+                .eq('artisan_id', artisanProfileId)
+                .eq('status', 'PENDING_APPROVAL');
+
+            if (questIds.isNotEmpty) {
+              final reviewPayload = <String, dynamic>{
+                'status': 'APPROVED',
+                'rejection_reason': null,
+                'reviewed_at': DateTime.now().toUtc().toIso8601String(),
+                if (client.auth.currentUser != null)
+                  'reviewed_by': client.auth.currentUser!.id,
+              };
+
+              await client
+                  .from('heritage_tasks')
+                  .update(reviewPayload)
+                  .inFilter('quest_id', questIds)
+                  .eq('title', 'Go to the workshop')
+                  .eq('sort_order', 1)
+                  .eq('status', 'PENDING_APPROVAL');
+
+              await client
+                  .from('heritage_tasks')
+                  .update(reviewPayload)
+                  .inFilter('quest_id', questIds)
+                  .eq('title', 'Stay for 15 minutes')
+                  .eq('sort_order', 2)
+                  .eq('status', 'PENDING_APPROVAL');
+            }
+          }
         }
       } catch (e) {
         debugPrint('Supabase direct updateArtisanStatusInDb note: $e');
@@ -2456,20 +2529,369 @@ class SupabaseService {
     await Future.delayed(const Duration(milliseconds: 400));
     return [
       HeritageStamp(
-        id: 's1', 
-        title: 'Batik Apprentice', 
-        iconUrl: 'https://images.unsplash.com/photo-1544967082-d9d25d867d66?w=200', 
+        id: 's1',
+        title: 'Batik Apprentice',
+        iconUrl: 'https://images.unsplash.com/photo-1544967082-d9d25d867d66?w=200',
         isUnlocked: true,
         description: 'Earned for visiting a master batik chanting workshop.',
       ),
       HeritageStamp(
-        id: 's2', 
-        title: 'Wood Guardian', 
-        iconUrl: 'https://images.unsplash.com/photo-1605721911519-3dfeb3be25e7?w=200', 
+        id: 's2',
+        title: 'Wood Guardian',
+        iconUrl: 'https://images.unsplash.com/photo-1605721911519-3dfeb3be25e7?w=200',
         isUnlocked: true,
         description: 'Earned for identifying three royal Cengal carving motifs.',
       ),
     ];
+  }
+
+  Future<List<Map<String, dynamic>>> fetchApprovedQuestsForArtisan(
+    String artisanProfileId,
+  ) async {
+    final client = _client;
+
+    if (client == null) {
+      throw StateError('Supabase is not initialized.');
+    }
+
+    final response = await client
+        .from('quests')
+        .select(
+          'id, artisan_id, title, description, category, '
+          'geofence_radius_meters, stamp_title, stamp_image_url, status, '
+          'created_at',
+        )
+        .eq('artisan_id', artisanProfileId)
+        .eq('status', 'APPROVED')
+        .order('created_at', ascending: false);
+
+    return List<Map<String, dynamic>>.from(response);
+  }
+
+  Future<Map<String, dynamic>?> fetchCurrentArtisanQuestProfile() async {
+    final client = _client;
+
+    if (client == null) {
+      throw StateError('Supabase is not initialized.');
+    }
+
+    final authenticatedUser = client.auth.currentUser;
+    if (authenticatedUser == null) {
+      throw StateError('You must be signed in to manage cultural quests.');
+    }
+
+    return client
+        .from('artisan_profiles')
+        .select('id, user_id, studio_name, status')
+        .eq('user_id', authenticatedUser.id)
+        .maybeSingle();
+  }
+
+  Future<List<Map<String, dynamic>>> fetchQuestsForArtisan(
+    String artisanProfileId,
+  ) async {
+    final client = _client;
+
+    if (client == null) {
+      throw StateError('Supabase is not initialized.');
+    }
+
+    final response = await client
+        .from('quests')
+        .select(
+          'id, artisan_id, title, description, category, '
+          'geofence_radius_meters, stamp_title, stamp_image_url, status, '
+          'created_at',
+        )
+        .eq('artisan_id', artisanProfileId)
+        .order('created_at', ascending: false);
+
+    return List<Map<String, dynamic>>.from(response);
+  }
+
+  Future<Map<String, dynamic>> updateCurrentArtisanQuest({
+    required String questId,
+    required String title,
+    required String description,
+    required String category,
+  }) async {
+    final client = _client;
+
+    if (client == null) {
+      throw StateError('Supabase is not initialized.');
+    }
+    if (client.auth.currentUser == null) {
+      throw StateError('You must be signed in to edit your cultural quest.');
+    }
+
+    final artisanProfile = await fetchCurrentArtisanQuestProfile();
+    if (artisanProfile == null) {
+      throw StateError(
+        'No artisan profile is linked to this signed-in account.',
+      );
+    }
+
+    return client
+        .from('quests')
+        .update({
+          'title': title.trim(),
+          'description': description.trim(),
+          'category': category.trim(),
+          'status': 'PENDING_APPROVAL',
+        })
+        .eq('id', questId)
+        .eq('artisan_id', artisanProfile['id'])
+        .select(
+          'id, artisan_id, title, description, category, '
+          'geofence_radius_meters, stamp_title, stamp_image_url, status, '
+          'created_at',
+        )
+        .single();
+  }
+
+  Future<Map<String, dynamic>> insertHeritageTask({
+    required String questId,
+    required String title,
+    required bool isRequired,
+    required int xpReward,
+    required int sortOrder,
+  }) async {
+    final client = _client;
+
+    if (client == null) {
+      throw StateError('Supabase is not initialized.');
+    }
+
+    if (client.auth.currentUser == null) {
+      throw StateError('You must be signed in to add a heritage activity.');
+    }
+
+    return client
+        .from('heritage_tasks')
+        .insert({
+          'quest_id': questId,
+          'title': title.trim(),
+          'is_required': isRequired,
+          'xp_reward': xpReward,
+          'sort_order': sortOrder,
+          'status': 'PENDING_APPROVAL',
+          'is_system_task': false,
+          'is_archived': false,
+        })
+        .select(
+          'id, quest_id, title, is_required, xp_reward, sort_order, created_at, '
+          'status, rejection_reason, reviewed_at, reviewed_by, is_system_task, '
+          'is_archived',
+        )
+        .single();
+  }
+
+  Future<List<Map<String, dynamic>>> fetchHeritageTasks(
+    String questId, {
+    required bool approvedOnly,
+    required bool includeInactive,
+  }) async {
+    final client = _client;
+
+    if (client == null) {
+      throw StateError('Supabase is not initialized.');
+    }
+
+    var query = client
+        .from('heritage_tasks')
+        .select(
+          'id, quest_id, title, is_required, xp_reward, sort_order, '
+          'created_at, status, rejection_reason, reviewed_at, reviewed_by, '
+          'is_system_task, is_archived',
+        )
+        .eq('quest_id', questId);
+
+    if (approvedOnly) {
+      query = query.eq('status', 'APPROVED');
+    }
+    if (!includeInactive) {
+      query = query.eq('is_archived', false);
+    }
+
+    final response = await query
+        .order('sort_order', ascending: true, nullsFirst: false)
+        .order('created_at', ascending: true);
+
+    return List<Map<String, dynamic>>.from(response);
+  }
+
+  Future<String?> fetchCurrentQuestProgressStatus(String questId) async {
+    final client = _client;
+    if (client == null) {
+      throw StateError('Supabase is not initialized.');
+    }
+
+    final user = client.auth.currentUser;
+    if (user == null) {
+      throw StateError('You must be signed in to view quest progress.');
+    }
+
+    final row = await client
+        .from('quest_progress')
+        .select('status')
+        .eq('user_id', user.id)
+        .eq('quest_id', questId)
+        .maybeSingle();
+
+    final status = row?['status'];
+    return status is String && status.trim().isNotEmpty ? status : null;
+  }
+
+  Future<String> startQuest({
+    required String questId,
+    required List<String> taskIds,
+  }) async {
+    final client = _client;
+    if (client == null) {
+      throw StateError('Supabase is not initialized.');
+    }
+
+    final user = client.auth.currentUser;
+    if (user == null) {
+      throw StateError('You must be signed in to start a quest.');
+    }
+
+    await client
+        .from('quest_progress')
+        .upsert(
+          {'user_id': user.id, 'quest_id': questId, 'status': 'IN_PROGRESS'},
+          onConflict: 'user_id,quest_id',
+          ignoreDuplicates: true,
+        );
+
+    if (taskIds.isNotEmpty) {
+      await client
+          .from('task_progress')
+          .upsert(
+            taskIds
+                .map(
+                  (taskId) => {
+                    'user_id': user.id,
+                    'task_id': taskId,
+                    'is_completed': false,
+                  },
+                )
+                .toList(growable: false),
+            onConflict: 'user_id,task_id',
+            ignoreDuplicates: true,
+          );
+    }
+
+    return await fetchCurrentQuestProgressStatus(questId) ?? 'IN_PROGRESS';
+  }
+
+  Future<Map<String, dynamic>> updateUnapprovedHeritageTask({
+    required String taskId,
+    required String title,
+    required bool isRequired,
+    required int xpReward,
+  }) async {
+    final client = _client;
+    if (client == null) {
+      throw StateError('Supabase is not initialized.');
+    }
+    if (client.auth.currentUser == null) {
+      throw StateError('You must be signed in to update a task submission.');
+    }
+
+    return client
+        .from('heritage_tasks')
+        .update({
+          'title': title.trim(),
+          'is_required': isRequired,
+          'xp_reward': xpReward,
+          'status': 'PENDING_APPROVAL',
+          'rejection_reason': null,
+          'reviewed_at': null,
+          'reviewed_by': null,
+          'is_archived': false,
+        })
+        .eq('id', taskId)
+        .eq('is_system_task', false)
+        .inFilter('status', ['PENDING_APPROVAL', 'REJECTED'])
+        .select(
+          'id, quest_id, title, is_required, xp_reward, sort_order, created_at, '
+          'status, rejection_reason, reviewed_at, reviewed_by, is_system_task, '
+          'is_archived',
+        )
+        .single();
+  }
+
+  Future<void> deleteUnapprovedHeritageTask(String taskId) async {
+    final client = _client;
+    if (client == null) {
+      throw StateError('Supabase is not initialized.');
+    }
+    if (client.auth.currentUser == null) {
+      throw StateError('You must be signed in to cancel a task submission.');
+    }
+
+    await client
+        .from('heritage_tasks')
+        .delete()
+        .eq('id', taskId)
+        .eq('is_system_task', false)
+        .inFilter('status', ['PENDING_APPROVAL', 'REJECTED']);
+  }
+
+  Future<List<Map<String, dynamic>>> fetchHeritageTaskChangeRequests(
+    List<String> taskIds,
+  ) async {
+    final client = _client;
+    if (client == null) {
+      throw StateError('Supabase is not initialized.');
+    }
+    if (taskIds.isEmpty) return [];
+
+    final response = await client
+        .from('heritage_task_change_requests')
+        .select(
+          'id, task_id, request_type, proposed_title, proposed_is_required, '
+          'proposed_xp_reward, status, rejection_reason, submitted_at, '
+          'reviewed_at, reviewed_by',
+        )
+        .inFilter('task_id', taskIds)
+        .order('submitted_at', ascending: false);
+
+    return List<Map<String, dynamic>>.from(response);
+  }
+
+  Future<Map<String, dynamic>> insertHeritageTaskChangeRequest({
+    required String taskId,
+    required String requestType,
+    String? proposedTitle,
+    bool? proposedIsRequired,
+    int? proposedXpReward,
+  }) async {
+    final client = _client;
+    if (client == null) {
+      throw StateError('Supabase is not initialized.');
+    }
+    if (client.auth.currentUser == null) {
+      throw StateError('You must be signed in to request task changes.');
+    }
+
+    return client
+        .from('heritage_task_change_requests')
+        .insert({
+          'task_id': taskId,
+          'request_type': requestType,
+          'proposed_title': proposedTitle?.trim(),
+          'proposed_is_required': proposedIsRequired,
+          'proposed_xp_reward': proposedXpReward,
+          'status': 'PENDING_APPROVAL',
+        })
+        .select(
+          'id, task_id, request_type, proposed_title, proposed_is_required, '
+          'proposed_xp_reward, status, rejection_reason, submitted_at, '
+          'reviewed_at, reviewed_by',
+        )
+        .single();
   }
 
   Future<List<Map<String, dynamic>>> fetchWorkshopLocations() async {

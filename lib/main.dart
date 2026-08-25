@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:warisan_kita/data/repositories/artisan_repository.dart';
 import 'package:warisan_kita/data/repositories/forum_repository.dart';
+import 'package:warisan_kita/data/repositories/gamification_repository.dart';
 import 'package:warisan_kita/data/repositories/matchmaker_repository.dart';
 import 'package:warisan_kita/data/repositories/user_repository.dart';
 import 'package:warisan_kita/data/services/supabase_service.dart';
@@ -75,6 +76,11 @@ void main() async {
           create: (context) =>
               ForumRepository(service: context.read<SupabaseService>()),
         ),
+        Provider(
+          create: (context) => GamificationRepository(
+            service: context.read<SupabaseService>(),
+          ),
+        ),
         Provider(create: (_) => const MatchmakerRepository()),
         ChangeNotifierProvider(create: (_) => ThemeViewModel()),
         ChangeNotifierProvider(create: (_) => LanguageViewModel()),
@@ -90,7 +96,11 @@ void main() async {
           create: (context) =>
               ForumViewModel(repository: context.read<ForumRepository>()),
         ),
-        ChangeNotifierProvider(create: (_) => GamificationViewModel()),
+        ChangeNotifierProvider(
+          create: (context) => GamificationViewModel(
+            repository: context.read<GamificationRepository>(),
+          ),
+        ),
         ChangeNotifierProvider(
           create: (context) => MatchmakerViewModel(
             repository: context.read<MatchmakerRepository>(),
