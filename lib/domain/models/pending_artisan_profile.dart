@@ -10,7 +10,9 @@ class PendingArtisanProfile {
   final String phone;
   final String? ssmNumber;
   final String? ssmFileName;
+  final String? ssmFileUrl;
   final String? certFileName;
+  final String? certFileUrl;
   final List<String> photos;
   final String? bio;
   final bool isUpgradeFromTourist;
@@ -27,7 +29,9 @@ class PendingArtisanProfile {
     required this.phone,
     this.ssmNumber,
     this.ssmFileName,
+    this.ssmFileUrl,
     this.certFileName,
+    this.certFileUrl,
     this.photos = const [],
     this.bio,
     this.isUpgradeFromTourist = false,
