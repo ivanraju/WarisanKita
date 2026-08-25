@@ -13,12 +13,12 @@ import 'package:warisan_kita/ui/matchmaker/widgets/empty_matchmaker_widget.dart'
 import 'package:warisan_kita/ui/matchmaker/widgets/shimmer_loading_card.dart';
 
 import 'package:warisan_kita/ui/map/widgets/google_map_widget.dart';
+import 'package:warisan_kita/ui/gamification/quest_view.dart';
 
 import 'package:warisan_kita/ui/tourist/widgets/geofence_unlocked_dialog.dart';
 import 'package:warisan_kita/ui/tourist/widgets/daily_mood_checkin_dialog.dart';
 import 'package:warisan_kita/ui/core/widgets/translation_language_dialog.dart';
 
-import 'package:warisan_kita/ui/tourist/quest_completion_screen.dart';
 import 'package:warisan_kita/ui/tourist/artisan_detail_screen.dart';
 
 class TouristMatchmakerView extends StatefulWidget {
@@ -43,6 +43,7 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
 
   MapViewModel? _mapVM;
   bool _locationTrackingStarted = false;
+  bool _isOpeningQuest = false;
 
   // ============================================================
   // START LIVE GPS
@@ -237,38 +238,39 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
   // VIEW QUEST
   // ============================================================
 
-  void _handleViewQuest(
+  Future<void> _handleViewQuest(
       BuildContext context,
       NearbyArtisan artisan,
-      ) {
-    final mapVM = context.read<MapViewModel>();
+      ) async {
     final workshop = artisan.workshop;
 
-    if (workshop == null ||
-        !mapVM.isWorkshopWithinInteractionRange(workshop)) {
+    if (workshop == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Move closer to ${artisan.name}. Quests unlock within '
-                '${mapVM.questInteractionRadiusMeters.toStringAsFixed(0)} m.',
-          ),
+        const SnackBar(
+          content: Text('Workshop details are unavailable.'),
           behavior: SnackBarBehavior.floating,
         ),
       );
       return;
     }
 
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => QuestCompletionScreen(
-          workshopName: artisan.name,
-          craftCategory: artisan.craftCategory,
-          locationName: artisan.locationName,
-          // Real GPS distance in metres calculated by MapViewModel
-          distanceMeters: artisan.distanceMeters,
+    if (_isOpeningQuest) {
+      return;
+    }
+
+    _isOpeningQuest = true;
+
+    try {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => QuestView(
+            workshop: workshop,
+          ),
         ),
-      ),
-    );
+      );
+    } finally {
+      _isOpeningQuest = false;
+    }
   }
 
   Widget _buildArtisanCard(

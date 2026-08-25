@@ -1,14 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:warisan_kita/ui/artisan/artisan_heritage_task_management_view.dart';
 
-class ArtisanTaskManagementScreen extends StatefulWidget {
+class ArtisanTaskManagementScreen extends StatelessWidget {
   const ArtisanTaskManagementScreen({super.key});
 
   @override
-  State<ArtisanTaskManagementScreen> createState() => _ArtisanTaskManagementScreenState();
+  Widget build(BuildContext context) =>
+      const ArtisanHeritageTaskManagementView();
 }
 
-class _ArtisanTaskManagementScreenState extends State<ArtisanTaskManagementScreen> {
+// Preserved temporarily for reference while the former local-only prototype is
+// retired. The public screen above now uses the Supabase-backed quest flow.
+class _LegacyArtisanTaskManagementScreen extends StatefulWidget {
+  const _LegacyArtisanTaskManagementScreen();
+
+  @override
+  State<_LegacyArtisanTaskManagementScreen> createState() =>
+      _LegacyArtisanTaskManagementScreenState();
+}
+
+class _LegacyArtisanTaskManagementScreenState
+    extends State<_LegacyArtisanTaskManagementScreen> {
   int _selectedFilterIndex = 0; // 0: All, 1: Active & Live, 2: Pending Approval
 
   // Task Queue with Default 2 Tasks initialized on profile creation
@@ -44,7 +57,8 @@ class _ArtisanTaskManagementScreenState extends State<ArtisanTaskManagementScree
       'workshop': 'Pak Mat Pottery Studio (Melaka)',
       'status': 'APPROVED',
       'isDefault': false,
-      'description': 'Hand-spin miniature labu sayong under master artisan guidance.',
+      'description':
+          'Hand-spin miniature labu sayong under master artisan guidance.',
     },
     {
       'id': 'gt2',
@@ -84,13 +98,19 @@ class _ArtisanTaskManagementScreenState extends State<ArtisanTaskManagementScree
       appBar: AppBar(
         title: Text(
           'Gamification Quest Manager',
-          style: GoogleFonts.dmSerifDisplay(color: const Color(0xFF004D40), fontSize: 20),
+          style: GoogleFonts.dmSerifDisplay(
+            color: const Color(0xFF004D40),
+            fontSize: 20,
+          ),
         ),
         backgroundColor: Colors.white,
         elevation: 0,
         leading: Navigator.canPop(context)
             ? IconButton(
-                icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF004D40)),
+                icon: const Icon(
+                  Icons.arrow_back_rounded,
+                  color: Color(0xFF004D40),
+                ),
                 onPressed: () => Navigator.of(context).pop(),
               )
             : null,
@@ -118,7 +138,11 @@ class _ArtisanTaskManagementScreenState extends State<ArtisanTaskManagementScree
             ),
             child: Row(
               children: [
-                const Icon(Icons.auto_awesome_rounded, color: Color(0xFFD97706), size: 24),
+                const Icon(
+                  Icons.auto_awesome_rounded,
+                  color: Color(0xFFD97706),
+                  size: 24,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -134,7 +158,10 @@ class _ArtisanTaskManagementScreenState extends State<ArtisanTaskManagementScree
                       ),
                       Text(
                         'Every artisan profile auto-initializes "Arrive at Workshop" & "Stay 15 Mins". You can fully customize new quests or choose from pre-set library templates (requires Admin Approval).',
-                        style: GoogleFonts.plusJakartaSans(fontSize: 11, color: const Color(0xFFB45309)),
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          color: const Color(0xFFB45309),
+                        ),
                       ),
                     ],
                   ),
@@ -152,9 +179,17 @@ class _ArtisanTaskManagementScreenState extends State<ArtisanTaskManagementScree
             children: [
               _buildFilterChip(0, 'All Quests', _tasks.length),
               const SizedBox(width: 8),
-              _buildFilterChip(1, '🟢 Active', _tasks.where((t) => t['status'] == 'APPROVED').length),
+              _buildFilterChip(
+                1,
+                '🟢 Active',
+                _tasks.where((t) => t['status'] == 'APPROVED').length,
+              ),
               const SizedBox(width: 8),
-              _buildFilterChip(2, '⏳ Pending', _tasks.where((t) => t['status'] != 'APPROVED').length),
+              _buildFilterChip(
+                2,
+                '⏳ Pending',
+                _tasks.where((t) => t['status'] != 'APPROVED').length,
+              ),
             ],
           ),
 
@@ -178,9 +213,12 @@ class _ArtisanTaskManagementScreenState extends State<ArtisanTaskManagementScree
                     _selectedFilterIndex == 1
                         ? 'No active live quests found.'
                         : (_selectedFilterIndex == 2
-                            ? 'No pending quests awaiting approval.'
-                            : 'No quests created yet.'),
-                    style: GoogleFonts.plusJakartaSans(fontSize: 13, color: Colors.grey[600]),
+                              ? 'No pending quests awaiting approval.'
+                              : 'No quests created yet.'),
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 13,
+                      color: Colors.grey[600],
+                    ),
                   ),
                 ],
               ),
@@ -214,7 +252,9 @@ class _ArtisanTaskManagementScreenState extends State<ArtisanTaskManagementScree
             color: isSelected ? const Color(0xFF004D40) : Colors.white,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: isSelected ? const Color(0xFF004D40) : Colors.black.withValues(alpha: 0.08),
+              color: isSelected
+                  ? const Color(0xFF004D40)
+                  : Colors.black.withValues(alpha: 0.08),
             ),
           ),
           child: Column(
@@ -232,7 +272,9 @@ class _ArtisanTaskManagementScreenState extends State<ArtisanTaskManagementScree
                 '$count Quests',
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 10,
-                  color: isSelected ? const Color(0xFFFFD54F) : Colors.grey[500],
+                  color: isSelected
+                      ? const Color(0xFFFFD54F)
+                      : Colors.grey[500],
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -256,21 +298,30 @@ class _ArtisanTaskManagementScreenState extends State<ArtisanTaskManagementScree
               child: Text(
                 'Delete Quest?',
                 softWrap: true,
-                style: GoogleFonts.dmSerifDisplay(color: const Color(0xFF004D40), fontSize: 20),
+                style: GoogleFonts.dmSerifDisplay(
+                  color: const Color(0xFF004D40),
+                  fontSize: 20,
+                ),
               ),
             ),
           ],
         ),
         content: Text(
           'Are you sure you want to delete "${task['title']}"? This action cannot be undone and will remove it from the tourist quest list.',
-          style: GoogleFonts.plusJakartaSans(fontSize: 13, color: Colors.grey[700]),
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 13,
+            color: Colors.grey[700],
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: Text(
               'Cancel',
-              style: GoogleFonts.plusJakartaSans(color: Colors.grey[600], fontWeight: FontWeight.bold),
+              style: GoogleFonts.plusJakartaSans(
+                color: Colors.grey[600],
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           FilledButton.icon(
@@ -281,16 +332,22 @@ class _ArtisanTaskManagementScreenState extends State<ArtisanTaskManagementScree
               Navigator.of(context).pop();
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('🗑️ Quest "${task['title']}" has been deleted.'),
+                  content: Text(
+                    '🗑️ Quest "${task['title']}" has been deleted.',
+                  ),
                   backgroundColor: const Color(0xFFEF4444),
                   behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
               );
             },
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFFEF4444),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             icon: const Icon(Icons.delete_rounded, size: 16),
             label: Text(
@@ -310,12 +367,19 @@ class _ArtisanTaskManagementScreenState extends State<ArtisanTaskManagementScree
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Row(
           children: [
-            const Icon(Icons.qr_code_2_rounded, color: Color(0xFF004D40), size: 28),
+            const Icon(
+              Icons.qr_code_2_rounded,
+              color: Color(0xFF004D40),
+              size: 28,
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
                 'Quest Verification QR',
-                style: GoogleFonts.dmSerifDisplay(color: const Color(0xFF004D40), fontSize: 20),
+                style: GoogleFonts.dmSerifDisplay(
+                  color: const Color(0xFF004D40),
+                  fontSize: 20,
+                ),
               ),
             ),
           ],
@@ -326,7 +390,11 @@ class _ArtisanTaskManagementScreenState extends State<ArtisanTaskManagementScree
             Text(
               task['title'],
               textAlign: TextAlign.center,
-              style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF0F172A),
+              ),
             ),
             const SizedBox(height: 4),
             Container(
@@ -337,7 +405,11 @@ class _ArtisanTaskManagementScreenState extends State<ArtisanTaskManagementScree
               ),
               child: Text(
                 '+${task['points']} EXP Reward • ${task['category']}',
-                style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFFB45309)),
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFFB45309),
+                ),
               ),
             ),
             const SizedBox(height: 20),
@@ -350,12 +422,20 @@ class _ArtisanTaskManagementScreenState extends State<ArtisanTaskManagementScree
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: const Color(0xFF004D40), width: 2),
                 boxShadow: const [
-                  BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 4))
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 10,
+                    offset: Offset(0, 4),
+                  ),
                 ],
               ),
               child: Column(
                 children: [
-                  const Icon(Icons.qr_code_2_rounded, size: 140, color: Color(0xFF004D40)),
+                  const Icon(
+                    Icons.qr_code_2_rounded,
+                    size: 140,
+                    color: Color(0xFF004D40),
+                  ),
                   const SizedBox(height: 8),
                   Text(
                     'WARISAN_QUEST_KEY_${task['id'].toString().toUpperCase()}',
@@ -375,7 +455,11 @@ class _ArtisanTaskManagementScreenState extends State<ArtisanTaskManagementScree
             Text(
               'Display or print this QR Code at your workshop station. Tourists will scan this code with their app to verify quest completion!',
               textAlign: TextAlign.center,
-              style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[600], height: 1.4),
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 11,
+                color: Colors.grey[600],
+                height: 1.4,
+              ),
             ),
           ],
         ),
@@ -384,20 +468,36 @@ class _ArtisanTaskManagementScreenState extends State<ArtisanTaskManagementScree
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('🖨️ Quest QR code for "${task['title']}" sent to printer!'),
+                  content: Text(
+                    '🖨️ Quest QR code for "${task['title']}" sent to printer!',
+                  ),
                   backgroundColor: const Color(0xFF004D40),
                   behavior: SnackBarBehavior.floating,
                 ),
               );
             },
             icon: const Icon(Icons.print_rounded, size: 16),
-            label: Text('PRINT QR', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 11)),
+            label: Text(
+              'PRINT QR',
+              style: GoogleFonts.plusJakartaSans(
+                fontWeight: FontWeight.bold,
+                fontSize: 11,
+              ),
+            ),
           ),
           FilledButton.icon(
             onPressed: () => Navigator.of(context).pop(),
-            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF004D40)),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF004D40),
+            ),
             icon: const Icon(Icons.check_rounded, size: 16),
-            label: Text('DONE', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 11)),
+            label: Text(
+              'DONE',
+              style: GoogleFonts.plusJakartaSans(
+                fontWeight: FontWeight.bold,
+                fontSize: 11,
+              ),
+            ),
           ),
         ],
       ),
@@ -409,7 +509,9 @@ class _ArtisanTaskManagementScreenState extends State<ArtisanTaskManagementScree
     final String status = task['status'];
     final bool isApproved = status == 'APPROVED';
     final String category = task['category'] ?? '';
-    final bool requiresQr = task['requiresQr'] ?? (!category.contains('Geofence') && !category.contains('Duration'));
+    final bool requiresQr =
+        task['requiresQr'] ??
+        (!category.contains('Geofence') && !category.contains('Duration'));
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -417,13 +519,17 @@ class _ArtisanTaskManagementScreenState extends State<ArtisanTaskManagementScree
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isDefault ? const Color(0xFF004D40).withValues(alpha: 0.3) : Colors.black.withValues(alpha: 0.06)),
+        border: Border.all(
+          color: isDefault
+              ? const Color(0xFF004D40).withValues(alpha: 0.3)
+              : Colors.black.withValues(alpha: 0.06),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
-          )
+          ),
         ],
       ),
       child: Column(
@@ -434,9 +540,14 @@ class _ArtisanTaskManagementScreenState extends State<ArtisanTaskManagementScree
             children: [
               Flexible(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
-                    color: isDefault ? const Color(0xFF004D40).withValues(alpha: 0.12) : const Color(0xFFE0F2FE),
+                    color: isDefault
+                        ? const Color(0xFF004D40).withValues(alpha: 0.12)
+                        : const Color(0xFFE0F2FE),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -445,7 +556,9 @@ class _ArtisanTaskManagementScreenState extends State<ArtisanTaskManagementScree
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
-                      color: isDefault ? const Color(0xFF004D40) : const Color(0xFF0284C7),
+                      color: isDefault
+                          ? const Color(0xFF004D40)
+                          : const Color(0xFF0284C7),
                     ),
                   ),
                 ),
@@ -457,18 +570,27 @@ class _ArtisanTaskManagementScreenState extends State<ArtisanTaskManagementScree
                   children: [
                     Flexible(
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
-                          color: isApproved ? const Color(0xFFD1FAE5) : const Color(0xFFFEF3C7),
+                          color: isApproved
+                              ? const Color(0xFFD1FAE5)
+                              : const Color(0xFFFEF3C7),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          isApproved ? 'LIVE & APPROVED' : 'PENDING ADMIN APPROVAL',
+                          isApproved
+                              ? 'LIVE & APPROVED'
+                              : 'PENDING ADMIN APPROVAL',
                           softWrap: true,
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
-                            color: isApproved ? const Color(0xFF047857) : const Color(0xFFB45309),
+                            color: isApproved
+                                ? const Color(0xFF047857)
+                                : const Color(0xFFB45309),
                           ),
                         ),
                       ),
@@ -476,7 +598,11 @@ class _ArtisanTaskManagementScreenState extends State<ArtisanTaskManagementScree
                     if (!isDefault) ...[
                       const SizedBox(width: 6),
                       IconButton(
-                        icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFEF4444), size: 20),
+                        icon: const Icon(
+                          Icons.delete_outline_rounded,
+                          color: Color(0xFFEF4444),
+                          size: 20,
+                        ),
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
                         tooltip: 'Delete Quest',
@@ -504,7 +630,10 @@ class _ArtisanTaskManagementScreenState extends State<ArtisanTaskManagementScree
             const SizedBox(height: 4),
             Text(
               task['description'],
-              style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.grey[600]),
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
             ),
           ],
 
@@ -521,11 +650,19 @@ class _ArtisanTaskManagementScreenState extends State<ArtisanTaskManagementScree
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.stars_rounded, color: Color(0xFFD97706), size: 16),
+                  const Icon(
+                    Icons.stars_rounded,
+                    color: Color(0xFFD97706),
+                    size: 16,
+                  ),
                   const SizedBox(width: 4),
                   Text(
                     '+${task['points']} EXP Reward',
-                    style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFFD97706)),
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFFD97706),
+                    ),
                   ),
                 ],
               ),
@@ -536,14 +673,27 @@ class _ArtisanTaskManagementScreenState extends State<ArtisanTaskManagementScree
                     OutlinedButton.icon(
                       onPressed: () => _showQuestQRModal(task),
                       style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
                         side: const BorderSide(color: Color(0xFF004D40)),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
-                      icon: const Icon(Icons.qr_code_2_rounded, size: 14, color: Color(0xFF004D40)),
+                      icon: const Icon(
+                        Icons.qr_code_2_rounded,
+                        size: 14,
+                        color: Color(0xFF004D40),
+                      ),
                       label: Text(
                         'View Quest QR',
-                        style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF004D40)),
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF004D40),
+                        ),
                       ),
                     ),
                   ],
@@ -551,7 +701,11 @@ class _ArtisanTaskManagementScreenState extends State<ArtisanTaskManagementScree
                     const SizedBox(width: 8),
                     Text(
                       '🔒 Mandatory',
-                      style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey[600]),
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey[600],
+                      ),
                     ),
                   ],
                 ],
@@ -568,10 +722,13 @@ class CreateGamificationTaskDialog extends StatefulWidget {
   const CreateGamificationTaskDialog({super.key});
 
   @override
-  State<CreateGamificationTaskDialog> createState() => _CreateGamificationTaskDialogState();
+  State<CreateGamificationTaskDialog> createState() =>
+      _CreateGamificationTaskDialogState();
 }
 
-class _CreateGamificationTaskDialogState extends State<CreateGamificationTaskDialog> with SingleTickerProviderStateMixin {
+class _CreateGamificationTaskDialogState
+    extends State<CreateGamificationTaskDialog>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   // Custom Quest Controllers
@@ -595,7 +752,8 @@ class _CreateGamificationTaskDialogState extends State<CreateGamificationTaskDia
       'title': 'Try Hand-Molding Clay on Spinning Wheel',
       'category': '🎨 Hands-on Crafting',
       'points': 500,
-      'description': 'Hand-spin miniature labu sayong under master artisan guidance.',
+      'description':
+          'Hand-spin miniature labu sayong under master artisan guidance.',
     },
     {
       'title': 'Draw Canting Wax on Silk Fabric',
@@ -607,13 +765,15 @@ class _CreateGamificationTaskDialogState extends State<CreateGamificationTaskDia
       'title': 'Identify 3 Heritage Clay Types',
       'category': '💬 Oral Lore & Q&A',
       'points': 300,
-      'description': 'Listen to Pak Mat explain clay firing differences in Melaka.',
+      'description':
+          'Listen to Pak Mat explain clay firing differences in Melaka.',
     },
     {
       'title': 'Take a Photo with Master Artisan',
       'category': '📸 Photo & Media Tagging',
       'points': 250,
-      'description': 'Capture a memorable photo with master craftsman at studio.',
+      'description':
+          'Capture a memorable photo with master craftsman at studio.',
     },
   ];
 
@@ -649,7 +809,14 @@ class _CreateGamificationTaskDialogState extends State<CreateGamificationTaskDia
       return;
     }
 
-    _finishSubmission(title: title, category: _selectedCategory, points: points, description: description.isEmpty ? 'Custom master artisan quest.' : description);
+    _finishSubmission(
+      title: title,
+      category: _selectedCategory,
+      points: points,
+      description: description.isEmpty
+          ? 'Custom master artisan quest.'
+          : description,
+    );
   }
 
   void _submitTemplateQuest() {
@@ -721,7 +888,10 @@ class _CreateGamificationTaskDialogState extends State<CreateGamificationTaskDia
                 child: Text(
                   'Create Workshop Quest',
                   softWrap: true,
-                  style: GoogleFonts.dmSerifDisplay(fontSize: 22, color: const Color(0xFF004D40)),
+                  style: GoogleFonts.dmSerifDisplay(
+                    fontSize: 22,
+                    color: const Color(0xFF004D40),
+                  ),
                 ),
               ),
               IconButton(
@@ -732,7 +902,10 @@ class _CreateGamificationTaskDialogState extends State<CreateGamificationTaskDia
           ),
           Text(
             'Fully customize your own quest or select a pre-made template.',
-            style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.grey[600]),
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 12,
+              color: Colors.grey[600],
+            ),
           ),
           const SizedBox(height: 16),
 
@@ -750,7 +923,10 @@ class _CreateGamificationTaskDialogState extends State<CreateGamificationTaskDia
               ),
               labelColor: Colors.white,
               unselectedLabelColor: const Color(0xFF1E293B),
-              labelStyle: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 12),
+              labelStyle: GoogleFonts.plusJakartaSans(
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
               tabs: const [
                 Tab(text: '✍️ Custom Builder'),
                 Tab(text: '📚 Template Library'),
@@ -770,32 +946,62 @@ class _CreateGamificationTaskDialogState extends State<CreateGamificationTaskDia
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Quest Title', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold)),
+                      Text(
+                        'Quest Title',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       const SizedBox(height: 6),
                       TextField(
                         controller: _titleController,
                         decoration: InputDecoration(
-                          hintText: 'e.g., Mold Traditional Labu Sayong Neck & Body',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          hintText:
+                              'e.g., Mold Traditional Labu Sayong Neck & Body',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
                         ),
                       ),
 
                       const SizedBox(height: 16),
 
-                      Text('Category', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold)),
+                      Text(
+                        'Category',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       const SizedBox(height: 6),
                       DropdownButtonFormField<String>(
                         value: _selectedCategory,
                         decoration: InputDecoration(
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
                         ),
                         items: _categories.map((cat) {
-                          return DropdownMenuItem(value: cat, child: Text(cat, style: GoogleFonts.plusJakartaSans(fontSize: 13)));
+                          return DropdownMenuItem(
+                            value: cat,
+                            child: Text(
+                              cat,
+                              style: GoogleFonts.plusJakartaSans(fontSize: 13),
+                            ),
+                          );
                         }).toList(),
                         onChanged: (val) {
-                          if (val != null) setState(() => _selectedCategory = val);
+                          if (val != null)
+                            setState(() => _selectedCategory = val);
                         },
                       ),
 
@@ -807,15 +1013,26 @@ class _CreateGamificationTaskDialogState extends State<CreateGamificationTaskDia
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('EXP Reward Points', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold)),
+                                Text(
+                                  'EXP Reward Points',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                                 const SizedBox(height: 6),
                                 TextField(
                                   controller: _pointsController,
                                   keyboardType: TextInputType.number,
                                   decoration: InputDecoration(
                                     suffixText: 'EXP',
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 14,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -826,20 +1043,38 @@ class _CreateGamificationTaskDialogState extends State<CreateGamificationTaskDia
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Quest Requirement', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold)),
+                                Text(
+                                  'Quest Requirement',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                                 const SizedBox(height: 6),
                                 DropdownButtonFormField<String>(
                                   value: _taskType,
                                   decoration: InputDecoration(
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 14,
+                                    ),
                                   ),
                                   items: const [
-                                    DropdownMenuItem(value: 'REQUIRED', child: Text('REQUIRED')),
-                                    DropdownMenuItem(value: 'OPTIONAL', child: Text('OPTIONAL')),
+                                    DropdownMenuItem(
+                                      value: 'REQUIRED',
+                                      child: Text('REQUIRED'),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 'OPTIONAL',
+                                      child: Text('OPTIONAL'),
+                                    ),
                                   ],
                                   onChanged: (val) {
-                                    if (val != null) setState(() => _taskType = val);
+                                    if (val != null)
+                                      setState(() => _taskType = val);
                                   },
                                 ),
                               ],
@@ -850,14 +1085,23 @@ class _CreateGamificationTaskDialogState extends State<CreateGamificationTaskDia
 
                       const SizedBox(height: 16),
 
-                      Text('Instructions / Heritage Lore Description', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold)),
+                      Text(
+                        'Instructions / Heritage Lore Description',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       const SizedBox(height: 6),
                       TextField(
                         controller: _descriptionController,
                         maxLines: 3,
                         decoration: InputDecoration(
-                          hintText: 'Explain how tourists complete this quest and what heritage lore they will learn...',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                          hintText:
+                              'Explain how tourists complete this quest and what heritage lore they will learn...',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
                           contentPadding: const EdgeInsets.all(16),
                         ),
                       ),
@@ -871,10 +1115,18 @@ class _CreateGamificationTaskDialogState extends State<CreateGamificationTaskDia
                           style: FilledButton.styleFrom(
                             backgroundColor: const Color(0xFF004D40),
                             padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
                           ),
-                          icon: const Icon(Icons.check_circle_rounded, size: 20),
-                          label: const Text('SUBMIT CUSTOM QUEST FOR APPROVAL', style: TextStyle(fontWeight: FontWeight.bold)),
+                          icon: const Icon(
+                            Icons.check_circle_rounded,
+                            size: 20,
+                          ),
+                          label: const Text(
+                            'SUBMIT CUSTOM QUEST FOR APPROVAL',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
                         ),
                       ),
                     ],
@@ -889,52 +1141,77 @@ class _CreateGamificationTaskDialogState extends State<CreateGamificationTaskDia
                         itemCount: _libraryTemplates.length,
                         itemBuilder: (context, index) {
                           final template = _libraryTemplates[index];
-                          final bool isSelected = _selectedTemplate?['title'] == template['title'];
+                          final bool isSelected =
+                              _selectedTemplate?['title'] == template['title'];
 
                           return GestureDetector(
-                            onTap: () => setState(() => _selectedTemplate = template),
+                            onTap: () =>
+                                setState(() => _selectedTemplate = template),
                             child: Container(
                               margin: const EdgeInsets.only(bottom: 12),
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                color: isSelected ? const Color(0xFF004D40).withOpacity(0.08) : Colors.white,
+                                color: isSelected
+                                    ? const Color(0xFF004D40).withOpacity(0.08)
+                                    : Colors.white,
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
-                                  color: isSelected ? const Color(0xFF004D40) : Colors.black.withOpacity(0.06),
+                                  color: isSelected
+                                      ? const Color(0xFF004D40)
+                                      : Colors.black.withOpacity(0.06),
                                   width: isSelected ? 1.8 : 1.0,
                                 ),
                               ),
                               child: Row(
                                 children: [
                                   Icon(
-                                    isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
-                                    color: isSelected ? const Color(0xFF004D40) : Colors.grey,
+                                    isSelected
+                                        ? Icons.check_circle_rounded
+                                        : Icons.radio_button_unchecked_rounded,
+                                    color: isSelected
+                                        ? const Color(0xFF004D40)
+                                        : Colors.grey,
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           template['title'],
-                                          style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                            color: const Color(0xFF0F172A),
+                                          ),
                                         ),
                                         Text(
                                           template['description'],
-                                          style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[600]),
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 11,
+                                            color: Colors.grey[600],
+                                          ),
                                         ),
                                       ],
                                     ),
                                   ),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: const Color(0xFFFEF3C7),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
                                       '+${template['points']} EXP',
-                                      style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFFB45309)),
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: const Color(0xFFB45309),
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -952,10 +1229,15 @@ class _CreateGamificationTaskDialogState extends State<CreateGamificationTaskDia
                         style: FilledButton.styleFrom(
                           backgroundColor: const Color(0xFF004D40),
                           padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
                         ),
                         icon: const Icon(Icons.send_rounded, size: 20),
-                        label: const Text('SUBMIT TEMPLATE QUEST FOR APPROVAL', style: TextStyle(fontWeight: FontWeight.bold)),
+                        label: const Text(
+                          'SUBMIT TEMPLATE QUEST FOR APPROVAL',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
                       ),
                     ),
                   ],
