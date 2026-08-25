@@ -24,7 +24,70 @@ class ForumRepository {
 
   Future<void> deleteReply(String threadId, String replyId) => _service.deleteReply(threadId, replyId);
 
-  Future<void> reportThread(String threadId, String reason, String notes) => _service.reportThread(threadId, reason, notes);
+  Future<Map<String, dynamic>> reportThread(
+      String threadId,
+      String reason,
+      String notes,
+      ) async {
+    return await _service.reportThread(
+      threadId,
+      reason,
+      notes,
+    );
+  }
+
+  Future<void> adminDeleteForumPost(
+      String postId,
+      String deletionReason,
+      ) async {
+    await _service.adminDeleteForumPost(
+      postId,
+      deletionReason,
+    );
+  }
+
+  Future<void> adminDeleteForumReply(
+      String threadId,
+      String replyId,
+      String deletionReason,
+      ) async {
+    await _service.adminDeleteForumReply(
+      threadId,
+      replyId,
+      deletionReason,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> fetchForumReportQueue() {
+    return _service.fetchForumReportQueue();
+  }
+
+  Future<List<Map<String, dynamic>>> fetchForumModerationHistory() async {
+    return await _service.fetchForumModerationHistory();
+  }
+
+  Future<Map<String, dynamic>> reportReply(
+      String threadId,
+      String replyId,
+      String reason,
+      String notes,
+      ) async {
+    return await _service.reportReply(
+      threadId,
+      replyId,
+      reason,
+      notes,
+    );
+  }
+
+  Future<void> dismissReplyReport(
+      String threadId,
+      String replyId,
+      ) =>
+      _service.dismissReplyReport(
+        threadId,
+        replyId,
+      );
 
   Future<void> dismissReport(String threadId) => _service.dismissReport(threadId);
 }

@@ -47,10 +47,11 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
     });
   }
 
-  void _handleApprove(BuildContext context, PendingArtisanProfile artisan) {
+  Future<void> _handleApprove(BuildContext context, PendingArtisanProfile artisan) async {
     final vm = context.read<ModerationViewModel>();
-    vm.approveArtisan(artisan.id);
+    await vm.approveArtisan(artisan.id);
 
+    if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -68,10 +69,11 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
     );
   }
 
-  void _handleReject(BuildContext context, PendingArtisanProfile artisan) {
+  Future<void> _handleReject(BuildContext context, PendingArtisanProfile artisan) async {
     final vm = context.read<ModerationViewModel>();
-    vm.rejectArtisan(artisan.id);
+    await vm.rejectArtisan(artisan.id);
 
+    if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -550,7 +552,7 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: accentColor.withOpacity(0.1),
+              color: accentColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: accentColor, size: 24),
