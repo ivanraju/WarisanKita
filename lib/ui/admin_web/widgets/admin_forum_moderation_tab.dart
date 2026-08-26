@@ -414,45 +414,55 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
               break;
             }
           }
+          if (foundReply != null) break;
+        }
 
-          if (foundReply != null) {
-            break;
+        final latestReport = reports.isNotEmpty ? reports.first : null;
+        final String reportNotes = latestReport?['notes']?.toString() ?? item['notes']?.toString() ?? '';
+        final String reportReason = latestReport?['reason']?.toString() ?? item['reason']?.toString() ?? 'User Reported Reply';
+
+        String authorName = foundReply?.sender ?? 'Community Member';
+        if (authorName == 'Community Member' && reportNotes.contains('posted by ')) {
+          authorName = reportNotes.split('posted by ').last.split(':').first.trim();
+        }
+
+        String replyContent = foundReply?.text ?? '';
+        if (replyContent.isEmpty) {
+          if (reportNotes.contains('"')) {
+            final match = RegExp(r'"([^"]*)"').firstMatch(reportNotes);
+            if (match != null && match.group(1) != null) {
+              replyContent = match.group(1)!;
+            }
+          }
+          if (replyContent.isEmpty) {
+            replyContent = reportNotes.isNotEmpty ? reportNotes : 'Reported Reply Content';
           }
         }
-
-        if (foundReply == null) {
-          continue;
-        }
-
-        final latestReport =
-        reports.isNotEmpty ? reports.first : null;
 
         dynamicReported.add({
           'id': replyId,
           'type': 'reply',
 
           // Needed later for delete/dismiss reply
-          'threadId': foundThread.id,
+          'threadId': foundThread?.id ?? item['postId']?.toString() ?? '',
           'replyId': replyId,
 
-          'author': foundReply.sender,
+          'author': authorName,
 
-          'role': foundReply.isArtisan
+          'role': (foundReply?.isArtisan == true)
               ? 'Master Artisan'
               : 'Tourist',
 
-          'content': foundReply.text,
+          'content': replyContent,
 
-          'reason':
-          latestReport?['reason'] ??
-              'User Reported Reply',
+          'reason': reportReason,
 
           'reportsCount': reportsCount,
 
           // ✅ All individual reports
           'reports': reports,
 
-          'timestamp': foundReply.timestamp,
+          'timestamp': foundReply?.timestamp ?? latestReport?['created_at']?.toString() ?? 'Recent',
 
           'isDynamic': true,
         });
