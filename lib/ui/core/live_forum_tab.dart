@@ -1362,8 +1362,8 @@ class _LiveForumTabState extends State<LiveForumTab> {
       final String actionType = (n['action_type'] ?? '').toString().toLowerCase();
       final String status = (n['status'] ?? '').toString().toLowerCase();
 
-      // Only treat posts as deleted if status is actioned or action_type is deleted (NOT dismissed!)
-      if (actionType == 'deleted' || status == 'actioned') {
+      // Only treat posts as deleted if status is actioned/deleted (NEVER if dismissed!)
+      if (status != 'dismissed' && (actionType == 'deleted' || status == 'actioned')) {
         final String id = (n['post_id'] ?? n['id'])?.toString() ?? '';
         if (id.isNotEmpty) deletedPostIds.add(id);
 

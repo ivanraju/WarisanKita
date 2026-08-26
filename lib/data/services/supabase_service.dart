@@ -2068,7 +2068,7 @@ class SupabaseService {
             _sessionThreadVotes[_threadVoteKey(threadId)] = persistedVote;
             threadMap['userVote'] = persistedVote;
 
-            // Content is reported ONLY if there is an active pending report in forum_reports or local queue, and NOT dismissed
+            // Content is reported ONLY if there is an active pending report in Supabase, and NOT dismissed
             bool isPostReported = false;
             String? postReportReason;
             String? postReportNotes;
@@ -2086,22 +2086,13 @@ class SupabaseService {
                         ?.toString() ??
                     threadMap['report_notes']?.toString();
               } else {
-                final localPostReport = _localReportQueue
-                    .where(
-                      (r) =>
-                          (r['postId']?.toString() == threadId ||
-                              r['id']?.toString() == threadId) &&
-                          (r['type'] == null || r['type'] == 'post'),
-                    )
-                    .firstOrNull;
-                if (localPostReport != null) {
-                  isPostReported = true;
-                  final rList = (localPostReport['reports'] as List?) ?? [];
-                  if (rList.isNotEmpty) {
-                    postReportReason = rList.first['reason']?.toString();
-                    postReportNotes = rList.first['notes']?.toString();
-                  }
-                }
+                // If not in active pending reports from Supabase, clear from local queue
+                _localReportQueue.removeWhere(
+                  (r) =>
+                      (r['postId']?.toString() == threadId ||
+                          r['id']?.toString() == threadId) &&
+                      (r['type'] == null || r['type'] == 'post'),
+                );
               }
             }
 
@@ -2174,22 +2165,11 @@ class SupabaseService {
                               ?.toString() ??
                           rMap['report_notes']?.toString();
                     } else {
-                      final localReplyReport = _localReportQueue
-                          .where(
-                            (rep) =>
-                                rep['replyId'] == replyId &&
-                                rep['type'] == 'reply',
-                          )
-                          .firstOrNull;
-                      if (localReplyReport != null) {
-                        isReplyReported = true;
-                        final rList =
-                            (localReplyReport['reports'] as List?) ?? [];
-                        if (rList.isNotEmpty) {
-                          replyReportReason = rList.first['reason']?.toString();
-                          replyReportNotes = rList.first['notes']?.toString();
-                        }
-                      }
+                      _localReportQueue.removeWhere(
+                        (rep) =>
+                            rep['replyId'] == replyId &&
+                            rep['type'] == 'reply',
+                      );
                     }
                   }
 
