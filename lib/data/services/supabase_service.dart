@@ -1174,6 +1174,9 @@ class SupabaseService {
     required String studioName,
     required String craftCategory,
     required String ssmNumber,
+    String? bio,
+    String? phone,
+    String? state,
     String? ssmFileName,
     String? certFileName,
     List<String>? photos,
@@ -1271,6 +1274,7 @@ class SupabaseService {
               .update({
                 'status': 'PENDING_APPROVAL',
                 'role': 'Artisan & Tourist',
+                if (phone != null) 'phone_number': phone,
                 'updated_at': DateTime.now().toIso8601String(),
               })
               .ilike('email', cleanEmail);
@@ -1282,6 +1286,7 @@ class SupabaseService {
             'full_name': userRecord['displayName'] ?? studioName,
             'status': 'PENDING_APPROVAL',
             'role': 'Artisan & Tourist',
+            if (phone != null) 'phone_number': phone,
             'created_at': DateTime.now().toIso8601String(),
             'updated_at': DateTime.now().toIso8601String(),
           });
@@ -1294,9 +1299,9 @@ class SupabaseService {
             'studio_name': studioName,
             'craft_category': craftCategory,
             'ssm_number': ssmNumber,
-            'bio': 'Master artisan dedicated to traditional Malaysian craft.',
-            'address': 'Malaysia',
-            'state': 'Melaka',
+            'bio': bio ?? 'Master artisan dedicated to traditional Malaysian craft.',
+            'address': state ?? 'Malaysia',
+            'state': state ?? 'Malaysia',
             'status': 'PENDING_APPROVAL',
             'created_at': DateTime.now().toIso8601String(),
             'updated_at': DateTime.now().toIso8601String(),
@@ -1563,6 +1568,10 @@ class SupabaseService {
               rowMap['craft_category'] ??= ap['craft_category'];
               rowMap['ssm_number'] ??= ap['ssm_number'];
               rowMap['bio'] ??= ap['bio'];
+              rowMap['state'] ??= ap['state'] ?? ap['address'];
+              rowMap['experience'] ??= ap['years_experience'] != null
+                  ? '${ap['years_experience']} years experience'
+                  : null;
 
               // Extract documents if they exist
               if (ap['artisan_documents'] is List) {
