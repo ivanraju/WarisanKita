@@ -134,7 +134,15 @@ class ForumViewModel extends ChangeNotifier {
     );
 
     await _repository.createThread(newThread);
+    if (safety.isAutoFlagged) {
+      await _repository.reportThread(
+        threadId,
+        safety.flagReason ?? 'Automated content flag',
+        'Flagged content created by $authorName: "$title"',
+      );
+    }
     await fetchThreads();
+    await fetchForumReportQueue();
     return safety;
   }
 
@@ -163,6 +171,9 @@ class ForumViewModel extends ChangeNotifier {
       parentReplyId: parentReplyId,
       timestamp: 'Just now',
       text: text,
+      isReported: safety.isAutoFlagged,
+      reportReason: safety.isAutoFlagged ? safety.flagReason : null,
+      reportNotes: safety.isAutoFlagged ? 'Automated system flag triggered upon reply creation.' : null,
     );
 
     await _repository.postReply(threadId, reply);
@@ -175,6 +186,7 @@ class ForumViewModel extends ChangeNotifier {
       );
     }
     await fetchThreads();
+    await fetchForumReportQueue();
     return safety;
   }
 

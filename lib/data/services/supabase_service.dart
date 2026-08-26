@@ -2033,8 +2033,31 @@ class SupabaseService {
   }
 
   Future<void> createThread(ForumThread thread) async {
+    _dismissedPostIds.remove(thread.id);
     _forumStore.insert(0, thread);
     _sessionThreadVotes[_threadVoteKey(thread.id)] = 0; // Initial neutral vote
+
+    if (thread.isReported) {
+      final existingIdx = _localReportQueue.indexWhere((r) => r['postId'] == thread.id && r['type'] == 'post');
+      final newReportItem = {
+        'reason': thread.reportReason ?? 'Automated content flag',
+        'notes': thread.reportNotes ?? '',
+        'created_at': DateTime.now().toIso8601String(),
+      };
+      if (existingIdx != -1) {
+        final existingReports = List<Map<String, dynamic>>.from(_localReportQueue[existingIdx]['reports'] ?? []);
+        existingReports.add(newReportItem);
+        _localReportQueue[existingIdx]['reports'] = existingReports;
+        _localReportQueue[existingIdx]['reportsCount'] = existingReports.length;
+      } else {
+        _localReportQueue.add({
+          'type': 'post',
+          'postId': thread.id,
+          'reports': [newReportItem],
+          'reportsCount': 1,
+        });
+      }
+    }
 
     final client = _client;
     if (client != null) {
@@ -2083,8 +2106,32 @@ class SupabaseService {
   }
 
   Future<void> postReply(String threadId, ThreadReply reply) async {
+    _dismissedReplyIds.remove(reply.id);
     final postVoteKey = _replyVoteKey(reply.id);
     _sessionReplyVotes[postVoteKey] = 0;
+
+    if (reply.isReported) {
+      final existingIdx = _localReportQueue.indexWhere((r) => r['replyId'] == reply.id && r['type'] == 'reply');
+      final newReportItem = {
+        'reason': reply.reportReason ?? 'Automated reply flag',
+        'notes': reply.reportNotes ?? '',
+        'created_at': DateTime.now().toIso8601String(),
+      };
+      if (existingIdx != -1) {
+        final existingReports = List<Map<String, dynamic>>.from(_localReportQueue[existingIdx]['reports'] ?? []);
+        existingReports.add(newReportItem);
+        _localReportQueue[existingIdx]['reports'] = existingReports;
+        _localReportQueue[existingIdx]['reportsCount'] = existingReports.length;
+      } else {
+        _localReportQueue.add({
+          'type': 'reply',
+          'postId': threadId,
+          'replyId': reply.id,
+          'reports': [newReportItem],
+          'reportsCount': 1,
+        });
+      }
+    }
 
     final idx = _forumStore.indexWhere((t) => t.id == threadId);
     if (idx != -1) {
@@ -2111,6 +2158,9 @@ class SupabaseService {
         'upvotes': reply.upvotes,
         'is_verified_answer': reply.isVerifiedAnswer,
         'is_edited': reply.isEdited,
+        'is_reported': reply.isReported,
+        if (reply.reportReason != null) 'report_reason': reply.reportReason,
+        if (reply.reportNotes != null) 'report_notes': reply.reportNotes,
         if (reply.parentReplyId != null)
           'parent_reply_id': reply.parentReplyId,
       };
