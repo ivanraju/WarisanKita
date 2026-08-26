@@ -58,7 +58,8 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
 
     final availableQuests = gameVM?.availableQuests ?? [];
     final totalQuestsCount = availableQuests.isNotEmpty ? availableQuests.length : 3;
-    final pendingQuestRequests = gameVM?.myRequests.where((r) => r.isPending).length ?? 3;
+    final int pendingFromVM = gameVM?.myRequests.where((r) => r.status.toUpperCase() == 'PENDING').length ?? 0;
+    final int pendingQuestRequests = pendingFromVM > 0 ? pendingFromVM : 3;
 
     final totalThreadsCount = forumVM.threads.length;
     final pendingForumReportsCount = forumVM.reportQueue.length;
