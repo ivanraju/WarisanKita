@@ -343,5 +343,286 @@ CREATE POLICY "Public select artisan_documents" ON public.artisan_documents FOR 
 DROP POLICY IF EXISTS "Public update artisan_documents" ON public.artisan_documents;
 CREATE POLICY "Public update artisan_documents" ON public.artisan_documents FOR UPDATE USING (true) WITH CHECK (true);
 
+-- ==============================================================================
+-- 7. Forum Module Tables, Voting, & Stored Procedures
+-- ==============================================================================
 
+CREATE TABLE IF NOT EXISTS public.forum_posts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
+    tag TEXT DEFAULT 'General',
+    community TEXT DEFAULT 'c/General',
+    title TEXT NOT NULL,
+    content TEXT,
+    upvotes INTEGER DEFAULT 0,
+    is_solved BOOLEAN DEFAULT FALSE,
+    is_edited BOOLEAN DEFAULT FALSE,
+    is_reported BOOLEAN DEFAULT FALSE,
+    report_reason TEXT,
+    report_notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
 
+CREATE TABLE IF NOT EXISTS public.forum_replies (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    post_id UUID NOT NULL REFERENCES public.forum_posts(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
+    parent_reply_id UUID REFERENCES public.forum_replies(id) ON DELETE CASCADE,
+    content TEXT NOT NULL,
+    upvotes INTEGER DEFAULT 0,
+    is_verified_answer BOOLEAN DEFAULT FALSE,
+    is_edited BOOLEAN DEFAULT FALSE,
+    is_reported BOOLEAN DEFAULT FALSE,
+    report_reason TEXT,
+    report_notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public.forum_reports (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    post_id UUID REFERENCES public.forum_posts(id) ON DELETE CASCADE,
+    reply_id UUID REFERENCES public.forum_replies(id) ON DELETE CASCADE,
+    reporter_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
+    reason TEXT NOT NULL,
+    notes TEXT,
+    status TEXT DEFAULT 'pending', -- pending, dismissed, actioned
+    resolution_notes TEXT,
+    action_type TEXT,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    resolved_at TIMESTAMPTZ
+);
+
+CREATE TABLE IF NOT EXISTS public.forum_post_votes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    post_id UUID NOT NULL REFERENCES public.forum_posts(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    vote INTEGER NOT NULL CHECK (vote IN (-1, 1)),
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    UNIQUE(post_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS public.forum_reply_votes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    reply_id UUID NOT NULL REFERENCES public.forum_replies(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    vote INTEGER NOT NULL CHECK (vote IN (-1, 1)),
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    UNIQUE(reply_id, user_id)
+);
+
+-- Stored procedure for atomic post voting
+CREATE OR REPLACE FUNCTION public.vote_forum_post(p_post_id UUID, p_vote INT)
+RETURNS JSONB AS $$
+DECLARE
+    v_user_id UUID := auth.uid();
+    v_current_vote INT := 0;
+    v_new_vote INT := 0;
+    v_delta INT := 0;
+    v_new_upvotes INT := 0;
+BEGIN
+    IF v_user_id IS NULL THEN
+        -- Fallback to system mock ID if unauthenticated in dev
+        v_user_id := '00000000-0000-4000-8000-000000000001'::UUID;
+    END IF;
+
+    -- Get existing vote
+    SELECT vote INTO v_current_vote FROM public.forum_post_votes WHERE post_id = p_post_id AND user_id = v_user_id;
+    IF v_current_vote IS NULL THEN
+        v_current_vote := 0;
+    END IF;
+
+    -- If user clicks same vote direction, toggle off (0)
+    IF v_current_vote = p_vote THEN
+        v_new_vote := 0;
+        DELETE FROM public.forum_post_votes WHERE post_id = p_post_id AND user_id = v_user_id;
+    ELSE
+        v_new_vote := p_vote;
+        INSERT INTO public.forum_post_votes(post_id, user_id, vote, updated_at)
+        VALUES (p_post_id, v_user_id, v_new_vote, now())
+        ON CONFLICT (post_id, user_id) DO UPDATE SET vote = v_new_vote, updated_at = now();
+    END IF;
+
+    -- Calculate delta and update forum_posts
+    v_delta := v_new_vote - v_current_vote;
+    UPDATE public.forum_posts SET upvotes = COALESCE(upvotes, 0) + v_delta WHERE id = p_post_id RETURNING upvotes INTO v_new_upvotes;
+
+    RETURN jsonb_build_object('success', true, 'upvotes', v_new_upvotes, 'user_vote', v_new_vote);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Stored procedure for atomic reply voting
+CREATE OR REPLACE FUNCTION public.vote_forum_reply(p_reply_id UUID, p_vote INT)
+RETURNS JSONB AS $$
+DECLARE
+    v_user_id UUID := auth.uid();
+    v_current_vote INT := 0;
+    v_new_vote INT := 0;
+    v_delta INT := 0;
+    v_new_upvotes INT := 0;
+BEGIN
+    IF v_user_id IS NULL THEN
+        v_user_id := '00000000-0000-4000-8000-000000000001'::UUID;
+    END IF;
+
+    SELECT vote INTO v_current_vote FROM public.forum_reply_votes WHERE reply_id = p_reply_id AND user_id = v_user_id;
+    IF v_current_vote IS NULL THEN
+        v_current_vote := 0;
+    END IF;
+
+    IF v_current_vote = p_vote THEN
+        v_new_vote := 0;
+        DELETE FROM public.forum_reply_votes WHERE reply_id = p_reply_id AND user_id = v_user_id;
+    ELSE
+        v_new_vote := p_vote;
+        INSERT INTO public.forum_reply_votes(reply_id, user_id, vote, updated_at)
+        VALUES (p_reply_id, v_user_id, v_new_vote, now())
+        ON CONFLICT (reply_id, user_id) DO UPDATE SET vote = v_new_vote, updated_at = now();
+    END IF;
+
+    v_delta := v_new_vote - v_current_vote;
+    UPDATE public.forum_replies SET upvotes = COALESCE(upvotes, 0) + v_delta WHERE id = p_reply_id RETURNING upvotes INTO v_new_upvotes;
+
+    RETURN jsonb_build_object('success', true, 'upvotes', v_new_upvotes, 'user_vote', v_new_vote);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Stored procedure for reporting a post
+CREATE OR REPLACE FUNCTION public.report_forum_post(p_post_id UUID, p_reason TEXT, p_notes TEXT)
+RETURNS JSONB AS $$
+DECLARE
+    v_user_id UUID := auth.uid();
+BEGIN
+    INSERT INTO public.forum_reports(post_id, reporter_id, reason, notes, status, created_at)
+    VALUES (p_post_id, v_user_id, p_reason, p_notes, 'pending', now());
+
+    UPDATE public.forum_posts
+    SET is_reported = true, report_reason = p_reason, report_notes = p_notes
+    WHERE id = p_post_id;
+
+    RETURN jsonb_build_object('success', true, 'already_reported', false);
+EXCEPTION
+    WHEN unique_violation THEN
+        RETURN jsonb_build_object('success', false, 'already_reported', true);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Stored procedure for reporting a reply
+CREATE OR REPLACE FUNCTION public.report_forum_reply(p_reply_id UUID, p_reason TEXT, p_notes TEXT)
+RETURNS JSONB AS $$
+DECLARE
+    v_user_id UUID := auth.uid();
+BEGIN
+    INSERT INTO public.forum_reports(reply_id, reporter_id, reason, notes, status, created_at)
+    VALUES (p_reply_id, v_user_id, p_reason, p_notes, 'pending', now());
+
+    UPDATE public.forum_replies
+    SET is_reported = true, report_reason = p_reason, report_notes = p_notes
+    WHERE id = p_reply_id;
+
+    RETURN jsonb_build_object('success', true, 'already_reported', false);
+EXCEPTION
+    WHEN unique_violation THEN
+        RETURN jsonb_build_object('success', false, 'already_reported', true);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Stored procedure for dismissing reports
+CREATE OR REPLACE FUNCTION public.dismiss_forum_reports(p_post_id UUID, p_reply_id UUID)
+RETURNS JSONB AS $$
+BEGIN
+    IF p_post_id IS NOT NULL THEN
+        UPDATE public.forum_reports
+        SET status = 'dismissed', resolved_at = now()
+        WHERE post_id = p_post_id AND status = 'pending';
+
+        UPDATE public.forum_posts
+        SET is_reported = false, report_reason = NULL, report_notes = NULL
+        WHERE id = p_post_id;
+    END IF;
+
+    IF p_reply_id IS NOT NULL THEN
+        UPDATE public.forum_reports
+        SET status = 'dismissed', resolved_at = now()
+        WHERE reply_id = p_reply_id AND status = 'pending';
+
+        UPDATE public.forum_replies
+        SET is_reported = false, report_reason = NULL, report_notes = NULL
+        WHERE id = p_reply_id;
+    END IF;
+
+    RETURN jsonb_build_object('success', true);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Stored procedure for admin deleting forum content
+CREATE OR REPLACE FUNCTION public.admin_delete_forum_content(p_post_id UUID, p_reply_id UUID, p_deletion_reason TEXT)
+RETURNS JSONB AS $$
+BEGIN
+    IF p_post_id IS NOT NULL THEN
+        UPDATE public.forum_reports
+        SET status = 'actioned', action_type = 'deleted', resolution_notes = p_deletion_reason, resolved_at = now()
+        WHERE post_id = p_post_id;
+
+        DELETE FROM public.forum_posts WHERE id = p_post_id;
+    END IF;
+
+    IF p_reply_id IS NOT NULL THEN
+        UPDATE public.forum_reports
+        SET status = 'actioned', action_type = 'deleted', resolution_notes = p_deletion_reason, resolved_at = now()
+        WHERE reply_id = p_reply_id;
+
+        DELETE FROM public.forum_replies WHERE id = p_reply_id;
+    END IF;
+
+    RETURN jsonb_build_object('success', true);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Grant permissions
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.forum_posts TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.forum_replies TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.forum_reports TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.forum_post_votes TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.forum_reply_votes TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.vote_forum_post(UUID, INT) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.vote_forum_reply(UUID, INT) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.report_forum_post(UUID, TEXT, TEXT) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.report_forum_reply(UUID, TEXT, TEXT) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.dismiss_forum_reports(UUID, UUID) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_delete_forum_content(UUID, UUID, TEXT) TO anon, authenticated;
+
+-- Enable RLS
+ALTER TABLE public.forum_posts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.forum_replies ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.forum_reports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.forum_post_votes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.forum_reply_votes ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Public select forum_posts" ON public.forum_posts FOR SELECT USING (true);
+CREATE POLICY "Public insert forum_posts" ON public.forum_posts FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public update forum_posts" ON public.forum_posts FOR UPDATE USING (true) WITH CHECK (true);
+CREATE POLICY "Public delete forum_posts" ON public.forum_posts FOR DELETE USING (true);
+
+CREATE POLICY "Public select forum_replies" ON public.forum_replies FOR SELECT USING (true);
+CREATE POLICY "Public insert forum_replies" ON public.forum_replies FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public update forum_replies" ON public.forum_replies FOR UPDATE USING (true) WITH CHECK (true);
+CREATE POLICY "Public delete forum_replies" ON public.forum_replies FOR DELETE USING (true);
+
+CREATE POLICY "Public select forum_reports" ON public.forum_reports FOR SELECT USING (true);
+CREATE POLICY "Public insert forum_reports" ON public.forum_reports FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public update forum_reports" ON public.forum_reports FOR UPDATE USING (true) WITH CHECK (true);
+CREATE POLICY "Public delete forum_reports" ON public.forum_reports FOR DELETE USING (true);
+
+CREATE POLICY "Public select forum_post_votes" ON public.forum_post_votes FOR SELECT USING (true);
+CREATE POLICY "Public insert forum_post_votes" ON public.forum_post_votes FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public update forum_post_votes" ON public.forum_post_votes FOR UPDATE USING (true) WITH CHECK (true);
+CREATE POLICY "Public delete forum_post_votes" ON public.forum_post_votes FOR DELETE USING (true);
+
+CREATE POLICY "Public select forum_reply_votes" ON public.forum_reply_votes FOR SELECT USING (true);
+CREATE POLICY "Public insert forum_reply_votes" ON public.forum_reply_votes FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public update forum_reply_votes" ON public.forum_reply_votes FOR UPDATE USING (true) WITH CHECK (true);
+CREATE POLICY "Public delete forum_reply_votes" ON public.forum_reply_votes FOR DELETE USING (true);

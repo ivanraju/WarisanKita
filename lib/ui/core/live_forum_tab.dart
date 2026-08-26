@@ -1351,7 +1351,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
   // REDDIT STYLE POST CARD WITH UPVOTE SIDEBAR
   Widget _buildRedditPostCard(Map<String, dynamic> thread) {
     final bool isArtisan = (thread['isArtisan'] as bool?) ?? false;
-    final int userVote = (thread['userVote'] as int?) ?? 0;
+    final int userVote = (thread['userVote'] as num?)?.toInt() ?? 0;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1831,7 +1831,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                           icon: Icon(
                             Icons.arrow_upward_rounded,
                             size: 16,
-                            color: ((_activeThread!['userVote'] as int?) == 1) ? const Color(0xFFF97316) : Colors.grey[600],
+                            color: (((_activeThread!['userVote'] as num?)?.toInt()) == 1) ? const Color(0xFFF97316) : Colors.grey[600],
                           ),
                           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                           constraints: const BoxConstraints(),
@@ -1839,13 +1839,13 @@ class _LiveForumTabState extends State<LiveForumTab> {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          '${_activeThread!['upvotes']}',
+                          '${(_activeThread!['upvotes'] as num?)?.toInt() ?? 0}',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
-                            color: ((_activeThread!['userVote'] as int?) == 1)
+                            color: (((_activeThread!['userVote'] as num?)?.toInt()) == 1)
                                 ? const Color(0xFFF97316)
-                                : (((_activeThread!['userVote'] as int?) == -1) ? const Color(0xFF6366F1) : const Color(0xFF004D40)),
+                                : ((((_activeThread!['userVote'] as num?)?.toInt()) == -1) ? const Color(0xFF6366F1) : const Color(0xFF004D40)),
                           ),
                         ),
                         const SizedBox(width: 4),
@@ -1853,7 +1853,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                           icon: Icon(
                             Icons.arrow_downward_rounded,
                             size: 16,
-                            color: ((_activeThread!['userVote'] as int?) == -1) ? const Color(0xFF6366F1) : Colors.grey[600],
+                            color: (((_activeThread!['userVote'] as num?)?.toInt()) == -1) ? const Color(0xFF6366F1) : Colors.grey[600],
                           ),
                           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                           constraints: const BoxConstraints(),
@@ -2134,7 +2134,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
     final bool isMe = msg['isMe'] as bool? ?? false;
     final bool isArtisan = msg['isArtisan'] as bool? ?? false;
     final bool isVerifiedAnswer = msg['isVerifiedAnswer'] as bool? ?? false;
-    final int userVote = (msg['userVote'] as int?) ?? 0;
+    final int userVote = (msg['userVote'] as num?)?.toInt() ?? 0;
 
     // ============================
     // Find parent reply
@@ -2414,7 +2414,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                     const SizedBox(width: 5),
 
                     Text(
-                      '${msg['upvotes']}',
+                      '${(msg['upvotes'] as num?)?.toInt() ?? 0}',
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
