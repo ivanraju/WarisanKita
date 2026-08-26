@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:warisan_kita/ui/directory/directory_view.dart';
+import 'package:warisan_kita/ui/matchmaker/craft_matchmaker_quiz_wizard.dart';
 import 'package:warisan_kita/ui/matchmaker/matchmaker_view.dart';
 import 'package:warisan_kita/ui/matchmaker/tourist_matchmaker_view.dart';
 import 'package:warisan_kita/ui/forum/forum_view.dart';
 import 'package:warisan_kita/ui/gamification/gamification_view.dart';
+import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/navigation_viewmodel.dart';
 
 class TouristDashboardScreen extends StatelessWidget {
@@ -176,46 +178,63 @@ class TouristHomeContent extends StatelessWidget {
           ),
           Padding(
             padding: const EdgeInsets.all(32),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Discovery\nBegins Here',
-                  style: GoogleFonts.dmSerifDisplay(color: Colors.white, fontSize: 32, height: 1.1),
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'Match your soul with nearby Malaysian artisans.',
-                  style: TextStyle(color: Colors.white70, fontSize: 14),
-                ),
-                const SizedBox(height: 24),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: [
-                    ElevatedButton(
-                      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QuizWizardScreen())),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFFD54F),
-                        foregroundColor: const Color(0xFF004D40),
+            child: Builder(builder: (ctx) {
+              final user = ctx.watch<AuthViewModel>().currentUser;
+              final hasSoul = user?.hasCraftPersonality == true;
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    hasSoul ? '${user!.craftPersonalityTitle}' : 'Discovery\nBegins Here',
+                    style: GoogleFonts.dmSerifDisplay(color: Colors.white, fontSize: hasSoul ? 26 : 32, height: 1.1),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    hasSoul
+                        ? '${user!.craftPersonalityDescription ?? "Tailored to your heritage cultural archetype."}'
+                        : 'Match your soul with nearby Malaysian artisans.',
+                    style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.3),
+                  ),
+                  const SizedBox(height: 24),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      ElevatedButton(
+                        onPressed: () {
+                          showDialog(
+                            context: ctx,
+                            builder: (_) => CraftMatchmakerQuizWizard(
+                              initialAnswers: user?.quizAnswers,
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFFFD54F),
+                          foregroundColor: const Color(0xFF004D40),
+                        ),
+                        child: Text(
+                          hasSoul ? 'UPDATE CRAFT SOUL' : 'START QUIZ',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
                       ),
-                      child: const Text('START QUIZ', style: TextStyle(fontWeight: FontWeight.bold)),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TouristMatchmakerView())),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        side: const BorderSide(color: Colors.white70, width: 1.5),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                      OutlinedButton.icon(
+                        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TouristMatchmakerView())),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          side: const BorderSide(color: Colors.white70, width: 1.5),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                        ),
+                        icon: const Icon(Icons.map_rounded, size: 18),
+                        label: const Text('MAP MATCHMAKER', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                       ),
-                      icon: const Icon(Icons.map_rounded, size: 18),
-                      label: const Text('MAP MATCHMAKER', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+                    ],
+                  ),
+                ],
+              );
+            }),
           ),
         ],
       ),

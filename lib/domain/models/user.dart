@@ -19,6 +19,13 @@ class UserModel {
   final String? state;
   final String? phone;
 
+  // Craft Matchmaker & Cultural Personality Preferences
+  final String? craftPersonalityTitle;
+  final String? craftPersonalityDescription;
+  final List<String> matchedCrafts;
+  final List<String> preferenceTags;
+  final Map<int, String> quizAnswers;
+
   const UserModel({
     required this.id,
     required this.email,
@@ -37,7 +44,15 @@ class UserModel {
     this.address,
     this.state,
     this.phone,
+    this.craftPersonalityTitle,
+    this.craftPersonalityDescription,
+    this.matchedCrafts = const [],
+    this.preferenceTags = const [],
+    this.quizAnswers = const {},
   });
+
+  bool get hasCraftPersonality =>
+      craftPersonalityTitle != null && craftPersonalityTitle!.trim().isNotEmpty;
 
   bool get isDualRole =>
       role == 'Artisan & Tourist' ||
@@ -137,6 +152,11 @@ class UserModel {
     String? address,
     String? state,
     String? phone,
+    String? craftPersonalityTitle,
+    String? craftPersonalityDescription,
+    List<String>? matchedCrafts,
+    List<String>? preferenceTags,
+    Map<int, String>? quizAnswers,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -156,10 +176,18 @@ class UserModel {
       address: address ?? this.address,
       state: state ?? this.state,
       phone: phone ?? this.phone,
+      craftPersonalityTitle: craftPersonalityTitle ?? this.craftPersonalityTitle,
+      craftPersonalityDescription: craftPersonalityDescription ?? this.craftPersonalityDescription,
+      matchedCrafts: matchedCrafts ?? this.matchedCrafts,
+      preferenceTags: preferenceTags ?? this.preferenceTags,
+      quizAnswers: quizAnswers ?? this.quizAnswers,
     );
   }
 
   Map<String, dynamic> toMap() {
+    final answersMap = <String, String>{};
+    quizAnswers.forEach((k, v) => answersMap[k.toString()] = v);
+
     return {
       'id': id,
       'email': email,
@@ -178,6 +206,11 @@ class UserModel {
       'address': address,
       'state': state,
       'phone': phone,
+      'craftPersonalityTitle': craftPersonalityTitle,
+      'craftPersonalityDescription': craftPersonalityDescription,
+      'matchedCrafts': matchedCrafts,
+      'preferenceTags': preferenceTags,
+      'quizAnswers': answersMap,
     };
   }
 
@@ -191,6 +224,23 @@ class UserModel {
       artisanMap = Map<String, dynamic>.from(map['artisan_profiles']);
     } else if (map['artisan_profiles'] is List && (map['artisan_profiles'] as List).isNotEmpty) {
       artisanMap = Map<String, dynamic>.from((map['artisan_profiles'] as List).first);
+    }
+
+    final rawMatched = map['matchedCrafts'] ?? map['matched_crafts'];
+    final List<String> parsedMatched = rawMatched is List ? List<String>.from(rawMatched) : [];
+
+    final rawTags = map['preferenceTags'] ?? map['preference_tags'];
+    final List<String> parsedTags = rawTags is List ? List<String>.from(rawTags) : [];
+
+    final rawAnswers = map['quizAnswers'] ?? map['quiz_answers'];
+    final Map<int, String> parsedAnswers = {};
+    if (rawAnswers is Map) {
+      rawAnswers.forEach((k, v) {
+        final parsedKey = int.tryParse(k.toString());
+        if (parsedKey != null && v != null) {
+          parsedAnswers[parsedKey] = v.toString();
+        }
+      });
     }
 
     return UserModel(
@@ -211,6 +261,11 @@ class UserModel {
       address: map['address'] ?? artisanMap?['address'],
       state: map['state'] ?? artisanMap?['state'],
       phone: map['phone'] ?? map['phone_number'],
+      craftPersonalityTitle: map['craftPersonalityTitle'] ?? map['craft_personality_title'],
+      craftPersonalityDescription: map['craftPersonalityDescription'] ?? map['craft_personality_description'],
+      matchedCrafts: parsedMatched,
+      preferenceTags: parsedTags,
+      quizAnswers: parsedAnswers,
     );
   }
 }

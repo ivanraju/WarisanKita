@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:warisan_kita/data/services/image_upload_service.dart';
 import 'package:warisan_kita/ui/tourist/artisan_detail_screen.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/moderation_viewmodel.dart';
@@ -575,16 +577,24 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
               itemBuilder: (context, index) {
                 if (index < _portfolioImages.length) {
                   final image = _portfolioImages[index];
+                  final isDataUri = image.startsWith('data:');
                   return Stack(
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(16),
-                        child: Image.network(
-                          image,
-                          width: double.infinity,
-                          height: double.infinity,
-                          fit: BoxFit.cover,
-                        ),
+                        child: isDataUri
+                            ? Image.memory(
+                                base64Decode(image.split(',').last),
+                                width: double.infinity,
+                                height: double.infinity,
+                                fit: BoxFit.cover,
+                              )
+                            : Image.network(
+                                image,
+                                width: double.infinity,
+                                height: double.infinity,
+                                fit: BoxFit.cover,
+                              ),
                       ),
                       Positioned(
                         top: 4,
@@ -605,21 +615,27 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                   );
                 }
 
-                // Add Image Tile
+                // Add Image Tile (WebP conversion pipeline)
                 return GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _portfolioImages.add(
-                        'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=600&auto=format&fit=crop&q=80',
-                      );
-                    });
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('📸 Photo ${_portfolioImages.length} added to gallery!'),
-                        backgroundColor: const Color(0xFF004D40),
-                        behavior: SnackBarBehavior.floating,
-                      ),
+                  onTap: () async {
+                    final uploadResult = await ImageUploadService().pickAndProcessImageAsWebp(
+                      prefix: 'portfolio_webp',
+                      bucketName: 'artisan-portfolio',
                     );
+
+                    if (uploadResult != null) {
+                      setState(() {
+                        _portfolioImages.add(uploadResult.effectiveUrl);
+                      });
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('📸 Uploaded ${uploadResult.fileName} (${uploadResult.fileSizeFormatted}) in optimized WebP format!'),
+                          backgroundColor: const Color(0xFF004D40),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
                   },
                   child: Container(
                     decoration: BoxDecoration(
@@ -633,7 +649,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                         const Icon(Icons.add_a_photo_outlined, color: Color(0xFFD97706), size: 24),
                         const SizedBox(height: 4),
                         Text(
-                          'Add Image',
+                          'Add WebP Photo',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,

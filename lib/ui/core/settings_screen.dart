@@ -184,11 +184,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
             context,
             icon: Icons.auto_awesome_outlined,
             title: langVM.translate('Take / Update Craft Matchmaker Quiz'),
-            subtitle: langVM.translate('Customize your cultural preferences'),
+            subtitle: (authVM.currentUser?.craftPersonalityTitle != null && authVM.currentUser!.craftPersonalityTitle!.isNotEmpty)
+                ? 'Soul: ${authVM.currentUser!.craftPersonalityTitle} • Tap to update preferences'
+                : langVM.translate('Customize your cultural preferences'),
             onTap: () {
               showDialog(
                 context: context,
                 builder: (_) => CraftMatchmakerQuizWizard(
+                  initialAnswers: authVM.currentUser?.quizAnswers,
                   onCompleted: (tags) {
                     setState(() {});
                   },

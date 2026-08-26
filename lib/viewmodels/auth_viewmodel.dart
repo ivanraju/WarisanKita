@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:warisan_kita/data/repositories/user_repository.dart';
 import 'package:warisan_kita/domain/models/user.dart';
 
@@ -104,6 +103,11 @@ class AuthViewModel extends ChangeNotifier {
     String? phone,
     String? state,
     String? craftCategory,
+    String? craftPersonalityTitle,
+    String? craftPersonalityDescription,
+    List<String>? matchedCrafts,
+    List<String>? preferenceTags,
+    Map<int, String>? quizAnswers,
   }) async {
     final email = _currentUser?.email ?? 'tourist@warisankita.my';
     final cleanUsername = username?.trim().replaceAll('@', '');
@@ -121,6 +125,11 @@ class AuthViewModel extends ChangeNotifier {
         phone: phone,
         state: state,
         craftCategory: craftCategory,
+        craftPersonalityTitle: craftPersonalityTitle ?? _currentUser?.craftPersonalityTitle,
+        craftPersonalityDescription: craftPersonalityDescription ?? _currentUser?.craftPersonalityDescription,
+        matchedCrafts: matchedCrafts ?? _currentUser?.matchedCrafts,
+        preferenceTags: preferenceTags ?? _currentUser?.preferenceTags,
+        quizAnswers: quizAnswers ?? _currentUser?.quizAnswers,
       );
       _currentUser = updated;
     } catch (e) {
@@ -136,6 +145,11 @@ class AuthViewModel extends ChangeNotifier {
           phone: phone ?? _currentUser!.phone,
           state: state ?? _currentUser!.state,
           craftCategory: craftCategory ?? _currentUser!.craftCategory,
+          craftPersonalityTitle: craftPersonalityTitle ?? _currentUser!.craftPersonalityTitle,
+          craftPersonalityDescription: craftPersonalityDescription ?? _currentUser!.craftPersonalityDescription,
+          matchedCrafts: matchedCrafts ?? _currentUser!.matchedCrafts,
+          preferenceTags: preferenceTags ?? _currentUser!.preferenceTags,
+          quizAnswers: quizAnswers ?? _currentUser!.quizAnswers,
         );
       }
     } finally {

@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:warisan_kita/data/services/image_upload_service.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/moderation_viewmodel.dart';
 
@@ -19,6 +21,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late final TextEditingController _studioNameController;
   String _selectedCraftCategory = 'Pottery & Ceramics';
   String _selectedState = 'Melaka';
+  String? _avatarWebpUrl;
 
   final List<String> _craftCategories = const [
     'Pottery & Ceramics',
@@ -206,36 +209,66 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           children: [
             const SizedBox(height: 12),
 
-            // Avatar Placeholder Image Picker
+            // Avatar Placeholder Image Picker (WebP conversion)
             Center(
-              child: Stack(
-                children: [
-                  CircleAvatar(
-                    radius: 54,
-                    backgroundColor: const Color(0xFF004D40).withValues(alpha: 0.1),
-                    child: Text(
-                      initials,
-                      style: GoogleFonts.dmSerifDisplay(
-                        fontSize: 32,
-                        color: const Color(0xFF004D40),
-                        fontWeight: FontWeight.bold,
+              child: GestureDetector(
+                onTap: () async {
+                  final result = await ImageUploadService().pickAndProcessImageAsWebp(
+                    prefix: 'avatar_webp',
+                    bucketName: 'avatars',
+                    maxWidth: 512,
+                    maxHeight: 512,
+                  );
+                  if (result != null) {
+                    setState(() {
+                      _avatarWebpUrl = result.effectiveUrl;
+                    });
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('📸 Avatar converted to WebP (${result.fileSizeFormatted}) and updated!'),
+                        backgroundColor: const Color(0xFF004D40),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                },
+                child: Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 54,
+                      backgroundColor: const Color(0xFF004D40).withValues(alpha: 0.1),
+                      backgroundImage: _avatarWebpUrl != null
+                          ? (_avatarWebpUrl!.startsWith('data:')
+                              ? MemoryImage(base64Decode(_avatarWebpUrl!.split(',').last))
+                              : NetworkImage(_avatarWebpUrl!) as ImageProvider)
+                          : null,
+                      child: _avatarWebpUrl == null
+                          ? Text(
+                              initials,
+                              style: GoogleFonts.dmSerifDisplay(
+                                fontSize: 32,
+                                color: const Color(0xFF004D40),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            )
+                          : null,
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF004D40),
+                          shape: BoxShape.circle,
+                          boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                        ),
+                        child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 18),
                       ),
                     ),
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF004D40),
-                        shape: BoxShape.circle,
-                        boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
-                      ),
-                      child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 18),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
 

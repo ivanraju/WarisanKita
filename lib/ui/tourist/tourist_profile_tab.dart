@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:warisan_kita/ui/artisan/artisan_application_pending_screen.dart';
+import 'package:warisan_kita/ui/matchmaker/craft_matchmaker_quiz_wizard.dart';
 import 'package:warisan_kita/ui/tourist/apply_artisan_screen.dart';
 import 'package:warisan_kita/ui/core/edit_profile_screen.dart';
 import 'package:warisan_kita/ui/core/settings_screen.dart';
@@ -541,7 +542,12 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                   ),
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
+
+                // 🌟 CRAFT SOUL PERSONALITY CARD / QUIZ LAUNCHER
+                _buildCraftSoulCard(context, authVM),
+
+                const SizedBox(height: 16),
 
                 // 🌱 HERITAGE PRESERVATION IMPACT CARD
                 Container(
@@ -1008,6 +1014,137 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildCraftSoulCard(BuildContext context, AuthViewModel authVM) {
+    final user = authVM.currentUser;
+    final hasSoul = user?.hasCraftPersonality == true;
+    final soulTitle = user?.craftPersonalityTitle ?? 'The Weaver of Dreams';
+    final soulDesc = user?.craftPersonalityDescription ?? 'Discover your inner cultural archetype and unlock tailored craft recommendations.';
+    final matchedCrafts = user?.matchedCrafts ?? const [];
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: hasSoul
+              ? [const Color(0xFF1E1B4B), const Color(0xFF312E81)]
+              : [const Color(0xFF0F766E), const Color(0xFF0D9488)],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: hasSoul ? const Color(0xFFA5B4FC) : const Color(0xFF5EEAD4),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.auto_awesome_rounded, color: Color(0xFFFFD54F), size: 18),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    hasSoul ? 'CRAFT SOUL ARCHETYPE' : 'CRAFT MATCHMAKER',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w900,
+                      color: const Color(0xFFFFD54F),
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ],
+              ),
+              FilledButton.tonal(
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (_) => CraftMatchmakerQuizWizard(
+                      initialAnswers: user?.quizAnswers,
+                      onCompleted: (tags) {
+                        setState(() {});
+                      },
+                    ),
+                  );
+                },
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.white.withValues(alpha: 0.18),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  minimumSize: const Size(0, 28),
+                ),
+                child: Text(
+                  hasSoul ? 'Retake / Update' : 'Take Quiz',
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            hasSoul ? soulTitle : 'Discover Your Cultural Craft Archetype',
+            style: GoogleFonts.dmSerifDisplay(
+              fontSize: 19,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            soulDesc,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 11.5,
+              color: Colors.white.withValues(alpha: 0.88),
+              height: 1.35,
+            ),
+          ),
+          if (hasSoul && matchedCrafts.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: matchedCrafts.map((c) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.white24),
+                  ),
+                  child: Text(
+                    c,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFFFFD54F),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:warisan_kita/ui/matchmaker/craft_matchmaker_quiz_wizard.dart';
 import 'package:warisan_kita/ui/tourist/artisan_detail_screen.dart';
 import 'package:warisan_kita/ui/tourist/quest_completion_screen.dart';
 import 'package:warisan_kita/ui/core/widgets/translation_language_dialog.dart';
 import 'package:warisan_kita/ui/tourist/widgets/rotating_artisan_image_carousel.dart';
+import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
 
 class TouristDirectoryTab extends StatefulWidget {
@@ -715,53 +717,128 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
+                    InkWell(
+                      onTap: () {
+                        showDialog(
+                          context: context,
+                          builder: (_) => CraftMatchmakerQuizWizard(
+                            initialAnswers: context.read<AuthViewModel>().currentUser?.quizAnswers,
+                            onCompleted: (_) => setState(() {}),
+                          ),
+                        );
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.edit_outlined, size: 12, color: Color(0xFF004D40)),
+                            const SizedBox(width: 2),
+                            Text(
+                              'Edit Soul Quiz',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF004D40),
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 ),
 
                 if (_hasPreferences) ...[
                   const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF0FDF4),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0xFF86EFAC)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.auto_awesome_rounded, color: Color(0xFF15803D), size: 16),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                'Recommended for You (Based on Preferences)',
-                                softWrap: true,
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: const Color(0xFF15803D),
+                  Builder(builder: (ctx) {
+                    final user = ctx.watch<AuthViewModel>().currentUser;
+                    final personalityTitle = user?.craftPersonalityTitle;
+                    final matchedCrafts = (user?.matchedCrafts != null && user!.matchedCrafts.isNotEmpty)
+                        ? user.matchedCrafts
+                        : const ['Songket', 'Batik', 'Woodwork'];
+
+                    return Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF0FDF4),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFF86EFAC)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.auto_awesome_rounded, color: Color(0xFF15803D), size: 16),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        (personalityTitle != null && personalityTitle.isNotEmpty)
+                                            ? 'Recommended for $personalityTitle'
+                                            : 'Recommended for You (Based on Preferences)',
+                                        softWrap: true,
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          color: const Color(0xFF15803D),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        SizedBox(
-                          height: 72,
-                          child: ListView(
-                            scrollDirection: Axis.horizontal,
-                            children: [
-                              _buildRecommendationCard(langVM.translate('Pak Mat Pottery Studio'), langVM.translate('Clay Pottery & Ceramics')),
-                              _buildRecommendationCard(langVM.translate('Siti Batik Craft Workshop'), langVM.translate('Batik Wax Painting')),
-                              _buildRecommendationCard(langVM.translate('Wan Songket Heritage Weavers'), langVM.translate('Songket Gold Weaving')),
+                              TextButton(
+                                onPressed: () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (_) => CraftMatchmakerQuizWizard(
+                                      initialAnswers: user?.quizAnswers,
+                                      onCompleted: (_) => setState(() {}),
+                                    ),
+                                  );
+                                },
+                                style: TextButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  minimumSize: const Size(0, 24),
+                                ),
+                                child: Text(
+                                  user?.hasCraftPersonality == true ? 'Retake Quiz' : 'Take Quiz',
+                                  style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF15803D)),
+                                ),
+                              ),
                             ],
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            height: 72,
+                            child: ListView(
+                              scrollDirection: Axis.horizontal,
+                              children: [
+                                if (matchedCrafts.any((c) => c.toLowerCase().contains('pottery') || c.toLowerCase().contains('clay') || c.toLowerCase().contains('ceramics')))
+                                  _buildRecommendationCard(langVM.translate('Pak Mat Pottery Studio'), langVM.translate('Clay Pottery & Ceramics')),
+                                if (matchedCrafts.any((c) => c.toLowerCase().contains('batik') || c.toLowerCase().contains('textile')))
+                                  _buildRecommendationCard(langVM.translate('Siti Batik Craft Workshop'), langVM.translate('Batik Wax Painting')),
+                                if (matchedCrafts.any((c) => c.toLowerCase().contains('songket') || c.toLowerCase().contains('weaving')))
+                                  _buildRecommendationCard(langVM.translate('Wan Songket Heritage Weavers'), langVM.translate('Songket Gold Weaving')),
+                                if (matchedCrafts.any((c) => c.toLowerCase().contains('wood') || c.toLowerCase().contains('carv') || c.toLowerCase().contains('timber')))
+                                  _buildRecommendationCard(langVM.translate('Master Zaid Woodcarving'), langVM.translate('Traditional Woodcarving')),
+                                if (matchedCrafts.any((c) => c.toLowerCase().contains('pewter') || c.toLowerCase().contains('metal') || c.toLowerCase().contains('keris')))
+                                  _buildRecommendationCard(langVM.translate('Straits Pewter & Blades'), langVM.translate('Royal Pewter & Metal')),
+                                if (matchedCrafts.any((c) => c.toLowerCase().contains('wau') || c.toLowerCase().contains('puppet') || c.toLowerCase().contains('bamboo')))
+                                  _buildRecommendationCard(langVM.translate('Pak Daud Wau & Puppetry'), langVM.translate('Paper & Bamboo')),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
                 ],
 
                 const SizedBox(height: 16),

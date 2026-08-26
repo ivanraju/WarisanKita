@@ -96,6 +96,11 @@ class UserRepository {
     String? phone,
     String? state,
     String? craftCategory,
+    String? craftPersonalityTitle,
+    String? craftPersonalityDescription,
+    List<String>? matchedCrafts,
+    List<String>? preferenceTags,
+    Map<int, String>? quizAnswers,
   }) {
     return _service.updateUserProfile(
       email: email,
@@ -106,6 +111,11 @@ class UserRepository {
       phone: phone,
       state: state,
       craftCategory: craftCategory,
+      craftPersonalityTitle: craftPersonalityTitle,
+      craftPersonalityDescription: craftPersonalityDescription,
+      matchedCrafts: matchedCrafts,
+      preferenceTags: preferenceTags,
+      quizAnswers: quizAnswers,
     );
   }
 

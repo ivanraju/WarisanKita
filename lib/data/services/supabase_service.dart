@@ -1131,12 +1131,17 @@ class SupabaseService {
     String? phone,
     String? state,
     String? craftCategory,
+    String? craftPersonalityTitle,
+    String? craftPersonalityDescription,
+    List<String>? matchedCrafts,
+    List<String>? preferenceTags,
+    Map<int, String>? quizAnswers,
   }) async {
     final cleanEmail = email.trim().toLowerCase();
     await Future.delayed(const Duration(milliseconds: 300));
 
     final userRecord = _userStore.containsKey(cleanEmail)
-        ? _userStore[cleanEmail]!
+        ? Map<String, dynamic>.from(_userStore[cleanEmail]!)
         : <String, dynamic>{'email': cleanEmail, 'role': 'Tourist', 'roles': ['Tourist'], 'status': 'ACTIVE'};
 
     final roleStr = (userRecord['role'] ?? '').toString();
@@ -1179,6 +1184,16 @@ class SupabaseService {
     if (craftCategory != null) userRecord['craftCategory'] = craftCategory;
     if (phone != null) userRecord['phone'] = phone;
 
+    if (craftPersonalityTitle != null) userRecord['craftPersonalityTitle'] = craftPersonalityTitle;
+    if (craftPersonalityDescription != null) userRecord['craftPersonalityDescription'] = craftPersonalityDescription;
+    if (matchedCrafts != null) userRecord['matchedCrafts'] = matchedCrafts;
+    if (preferenceTags != null) userRecord['preferenceTags'] = preferenceTags;
+    if (quizAnswers != null) {
+      final answersMap = <String, String>{};
+      quizAnswers.forEach((k, v) => answersMap[k.toString()] = v);
+      userRecord['quizAnswers'] = answersMap;
+    }
+
     _userStore[cleanEmail] = userRecord;
 
     final client = _client;
@@ -1203,6 +1218,17 @@ class SupabaseService {
         if (state != null) updateMap['state'] = state;
         if (craftCategory != null) updateMap['craft_category'] = craftCategory;
         if (phone != null) updateMap['phone_number'] = phone;
+
+        if (craftPersonalityTitle != null) updateMap['craft_personality_title'] = craftPersonalityTitle;
+        if (craftPersonalityDescription != null) updateMap['craft_personality_description'] = craftPersonalityDescription;
+        if (matchedCrafts != null) updateMap['matched_crafts'] = matchedCrafts;
+        if (preferenceTags != null) updateMap['preference_tags'] = preferenceTags;
+        if (quizAnswers != null) {
+          final answersMap = <String, String>{};
+          quizAnswers.forEach((k, v) => answersMap[k.toString()] = v);
+          updateMap['quiz_answers'] = answersMap;
+        }
+
         updateMap['updated_at'] = DateTime.now().toIso8601String();
 
         if (updateMap.isNotEmpty) {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:warisan_kita/data/services/image_upload_service.dart';
 import 'package:warisan_kita/domain/models/pending_artisan_profile.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/moderation_viewmodel.dart';
@@ -150,23 +151,25 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
 
   Future<void> _pickStudioPhotos() async {
     try {
-      final result = await FilePickerPlatform.instance.pickFiles(
-        type: FileType.image,
+      final results = await ImageUploadService().pickMultipleImagesAsWebp(
+        prefix: 'artisan_proof',
+        bucketName: 'verification-docs',
       );
 
-      if (result.isNotEmpty) {
+      if (results.isNotEmpty) {
         setState(() {
-          for (final file in result) {
+          for (final res in results) {
             _uploadedPhotos.add({
-              'name': file.name,
-              'size': '850 KB',
+              'name': res.fileName,
+              'size': res.fileSizeFormatted,
+              'url': res.effectiveUrl,
             });
           }
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('📸 Studio workshop photo attached (${result.length} files)'),
+              content: Text('📸 Attached ${results.length} workshop photo(s) in optimized WebP format!'),
               backgroundColor: const Color(0xFF004D40),
               behavior: SnackBarBehavior.floating,
             ),
@@ -175,12 +178,12 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
       }
     } catch (_) {
       setState(() {
-        _uploadedPhotos.add({'name': 'Workshop_Studio_View.jpg', 'size': '850 KB'});
+        _uploadedPhotos.add({'name': 'Workshop_Studio_View.webp', 'size': '240 KB'});
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('📸 Sample Workshop Photo attached!'),
+            content: Text('📸 Sample Workshop Photo attached (WebP)!'),
             backgroundColor: Color(0xFF004D40),
             behavior: SnackBarBehavior.floating,
           ),
