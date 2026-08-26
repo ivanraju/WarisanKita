@@ -2951,13 +2951,15 @@ class SupabaseService {
   // Returns empty string on full success, or an error/status message.
   Future<String> adminDeleteForumPost(
     String postId,
-    String deletionReason,
-  ) async {
+    String deletionReason, [
+    String? adminUsername,
+  ]) async {
     // 1. Capture post metadata BEFORE removing from local store
     final foundThread = _forumStore.where((t) => t.id == postId).firstOrNull;
     final authorEmail = foundThread?.authorEmail ?? '';
     final authorName = foundThread?.authorName ?? '';
     final postTitle = foundThread?.title ?? 'Post';
+    final modName = adminUsername ?? 'Admin';
 
     // 2. Immediately update local state (admin sees deletion instantly)
     _forumStore.removeWhere((thread) => thread.id == postId);
@@ -2984,12 +2986,13 @@ class SupabaseService {
       'post_title': postTitle,
       'author_email': authorEmail,
       'author_name': authorName,
+      'moderator_name': modName,
       'status': 'actioned',
       'action_type': 'deleted',
       'reason': deletionReason,
       'admin_reason': deletionReason,
       'notes':
-          'Post "$postTitle" by $authorName ($authorEmail) deleted: $deletionReason',
+          'Post "$postTitle" by $authorName ($authorEmail) deleted by Admin $modName: $deletionReason',
       'resolution_notes': deletionReason,
       'resolved_at': DateTime.now().toIso8601String(),
     });
@@ -3006,6 +3009,8 @@ class SupabaseService {
         'action_type': 'deleted',
         'resolution_notes': deletionReason,
         'deletion_reason': deletionReason,
+        'notes':
+            'Post "$postTitle" by $authorName ($authorEmail) deleted by Admin $modName: $deletionReason',
         'resolved_at': DateTime.now().toIso8601String(),
       }).eq('post_id', postId);
     } catch (_) {}
@@ -3097,12 +3102,14 @@ class SupabaseService {
   Future<String> adminDeleteForumReply(
     String threadId,
     String replyId,
-    String deletionReason,
-  ) async {
+    String deletionReason, [
+    String? adminUsername,
+  ]) async {
     // 1. Capture reply metadata BEFORE removing from local store
     String authorEmail = '';
     String authorName = '';
     String replyText = '';
+    final modName = adminUsername ?? 'Admin';
     for (final t in _forumStore) {
       final r = t.replies.where((rep) => rep.id == replyId).firstOrNull;
       if (r != null) {
@@ -3140,11 +3147,12 @@ class SupabaseService {
       'reply_text': replyText,
       'author_email': authorEmail,
       'author_name': authorName,
+      'moderator_name': modName,
       'status': 'actioned',
       'action_type': 'deleted',
       'reason': deletionReason,
       'admin_reason': deletionReason,
-      'notes': 'Reply by $authorName ($authorEmail) deleted: $deletionReason',
+      'notes': 'Reply by $authorName ($authorEmail) deleted by Admin $modName: $deletionReason',
       'resolution_notes': deletionReason,
       'resolved_at': DateTime.now().toIso8601String(),
     });
@@ -3161,6 +3169,7 @@ class SupabaseService {
         'action_type': 'deleted',
         'resolution_notes': deletionReason,
         'deletion_reason': deletionReason,
+        'notes': 'Reply by $authorName ($authorEmail) deleted by Admin $modName: $deletionReason',
         'resolved_at': DateTime.now().toIso8601String(),
       }).eq('reply_id', replyId);
     } catch (_) {}
@@ -3412,7 +3421,12 @@ class SupabaseService {
     }
   }
 
-  Future<void> dismissReplyReport(String threadId, String replyId) async {
+  Future<void> dismissReplyReport(
+    String threadId,
+    String replyId, [
+    String? adminUsername,
+  ]) async {
+    final modName = adminUsername ?? 'Admin';
     for (int i = 0; i < _forumStore.length; i++) {
       final t = _forumStore[i];
       final rIdx = t.replies.indexWhere((r) => r.id == replyId);
@@ -3438,6 +3452,8 @@ class SupabaseService {
       'id': 'hist_${DateTime.now().millisecondsSinceEpoch}',
       'reply_id': replyId,
       'status': 'dismissed',
+      'moderator_name': modName,
+      'notes': 'Reply flag dismissed by Admin $modName',
       'resolved_at': DateTime.now().toIso8601String(),
     });
 
@@ -3564,7 +3580,11 @@ class SupabaseService {
     }
   }
 
-  Future<void> dismissReport(String threadId) async {
+  Future<void> dismissReport(
+    String threadId, [
+    String? adminUsername,
+  ]) async {
+    final modName = adminUsername ?? 'Admin';
     _deletedPostIds.remove(threadId);
     _dismissedReportPostIds.add(threadId);
 
@@ -3587,6 +3607,8 @@ class SupabaseService {
       'id': 'hist_${DateTime.now().millisecondsSinceEpoch}',
       'post_id': threadId,
       'status': 'dismissed',
+      'moderator_name': modName,
+      'notes': 'Flag dismissed by Admin $modName',
       'resolved_at': DateTime.now().toIso8601String(),
     });
 

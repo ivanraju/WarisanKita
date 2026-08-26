@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/forum_viewmodel.dart';
 
 class AdminForumModerationTab extends StatefulWidget {
@@ -34,15 +35,19 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
     final type = post['type']?.toString();
     final id = post['id']?.toString() ?? '';
     final threadId = (post['threadId'] ?? id).toString();
+    final authVM = context.read<AuthViewModel>();
+    final adminName = authVM.currentUser?.effectiveUsername ?? authVM.currentUser?.email ?? 'Admin';
 
     if (type == 'reply') {
       await context.read<ForumViewModel>().dismissReplyReport(
         threadId,
         id,
+        adminName,
       );
     } else {
       await context.read<ForumViewModel>().dismissReport(
         id,
+        adminName,
       );
     }
 
@@ -129,6 +134,8 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                 }
 
                 final forumVM = context.read<ForumViewModel>();
+                final authVM = context.read<AuthViewModel>();
+                final adminName = authVM.currentUser?.effectiveUsername ?? authVM.currentUser?.email ?? 'Admin';
 
                 try {
                   final type = post['type']?.toString();
@@ -141,6 +148,7 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                       threadId,
                       id,
                       reason,
+                      adminName,
                     );
                   }
                   // Admin delete reported POST
@@ -148,6 +156,7 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                     await forumVM.adminDeleteForumPost(
                       id,
                       reason,
+                      adminName,
                     );
                   }
 
@@ -714,11 +723,27 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
 
             final String reporterId =
                 record['reporter_id']?.toString() ??
-                    'Unknown';
+                    '';
 
             final String resolvedAt =
                 record['resolved_at']?.toString() ??
                     '';
+
+            String moderatorName =
+                record['moderator_name']?.toString() ??
+                    record['admin_username']?.toString() ??
+                    '';
+
+            if (moderatorName.isEmpty || moderatorName == 'null') {
+              if (notes.contains('by Admin ')) {
+                final part = notes.split('by Admin ').last;
+                moderatorName = part.split(':').first.trim();
+              } else if (notes.contains('Dismissed by Admin ')) {
+                moderatorName = notes.split('Dismissed by Admin ').last.trim();
+              } else {
+                moderatorName = 'Admin';
+              }
+            }
 
             final Color statusColor =
             isActioned
@@ -929,40 +954,72 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                         const Color(0xFF991B1B),
                       ),
                     ),
-                  ],
-
-                  const SizedBox(height: 16),
+                  ],                  const SizedBox(height: 16),
                   const Divider(),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
 
                   Wrap(
-                    spacing: 18,
+                    spacing: 12,
                     runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      Text(
-                        'Reporter: $reporterId',
-                        style:
-                        GoogleFonts.plusJakartaSans(
-                          fontSize: 10,
-                          color: Colors.grey[600],
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF004D40).withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.admin_panel_settings_rounded,
+                              size: 13,
+                              color: Color(0xFF004D40),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Moderated By: $moderatorName',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF004D40),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      Text(
-                        'Target ID: $targetId',
-                        style:
-                        GoogleFonts.plusJakartaSans(
-                          fontSize: 10,
-                          color: Colors.grey[600],
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          '$type ID: #${targetId.length > 8 ? targetId.substring(0, 8) : targetId}',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF334155),
+                          ),
                         ),
                       ),
-                      Text(
-                        'Resolved: $resolvedAt',
-                        style:
-                        GoogleFonts.plusJakartaSans(
-                          fontSize: 10,
-                          color: Colors.grey[600],
+                      if (reporterId.isNotEmpty && reporterId != 'null' && reporterId != 'Unknown')
+                        Text(
+                          'Reporter: #${reporterId.length > 8 ? reporterId.substring(0, 8) : reporterId}',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11,
+                            color: Colors.grey[600],
+                          ),
                         ),
-                      ),
+                      if (resolvedAt.isNotEmpty)
+                        Text(
+                          'Resolved: $resolvedAt',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11,
+                            color: Colors.grey[600],
+                          ),
+                        ),
                     ],
                   ),
                 ],
