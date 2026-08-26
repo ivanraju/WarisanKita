@@ -1735,6 +1735,38 @@ class SupabaseService {
           }
         }
 
+        // =====================================================
+        // Query active pending reports from forum_reports table
+        // =====================================================
+        final Set<String> activePendingPostReports = {};
+        final Set<String> activePendingReplyReports = {};
+        final Map<String, Map<String, dynamic>> activeReportDetails = {};
+
+        try {
+          final pendingReportsRes = await client
+              .from('forum_reports')
+              .select('post_id, reply_id, reason, notes, status')
+              .eq('status', 'pending');
+
+          if (pendingReportsRes is List) {
+            for (final r in pendingReportsRes) {
+              final rMap = Map<String, dynamic>.from(r);
+              final pId = rMap['post_id']?.toString();
+              final repId = rMap['reply_id']?.toString();
+              if (pId != null && pId.isNotEmpty) {
+                activePendingPostReports.add(pId);
+                activeReportDetails['post_$pId'] = rMap;
+              }
+              if (repId != null && repId.isNotEmpty) {
+                activePendingReplyReports.add(repId);
+                activeReportDetails['reply_$repId'] = rMap;
+              }
+            }
+          }
+        } catch (e) {
+          debugPrint('fetch pending reports note: $e');
+        }
+
         final List<ForumThread> remote = [];
         if (res is List && res.isNotEmpty) {
           for (final row in res) {
@@ -1747,23 +1779,35 @@ class SupabaseService {
             _sessionThreadVotes[_threadVoteKey(threadId)] = persistedVote;
             threadMap['userVote'] = persistedVote;
 
-            // Check dismissed status
-            if (_dismissedPostIds.contains(threadId)) {
-              threadMap['is_reported'] = false;
-              threadMap['report_reason'] = null;
-              threadMap['report_notes'] = null;
-            } else {
-              // Preserve local report status if recorded
-              final localPostReport = _localReportQueue.where((r) => r['postId'] == threadId && r['type'] == 'post').firstOrNull;
-              if (localPostReport != null) {
-                threadMap['is_reported'] = true;
-                final rList = (localPostReport['reports'] as List?) ?? [];
-                if (rList.isNotEmpty) {
-                  threadMap['report_reason'] = rList.first['reason'];
-                  threadMap['report_notes'] = rList.first['notes'];
+            // Content is reported ONLY if there is an active pending report in forum_reports or local queue, and NOT dismissed
+            bool isPostReported = false;
+            String? postReportReason;
+            String? postReportNotes;
+
+            if (!_dismissedPostIds.contains(threadId)) {
+              if (activePendingPostReports.contains(threadId)) {
+                isPostReported = true;
+                postReportReason = activeReportDetails['post_$threadId']?['reason']?.toString() ??
+                    threadMap['report_reason']?.toString() ??
+                    'Reported Content';
+                postReportNotes = activeReportDetails['post_$threadId']?['notes']?.toString() ??
+                    threadMap['report_notes']?.toString();
+              } else {
+                final localPostReport = _localReportQueue.where((r) => r['postId'] == threadId && r['type'] == 'post').firstOrNull;
+                if (localPostReport != null) {
+                  isPostReported = true;
+                  final rList = (localPostReport['reports'] as List?) ?? [];
+                  if (rList.isNotEmpty) {
+                    postReportReason = rList.first['reason']?.toString();
+                    postReportNotes = rList.first['notes']?.toString();
+                  }
                 }
               }
             }
+
+            threadMap['is_reported'] = isPostReported;
+            threadMap['report_reason'] = isPostReported ? postReportReason : null;
+            threadMap['report_notes'] = isPostReported ? postReportNotes : null;
 
             final localMatch = _forumStore.where((l) => l.id == threadMap['id']).firstOrNull;
 
@@ -1804,23 +1848,35 @@ class SupabaseService {
                   _sessionReplyVotes[_replyVoteKey(replyId)] = pReplyVote;
                   rMap['userVote'] = pReplyVote;
 
-                  // Check dismissed status for reply
-                  if (_dismissedReplyIds.contains(replyId)) {
-                    rMap['is_reported'] = false;
-                    rMap['report_reason'] = null;
-                    rMap['report_notes'] = null;
-                  } else {
-                    // Preserve local reply report status if recorded
-                    final localReplyReport = _localReportQueue.where((rep) => rep['replyId'] == replyId && rep['type'] == 'reply').firstOrNull;
-                    if (localReplyReport != null) {
-                      rMap['is_reported'] = true;
-                      final rList = (localReplyReport['reports'] as List?) ?? [];
-                      if (rList.isNotEmpty) {
-                        rMap['report_reason'] = rList.first['reason'];
-                        rMap['report_notes'] = rList.first['notes'];
+                  // Reply is reported ONLY if there is an active pending report, and NOT dismissed
+                  bool isReplyReported = false;
+                  String? replyReportReason;
+                  String? replyReportNotes;
+
+                  if (!_dismissedReplyIds.contains(replyId)) {
+                    if (activePendingReplyReports.contains(replyId)) {
+                      isReplyReported = true;
+                      replyReportReason = activeReportDetails['reply_$replyId']?['reason']?.toString() ??
+                          rMap['report_reason']?.toString() ??
+                          'Reported Reply';
+                      replyReportNotes = activeReportDetails['reply_$replyId']?['notes']?.toString() ??
+                          rMap['report_notes']?.toString();
+                    } else {
+                      final localReplyReport = _localReportQueue.where((rep) => rep['replyId'] == replyId && rep['type'] == 'reply').firstOrNull;
+                      if (localReplyReport != null) {
+                        isReplyReported = true;
+                        final rList = (localReplyReport['reports'] as List?) ?? [];
+                        if (rList.isNotEmpty) {
+                          replyReportReason = rList.first['reason']?.toString();
+                          replyReportNotes = rList.first['notes']?.toString();
+                        }
                       }
                     }
                   }
+
+                  rMap['is_reported'] = isReplyReported;
+                  rMap['report_reason'] = isReplyReported ? replyReportReason : null;
+                  rMap['report_notes'] = isReplyReported ? replyReportNotes : null;
 
                   processedReplies.add(rMap);
                 }
