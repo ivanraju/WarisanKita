@@ -233,11 +233,13 @@ class ForumViewModel extends ChangeNotifier {
 
   Future<void> adminDeleteForumPost(
       String postId,
-      String deletionReason,
-      ) async {
+      String deletionReason, [
+      String? adminUsername,
+  ]) async {
     await _repository.adminDeleteForumPost(
       postId,
       deletionReason,
+      adminUsername,
     );
 
     // Refresh forum + moderation queue + moderation notices
@@ -251,12 +253,14 @@ class ForumViewModel extends ChangeNotifier {
   Future<void> adminDeleteForumReply(
       String threadId,
       String replyId,
-      String deletionReason,
-      ) async {
+      String deletionReason, [
+      String? adminUsername,
+  ]) async {
     await _repository.adminDeleteForumReply(
       threadId,
       replyId,
       deletionReason,
+      adminUsername,
     );
 
     // Refresh forum + moderation queue + moderation notices
@@ -312,11 +316,13 @@ class ForumViewModel extends ChangeNotifier {
 
   Future<void> dismissReplyReport(
       String threadId,
-      String replyId,
-      ) async {
+      String replyId, [
+      String? adminUsername,
+  ]) async {
     await _repository.dismissReplyReport(
       threadId,
       replyId,
+      adminUsername,
     );
 
     // Refresh forum, report queue & moderation history after dismiss
@@ -344,8 +350,14 @@ class ForumViewModel extends ChangeNotifier {
     return result;
   }
 
-  Future<void> dismissReport(String threadId) async {
-    await _repository.dismissReport(threadId);
+  Future<void> dismissReport(
+      String threadId, [
+      String? adminUsername,
+  ]) async {
+    await _repository.dismissReport(
+      threadId,
+      adminUsername,
+    );
 
     // Refresh forum, report queue & moderation history after dismiss
     await fetchThreads();

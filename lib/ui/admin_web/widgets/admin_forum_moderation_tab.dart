@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/forum_viewmodel.dart';
 
 class AdminForumModerationTab extends StatefulWidget {
@@ -34,15 +35,19 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
     final type = post['type']?.toString();
     final id = post['id']?.toString() ?? '';
     final threadId = (post['threadId'] ?? id).toString();
+    final authVM = context.read<AuthViewModel>();
+    final adminName = authVM.currentUser?.effectiveUsername ?? authVM.currentUser?.email ?? 'Admin';
 
     if (type == 'reply') {
       await context.read<ForumViewModel>().dismissReplyReport(
         threadId,
         id,
+        adminName,
       );
     } else {
       await context.read<ForumViewModel>().dismissReport(
         id,
+        adminName,
       );
     }
 
@@ -129,6 +134,8 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                 }
 
                 final forumVM = context.read<ForumViewModel>();
+                final authVM = context.read<AuthViewModel>();
+                final adminName = authVM.currentUser?.effectiveUsername ?? authVM.currentUser?.email ?? 'Admin';
 
                 try {
                   final type = post['type']?.toString();
@@ -141,6 +148,7 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                       threadId,
                       id,
                       reason,
+                      adminName,
                     );
                   }
                   // Admin delete reported POST
@@ -148,6 +156,7 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                     await forumVM.adminDeleteForumPost(
                       id,
                       reason,
+                      adminName,
                     );
                   }
 
@@ -644,16 +653,35 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
             final bool isActioned =
                 status == 'actioned';
 
-            final bool isPost =
-                record['post_id'] != null;
+            final String notes = (record['notes'] ?? '').toString();
+            final String postId = (record['post_id'] ?? '').toString();
+            final String replyId = (record['reply_id'] ?? '').toString();
 
-            final String type =
-            isPost ? 'Post' : 'Reply';
+            final bool hasPostId = postId.isNotEmpty && postId != 'null';
+            final bool hasReplyId = replyId.isNotEmpty && replyId != 'null';
 
-            final String targetId =
-            isPost
-                ? record['post_id']?.toString() ?? ''
-                : record['reply_id']?.toString() ?? '';
+            final bool isPost = hasPostId ||
+                (!hasReplyId && (notes.toLowerCase().contains('post') ||
+                    notes.toLowerCase().contains('flagged content') ||
+                    record['post_title'] != null));
+
+            final String type = isPost ? 'Post' : 'Reply';
+
+            String targetId = '';
+            if (isPost && hasPostId) {
+              targetId = postId;
+            } else if (!isPost && hasReplyId) {
+              targetId = replyId;
+            } else if (hasPostId) {
+              targetId = postId;
+            } else if (hasReplyId) {
+              targetId = replyId;
+            } else {
+              final rawId = (record['target_id'] ?? record['id'] ?? '').toString();
+              if (rawId.isNotEmpty && rawId != 'null') {
+                targetId = rawId;
+              }
+            }
 
             final String reportReason =
                 record['reason']?.toString() ??
@@ -665,21 +693,83 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
             final String? deletionReason =
             record['deletion_reason']?.toString();
 
-            final String? contentSnapshot =
-            record['content_snapshot']?.toString();
-
-            final String authorName =
+            String authorName =
                 record['target_author_name']?.toString() ??
                     record['author_name']?.toString() ??
-                    'Unknown User';
+                    '';
+
+            if (authorName.isEmpty || authorName == 'null' || authorName == 'Unknown User') {
+              if (notes.contains('created by ')) {
+                final part = notes.split('created by ').last;
+                authorName = part.split(':').first.trim();
+              } else if (notes.contains('posted by ')) {
+                final part = notes.split('posted by ').last;
+                authorName = part.split(':').first.trim();
+              } else if (notes.contains('by ') && notes.contains('(')) {
+                final part = notes.split('by ').last;
+                authorName = part.split('(').first.trim();
+              } else if (isPost && targetId.isNotEmpty) {
+                final threadMatch = forumVM.threads.where((t) => t.id == targetId).firstOrNull;
+                if (threadMatch != null) {
+                  authorName = threadMatch.authorName;
+                }
+              }
+            }
+
+            if (authorName.isEmpty || authorName == 'null') {
+              authorName = 'Community Member';
+            }
+
+            String resolvedContent =
+                record['content_snapshot']?.toString() ??
+                    record['post_title']?.toString() ??
+                    record['reply_text']?.toString() ??
+                    '';
+
+            if (resolvedContent.isEmpty || resolvedContent == 'null') {
+              if (notes.contains('"')) {
+                final match = RegExp(r'"([^"]*)"').firstMatch(notes);
+                if (match != null && match.group(1) != null) {
+                  resolvedContent = match.group(1)!;
+                }
+              }
+            }
+
+            final String? contentSnapshot =
+                resolvedContent.isNotEmpty ? resolvedContent : null;
 
             final String reporterId =
                 record['reporter_id']?.toString() ??
-                    'Unknown';
+                    '';
 
-            final String resolvedAt =
+            final String rawResolvedAt =
                 record['resolved_at']?.toString() ??
                     '';
+            String resolvedAt = rawResolvedAt;
+            if (rawResolvedAt.isNotEmpty && rawResolvedAt != 'null') {
+              try {
+                final dt = DateTime.parse(rawResolvedAt).toLocal();
+                resolvedAt = '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+              } catch (_) {
+                resolvedAt = rawResolvedAt;
+              }
+            }
+
+            String moderatorName =
+                record['moderator_name']?.toString() ??
+                    record['admin_username']?.toString() ??
+                    '';
+
+            if (moderatorName.isEmpty || moderatorName == 'null') {
+              if (notes.contains('by Admin ')) {
+                final part = notes.split('by Admin ').last;
+                moderatorName = part.split(':').first.trim();
+              } else if (notes.contains('Dismissed by Admin ')) {
+                moderatorName = notes.split('Dismissed by Admin ').last.trim();
+              } else {
+                moderatorName = 'Admin';
+              }
+            }
 
             final Color statusColor =
             isActioned
@@ -890,40 +980,73 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                         const Color(0xFF991B1B),
                       ),
                     ),
-                  ],
-
-                  const SizedBox(height: 16),
+                  ],                  const SizedBox(height: 16),
                   const Divider(),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
 
                   Wrap(
-                    spacing: 18,
+                    spacing: 12,
                     runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      Text(
-                        'Reporter: $reporterId',
-                        style:
-                        GoogleFonts.plusJakartaSans(
-                          fontSize: 10,
-                          color: Colors.grey[600],
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF004D40).withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.admin_panel_settings_rounded,
+                              size: 13,
+                              color: Color(0xFF004D40),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Moderated By: $moderatorName',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF004D40),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      Text(
-                        'Target ID: $targetId',
-                        style:
-                        GoogleFonts.plusJakartaSans(
-                          fontSize: 10,
-                          color: Colors.grey[600],
+                      if (targetId.isNotEmpty && targetId != 'null')
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            '$type ID: #${targetId.length > 8 ? targetId.substring(0, 8) : targetId}',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF334155),
+                            ),
+                          ),
                         ),
-                      ),
-                      Text(
-                        'Resolved: $resolvedAt',
-                        style:
-                        GoogleFonts.plusJakartaSans(
-                          fontSize: 10,
-                          color: Colors.grey[600],
+                      if (reporterId.isNotEmpty && reporterId != 'null' && reporterId != 'Unknown')
+                        Text(
+                          'Reporter: #${reporterId.length > 8 ? reporterId.substring(0, 8) : reporterId}',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11,
+                            color: Colors.grey[600],
+                          ),
                         ),
-                      ),
+                      if (resolvedAt.isNotEmpty)
+                        Text(
+                          'Resolved: $resolvedAt',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11,
+                            color: Colors.grey[600],
+                          ),
+                        ),
                     ],
                   ),
                 ],

@@ -38,23 +38,27 @@ class ForumRepository {
 
   Future<String> adminDeleteForumPost(
       String postId,
-      String deletionReason,
-      ) async {
+      String deletionReason, [
+      String? adminUsername,
+  ]) async {
     return await _service.adminDeleteForumPost(
       postId,
       deletionReason,
+      adminUsername,
     );
   }
 
   Future<String> adminDeleteForumReply(
       String threadId,
       String replyId,
-      String deletionReason,
-      ) async {
+      String deletionReason, [
+      String? adminUsername,
+  ]) async {
     return await _service.adminDeleteForumReply(
       threadId,
       replyId,
       deletionReason,
+      adminUsername,
     );
   }
 
@@ -82,14 +86,23 @@ class ForumRepository {
 
   Future<void> dismissReplyReport(
       String threadId,
-      String replyId,
-      ) =>
+      String replyId, [
+      String? adminUsername,
+  ]) =>
       _service.dismissReplyReport(
         threadId,
         replyId,
+        adminUsername,
       );
 
-  Future<void> dismissReport(String threadId) => _service.dismissReport(threadId);
+  Future<void> dismissReport(
+      String threadId, [
+      String? adminUsername,
+  ]) =>
+      _service.dismissReport(
+        threadId,
+        adminUsername,
+      );
 
   Future<void> dismissModerationNotice(String reportId) =>
       _service.dismissModerationNotice(reportId);

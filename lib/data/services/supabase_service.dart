@@ -2068,7 +2068,7 @@ class SupabaseService {
             _sessionThreadVotes[_threadVoteKey(threadId)] = persistedVote;
             threadMap['userVote'] = persistedVote;
 
-            // Content is reported ONLY if there is an active pending report in forum_reports or local queue, and NOT dismissed
+            // Content is reported ONLY if there is an active pending report in Supabase, and NOT dismissed
             bool isPostReported = false;
             String? postReportReason;
             String? postReportNotes;
@@ -2086,22 +2086,13 @@ class SupabaseService {
                         ?.toString() ??
                     threadMap['report_notes']?.toString();
               } else {
-                final localPostReport = _localReportQueue
-                    .where(
-                      (r) =>
-                          (r['postId']?.toString() == threadId ||
-                              r['id']?.toString() == threadId) &&
-                          (r['type'] == null || r['type'] == 'post'),
-                    )
-                    .firstOrNull;
-                if (localPostReport != null) {
-                  isPostReported = true;
-                  final rList = (localPostReport['reports'] as List?) ?? [];
-                  if (rList.isNotEmpty) {
-                    postReportReason = rList.first['reason']?.toString();
-                    postReportNotes = rList.first['notes']?.toString();
-                  }
-                }
+                // If not in active pending reports from Supabase, clear from local queue
+                _localReportQueue.removeWhere(
+                  (r) =>
+                      (r['postId']?.toString() == threadId ||
+                          r['id']?.toString() == threadId) &&
+                      (r['type'] == null || r['type'] == 'post'),
+                );
               }
             }
 
@@ -2174,22 +2165,11 @@ class SupabaseService {
                               ?.toString() ??
                           rMap['report_notes']?.toString();
                     } else {
-                      final localReplyReport = _localReportQueue
-                          .where(
-                            (rep) =>
-                                rep['replyId'] == replyId &&
-                                rep['type'] == 'reply',
-                          )
-                          .firstOrNull;
-                      if (localReplyReport != null) {
-                        isReplyReported = true;
-                        final rList =
-                            (localReplyReport['reports'] as List?) ?? [];
-                        if (rList.isNotEmpty) {
-                          replyReportReason = rList.first['reason']?.toString();
-                          replyReportNotes = rList.first['notes']?.toString();
-                        }
-                      }
+                      _localReportQueue.removeWhere(
+                        (rep) =>
+                            rep['replyId'] == replyId &&
+                            rep['type'] == 'reply',
+                      );
                     }
                   }
 
@@ -2391,10 +2371,30 @@ class SupabaseService {
         final remoteHistory = List<Map<String, dynamic>>.from(response ?? []);
         for (final item in remoteHistory) {
           final id = item['id']?.toString();
-          if (id != null &&
-              !_dismissedNoticeIds.contains(id) &&
-              !history.any((h) => h['id']?.toString() == id)) {
-            history.add(item);
+          final postId = item['post_id']?.toString();
+          final replyId = item['reply_id']?.toString();
+
+          if (id != null && !_dismissedNoticeIds.contains(id)) {
+            // Check if this post or reply is already in history (e.g. from local history)
+            final existingIdx = history.indexWhere((h) =>
+                h['id']?.toString() == id ||
+                (postId != null && postId.isNotEmpty && h['post_id']?.toString() == postId) ||
+                (replyId != null && replyId.isNotEmpty && h['reply_id']?.toString() == replyId));
+
+            if (existingIdx != -1) {
+              // Merge remote item with local item, preserving moderator_name if local has it
+              history[existingIdx] = {
+                ...item,
+                if (history[existingIdx]['moderator_name'] != null)
+                  'moderator_name': history[existingIdx]['moderator_name'],
+                if (history[existingIdx]['author_name'] != null)
+                  'author_name': history[existingIdx]['author_name'],
+                if (history[existingIdx]['post_title'] != null)
+                  'post_title': history[existingIdx]['post_title'],
+              };
+            } else {
+              history.add(item);
+            }
           }
         }
       } catch (e) {
@@ -2951,13 +2951,15 @@ class SupabaseService {
   // Returns empty string on full success, or an error/status message.
   Future<String> adminDeleteForumPost(
     String postId,
-    String deletionReason,
-  ) async {
+    String deletionReason, [
+    String? adminUsername,
+  ]) async {
     // 1. Capture post metadata BEFORE removing from local store
     final foundThread = _forumStore.where((t) => t.id == postId).firstOrNull;
     final authorEmail = foundThread?.authorEmail ?? '';
     final authorName = foundThread?.authorName ?? '';
     final postTitle = foundThread?.title ?? 'Post';
+    final modName = adminUsername ?? 'Admin';
 
     // 2. Immediately update local state (admin sees deletion instantly)
     _forumStore.removeWhere((thread) => thread.id == postId);
@@ -2984,12 +2986,13 @@ class SupabaseService {
       'post_title': postTitle,
       'author_email': authorEmail,
       'author_name': authorName,
+      'moderator_name': modName,
       'status': 'actioned',
       'action_type': 'deleted',
       'reason': deletionReason,
       'admin_reason': deletionReason,
       'notes':
-          'Post "$postTitle" by $authorName ($authorEmail) deleted: $deletionReason',
+          'Post "$postTitle" by $authorName ($authorEmail) deleted by Admin $modName: $deletionReason',
       'resolution_notes': deletionReason,
       'resolved_at': DateTime.now().toIso8601String(),
     });
@@ -3006,6 +3009,8 @@ class SupabaseService {
         'action_type': 'deleted',
         'resolution_notes': deletionReason,
         'deletion_reason': deletionReason,
+        'notes':
+            'Post "$postTitle" by $authorName ($authorEmail) deleted by Admin $modName: $deletionReason',
         'resolved_at': DateTime.now().toIso8601String(),
       }).eq('post_id', postId);
     } catch (_) {}
@@ -3097,12 +3102,14 @@ class SupabaseService {
   Future<String> adminDeleteForumReply(
     String threadId,
     String replyId,
-    String deletionReason,
-  ) async {
+    String deletionReason, [
+    String? adminUsername,
+  ]) async {
     // 1. Capture reply metadata BEFORE removing from local store
     String authorEmail = '';
     String authorName = '';
     String replyText = '';
+    final modName = adminUsername ?? 'Admin';
     for (final t in _forumStore) {
       final r = t.replies.where((rep) => rep.id == replyId).firstOrNull;
       if (r != null) {
@@ -3140,11 +3147,12 @@ class SupabaseService {
       'reply_text': replyText,
       'author_email': authorEmail,
       'author_name': authorName,
+      'moderator_name': modName,
       'status': 'actioned',
       'action_type': 'deleted',
       'reason': deletionReason,
       'admin_reason': deletionReason,
-      'notes': 'Reply by $authorName ($authorEmail) deleted: $deletionReason',
+      'notes': 'Reply by $authorName ($authorEmail) deleted by Admin $modName: $deletionReason',
       'resolution_notes': deletionReason,
       'resolved_at': DateTime.now().toIso8601String(),
     });
@@ -3161,6 +3169,7 @@ class SupabaseService {
         'action_type': 'deleted',
         'resolution_notes': deletionReason,
         'deletion_reason': deletionReason,
+        'notes': 'Reply by $authorName ($authorEmail) deleted by Admin $modName: $deletionReason',
         'resolved_at': DateTime.now().toIso8601String(),
       }).eq('reply_id', replyId);
     } catch (_) {}
@@ -3412,7 +3421,12 @@ class SupabaseService {
     }
   }
 
-  Future<void> dismissReplyReport(String threadId, String replyId) async {
+  Future<void> dismissReplyReport(
+    String threadId,
+    String replyId, [
+    String? adminUsername,
+  ]) async {
+    final modName = adminUsername ?? 'Admin';
     for (int i = 0; i < _forumStore.length; i++) {
       final t = _forumStore[i];
       final rIdx = t.replies.indexWhere((r) => r.id == replyId);
@@ -3438,6 +3452,8 @@ class SupabaseService {
       'id': 'hist_${DateTime.now().millisecondsSinceEpoch}',
       'reply_id': replyId,
       'status': 'dismissed',
+      'moderator_name': modName,
+      'notes': 'Reply flag dismissed by Admin $modName',
       'resolved_at': DateTime.now().toIso8601String(),
     });
 
@@ -3564,7 +3580,11 @@ class SupabaseService {
     }
   }
 
-  Future<void> dismissReport(String threadId) async {
+  Future<void> dismissReport(
+    String threadId, [
+    String? adminUsername,
+  ]) async {
+    final modName = adminUsername ?? 'Admin';
     _deletedPostIds.remove(threadId);
     _dismissedReportPostIds.add(threadId);
 
@@ -3587,6 +3607,8 @@ class SupabaseService {
       'id': 'hist_${DateTime.now().millisecondsSinceEpoch}',
       'post_id': threadId,
       'status': 'dismissed',
+      'moderator_name': modName,
+      'notes': 'Flag dismissed by Admin $modName',
       'resolved_at': DateTime.now().toIso8601String(),
     });
 
