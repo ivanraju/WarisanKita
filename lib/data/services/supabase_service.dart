@@ -2252,12 +2252,16 @@ class SupabaseService {
   Future<List<Map<String, dynamic>>> fetchForumReportQueue() async {
     final Map<String, Map<String, dynamic>> groupedReports = {};
 
-    // 1. Add all from _localReportQueue (excluding dismissed)
+    // 1. Add all from _localReportQueue (excluding dismissed & deleted)
     for (final item in _localReportQueue) {
       final String? postId = (item['postId'] ?? (item['type'] == 'post' ? item['id'] : null))?.toString();
       final String? replyId = (item['replyId'] ?? (item['type'] == 'reply' ? item['id'] : null))?.toString();
       if (postId != null && (_deletedPostIds.contains(postId) || _dismissedReportPostIds.contains(postId))) continue;
       if (replyId != null && _dismissedReportReplyIds.contains(replyId)) continue;
+      if (_forumStore.isNotEmpty) {
+        if (postId != null && !_forumStore.any((t) => t.id == postId)) continue;
+        if (replyId != null && !_forumStore.any((t) => t.replies.any((r) => r.id == replyId))) continue;
+      }
       final String key = postId != null ? 'post_$postId' : 'reply_$replyId';
       groupedReports[key] = Map<String, dynamic>.from(item);
     }
@@ -2319,6 +2323,10 @@ class SupabaseService {
           final replyId = report['reply_id']?.toString();
           if (postId != null && (_deletedPostIds.contains(postId) || _dismissedReportPostIds.contains(postId))) continue;
           if (replyId != null && _dismissedReportReplyIds.contains(replyId)) continue;
+          if (_forumStore.isNotEmpty) {
+            if (postId != null && !_forumStore.any((t) => t.id == postId)) continue;
+            if (replyId != null && !_forumStore.any((t) => t.replies.any((r) => r.id == replyId))) continue;
+          }
           final String key;
           if (postId != null) {
             key = 'post_$postId';
