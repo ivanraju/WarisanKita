@@ -1659,6 +1659,8 @@ class SupabaseService {
   static final Map<String, int> _sessionReplyVotes = {};
   static final List<Map<String, dynamic>> _localReportQueue = [];
   static final List<Map<String, dynamic>> _localModerationHistory = [];
+  static final Set<String> _dismissedPostIds = {};
+  static final Set<String> _dismissedReplyIds = {};
 
   String _threadVoteKey(String threadId) {
     final userId = _client?.auth.currentUser?.id ?? 'guest';
@@ -1745,14 +1747,21 @@ class SupabaseService {
             _sessionThreadVotes[_threadVoteKey(threadId)] = persistedVote;
             threadMap['userVote'] = persistedVote;
 
-            // Preserve local report status if recorded
-            final localPostReport = _localReportQueue.where((r) => r['postId'] == threadId && r['type'] == 'post').firstOrNull;
-            if (localPostReport != null) {
-              threadMap['is_reported'] = true;
-              final rList = (localPostReport['reports'] as List?) ?? [];
-              if (rList.isNotEmpty) {
-                threadMap['report_reason'] = rList.first['reason'];
-                threadMap['report_notes'] = rList.first['notes'];
+            // Check dismissed status
+            if (_dismissedPostIds.contains(threadId)) {
+              threadMap['is_reported'] = false;
+              threadMap['report_reason'] = null;
+              threadMap['report_notes'] = null;
+            } else {
+              // Preserve local report status if recorded
+              final localPostReport = _localReportQueue.where((r) => r['postId'] == threadId && r['type'] == 'post').firstOrNull;
+              if (localPostReport != null) {
+                threadMap['is_reported'] = true;
+                final rList = (localPostReport['reports'] as List?) ?? [];
+                if (rList.isNotEmpty) {
+                  threadMap['report_reason'] = rList.first['reason'];
+                  threadMap['report_notes'] = rList.first['notes'];
+                }
               }
             }
 
@@ -1795,14 +1804,21 @@ class SupabaseService {
                   _sessionReplyVotes[_replyVoteKey(replyId)] = pReplyVote;
                   rMap['userVote'] = pReplyVote;
 
-                  // Preserve local reply report status if recorded
-                  final localReplyReport = _localReportQueue.where((rep) => rep['replyId'] == replyId && rep['type'] == 'reply').firstOrNull;
-                  if (localReplyReport != null) {
-                    rMap['is_reported'] = true;
-                    final rList = (localReplyReport['reports'] as List?) ?? [];
-                    if (rList.isNotEmpty) {
-                      rMap['report_reason'] = rList.first['reason'];
-                      rMap['report_notes'] = rList.first['notes'];
+                  // Check dismissed status for reply
+                  if (_dismissedReplyIds.contains(replyId)) {
+                    rMap['is_reported'] = false;
+                    rMap['report_reason'] = null;
+                    rMap['report_notes'] = null;
+                  } else {
+                    // Preserve local reply report status if recorded
+                    final localReplyReport = _localReportQueue.where((rep) => rep['replyId'] == replyId && rep['type'] == 'reply').firstOrNull;
+                    if (localReplyReport != null) {
+                      rMap['is_reported'] = true;
+                      final rList = (localReplyReport['reports'] as List?) ?? [];
+                      if (rList.isNotEmpty) {
+                        rMap['report_reason'] = rList.first['reason'];
+                        rMap['report_notes'] = rList.first['notes'];
+                      }
                     }
                   }
 
@@ -1832,17 +1848,19 @@ class SupabaseService {
   Future<List<Map<String, dynamic>>> fetchForumReportQueue() async {
     final Map<String, Map<String, dynamic>> groupedReports = {};
 
-    // 1. Add all from _localReportQueue
+    // 1. Add all from _localReportQueue (excluding dismissed)
     for (final item in _localReportQueue) {
       final String? postId = item['postId']?.toString();
       final String? replyId = item['replyId']?.toString();
+      if (postId != null && _dismissedPostIds.contains(postId)) continue;
+      if (replyId != null && _dismissedReplyIds.contains(replyId)) continue;
       final String key = postId != null ? 'post_$postId' : 'reply_$replyId';
       groupedReports[key] = Map<String, dynamic>.from(item);
     }
 
-    // 2. Add reported items from _forumStore
+    // 2. Add reported items from _forumStore (excluding dismissed)
     for (final thread in _forumStore) {
-      if (thread.isReported) {
+      if (thread.isReported && !_dismissedPostIds.contains(thread.id)) {
         final key = 'post_${thread.id}';
         if (!groupedReports.containsKey(key)) {
           groupedReports[key] = {
@@ -1860,7 +1878,7 @@ class SupabaseService {
         }
       }
       for (final reply in thread.replies) {
-        if (reply.isReported) {
+        if (reply.isReported && !_dismissedReplyIds.contains(reply.id)) {
           final key = 'reply_${reply.id}';
           if (!groupedReports.containsKey(key)) {
             groupedReports[key] = {
@@ -1895,6 +1913,8 @@ class SupabaseService {
         for (final report in reports) {
           final postId = report['post_id']?.toString();
           final replyId = report['reply_id']?.toString();
+          if (postId != null && _dismissedPostIds.contains(postId)) continue;
+          if (replyId != null && _dismissedReplyIds.contains(replyId)) continue;
           final String key;
           if (postId != null) {
             key = 'post_$postId';
@@ -2310,6 +2330,7 @@ class SupabaseService {
     _forumStore.removeWhere(
       (thread) => thread.id == postId,
     );
+    _dismissedPostIds.add(postId);
     _localReportQueue.removeWhere((r) => r['postId'] == postId && r['type'] == 'post');
     _localModerationHistory.insert(0, {
       'id': 'hist_${DateTime.now().millisecondsSinceEpoch}',
@@ -2355,20 +2376,15 @@ class SupabaseService {
       String deletionReason,
       ) async {
     // Remove deleted reply from local forum state and report queue
-    final threadIndex = _forumStore.indexWhere(
-      (thread) => thread.id == threadId,
-    );
-
-    if (threadIndex != -1) {
-      final thread = _forumStore[threadIndex];
-      final updatedReplies = List<ThreadReply>.from(thread.replies)
-        ..removeWhere((reply) => reply.id == replyId);
-
-      _forumStore[threadIndex] = thread.copyWith(
-        replies: updatedReplies,
-        replyCount: updatedReplies.length,
-      );
+    for (int i = 0; i < _forumStore.length; i++) {
+      final t = _forumStore[i];
+      final rIdx = t.replies.indexWhere((r) => r.id == replyId);
+      if (rIdx != -1) {
+        final updatedReplies = List<ThreadReply>.from(t.replies)..removeAt(rIdx);
+        _forumStore[i] = t.copyWith(replies: updatedReplies, replyCount: updatedReplies.length);
+      }
     }
+    _dismissedReplyIds.add(replyId);
     _localReportQueue.removeWhere((r) => r['replyId'] == replyId && r['type'] == 'reply');
     _localModerationHistory.insert(0, {
       'id': 'hist_${DateTime.now().millisecondsSinceEpoch}',
@@ -2455,24 +2471,26 @@ class SupabaseService {
       String reason,
       String notes,
       ) async {
-    // 1. Update local store
-    final tIdx = _forumStore.indexWhere((t) => t.id == threadId);
-    if (tIdx != -1) {
-      final thread = _forumStore[tIdx];
-      final rIdx = thread.replies.indexWhere((r) => r.id == replyId);
+    // 1. Unmark dismissed if reported anew
+    _dismissedReplyIds.remove(replyId);
+
+    // 2. Update local store
+    for (int i = 0; i < _forumStore.length; i++) {
+      final t = _forumStore[i];
+      final rIdx = t.replies.indexWhere((r) => r.id == replyId);
       if (rIdx != -1) {
-        final updatedReply = thread.replies[rIdx].copyWith(
+        final updatedReply = t.replies[rIdx].copyWith(
           isReported: true,
           reportReason: reason,
           reportNotes: notes,
         );
-        final updatedReplies = List<ThreadReply>.from(thread.replies);
+        final updatedReplies = List<ThreadReply>.from(t.replies);
         updatedReplies[rIdx] = updatedReply;
-        _forumStore[tIdx] = thread.copyWith(replies: updatedReplies);
+        _forumStore[i] = t.copyWith(replies: updatedReplies);
       }
     }
 
-    // 2. Add to _localReportQueue
+    // 3. Add to _localReportQueue
     final existingIdx = _localReportQueue.indexWhere((r) => r['replyId'] == replyId && r['type'] == 'reply');
     final newReportItem = {
       'reason': reason,
@@ -2546,21 +2564,21 @@ class SupabaseService {
       String threadId,
       String replyId,
       ) async {
-    final tIdx = _forumStore.indexWhere((t) => t.id == threadId);
-    if (tIdx != -1) {
-      final thread = _forumStore[tIdx];
-      final rIdx = thread.replies.indexWhere((r) => r.id == replyId);
+    for (int i = 0; i < _forumStore.length; i++) {
+      final t = _forumStore[i];
+      final rIdx = t.replies.indexWhere((r) => r.id == replyId);
       if (rIdx != -1) {
-        final updatedReplies = List<ThreadReply>.from(thread.replies);
+        final updatedReplies = List<ThreadReply>.from(t.replies);
         updatedReplies[rIdx] = updatedReplies[rIdx].copyWith(
           isReported: false,
           reportReason: null,
           reportNotes: null,
         );
-        _forumStore[tIdx] = thread.copyWith(replies: updatedReplies);
+        _forumStore[i] = t.copyWith(replies: updatedReplies);
       }
     }
 
+    _dismissedReplyIds.add(replyId);
     _localReportQueue.removeWhere((r) => r['replyId'] == replyId && r['type'] == 'reply');
     _localModerationHistory.insert(0, {
       'id': 'hist_${DateTime.now().millisecondsSinceEpoch}',
@@ -2603,6 +2621,8 @@ class SupabaseService {
       String reason,
       String notes,
       ) async {
+    _dismissedPostIds.remove(threadId);
+
     final tIdx = _forumStore.indexWhere((t) => t.id == threadId);
     if (tIdx != -1) {
       _forumStore[tIdx] = _forumStore[tIdx].copyWith(
@@ -2690,6 +2710,7 @@ class SupabaseService {
       );
     }
 
+    _dismissedPostIds.add(threadId);
     _localReportQueue.removeWhere((r) => r['postId'] == threadId && r['type'] == 'post');
     _localModerationHistory.insert(0, {
       'id': 'hist_${DateTime.now().millisecondsSinceEpoch}',

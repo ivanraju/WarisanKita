@@ -28,36 +28,39 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
   }
 
   void _dismissFlag(Map<String, dynamic> post) async {
-    if (post['isDynamic'] == true) {
-      if (post['type'] == 'reply') {
-        await context.read<ForumViewModel>().dismissReplyReport(
-          post['threadId'].toString(),
-          post['id'].toString(),
-        );
-      } else {
-        await context.read<ForumViewModel>().dismissReport(
-          post['id'].toString(),
-        );
-      }
+    final type = post['type']?.toString();
+    final id = post['id']?.toString() ?? '';
+    final threadId = (post['threadId'] ?? id).toString();
+
+    if (type == 'reply') {
+      await context.read<ForumViewModel>().dismissReplyReport(
+        threadId,
+        id,
+      );
     } else {
-      setState(() {
-        _staticReportedPosts.removeWhere(
-              (p) => p['id'] == post['id'],
-        );
-      });
+      await context.read<ForumViewModel>().dismissReport(
+        id,
+      );
     }
+
+    setState(() {
+      _staticReportedPosts.removeWhere(
+        (p) => p['id'] == id,
+      );
+    });
 
     if (!mounted) return;
 
     final typeLabel =
-    post['type'] == 'reply' ? 'reply' : 'post';
+    type == 'reply' ? 'reply' : 'post';
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Flag dismissed for $typeLabel by ${post['author']}.',
+          'Flag dismissed for $typeLabel by ${post['author'] ?? 'author'}.',
         ),
         backgroundColor: const Color(0xFF004D40),
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }
