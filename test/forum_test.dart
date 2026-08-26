@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:warisan_kita/data/repositories/forum_repository.dart';
 import 'package:warisan_kita/data/services/supabase_service.dart';
 import 'package:warisan_kita/domain/models/forum_post.dart';
@@ -48,12 +49,18 @@ void main() {
     });
   });
 
+  setUpAll(() {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    SharedPreferences.setMockInitialValues({});
+  });
+
   group('Forum Upvote, Downvote, & Self-Voting Prevention Tests', () {
     late SupabaseService service;
     late ForumRepository repository;
     late ForumViewModel viewModel;
 
     setUp(() {
+      SharedPreferences.setMockInitialValues({});
       service = SupabaseService();
       repository = ForumRepository(service: service);
       viewModel = ForumViewModel(repository: repository);
@@ -287,6 +294,12 @@ void main() {
 
       expect(viewModel.threads.any((t) => t.id == thread.id), false);
       expect(viewModel.reportQueue.any((r) => r['postId'] == thread.id), false);
+      expect(viewModel.moderationHistory.any((h) => h['post_id'] == thread.id), true);
+
+      // User dismisses moderation notice
+      final notice = viewModel.moderationHistory.firstWhere((h) => h['post_id'] == thread.id);
+      await viewModel.dismissModerationNotice(notice['id']?.toString() ?? thread.id);
+      expect(viewModel.moderationHistory.any((h) => h['post_id'] == thread.id), false);
     });
 
     test('Creating a post with sensitive keywords is automatically flagged into reportQueue', () async {

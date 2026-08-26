@@ -39,6 +39,9 @@ class ForumViewModel extends ChangeNotifier {
     notifyListeners();
 
     _threads = await _repository.getThreads();
+    try {
+      _moderationHistory = await _repository.fetchForumModerationHistory();
+    } catch (_) {}
 
     _isLoading = false;
     notifyListeners();
@@ -237,9 +240,10 @@ class ForumViewModel extends ChangeNotifier {
       deletionReason,
     );
 
-    // Refresh forum + moderation queue
+    // Refresh forum + moderation queue + moderation notices
     await fetchThreads();
     await fetchForumReportQueue();
+    await fetchForumModerationHistory();
 
     notifyListeners();
   }
@@ -255,9 +259,10 @@ class ForumViewModel extends ChangeNotifier {
       deletionReason,
     );
 
-    // Refresh forum + moderation queue
+    // Refresh forum + moderation queue + moderation notices
     await fetchThreads();
     await fetchForumReportQueue();
+    await fetchForumModerationHistory();
 
     notifyListeners();
   }
@@ -346,6 +351,14 @@ class ForumViewModel extends ChangeNotifier {
     await fetchThreads();
     await fetchForumReportQueue();
     await fetchForumModerationHistory();
+    notifyListeners();
+  }
+
+  Future<void> dismissModerationNotice(String reportId) async {
+    await _repository.dismissModerationNotice(reportId);
+    _moderationHistory.removeWhere((item) =>
+        item['id']?.toString() == reportId ||
+        item['resolved_at']?.toString() == reportId);
     notifyListeners();
   }
 }
