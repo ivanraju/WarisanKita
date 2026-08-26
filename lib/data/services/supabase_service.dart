@@ -1292,10 +1292,10 @@ class SupabaseService {
           });
         }
 
-        // Upsert into artisan_profiles
         try {
-          final profileRes = await client.from('artisan_profiles').upsert({
-            'user_id': userId,
+          dynamic profileRes = await client.from('artisan_profiles').select('id').eq('user_id', userId).maybeSingle();
+          
+          final profileData = {
             'studio_name': studioName,
             'craft_category': craftCategory,
             'ssm_number': ssmNumber,
@@ -1303,9 +1303,16 @@ class SupabaseService {
             'address': state ?? 'Malaysia',
             'state': state ?? 'Malaysia',
             'status': 'PENDING_APPROVAL',
-            'created_at': DateTime.now().toIso8601String(),
             'updated_at': DateTime.now().toIso8601String(),
-          }, onConflict: 'user_id').select('id').maybeSingle();
+          };
+
+          if (profileRes != null) {
+            await client.from('artisan_profiles').update(profileData).eq('user_id', userId);
+          } else {
+            profileData['user_id'] = userId;
+            profileData['created_at'] = DateTime.now().toIso8601String();
+            profileRes = await client.from('artisan_profiles').insert(profileData).select('id').maybeSingle();
+          }
 
           if (profileRes != null) {
             final artisanId = profileRes['id'];
