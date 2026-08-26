@@ -2299,9 +2299,17 @@ class _LiveForumTabState extends State<LiveForumTab> {
 
   // QUORA STYLE Q&A THREAD DETAIL VIEW
   Widget _buildQuoraThreadDetailView(LanguageViewModel langVM) {
-    final List<Map<String, dynamic>> messages = List<Map<String, dynamic>>.from(
+    final List<Map<String, dynamic>> allMessages = List<Map<String, dynamic>>.from(
       _activeThread!['messages'] ?? [],
     );
+
+    // Only show approved, non-flagged replies in public thread, EXCEPT for the author
+    final List<Map<String, dynamic>> messages = allMessages.where((msg) {
+      if (msg['isReported'] == true) {
+        return msg['isMe'] == true;
+      }
+      return true;
+    }).toList();
 
     return Column(
       children: [
@@ -2807,6 +2815,35 @@ class _LiveForumTabState extends State<LiveForumTab> {
                         fontWeight: FontWeight.w900,
                         color: const Color(0xFF78350F),
                       ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          if (msg['isReported'] == true) ...[
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF3C7),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: const Color(0xFFFDE68A)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.pending_actions_rounded,
+                    size: 12,
+                    color: Color(0xFFB45309),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Pending Moderation (Only visible to you)',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF78350F),
                     ),
                   ),
                 ],
