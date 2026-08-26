@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:warisan_kita/domain/models/pending_artisan_profile.dart';
 
 class ArtisanReviewDialog extends StatefulWidget {
@@ -51,7 +52,7 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF10B981).withOpacity(0.12),
+                            color: const Color(0xFF10B981).withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Icon(Icons.rate_review_rounded, color: Color(0xFF10B981), size: 22),
@@ -97,7 +98,7 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Submitted Portfolio Images (3)',
+                      'Submitted Portfolio Images (${widget.artisan.photos.length})',
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
@@ -108,12 +109,9 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
                     Wrap(
                       spacing: 10,
                       runSpacing: 10,
-                      children: [
-                        _buildPortfolioThumbnail(widget.artisan.imageUrl),
-                        _buildPortfolioThumbnail('https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=600'),
-                        _buildPortfolioThumbnail('https://images.unsplash.com/photo-1544717305-2782549b5136?w=600'),
-                        _buildPortfolioThumbnail('https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=600'),
-                      ],
+                      children: widget.artisan.photos.isEmpty
+                          ? [_buildPortfolioThumbnail(widget.artisan.imageUrl)]
+                          : widget.artisan.photos.map((url) => _buildPortfolioThumbnail(url)).toList(),
                     ),
                   ],
                 );
@@ -226,11 +224,10 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
                       'Submitted Proof Documents (Verified)',
                       style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF334155)),
                     ),
-                    const SizedBox(height: 6),
-                    _buildAdminDocChip(Icons.article_rounded, widget.artisan.ssmFileName ?? 'SSM_Registration_License_2026.pdf (1.2 MB)'),
-                    _buildAdminDocChip(Icons.workspace_premium_rounded, widget.artisan.certFileName ?? 'Kraftangan_Malaysia_Master_Cert.pdf (2.4 MB)'),
+                    _buildAdminDocChip(Icons.article_rounded, widget.artisan.ssmFileName ?? 'SSM_Registration_License_2026.pdf (1.2 MB)', url: widget.artisan.ssmFileUrl),
+                    _buildAdminDocChip(Icons.workspace_premium_rounded, widget.artisan.certFileName ?? 'Kraftangan_Malaysia_Master_Cert.pdf (2.4 MB)', url: widget.artisan.certFileUrl),
                     if (widget.artisan.photos.isNotEmpty)
-                      _buildAdminDocChip(Icons.photo_library_rounded, '${widget.artisan.photos.length} Studio & Workshop Photos Attached'),
+                      _buildAdminDocChip(Icons.photo_library_rounded, '${widget.artisan.photos.length} Studio & Workshop Photos Attached', url: widget.artisan.photos.first),
 
                     const SizedBox(height: 18),
 
@@ -350,47 +347,73 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
     );
   }
 
-  Widget _buildAdminDocChip(IconData icon, String filename) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFCBD5E1)),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 14, color: const Color(0xFF0284C7)),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              filename,
-              style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+  Widget _buildAdminDocChip(IconData icon, String filename, {String? url}) {
+    return InkWell(
+      onTap: () {
+        if (url != null && url.isNotEmpty) {
+           // use url_launcher or similar here if we want to add the package.
+           // Since we don't have time to re-import and add dependencies if missing,
+           // let's just use `import 'package:url_launcher/url_launcher.dart';`
+           _launchURL(url);
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFFCBD5E1)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 14, color: const Color(0xFF0284C7)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                filename,
+                style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+              ),
             ),
-          ),
-          const Icon(Icons.open_in_new_rounded, size: 12, color: Color(0xFF0284C7)),
-        ],
+            if (url != null && url.isNotEmpty)
+              const Icon(Icons.open_in_new_rounded, size: 12, color: Color(0xFF0284C7)),
+          ],
+        ),
       ),
     );
   }
 
+  Future<void> _launchURL(String url) async {
+    try {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+      }
+    } catch (e) {
+      debugPrint('Error launching url: $e');
+    }
+  }
+
   Widget _buildPortfolioThumbnail(String url) {
-    return SizedBox(
-      width: 80,
-      height: 80,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Image.network(
-          url,
-          width: 80,
-          height: 80,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Container(
+    return InkWell(
+      onTap: () => _launchURL(url),
+      borderRadius: BorderRadius.circular(12),
+      child: SizedBox(
+        width: 80,
+        height: 80,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.network(
+            url,
             width: 80,
             height: 80,
-            color: const Color(0xFFE2E8F0),
-            child: const Icon(Icons.photo_rounded, size: 24, color: Color(0xFF94A3B8)),
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => Container(
+              width: 80,
+              height: 80,
+              color: const Color(0xFFE2E8F0),
+              child: const Icon(Icons.photo_rounded, size: 24, color: Color(0xFF94A3B8)),
+            ),
           ),
         ),
       ),

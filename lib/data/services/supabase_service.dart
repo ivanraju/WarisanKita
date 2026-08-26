@@ -1270,10 +1270,10 @@ class SupabaseService {
       try {
         dynamic res;
         try {
-          res = await client.from('users').select('*, artisan_profiles!artisan_profiles_user_id_fkey(*)').ilike('status', '%PENDING%');
+          res = await client.from('users').select('*, artisan_profiles!artisan_profiles_user_id_fkey(*, artisan_documents(*))').ilike('status', '%PENDING%');
         } catch (_) {
           try {
-            res = await client.from('users').select('*, artisan_profiles(*)').ilike('status', '%PENDING%');
+            res = await client.from('users').select('*, artisan_profiles(*, artisan_documents(*))').ilike('status', '%PENDING%');
           } catch (_) {
             res = await client.from('users').select().ilike('status', '%PENDING%');
           }
@@ -1281,18 +1281,59 @@ class SupabaseService {
         if (res is List && res.isNotEmpty) {
           for (final row in res) {
             final rowMap = Map<String, dynamic>.from(row);
+            Map<String, dynamic>? ap;
             if (rowMap['artisan_profiles'] is Map) {
-              final ap = Map<String, dynamic>.from(rowMap['artisan_profiles']);
-              rowMap['studio_name'] ??= ap['studio_name'];
-              rowMap['craft_category'] ??= ap['craft_category'];
-              rowMap['ssm_number'] ??= ap['ssm_number'];
-              rowMap['bio'] ??= ap['bio'];
+              ap = Map<String, dynamic>.from(rowMap['artisan_profiles']);
             } else if (rowMap['artisan_profiles'] is List && (rowMap['artisan_profiles'] as List).isNotEmpty) {
-              final ap = Map<String, dynamic>.from((rowMap['artisan_profiles'] as List).first);
+              ap = Map<String, dynamic>.from((rowMap['artisan_profiles'] as List).first);
+            }
+            
+            if (ap != null) {
               rowMap['studio_name'] ??= ap['studio_name'];
               rowMap['craft_category'] ??= ap['craft_category'];
               rowMap['ssm_number'] ??= ap['ssm_number'];
               rowMap['bio'] ??= ap['bio'];
+
+              // Extract documents if they exist
+              if (ap['artisan_documents'] is List) {
+                final docs = ap['artisan_documents'] as List;
+                List<String> photos = [];
+                String? ssmFileName;
+                String? ssmFileUrl;
+                String? certFileName;
+                String? certFileUrl;
+                String? avatarUrl;
+
+                for (var d in docs) {
+                  final doc = d as Map;
+                  final type = doc['doc_type']?.toString();
+                  final url = doc['file_url']?.toString();
+                  final name = doc['file_name']?.toString();
+                  
+                  if (type == 'PORTFOLIO_IMAGE' || type == 'STUDIO_PHOTO') {
+                    if (url != null) photos.add(url);
+                  } else if (type == 'SSM_BUSINESS_CERT') {
+                    if (name != null) ssmFileName = name;
+                    if (url != null) ssmFileUrl = url;
+                  } else if (type == 'KRAFTANGAN_MASTER_CERT') {
+                    if (name != null) certFileName = name;
+                    if (url != null) certFileUrl = url;
+                  } else if (type == 'MYKAD_SCAN') {
+                    if (url != null) avatarUrl = url;
+                  }
+                }
+                
+                if (photos.isNotEmpty) rowMap['photos'] = photos;
+                if (ssmFileName != null) rowMap['ssm_file_name'] = ssmFileName;
+                if (ssmFileUrl != null) rowMap['ssm_file_url'] = ssmFileUrl;
+                if (certFileName != null) rowMap['cert_file_name'] = certFileName;
+                if (certFileUrl != null) rowMap['cert_file_url'] = certFileUrl;
+                
+                // fallback the avatar if users.avatar_url is empty
+                if ((rowMap['avatar_url'] == null || rowMap['avatar_url'].toString().isEmpty) && avatarUrl != null) {
+                  rowMap['imageUrl'] = avatarUrl;
+                }
+              }
             }
             results.add(rowMap);
           }

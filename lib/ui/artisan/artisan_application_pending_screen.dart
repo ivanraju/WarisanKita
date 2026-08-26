@@ -30,6 +30,8 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
         ? user.ssmNumber!
         : ((ssmNumber.isNotEmpty) ? ssmNumber : 'Under Verification');
 
+    final bool isRejected = user?.status.toUpperCase() == 'REJECTED';
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
@@ -70,7 +72,7 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(28),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.06),
+                  color: Colors.black.withValues(alpha: 0.06),
                   blurRadius: 30,
                   offset: const Offset(0, 10),
                 )
@@ -83,14 +85,14 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFEF3C7),
+                    color: isRejected ? const Color(0xFFFEF2F2) : const Color(0xFFFEF3C7),
                     shape: BoxShape.circle,
-                    border: Border.all(color: const Color(0xFFFDE68A), width: 3),
+                    border: Border.all(color: isRejected ? const Color(0xFFFCA5A5) : const Color(0xFFFDE68A), width: 3),
                   ),
-                  child: const Icon(
-                    Icons.hourglass_top_rounded,
+                  child: Icon(
+                    isRejected ? Icons.cancel_outlined : Icons.hourglass_top_rounded,
                     size: 48,
-                    color: Color(0xFFD97706),
+                    color: isRejected ? const Color(0xFFDC2626) : const Color(0xFFD97706),
                   ),
                 ),
 
@@ -100,16 +102,16 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFEF3C7),
+                    color: isRejected ? const Color(0xFFFEF2F2) : const Color(0xFFFEF3C7),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFFF59E0B)),
+                    border: Border.all(color: isRejected ? const Color(0xFFEF4444) : const Color(0xFFF59E0B)),
                   ),
                   child: Text(
-                    '⏳ APPLICATION UNDER ADMIN REVIEW',
+                    isRejected ? '❌ APPLICATION NOT APPROVED' : '⏳ APPLICATION UNDER ADMIN REVIEW',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 11,
                       fontWeight: FontWeight.w900,
-                      color: const Color(0xFF78350F),
+                      color: isRejected ? const Color(0xFF991B1B) : const Color(0xFF78350F),
                       letterSpacing: 0.8,
                     ),
                   ),
@@ -118,7 +120,7 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
                 const SizedBox(height: 16),
 
                 Text(
-                  'Application Submitted Successfully!',
+                  isRejected ? 'Application Needs Update' : 'Application Submitted Successfully!',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.dmSerifDisplay(
                     fontSize: 24,
@@ -130,7 +132,9 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
                 const SizedBox(height: 10),
 
                 Text(
-                  'Your studio license documents (SSM License & Kraftangan Master Certificate) have been received. Kraftangan Malaysia Moderation Officers are reviewing your application.',
+                  isRejected
+                      ? 'Your artisan application was reviewed, but unfortunately could not be approved at this time. Please ensure all uploaded documents (SSM, Kraftangan Cert) are clear, valid, and registered under your name.'
+                      : 'Your studio license documents (SSM License & Kraftangan Master Certificate) have been received. Kraftangan Malaysia Moderation Officers are reviewing your application.',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 13,
@@ -141,44 +145,45 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
 
                 const SizedBox(height: 28),
 
-                // 3-Step Onboarding Progress Timeline
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8F9FA),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.black.withOpacity(0.04)),
+                if (!isRejected) ...[
+                  // 3-Step Onboarding Progress Timeline
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8F9FA),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.black.withValues(alpha: 0.04)),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildTimelineItem(
+                          step: '1',
+                          title: 'Application & Credentials Submitted',
+                          subtitle: 'SSM & Kraftangan documents attached',
+                          isCompleted: true,
+                          isCurrent: false,
+                        ),
+                        const Divider(height: 20),
+                        _buildTimelineItem(
+                          step: '2',
+                          title: 'Kraftangan Admin Review',
+                          subtitle: 'In progress • Estimated 1 - 2 business days',
+                          isCompleted: false,
+                          isCurrent: true,
+                        ),
+                        const Divider(height: 20),
+                        _buildTimelineItem(
+                          step: '3',
+                          title: 'Marketplace Directory Activation',
+                          subtitle: 'Public tourist search & quest completion active',
+                          isCompleted: false,
+                          isCurrent: false,
+                        ),
+                      ],
+                    ),
                   ),
-                  child: Column(
-                    children: [
-                      _buildTimelineItem(
-                        step: '1',
-                        title: 'Application & Credentials Submitted',
-                        subtitle: 'SSM & Kraftangan documents attached',
-                        isCompleted: true,
-                        isCurrent: false,
-                      ),
-                      const Divider(height: 20),
-                      _buildTimelineItem(
-                        step: '2',
-                        title: 'Kraftangan Admin Review',
-                        subtitle: 'In progress • Estimated 1 - 2 business days',
-                        isCompleted: false,
-                        isCurrent: true,
-                      ),
-                      const Divider(height: 20),
-                      _buildTimelineItem(
-                        step: '3',
-                        title: 'Marketplace Directory Activation',
-                        subtitle: 'Public tourist search & quest completion active',
-                        isCompleted: false,
-                        isCurrent: false,
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 24),
+                  const SizedBox(height: 24),
+                ],
 
                 // Submitted Details Summary Box
                 Container(
@@ -203,27 +208,54 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
 
                 const SizedBox(height: 28),
 
-                // Locked Status Notice
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFEF2F2),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFFFCA5A5)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.lock_outlined, color: Color(0xFFEF4444), size: 20),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          '🔒 Studio Profile Customization is locked until Kraftangan Admin Officers verify & approve your license.',
-                          style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFFB91C1C)),
+                if (isRejected)
+                  // Rejection Notice
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF2F2),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFFCA5A5)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.error_outline_rounded, color: Color(0xFFEF4444), size: 24),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Please double-check your credentials and submit a new application when ready.',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFFB91C1C),
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
+                  )
+                else
+                  // Locked Status Notice
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF2F2),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFFCA5A5)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.lock_outlined, color: Color(0xFFEF4444), size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            '🔒 Studio Profile Customization is locked until Kraftangan Admin Officers verify & approve your license.',
+                            style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFFB91C1C)),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
 
                 const SizedBox(height: 20),
 
@@ -232,29 +264,51 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
                   width: double.infinity,
                   height: 52,
                   child: FilledButton.icon(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Row(
-                            children: [
-                              Icon(Icons.sync_rounded, color: Colors.white, size: 18),
-                              SizedBox(width: 10),
-                              Text('Application status: STILL UNDER REVIEW by Kraftangan Officers'),
-                            ],
-                          ),
-                          backgroundColor: Color(0xFFD97706),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
+                    onPressed: () async {
+                      if (isRejected) {
+                        Navigator.pushReplacementNamed(context, '/apply-artisan');
+                      } else {
+                        final authVM = context.read<AuthViewModel>();
+                        await authVM.restoreSession();
+                        if (!context.mounted) return;
+                        
+                        final currentStatus = authVM.currentUser?.status;
+                        
+                        if (currentStatus == 'ACTIVE' || currentStatus == 'APPROVED') {
+                           Navigator.pushReplacementNamed(context, '/tourist');
+                        } else if (currentStatus == 'REJECTED') {
+                           // Trigger rebuild with rejected status
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Row(
+                                children: [
+                                  Icon(Icons.sync_rounded, color: Colors.white, size: 18),
+                                  SizedBox(width: 10),
+                                  Text('Application status: STILL UNDER REVIEW'),
+                                ],
+                              ),
+                              backgroundColor: Color(0xFFD97706),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        }
+                      }
                     },
                     style: FilledButton.styleFrom(
                       backgroundColor: const Color(0xFF004D40),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
                     ),
-                    icon: const Icon(Icons.refresh_rounded, size: 20, color: Color(0xFFFFD54F)),
+                    icon: Icon(isRejected ? Icons.refresh_rounded : Icons.refresh_rounded, size: 20),
                     label: Text(
-                      'Check Verification Status',
-                      style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.bold),
+                      isRejected ? 'Update Documents & Re-Apply' : 'Check Verification Status',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        letterSpacing: 0.5,
+                      ),
                     ),
                   ),
                 ),
@@ -288,24 +342,40 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
 
                 const SizedBox(height: 12),
 
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: TextButton.icon(
+                if (isRejected)
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pushReplacementNamed(context, '/tourist');
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF004D40),
+                        side: const BorderSide(color: Color(0xFF004D40), width: 1.5),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      icon: const Icon(Icons.explore_outlined, size: 20),
+                      label: Text(
+                        'Continue as Cultural Tourist',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  TextButton(
                     onPressed: () {
-                      if (Navigator.of(context).canPop()) {
-                        Navigator.of(context).pop();
-                      } else {
-                        Navigator.of(context).pushReplacementNamed('/tourist');
-                      }
+                      Navigator.pushReplacementNamed(context, '/tourist');
                     },
-                    icon: const Icon(Icons.explore_rounded, size: 18, color: Color(0xFF004D40)),
-                    label: Text(
-                      'Explore as Cultural Tourist while waiting',
-                      style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF004D40)),
+                    style: TextButton.styleFrom(foregroundColor: const Color(0xFF004D40)),
+                    child: Text(
+                      'Explore Map as Tourist while waiting',
+                      style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, fontSize: 13),
                     ),
                   ),
-                ),
               ],
             ),
           ),
