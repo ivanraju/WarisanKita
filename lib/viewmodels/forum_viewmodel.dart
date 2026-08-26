@@ -106,8 +106,8 @@ class ForumViewModel extends ChangeNotifier {
           authorEmail: authorEmail,
           isMe: true,
           isArtisan: isArtisan,
-          upvotes: 1,
-          userVote: 1,
+          upvotes: 0,
+          userVote: 0,
           isVerifiedAnswer: false,
           timestamp: 'Just now',
           text: initialMessage.trim(),
@@ -122,8 +122,8 @@ class ForumViewModel extends ChangeNotifier {
       authorName: authorName,
       authorEmail: authorEmail,
       isArtisan: isArtisan,
-      upvotes: 1,
-      userVote: 1,
+      upvotes: 0,
+      userVote: 0,
       replyCount: initialReplies.length,
       timestamp: 'Just now',
       isSolved: false,
@@ -157,8 +157,8 @@ class ForumViewModel extends ChangeNotifier {
       authorEmail: authorEmail,
       isMe: true,
       isArtisan: isArtisan,
-      upvotes: 1,
-      userVote: 1,
+      upvotes: 0,
+      userVote: 0,
       isVerifiedAnswer: isArtisan,
       parentReplyId: parentReplyId,
       timestamp: 'Just now',
@@ -286,6 +286,8 @@ class ForumViewModel extends ChangeNotifier {
       notes,
     );
 
+    await fetchThreads();
+    await fetchForumReportQueue();
     notifyListeners();
 
     return result;
@@ -300,8 +302,11 @@ class ForumViewModel extends ChangeNotifier {
       replyId,
     );
 
-    // Refresh moderation queue after dismiss
+    // Refresh forum, report queue & moderation history after dismiss
+    await fetchThreads();
     await fetchForumReportQueue();
+    await fetchForumModerationHistory();
+    notifyListeners();
   }
 
   Future<Map<String, dynamic>> reportThread(
@@ -315,6 +320,8 @@ class ForumViewModel extends ChangeNotifier {
       notes,
     );
 
+    await fetchThreads();
+    await fetchForumReportQueue();
     notifyListeners();
 
     return result;
@@ -323,7 +330,10 @@ class ForumViewModel extends ChangeNotifier {
   Future<void> dismissReport(String threadId) async {
     await _repository.dismissReport(threadId);
 
-    // Refresh moderation queue after dismiss
+    // Refresh forum, report queue & moderation history after dismiss
+    await fetchThreads();
     await fetchForumReportQueue();
+    await fetchForumModerationHistory();
+    notifyListeners();
   }
 }

@@ -233,11 +233,44 @@ class _LiveForumTabState extends State<LiveForumTab> {
   }
 
   void _voteThread(Map<String, dynamic> thread, int voteDirection) {
+    final authVM = context.read<AuthViewModel>();
+    final currentUser = authVM.currentUser;
+    final String authorEmail = (thread['authorEmail'] ?? thread['author_email'] ?? '').toString();
+    final String userId = (thread['userId'] ?? thread['user_id'] ?? '').toString();
+
+    final bool isMyThread = (currentUser != null &&
+        ((currentUser.email.isNotEmpty && authorEmail.isNotEmpty && authorEmail.toLowerCase() == currentUser.email.toLowerCase()) ||
+         (currentUser.id.isNotEmpty && userId.isNotEmpty && userId == currentUser.id)));
+
+    if (isMyThread) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('You cannot vote on your own post.'),
+          duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     context.read<ForumViewModel>().voteThread(thread['id'].toString(), voteDirection);
   }
 
   void _voteMessage(Map<String, dynamic> msg, int voteDirection) {
     if (_activeThread == null) return;
+    final bool isMyReply = (msg['isMe'] as bool?) ?? false;
+
+    if (isMyReply) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('You cannot vote on your own reply.'),
+          duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     context.read<ForumViewModel>().voteReply(_activeThread!['id'].toString(), msg['id'].toString(), voteDirection);
   }
 
@@ -1351,7 +1384,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
   // REDDIT STYLE POST CARD WITH UPVOTE SIDEBAR
   Widget _buildRedditPostCard(Map<String, dynamic> thread) {
     final bool isArtisan = (thread['isArtisan'] as bool?) ?? false;
-    final int userVote = (thread['userVote'] as int?) ?? 0;
+    final int userVote = (thread['userVote'] as num?)?.toInt() ?? 0;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1831,7 +1864,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                           icon: Icon(
                             Icons.arrow_upward_rounded,
                             size: 16,
-                            color: ((_activeThread!['userVote'] as int?) == 1) ? const Color(0xFFF97316) : Colors.grey[600],
+                            color: (((_activeThread!['userVote'] as num?)?.toInt()) == 1) ? const Color(0xFFF97316) : Colors.grey[600],
                           ),
                           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                           constraints: const BoxConstraints(),
@@ -1839,13 +1872,13 @@ class _LiveForumTabState extends State<LiveForumTab> {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          '${_activeThread!['upvotes']}',
+                          '${(_activeThread!['upvotes'] as num?)?.toInt() ?? 0}',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
-                            color: ((_activeThread!['userVote'] as int?) == 1)
+                            color: (((_activeThread!['userVote'] as num?)?.toInt()) == 1)
                                 ? const Color(0xFFF97316)
-                                : (((_activeThread!['userVote'] as int?) == -1) ? const Color(0xFF6366F1) : const Color(0xFF004D40)),
+                                : ((((_activeThread!['userVote'] as num?)?.toInt()) == -1) ? const Color(0xFF6366F1) : const Color(0xFF004D40)),
                           ),
                         ),
                         const SizedBox(width: 4),
@@ -1853,7 +1886,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                           icon: Icon(
                             Icons.arrow_downward_rounded,
                             size: 16,
-                            color: ((_activeThread!['userVote'] as int?) == -1) ? const Color(0xFF6366F1) : Colors.grey[600],
+                            color: (((_activeThread!['userVote'] as num?)?.toInt()) == -1) ? const Color(0xFF6366F1) : Colors.grey[600],
                           ),
                           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                           constraints: const BoxConstraints(),
@@ -2134,7 +2167,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
     final bool isMe = msg['isMe'] as bool? ?? false;
     final bool isArtisan = msg['isArtisan'] as bool? ?? false;
     final bool isVerifiedAnswer = msg['isVerifiedAnswer'] as bool? ?? false;
-    final int userVote = (msg['userVote'] as int?) ?? 0;
+    final int userVote = (msg['userVote'] as num?)?.toInt() ?? 0;
 
     // ============================
     // Find parent reply
@@ -2414,7 +2447,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                     const SizedBox(width: 5),
 
                     Text(
-                      '${msg['upvotes']}',
+                      '${(msg['upvotes'] as num?)?.toInt() ?? 0}',
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
