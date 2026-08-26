@@ -342,6 +342,201 @@ CREATE POLICY "Public select artisan_documents" ON public.artisan_documents FOR 
 
 DROP POLICY IF EXISTS "Public update artisan_documents" ON public.artisan_documents;
 CREATE POLICY "Public update artisan_documents" ON public.artisan_documents FOR UPDATE USING (true) WITH CHECK (true);
+        username,
+        full_name,
+        display_name,
+        role,
+        status,
+        created_at,
+        updated_at
+    ) VALUES (
+        NEW.id,
+        NEW.email,
+        v_username,
+        v_fullname,
+        v_fullname,
+        v_role,
+        v_status,
+        now(),
+        now()
+    )
+    ON CONFLICT (id) DO UPDATE SET
+        email = EXCLUDED.email,
+        username = COALESCE(EXCLUDED.username, public.users.username),
+        full_name = COALESCE(EXCLUDED.full_name, public.users.full_name),
+        display_name = COALESCE(EXCLUDED.display_name, public.users.display_name),
+        role = EXCLUDED.role,
+        status = EXCLUDED.status,
+        updated_at = now();
+
+    -- 2. If Artisan, insert professional details into public.artisan_profiles
+    IF v_role LIKE '%Artisan%' OR (v_studio IS NOT NULL AND v_studio != '') THEN
+        INSERT INTO public.artisan_profiles (
+            user_id,
+            studio_name,
+            craft_category,
+            ssm_number,
+            bio,
+            address,
+            state,
+            status,
+            created_at,
+            updated_at
+        ) VALUES (
+            NEW.id,
+            COALESCE(v_studio, v_fullname, 'Master Artisan Studio'),
+            v_craft,
+            v_ssm,
+            'Master artisan dedicated to traditional Malaysian craft.',
+            'Malaysia',
+            'Melaka',
+            v_status,
+            now(),
+            now()
+        )
+        ON CONFLICT DO NOTHING;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+    AFTER INSERT ON auth.users
+    FOR EACH ROW EXECUTE FUNCTION public.handle_new_auth_user();
+
+-- 7. Helper Function for Admin Check
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN AS $$
+BEGIN
+    RETURN EXISTS (
+        SELECT 1 FROM public.users
+        WHERE id = auth.uid()
+        AND role = 'Admin'
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 8. Public Security-Definer RPC Function for Registration Account Lookup
+CREATE OR REPLACE FUNCTION public.check_account_by_email(p_email text)
+RETURNS TABLE (
+    user_id uuid,
+    email text,
+    username text,
+    full_name text,
+    display_name text,
+    role text,
+    status text,
+    studio_name text,
+    craft_category text,
+    ssm_number text
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        u.id AS user_id,
+        u.email,
+        u.username,
+        u.full_name,
+        u.display_name,
+        u.role,
+        u.status,
+        ap.studio_name,
+        ap.craft_category,
+        ap.ssm_number
+    FROM public.users u
+    LEFT JOIN public.artisan_profiles ap ON ap.user_id = u.id
+    WHERE lower(u.email) = lower(trim(p_email));
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 9. Public Security-Definer RPC Function for Moderation (Approve / Reject / Suspend)
+CREATE OR REPLACE FUNCTION public.admin_update_user_status(
+    p_email text,
+    p_status text,
+    p_role text DEFAULT NULL
+)
+RETURNS JSONB AS $$
+DECLARE
+    v_user_id uuid;
+    v_artisan_status text;
+BEGIN
+    -- 1. Find user id
+    SELECT id INTO v_user_id
+    FROM public.users
+    WHERE lower(trim(email)) = lower(trim(p_email));
+
+    IF v_user_id IS NULL THEN
+        RETURN jsonb_build_object('success', false, 'message', 'User not found');
+    END IF;
+
+    -- 2. Update public.users status and role
+    UPDATE public.users
+    SET 
+        status = p_status,
+        role = COALESCE(p_role, role),
+        updated_at = now()
+    WHERE id = v_user_id;
+
+    -- 3. Update auth.users user_metadata status and role if auth user exists
+    UPDATE auth.users
+    SET raw_user_meta_data = raw_user_meta_data || 
+        jsonb_build_object(
+            'status', p_status,
+            'role', COALESCE(p_role, raw_user_meta_data->>'role')
+        )
+    WHERE id = v_user_id;
+
+    -- 4. Update public.artisan_profiles status
+    IF upper(p_status) IN ('ACTIVE', 'APPROVED') THEN
+        v_artisan_status := 'APPROVED';
+    ELSE
+        v_artisan_status := p_status;
+    END IF;
+
+    UPDATE public.artisan_profiles
+    SET 
+        status = v_artisan_status,
+        updated_at = now()
+    WHERE user_id = v_user_id;
+
+    RETURN jsonb_build_object('success', true, 'user_id', v_user_id, 'status', p_status);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Grant permissions on tables and RPC functions
+GRANT SELECT, INSERT, UPDATE ON public.users TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE ON public.artisan_profiles TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE ON public.artisan_documents TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.check_account_by_email(text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_update_user_status(text, text, text) TO anon, authenticated;
+
+-- Policies for public.users and public.artisan_profiles
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.artisan_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.artisan_documents ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public select users" ON public.users;
+CREATE POLICY "Public select users" ON public.users FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Public update users" ON public.users;
+CREATE POLICY "Public update users" ON public.users FOR UPDATE USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public insert users" ON public.users;
+CREATE POLICY "Public insert users" ON public.users FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public select artisan_profiles" ON public.artisan_profiles;
+CREATE POLICY "Public select artisan_profiles" ON public.artisan_profiles FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Public update artisan_profiles" ON public.artisan_profiles;
+CREATE POLICY "Public update artisan_profiles" ON public.artisan_profiles FOR UPDATE USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public select artisan_documents" ON public.artisan_documents;
+CREATE POLICY "Public select artisan_documents" ON public.artisan_documents FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Public update artisan_documents" ON public.artisan_documents;
+CREATE POLICY "Public update artisan_documents" ON public.artisan_documents FOR UPDATE USING (true) WITH CHECK (true);
 
 -- ==============================================================================
 -- 7. Forum Module Tables, Voting, & Stored Procedures
@@ -425,17 +620,19 @@ DECLARE
     v_new_upvotes INT := 0;
 BEGIN
     IF v_user_id IS NULL THEN
-        -- Fallback to system mock ID if unauthenticated in dev
         v_user_id := '00000000-0000-4000-8000-000000000001'::UUID;
     END IF;
 
-    -- Get existing vote
+    -- Self-vote prevention: Authors cannot vote on their own posts
+    IF EXISTS (SELECT 1 FROM public.forum_posts WHERE id = p_post_id AND user_id = v_user_id) THEN
+        RETURN jsonb_build_object('success', false, 'error', 'Cannot vote on own post', 'self_vote', true);
+    END IF;
+
     SELECT vote INTO v_current_vote FROM public.forum_post_votes WHERE post_id = p_post_id AND user_id = v_user_id;
     IF v_current_vote IS NULL THEN
         v_current_vote := 0;
     END IF;
 
-    -- If user clicks same vote direction, toggle off (0)
     IF v_current_vote = p_vote THEN
         v_new_vote := 0;
         DELETE FROM public.forum_post_votes WHERE post_id = p_post_id AND user_id = v_user_id;
@@ -446,7 +643,6 @@ BEGIN
         ON CONFLICT (post_id, user_id) DO UPDATE SET vote = v_new_vote, updated_at = now();
     END IF;
 
-    -- Calculate delta and update forum_posts
     v_delta := v_new_vote - v_current_vote;
     UPDATE public.forum_posts SET upvotes = COALESCE(upvotes, 0) + v_delta WHERE id = p_post_id RETURNING upvotes INTO v_new_upvotes;
 
@@ -466,6 +662,11 @@ DECLARE
 BEGIN
     IF v_user_id IS NULL THEN
         v_user_id := '00000000-0000-4000-8000-000000000001'::UUID;
+    END IF;
+
+    -- Self-vote prevention: Authors cannot vote on their own replies
+    IF EXISTS (SELECT 1 FROM public.forum_replies WHERE id = p_reply_id AND user_id = v_user_id) THEN
+        RETURN jsonb_build_object('success', false, 'error', 'Cannot vote on own reply', 'self_vote', true);
     END IF;
 
     SELECT vote INTO v_current_vote FROM public.forum_reply_votes WHERE reply_id = p_reply_id AND user_id = v_user_id;

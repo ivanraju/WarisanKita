@@ -233,11 +233,44 @@ class _LiveForumTabState extends State<LiveForumTab> {
   }
 
   void _voteThread(Map<String, dynamic> thread, int voteDirection) {
+    final authVM = context.read<AuthViewModel>();
+    final currentUser = authVM.currentUser;
+    final String authorEmail = (thread['authorEmail'] ?? thread['author_email'] ?? '').toString();
+    final String userId = (thread['userId'] ?? thread['user_id'] ?? '').toString();
+
+    final bool isMyThread = (currentUser != null &&
+        ((currentUser.email.isNotEmpty && authorEmail.isNotEmpty && authorEmail.toLowerCase() == currentUser.email.toLowerCase()) ||
+         (currentUser.id.isNotEmpty && userId.isNotEmpty && userId == currentUser.id)));
+
+    if (isMyThread) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('You cannot vote on your own post.'),
+          duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     context.read<ForumViewModel>().voteThread(thread['id'].toString(), voteDirection);
   }
 
   void _voteMessage(Map<String, dynamic> msg, int voteDirection) {
     if (_activeThread == null) return;
+    final bool isMyReply = (msg['isMe'] as bool?) ?? false;
+
+    if (isMyReply) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('You cannot vote on your own reply.'),
+          duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     context.read<ForumViewModel>().voteReply(_activeThread!['id'].toString(), msg['id'].toString(), voteDirection);
   }
 

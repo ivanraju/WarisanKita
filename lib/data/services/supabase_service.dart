@@ -1918,9 +1918,7 @@ class SupabaseService {
 
   Future<void> createThread(ForumThread thread) async {
     _forumStore.insert(0, thread);
-    _sessionThreadVotes[
-    _threadVoteKey(thread.id)
-    ] = 1; // Author automatically upvotes own thread
+    _sessionThreadVotes[_threadVoteKey(thread.id)] = 0; // Initial neutral vote
 
     final client = _client;
     if (client != null) {
@@ -1950,7 +1948,7 @@ class SupabaseService {
       }
 
       for (final reply in thread.replies) {
-        _sessionReplyVotes[_replyVoteKey(reply.id)] = 1;
+        _sessionReplyVotes[_replyVoteKey(reply.id)] = 0;
         try {
           await client.from('forum_replies').insert({
             'id': reply.id,
@@ -1970,11 +1968,7 @@ class SupabaseService {
 
   Future<void> postReply(String threadId, ThreadReply reply) async {
     final postVoteKey = _replyVoteKey(reply.id);
-
-    _sessionReplyVotes[postVoteKey] = 1;
-
-    debugPrint('🟢 POST REPLY voteKey = $postVoteKey');
-    debugPrint('🟢 POST REPLY votes = $_sessionReplyVotes');
+    _sessionReplyVotes[postVoteKey] = 0;
 
     final idx = _forumStore.indexWhere((t) => t.id == threadId);
     if (idx != -1) {
@@ -2039,6 +2033,18 @@ class SupabaseService {
     if (index == -1) return;
 
     final ForumThread currentThread = _forumStore[index];
+    final client = _client;
+    final String? currentUserId = client?.auth.currentUser?.id;
+    final String? currentUserEmail = client?.auth.currentUser?.email;
+
+    // Self-vote prevention: Author cannot vote on their own thread
+    final bool isAuthor = (currentUserId != null && currentThread.userId != null && currentThread.userId == currentUserId) ||
+        (currentUserEmail != null && currentThread.authorEmail.isNotEmpty && currentThread.authorEmail.toLowerCase() == currentUserEmail.toLowerCase());
+    if (isAuthor) {
+      debugPrint('Self-vote prevention: Author cannot vote on their own thread');
+      return;
+    }
+
     final String voteKey = _threadVoteKey(threadId);
     final int currentVote = _sessionThreadVotes[voteKey] ?? currentThread.userVote;
 
@@ -2054,10 +2060,7 @@ class SupabaseService {
       userVote: newVote,
     );
 
-    final client = _client;
     if (client == null) return;
-
-    final String? currentUserId = client.auth.currentUser?.id;
 
     try {
       final result = await client.rpc(
@@ -2127,6 +2130,18 @@ class SupabaseService {
     if (rIdx == -1) return;
 
     final ThreadReply currentReply = thread.replies[rIdx];
+    final client = _client;
+    final String? currentUserId = client?.auth.currentUser?.id;
+    final String? currentUserEmail = client?.auth.currentUser?.email;
+
+    // Self-vote prevention: Author cannot vote on their own reply
+    final bool isAuthor = (currentUserEmail != null && currentReply.authorEmail.isNotEmpty && currentReply.authorEmail.toLowerCase() == currentUserEmail.toLowerCase()) ||
+        (currentReply.isMe && currentUserId != null);
+    if (isAuthor) {
+      debugPrint('Self-vote prevention: Author cannot vote on their own reply');
+      return;
+    }
+
     final String voteKey = _replyVoteKey(replyId);
     final int currentVote = _sessionReplyVotes[voteKey] ?? currentReply.userVote;
 
@@ -2144,10 +2159,7 @@ class SupabaseService {
     );
     _forumStore[tIdx] = thread.copyWith(replies: updatedReplies);
 
-    final client = _client;
     if (client == null) return;
-
-    final String? currentUserId = client.auth.currentUser?.id;
 
     try {
       final result = await client.rpc(

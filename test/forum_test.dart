@@ -48,7 +48,7 @@ void main() {
     });
   });
 
-  group('Forum Upvote & Downvote Toggle Tests', () {
+  group('Forum Upvote, Downvote, & Self-Voting Prevention Tests', () {
     late SupabaseService service;
     late ForumRepository repository;
     late ForumViewModel viewModel;
@@ -59,7 +59,7 @@ void main() {
       viewModel = ForumViewModel(repository: repository);
     });
 
-    test('Creating a thread initializes upvotes to 1 and userVote to 1 for author', () async {
+    test('Creating a thread initializes score to 0 and neutral vote 0 (StackOverflow/Quora standard)', () async {
       await viewModel.createThread(
         community: 'c/Batik',
         title: 'Best wax for canting technique?',
@@ -69,11 +69,11 @@ void main() {
       );
 
       final thread = viewModel.threads.firstWhere((t) => t.title == 'Best wax for canting technique?');
-      expect(thread.upvotes, 1);
-      expect(thread.userVote, 1);
+      expect(thread.upvotes, 0);
+      expect(thread.userVote, 0);
     });
 
-    test('Upvoting a thread that is already upvoted toggles off (cancels) vote', () async {
+    test('Community members voting on a thread applies +1, toggle off (0), and downvote (-1)', () async {
       await viewModel.createThread(
         community: 'c/Wau',
         title: 'Bamboo curing for Wau Bulan',
@@ -83,19 +83,25 @@ void main() {
       );
 
       final thread = viewModel.threads.firstWhere((t) => t.title == 'Bamboo curing for Wau Bulan');
-      final initialScore = thread.upvotes;
+      expect(thread.upvotes, 0);
 
-      // User already has userVote = 1. Clicking Upvote (1) again should toggle off (0)
+      // Community member upvotes (+1)
+      await viewModel.voteThread(thread.id, 1);
+      final upvotedThread = viewModel.threads.firstWhere((t) => t.id == thread.id);
+      expect(upvotedThread.userVote, 1);
+      expect(upvotedThread.upvotes, 1);
+
+      // Community member clicks Upvote again -> toggles off (0)
       await viewModel.voteThread(thread.id, 1);
       final toggledThread = viewModel.threads.firstWhere((t) => t.id == thread.id);
       expect(toggledThread.userVote, 0);
-      expect(toggledThread.upvotes, initialScore - 1);
+      expect(toggledThread.upvotes, 0);
 
-      // Clicking Upvote (1) again sets userVote = 1 and score + 1
-      await viewModel.voteThread(thread.id, 1);
-      final reUpvotedThread = viewModel.threads.firstWhere((t) => t.id == thread.id);
-      expect(reUpvotedThread.userVote, 1);
-      expect(reUpvotedThread.upvotes, initialScore);
+      // Community member downvotes (-1)
+      await viewModel.voteThread(thread.id, -1);
+      final downvotedThread = viewModel.threads.firstWhere((t) => t.id == thread.id);
+      expect(downvotedThread.userVote, -1);
+      expect(downvotedThread.upvotes, -1);
     });
 
     test('Switching vote directly from Upvote (+1) to Downvote (-1) applies -2 score delta', () async {
@@ -108,22 +114,25 @@ void main() {
       );
 
       final thread = viewModel.threads.firstWhere((t) => t.title == 'Lok 7 forging process');
-      final initialScore = thread.upvotes; // starts with 1 upvote
 
-      // Switch to Downvote (-1)
+      // Member upvotes (+1)
+      await viewModel.voteThread(thread.id, 1);
+      expect(viewModel.threads.firstWhere((t) => t.id == thread.id).upvotes, 1);
+
+      // Member switches directly to Downvote (-1)
       await viewModel.voteThread(thread.id, -1);
       final downvoted = viewModel.threads.firstWhere((t) => t.id == thread.id);
       expect(downvoted.userVote, -1);
-      expect(downvoted.upvotes, initialScore - 2); // 1 -> -1 = delta -2
+      expect(downvoted.upvotes, -1); // 1 -> -1 = delta -2
 
       // Switch back to Upvote (+1)
       await viewModel.voteThread(thread.id, 1);
       final upvotedAgain = viewModel.threads.firstWhere((t) => t.id == thread.id);
       expect(upvotedAgain.userVote, 1);
-      expect(upvotedAgain.upvotes, initialScore); // -1 -> 1 = delta +2
+      expect(upvotedAgain.upvotes, 1); // -1 -> 1 = delta +2
     });
 
-    test('Reply voting correctly handles upvoting, cancelling, and downvoting', () async {
+    test('Reply voting starts at 0 and correctly handles upvoting, cancelling, and downvoting', () async {
       await viewModel.createThread(
         community: 'c/Woodcarving',
         title: 'Chengal wood grain selection',
@@ -143,19 +152,26 @@ void main() {
 
       final updatedThread = viewModel.threads.firstWhere((t) => t.id == thread.id);
       final reply = updatedThread.replies.first;
-      final initialReplyScore = reply.upvotes;
+      expect(reply.upvotes, 0);
+      expect(reply.userVote, 0);
 
-      // Author of reply starts with userVote = 1. Click upvote (1) to toggle off (0)
+      // Community member upvotes (+1)
+      await viewModel.voteReply(thread.id, reply.id, 1);
+      final upvotedReply = viewModel.threads.firstWhere((t) => t.id == thread.id).replies.first;
+      expect(upvotedReply.userVote, 1);
+      expect(upvotedReply.upvotes, 1);
+
+      // Toggle off (0)
       await viewModel.voteReply(thread.id, reply.id, 1);
       final toggledReply = viewModel.threads.firstWhere((t) => t.id == thread.id).replies.first;
       expect(toggledReply.userVote, 0);
-      expect(toggledReply.upvotes, initialReplyScore - 1);
+      expect(toggledReply.upvotes, 0);
 
       // Downvote reply (-1)
       await viewModel.voteReply(thread.id, reply.id, -1);
       final downvotedReply = viewModel.threads.firstWhere((t) => t.id == thread.id).replies.first;
       expect(downvotedReply.userVote, -1);
-      expect(downvotedReply.upvotes, initialReplyScore - 2);
+      expect(downvotedReply.upvotes, -1);
     });
   });
 }
