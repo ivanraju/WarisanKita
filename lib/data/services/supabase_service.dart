@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:async';
+import 'dart:io' as io;
 import 'dart:math';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
@@ -1320,13 +1321,22 @@ class SupabaseService {
             final artisanId = profileRes['id'];
             
             Future<Map<String, String>?> uploadDoc(PlatformFile? file, String bucket, String folder) async {
-              if (file == null || file.bytes == null) return null;
+              if (file == null) return null;
               try {
+                Uint8List? bytes;
+                if (kIsWeb) {
+                  // Fallback for web if ever needed, but we avoid calling .bytes natively on windows
+                } else if (file.path != null) {
+                  bytes = await io.File(file.path!).readAsBytes();
+                }
+                
+                if (bytes == null) return null;
+
                 final fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.name.replaceAll(' ', '_')}';
                 final path = '$folder/$fileName';
                 await client.storage.from(bucket).uploadBinary(
                   path,
-                  file.bytes!,
+                  bytes,
                 );
                 final url = client.storage.from(bucket).getPublicUrl(path);
                 return {'url': url, 'name': file.name};

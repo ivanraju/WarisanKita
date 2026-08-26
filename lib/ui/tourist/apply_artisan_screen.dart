@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:file_picker_platform_interface/file_picker_platform_interface.dart';
 import 'package:warisan_kita/domain/models/pending_artisan_profile.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/moderation_viewmodel.dart';
@@ -68,10 +69,9 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
 
   Future<void> _pickSsmDocument() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final result = await FilePickerPlatform.instance.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf', 'png', 'jpg', 'jpeg'],
-        withData: true,
       );
 
       if (result != null && result.files.isNotEmpty) {
@@ -93,10 +93,9 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
 
   Future<void> _pickKraftanganCertificate() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final result = await FilePickerPlatform.instance.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf', 'png', 'jpg', 'jpeg'],
-        withData: true,
       );
 
       if (result != null && result.files.isNotEmpty) {
@@ -118,10 +117,9 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
 
   Future<void> _pickStudioPhotos() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final result = await FilePickerPlatform.instance.pickFiles(
         type: FileType.image,
         allowMultiple: true,
-        withData: true,
       );
 
       if (result != null && result.files.isNotEmpty) {
