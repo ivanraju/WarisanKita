@@ -424,22 +424,35 @@ class ModerationViewModel extends ChangeNotifier {
         final isUpgrade = role.contains('Tourist') || role.contains('Both');
 
         final existingIdx = _pendingArtisans.indexWhere((p) => p.email.toLowerCase() == email.toLowerCase());
+        
+        // Resolve the avatar/image URL from the DB row
+        final resolvedImageUrl = (raw['imageUrl'] ?? raw['avatar_url'] ?? 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600').toString();
+        
+        // Resolve photos - must be actual URLs, not filenames
+        List<String> resolvedPhotos;
+        if (raw['photos'] is List && (raw['photos'] as List).isNotEmpty) {
+          resolvedPhotos = List<String>.from(raw['photos']);
+        } else {
+          // Fallback: use the user's avatar as a portfolio image if available
+          resolvedPhotos = [resolvedImageUrl];
+        }
+
         final newProfile = PendingArtisanProfile(
           id: id,
           name: name,
           craftCategory: craft,
           state: state,
           dateSubmitted: 'Today',
-          imageUrl: (raw['imageUrl'] ?? 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600').toString(),
+          imageUrl: resolvedImageUrl,
           email: email,
           experience: (raw['experience'] ?? 'Verified Studio').toString(),
           phone: (raw['phone'] ?? raw['phone_number'] ?? '+60 12-345 6789').toString(),
           ssmNumber: (raw['ssm_number'] ?? raw['ssmNumber'] ?? '202601004821 (SSM Verified)').toString(),
           ssmFileName: (raw['ssm_file'] ?? raw['ssm_file_name'] ?? raw['ssmFileName'] ?? 'SSM_Registration_Cert.pdf').toString(),
-          ssmFileUrl: raw['ssm_file_url']?.toString(),
+          ssmFileUrl: raw['ssm_file_url']?.toString() ?? 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
           certFileName: (raw['cert_file'] ?? raw['cert_file_name'] ?? raw['certFileName'] ?? 'Kraftangan_Master_Cert.pdf').toString(),
-          certFileUrl: raw['cert_file_url']?.toString(),
-          photos: (raw['photos'] is List) ? List<String>.from(raw['photos']) : const ['Studio_Workshop_Photo_1.jpg'],
+          certFileUrl: raw['cert_file_url']?.toString() ?? 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+          photos: resolvedPhotos,
           bio: raw['bio']?.toString(),
           isUpgradeFromTourist: isUpgrade,
         );

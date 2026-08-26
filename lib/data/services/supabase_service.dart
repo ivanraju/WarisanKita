@@ -1289,7 +1289,7 @@ class SupabaseService {
 
         // Upsert into artisan_profiles
         try {
-          await client.from('artisan_profiles').upsert({
+          final profileRes = await client.from('artisan_profiles').upsert({
             'user_id': userId,
             'studio_name': studioName,
             'craft_category': craftCategory,
@@ -1300,7 +1300,35 @@ class SupabaseService {
             'status': 'PENDING_APPROVAL',
             'created_at': DateTime.now().toIso8601String(),
             'updated_at': DateTime.now().toIso8601String(),
-          });
+          }).select('id').maybeSingle();
+
+          if (profileRes != null) {
+            final artisanId = profileRes['id'];
+            try {
+              await client.from('artisan_documents').upsert([
+                {
+                   'artisan_id': artisanId,
+                   'doc_type': 'SSM_BUSINESS_CERT',
+                   'file_url': 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+                   'file_name': ssmFileName ?? 'SSM_Registration.pdf'
+                },
+                {
+                   'artisan_id': artisanId,
+                   'doc_type': 'KRAFTANGAN_MASTER_CERT',
+                   'file_url': 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+                   'file_name': certFileName ?? 'Kraftangan_Cert.pdf'
+                },
+                {
+                   'artisan_id': artisanId,
+                   'doc_type': 'STUDIO_PHOTO',
+                   'file_url': 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=600',
+                   'file_name': (photos != null && photos.isNotEmpty) ? photos.first : 'Studio_1.jpg'
+                }
+              ]);
+            } catch (docErr) {
+              debugPrint('Supabase linkArtisanRoleToTourist artisan_documents note: $docErr');
+            }
+          }
         } catch (apErr) {
           debugPrint(
             'Supabase linkArtisanRoleToTourist artisan_profiles note: $apErr',
