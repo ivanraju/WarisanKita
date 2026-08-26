@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:warisan_kita/domain/models/pending_artisan_profile.dart';
 import 'package:warisan_kita/domain/models/user.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
+import 'package:warisan_kita/viewmodels/forum_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/moderation_viewmodel.dart';
 import 'package:warisan_kita/ui/admin_web/widgets/admin_forum_moderation_tab.dart';
 import 'package:warisan_kita/ui/admin_web/widgets/admin_quest_approvals_tab.dart';
@@ -406,11 +407,18 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
                 icon: const Icon(Icons.refresh_rounded, color: Color(0xFF64748B)),
                 tooltip: 'Refresh Moderation & User Data',
                 onPressed: () async {
-                  await context.read<ModerationViewModel>().refreshAllData();
+                  final modVM = context.read<ModerationViewModel>();
+                  final forumVM = context.read<ForumViewModel>();
+                  await Future.wait([
+                    modVM.refreshAllData(),
+                    forumVM.fetchThreads(),
+                    forumVM.fetchForumReportQueue(),
+                    forumVM.fetchForumModerationHistory(),
+                  ]);
                   if (!context.mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('All artisan, user, and moderation data refreshed!'),
+                      content: Text('All platform data refreshed!'),
                       duration: Duration(seconds: 1),
                       behavior: SnackBarBehavior.floating,
                     ),
