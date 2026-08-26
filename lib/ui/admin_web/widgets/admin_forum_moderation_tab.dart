@@ -665,13 +665,52 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
             final String? deletionReason =
             record['deletion_reason']?.toString();
 
-            final String? contentSnapshot =
-            record['content_snapshot']?.toString();
+            final String notes = (record['notes'] ?? '').toString();
 
-            final String authorName =
+            String authorName =
                 record['target_author_name']?.toString() ??
                     record['author_name']?.toString() ??
-                    'Unknown User';
+                    '';
+
+            if (authorName.isEmpty || authorName == 'null' || authorName == 'Unknown User') {
+              if (notes.contains('created by ')) {
+                final part = notes.split('created by ').last;
+                authorName = part.split(':').first.trim();
+              } else if (notes.contains('posted by ')) {
+                final part = notes.split('posted by ').last;
+                authorName = part.split(':').first.trim();
+              } else if (notes.contains('by ') && notes.contains('(')) {
+                final part = notes.split('by ').last;
+                authorName = part.split('(').first.trim();
+              } else if (isPost && targetId.isNotEmpty) {
+                final threadMatch = forumVM.threads.where((t) => t.id == targetId).firstOrNull;
+                if (threadMatch != null) {
+                  authorName = threadMatch.authorName;
+                }
+              }
+            }
+
+            if (authorName.isEmpty || authorName == 'null') {
+              authorName = 'Community Member';
+            }
+
+            String resolvedContent =
+                record['content_snapshot']?.toString() ??
+                    record['post_title']?.toString() ??
+                    record['reply_text']?.toString() ??
+                    '';
+
+            if (resolvedContent.isEmpty || resolvedContent == 'null') {
+              if (notes.contains('"')) {
+                final match = RegExp(r'"([^"]*)"').firstMatch(notes);
+                if (match != null && match.group(1) != null) {
+                  resolvedContent = match.group(1)!;
+                }
+              }
+            }
+
+            final String? contentSnapshot =
+                resolvedContent.isNotEmpty ? resolvedContent : null;
 
             final String reporterId =
                 record['reporter_id']?.toString() ??
