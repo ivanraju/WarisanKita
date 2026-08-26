@@ -2391,10 +2391,30 @@ class SupabaseService {
         final remoteHistory = List<Map<String, dynamic>>.from(response ?? []);
         for (final item in remoteHistory) {
           final id = item['id']?.toString();
-          if (id != null &&
-              !_dismissedNoticeIds.contains(id) &&
-              !history.any((h) => h['id']?.toString() == id)) {
-            history.add(item);
+          final postId = item['post_id']?.toString();
+          final replyId = item['reply_id']?.toString();
+
+          if (id != null && !_dismissedNoticeIds.contains(id)) {
+            // Check if this post or reply is already in history (e.g. from local history)
+            final existingIdx = history.indexWhere((h) =>
+                h['id']?.toString() == id ||
+                (postId != null && postId.isNotEmpty && h['post_id']?.toString() == postId) ||
+                (replyId != null && replyId.isNotEmpty && h['reply_id']?.toString() == replyId));
+
+            if (existingIdx != -1) {
+              // Merge remote item with local item, preserving moderator_name if local has it
+              history[existingIdx] = {
+                ...item,
+                if (history[existingIdx]['moderator_name'] != null)
+                  'moderator_name': history[existingIdx]['moderator_name'],
+                if (history[existingIdx]['author_name'] != null)
+                  'author_name': history[existingIdx]['author_name'],
+                if (history[existingIdx]['post_title'] != null)
+                  'post_title': history[existingIdx]['post_title'],
+              };
+            } else {
+              history.add(item);
+            }
           }
         }
       } catch (e) {
