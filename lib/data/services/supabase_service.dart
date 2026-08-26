@@ -1305,7 +1305,7 @@ class SupabaseService {
             'status': 'PENDING_APPROVAL',
             'created_at': DateTime.now().toIso8601String(),
             'updated_at': DateTime.now().toIso8601String(),
-          }).select('id').maybeSingle();
+          }, onConflict: 'user_id').select('id').maybeSingle();
 
           if (profileRes != null) {
             final artisanId = profileRes['id'];
