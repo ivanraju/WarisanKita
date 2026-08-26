@@ -62,7 +62,17 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
     final int pendingQuestRequests = pendingFromVM > 0 ? pendingFromVM : 3;
 
     final totalThreadsCount = forumVM.threads.length;
-    final pendingForumReportsCount = forumVM.reportQueue.length;
+    final int pendingForumReportsCount = forumVM.reportQueue.where((item) {
+      final String type = item['type']?.toString() ?? '';
+      if (type == 'post') {
+        final String postId = (item['postId'] ?? item['id'])?.toString() ?? '';
+        return forumVM.threads.any((t) => t.id == postId);
+      } else if (type == 'reply') {
+        final String replyId = (item['replyId'] ?? item['id'])?.toString() ?? '';
+        return forumVM.threads.any((t) => t.replies.any((r) => r.id == replyId));
+      }
+      return false;
+    }).length;
     final moderationHistory = forumVM.moderationHistory;
 
     final totalActionsRequired = pendingArtisansCount + pendingQuestRequests + pendingForumReportsCount;
