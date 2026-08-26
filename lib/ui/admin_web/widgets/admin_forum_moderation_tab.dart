@@ -693,8 +693,6 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
             final String? deletionReason =
             record['deletion_reason']?.toString();
 
-            final String notes = (record['notes'] ?? '').toString();
-
             String authorName =
                 record['target_author_name']?.toString() ??
                     record['author_name']?.toString() ??
@@ -739,6 +737,10 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
 
             final String? contentSnapshot =
                 resolvedContent.isNotEmpty ? resolvedContent : null;
+
+            final String reporterId =
+                record['reporter_id']?.toString() ??
+                    '';
 
             final String rawResolvedAt =
                 record['resolved_at']?.toString() ??
