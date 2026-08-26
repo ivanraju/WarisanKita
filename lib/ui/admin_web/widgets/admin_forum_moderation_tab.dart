@@ -653,16 +653,35 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
             final bool isActioned =
                 status == 'actioned';
 
-            final bool isPost =
-                record['post_id'] != null;
+            final String notes = (record['notes'] ?? '').toString();
+            final String postId = (record['post_id'] ?? '').toString();
+            final String replyId = (record['reply_id'] ?? '').toString();
 
-            final String type =
-            isPost ? 'Post' : 'Reply';
+            final bool hasPostId = postId.isNotEmpty && postId != 'null';
+            final bool hasReplyId = replyId.isNotEmpty && replyId != 'null';
 
-            final String targetId =
-            isPost
-                ? record['post_id']?.toString() ?? ''
-                : record['reply_id']?.toString() ?? '';
+            final bool isPost = hasPostId ||
+                (!hasReplyId && (notes.toLowerCase().contains('post') ||
+                    notes.toLowerCase().contains('flagged content') ||
+                    record['post_title'] != null));
+
+            final String type = isPost ? 'Post' : 'Reply';
+
+            String targetId = '';
+            if (isPost && hasPostId) {
+              targetId = postId;
+            } else if (!isPost && hasReplyId) {
+              targetId = replyId;
+            } else if (hasPostId) {
+              targetId = postId;
+            } else if (hasReplyId) {
+              targetId = replyId;
+            } else {
+              final rawId = (record['target_id'] ?? record['id'] ?? '').toString();
+              if (rawId.isNotEmpty && rawId != 'null') {
+                targetId = rawId;
+              }
+            }
 
             final String reportReason =
                 record['reason']?.toString() ??
@@ -721,13 +740,18 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
             final String? contentSnapshot =
                 resolvedContent.isNotEmpty ? resolvedContent : null;
 
-            final String reporterId =
-                record['reporter_id']?.toString() ??
-                    '';
-
-            final String resolvedAt =
+            final String rawResolvedAt =
                 record['resolved_at']?.toString() ??
                     '';
+            String resolvedAt = rawResolvedAt;
+            if (rawResolvedAt.isNotEmpty && rawResolvedAt != 'null') {
+              try {
+                final dt = DateTime.parse(rawResolvedAt).toLocal();
+                resolvedAt = '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+              } catch (_) {
+                resolvedAt = rawResolvedAt;
+              }
+            }
 
             String moderatorName =
                 record['moderator_name']?.toString() ??
@@ -989,21 +1013,22 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                           ],
                         ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          '$type ID: #${targetId.length > 8 ? targetId.substring(0, 8) : targetId}',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF334155),
+                      if (targetId.isNotEmpty && targetId != 'null')
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            '$type ID: #${targetId.length > 8 ? targetId.substring(0, 8) : targetId}',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF334155),
+                            ),
                           ),
                         ),
-                      ),
                       if (reporterId.isNotEmpty && reporterId != 'null' && reporterId != 'Unknown')
                         Text(
                           'Reporter: #${reporterId.length > 8 ? reporterId.substring(0, 8) : reporterId}',
