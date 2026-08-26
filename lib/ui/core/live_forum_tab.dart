@@ -2820,6 +2820,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                 ],
               ),
             ),
+          ],
           if (msg['isReported'] == true) ...[
             Container(
               margin: const EdgeInsets.only(bottom: 8),
