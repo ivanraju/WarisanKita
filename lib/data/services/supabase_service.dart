@@ -1657,6 +1657,8 @@ class SupabaseService {
   static final List<ForumThread> _forumStore = [];
   static final Map<String, int> _sessionThreadVotes = {};
   static final Map<String, int> _sessionReplyVotes = {};
+  static final List<Map<String, dynamic>> _localReportQueue = [];
+  static final List<Map<String, dynamic>> _localModerationHistory = [];
 
   String _threadVoteKey(String threadId) {
     final userId = _client?.auth.currentUser?.id ?? 'guest';
@@ -1742,6 +1744,18 @@ class SupabaseService {
             // Keep session cache synchronized with database
             _sessionThreadVotes[_threadVoteKey(threadId)] = persistedVote;
             threadMap['userVote'] = persistedVote;
+
+            // Preserve local report status if recorded
+            final localPostReport = _localReportQueue.where((r) => r['postId'] == threadId && r['type'] == 'post').firstOrNull;
+            if (localPostReport != null) {
+              threadMap['is_reported'] = true;
+              final rList = (localPostReport['reports'] as List?) ?? [];
+              if (rList.isNotEmpty) {
+                threadMap['report_reason'] = rList.first['reason'];
+                threadMap['report_notes'] = rList.first['notes'];
+              }
+            }
+
             final localMatch = _forumStore.where((l) => l.id == threadMap['id']).firstOrNull;
 
             try {
@@ -1780,6 +1794,18 @@ class SupabaseService {
                   final int pReplyVote = persistedReplyVotes[replyId] ?? _sessionReplyVotes[_replyVoteKey(replyId)] ?? (rMap['user_vote'] as num?)?.toInt() ?? 0;
                   _sessionReplyVotes[_replyVoteKey(replyId)] = pReplyVote;
                   rMap['userVote'] = pReplyVote;
+
+                  // Preserve local reply report status if recorded
+                  final localReplyReport = _localReportQueue.where((rep) => rep['replyId'] == replyId && rep['type'] == 'reply').firstOrNull;
+                  if (localReplyReport != null) {
+                    rMap['is_reported'] = true;
+                    final rList = (localReplyReport['reports'] as List?) ?? [];
+                    if (rList.isNotEmpty) {
+                      rMap['report_reason'] = rList.first['reason'];
+                      rMap['report_notes'] = rList.first['notes'];
+                    }
+                  }
+
                   processedReplies.add(rMap);
                 }
               }
@@ -1804,116 +1830,130 @@ class SupabaseService {
   }
 
   Future<List<Map<String, dynamic>>> fetchForumReportQueue() async {
-    final client = _client;
+    final Map<String, Map<String, dynamic>> groupedReports = {};
 
-    if (client == null) {
-      return [];
+    // 1. Add all from _localReportQueue
+    for (final item in _localReportQueue) {
+      final String? postId = item['postId']?.toString();
+      final String? replyId = item['replyId']?.toString();
+      final String key = postId != null ? 'post_$postId' : 'reply_$replyId';
+      groupedReports[key] = Map<String, dynamic>.from(item);
     }
 
-    try {
-      if (kDebugMode) {
-        print(
-        '🔐 CURRENT SUPABASE USER = '
-            '${client.auth.currentUser?.email} '
-            '(${client.auth.currentUser?.id})',
-      );
-      }
-      final response = await client
-          .from('forum_reports')
-          .select()
-          .eq('status', 'pending')
-          .order('created_at', ascending: false);
-
-      final reports =
-      List<Map<String, dynamic>>.from(response);
-
-      final Map<String, Map<String, dynamic>>
-      groupedReports = {};
-
-      for (final report in reports) {
-        final postId = report['post_id']?.toString();
-        final replyId = report['reply_id']?.toString();
-
-        final String key;
-
-        if (postId != null) {
-          key = 'post_$postId';
-        } else if (replyId != null) {
-          key = 'reply_$replyId';
-        } else {
-          continue;
-        }
-
+    // 2. Add reported items from _forumStore
+    for (final thread in _forumStore) {
+      if (thread.isReported) {
+        final key = 'post_${thread.id}';
         if (!groupedReports.containsKey(key)) {
           groupedReports[key] = {
-            'type': postId != null ? 'post' : 'reply',
-            'postId': postId,
-            'replyId': replyId,
-            'reports': <Map<String, dynamic>>[],
+            'type': 'post',
+            'postId': thread.id,
+            'reports': [
+              {
+                'reason': thread.reportReason ?? 'Inappropriate Content',
+                'notes': thread.reportNotes ?? '',
+                'created_at': thread.timestamp,
+              }
+            ],
+            'reportsCount': 1,
           };
         }
-
-        final reportList =
-        groupedReports[key]!['reports']
-        as List<Map<String, dynamic>>;
-
-        reportList.add(report);
       }
-
-      final result = groupedReports.values.toList();
-
-      for (final item in result) {
-        final reports =
-        item['reports'] as List<Map<String, dynamic>>;
-
-        item['reportsCount'] = reports.length;
+      for (final reply in thread.replies) {
+        if (reply.isReported) {
+          final key = 'reply_${reply.id}';
+          if (!groupedReports.containsKey(key)) {
+            groupedReports[key] = {
+              'type': 'reply',
+              'postId': thread.id,
+              'replyId': reply.id,
+              'reports': [
+                {
+                  'reason': reply.reportReason ?? 'Inappropriate Content',
+                  'notes': reply.reportNotes ?? '',
+                  'created_at': reply.timestamp,
+                }
+              ],
+              'reportsCount': 1,
+            };
+          }
+        }
       }
-
-      return result;
-    } catch (e) {
-      debugPrint(
-        'fetchForumReportQueue error: $e',
-      );
-
-      return [];
     }
+
+    // 3. Query Supabase if client is available
+    final client = _client;
+    if (client != null) {
+      try {
+        final response = await client
+            .from('forum_reports')
+            .select()
+            .eq('status', 'pending')
+            .order('created_at', ascending: false);
+
+        final reports = List<Map<String, dynamic>>.from(response);
+        for (final report in reports) {
+          final postId = report['post_id']?.toString();
+          final replyId = report['reply_id']?.toString();
+          final String key;
+          if (postId != null) {
+            key = 'post_$postId';
+          } else if (replyId != null) {
+            key = 'reply_$replyId';
+          } else {
+            continue;
+          }
+
+          if (!groupedReports.containsKey(key)) {
+            groupedReports[key] = {
+              'type': postId != null ? 'post' : 'reply',
+              'postId': postId,
+              'replyId': replyId,
+              'reports': <Map<String, dynamic>>[],
+            };
+          }
+
+          final reportList = groupedReports[key]!['reports'] as List<Map<String, dynamic>>;
+          reportList.add(report);
+          groupedReports[key]!['reportsCount'] = reportList.length;
+        }
+      } catch (e) {
+        debugPrint('fetchForumReportQueue Supabase note: $e');
+      }
+    }
+
+    return groupedReports.values.toList();
   }
 
   Future<List<Map<String, dynamic>>> fetchForumModerationHistory() async {
+    final List<Map<String, dynamic>> history = List.from(_localModerationHistory);
     final client = _client;
+    if (client != null) {
+      try {
+        final response = await client
+            .from('forum_reports')
+            .select()
+            .inFilter(
+          'status',
+          ['dismissed', 'actioned'],
+        )
+            .order(
+          'resolved_at',
+          ascending: false,
+        );
 
-    if (client == null) {
-      return [];
+        final remoteHistory = List<Map<String, dynamic>>.from(response);
+        for (final item in remoteHistory) {
+          final id = item['id']?.toString();
+          if (id != null && !history.any((h) => h['id']?.toString() == id)) {
+            history.add(item);
+          }
+        }
+      } catch (e) {
+        debugPrint('fetchForumModerationHistory Supabase note: $e');
+      }
     }
-
-    try {
-      final response = await client
-          .from('forum_reports')
-          .select()
-          .inFilter(
-        'status',
-        ['dismissed', 'actioned'],
-      )
-          .order(
-        'resolved_at',
-        ascending: false,
-      );
-
-      final history =
-      List<Map<String, dynamic>>.from(response);
-
-      debugPrint(
-        'MODERATION HISTORY = ${history.length} records',
-      );
-
-      return history;
-    } catch (e) {
-      debugPrint(
-        'fetchForumModerationHistory error: $e',
-      );
-
-      return [];
-    }
+    return history;
   }
 
   Future<void> createThread(ForumThread thread) async {
@@ -2266,10 +2306,19 @@ class SupabaseService {
       String postId,
       String deletionReason,
       ) async {
-    // Remove deleted post from local forum state
+    // Remove deleted post from local forum state and report queue
     _forumStore.removeWhere(
       (thread) => thread.id == postId,
     );
+    _localReportQueue.removeWhere((r) => r['postId'] == postId && r['type'] == 'post');
+    _localModerationHistory.insert(0, {
+      'id': 'hist_${DateTime.now().millisecondsSinceEpoch}',
+      'post_id': postId,
+      'status': 'actioned',
+      'action_type': 'deleted',
+      'resolution_notes': deletionReason,
+      'resolved_at': DateTime.now().toIso8601String(),
+    });
 
     final client = _client;
     if (client == null) return;
@@ -2305,7 +2354,7 @@ class SupabaseService {
       String replyId,
       String deletionReason,
       ) async {
-    // Remove deleted reply from local forum state
+    // Remove deleted reply from local forum state and report queue
     final threadIndex = _forumStore.indexWhere(
       (thread) => thread.id == threadId,
     );
@@ -2320,6 +2369,15 @@ class SupabaseService {
         replyCount: updatedReplies.length,
       );
     }
+    _localReportQueue.removeWhere((r) => r['replyId'] == replyId && r['type'] == 'reply');
+    _localModerationHistory.insert(0, {
+      'id': 'hist_${DateTime.now().millisecondsSinceEpoch}',
+      'reply_id': replyId,
+      'status': 'actioned',
+      'action_type': 'deleted',
+      'resolution_notes': deletionReason,
+      'resolved_at': DateTime.now().toIso8601String(),
+    });
 
     final client = _client;
     if (client == null) return;
@@ -2397,7 +2455,7 @@ class SupabaseService {
       String reason,
       String notes,
       ) async {
-    // Update local store
+    // 1. Update local store
     final tIdx = _forumStore.indexWhere((t) => t.id == threadId);
     if (tIdx != -1) {
       final thread = _forumStore[tIdx];
@@ -2412,6 +2470,28 @@ class SupabaseService {
         updatedReplies[rIdx] = updatedReply;
         _forumStore[tIdx] = thread.copyWith(replies: updatedReplies);
       }
+    }
+
+    // 2. Add to _localReportQueue
+    final existingIdx = _localReportQueue.indexWhere((r) => r['replyId'] == replyId && r['type'] == 'reply');
+    final newReportItem = {
+      'reason': reason,
+      'notes': notes,
+      'created_at': DateTime.now().toIso8601String(),
+    };
+    if (existingIdx != -1) {
+      final existingReports = List<Map<String, dynamic>>.from(_localReportQueue[existingIdx]['reports'] ?? []);
+      existingReports.add(newReportItem);
+      _localReportQueue[existingIdx]['reports'] = existingReports;
+      _localReportQueue[existingIdx]['reportsCount'] = existingReports.length;
+    } else {
+      _localReportQueue.add({
+        'type': 'reply',
+        'postId': threadId,
+        'replyId': replyId,
+        'reports': [newReportItem],
+        'reportsCount': 1,
+      });
     }
 
     final client = _client;
@@ -2444,7 +2524,7 @@ class SupabaseService {
       try {
         await client.from('forum_reports').insert({
           'reply_id': replyId,
-          'reporter_id': currentUserId,
+          if (currentUserId != null) 'reporter_id': currentUserId,
           'reason': reason,
           'notes': notes,
           'status': 'pending',
@@ -2480,6 +2560,14 @@ class SupabaseService {
         _forumStore[tIdx] = thread.copyWith(replies: updatedReplies);
       }
     }
+
+    _localReportQueue.removeWhere((r) => r['replyId'] == replyId && r['type'] == 'reply');
+    _localModerationHistory.insert(0, {
+      'id': 'hist_${DateTime.now().millisecondsSinceEpoch}',
+      'reply_id': replyId,
+      'status': 'dismissed',
+      'resolved_at': DateTime.now().toIso8601String(),
+    });
 
     final client = _client;
     if (client == null) return;
@@ -2524,6 +2612,26 @@ class SupabaseService {
       );
     }
 
+    final existingIdx = _localReportQueue.indexWhere((r) => r['postId'] == threadId && r['type'] == 'post');
+    final newReportItem = {
+      'reason': reason,
+      'notes': notes,
+      'created_at': DateTime.now().toIso8601String(),
+    };
+    if (existingIdx != -1) {
+      final existingReports = List<Map<String, dynamic>>.from(_localReportQueue[existingIdx]['reports'] ?? []);
+      existingReports.add(newReportItem);
+      _localReportQueue[existingIdx]['reports'] = existingReports;
+      _localReportQueue[existingIdx]['reportsCount'] = existingReports.length;
+    } else {
+      _localReportQueue.add({
+        'type': 'post',
+        'postId': threadId,
+        'reports': [newReportItem],
+        'reportsCount': 1,
+      });
+    }
+
     final client = _client;
     if (client == null) {
       return {'success': true, 'already_reported': false};
@@ -2554,7 +2662,7 @@ class SupabaseService {
       try {
         await client.from('forum_reports').insert({
           'post_id': threadId,
-          'reporter_id': currentUserId,
+          if (currentUserId != null) 'reporter_id': currentUserId,
           'reason': reason,
           'notes': notes,
           'status': 'pending',
@@ -2581,6 +2689,14 @@ class SupabaseService {
         reportNotes: null,
       );
     }
+
+    _localReportQueue.removeWhere((r) => r['postId'] == threadId && r['type'] == 'post');
+    _localModerationHistory.insert(0, {
+      'id': 'hist_${DateTime.now().millisecondsSinceEpoch}',
+      'post_id': threadId,
+      'status': 'dismissed',
+      'resolved_at': DateTime.now().toIso8601String(),
+    });
 
     final client = _client;
     if (client == null) return;

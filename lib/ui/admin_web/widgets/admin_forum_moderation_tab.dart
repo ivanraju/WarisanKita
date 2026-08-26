@@ -448,6 +448,60 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
       }
     }
 
+    // Also include any reported threads/replies directly from forumVM.threads
+    for (final thread in forumVM.threads) {
+      if (thread.isReported) {
+        final bool alreadyInQueue = dynamicReported.any((item) => item['type'] == 'post' && item['id'] == thread.id);
+        if (!alreadyInQueue) {
+          dynamicReported.add({
+            'id': thread.id,
+            'type': 'post',
+            'author': thread.authorName,
+            'role': thread.isArtisan ? 'Master Artisan' : 'Tourist',
+            'content': thread.title,
+            'reason': thread.reportReason ?? 'User Reported Content',
+            'reportsCount': 1,
+            'reports': [
+              {
+                'reason': thread.reportReason ?? 'User Reported Content',
+                'notes': thread.reportNotes ?? '',
+                'created_at': thread.timestamp,
+              }
+            ],
+            'timestamp': thread.timestamp,
+            'isDynamic': true,
+          });
+        }
+      }
+      for (final reply in thread.replies) {
+        if (reply.isReported) {
+          final bool alreadyInQueue = dynamicReported.any((item) => item['type'] == 'reply' && item['id'] == reply.id);
+          if (!alreadyInQueue) {
+            dynamicReported.add({
+              'id': reply.id,
+              'type': 'reply',
+              'threadId': thread.id,
+              'replyId': reply.id,
+              'author': reply.sender,
+              'role': reply.isArtisan ? 'Master Artisan' : 'Tourist',
+              'content': reply.text,
+              'reason': reply.reportReason ?? 'User Reported Reply',
+              'reportsCount': 1,
+              'reports': [
+                {
+                  'reason': reply.reportReason ?? 'User Reported Reply',
+                  'notes': reply.reportNotes ?? '',
+                  'created_at': reply.timestamp,
+                }
+              ],
+              'timestamp': reply.timestamp,
+              'isDynamic': true,
+            });
+          }
+        }
+      }
+    }
+
     final allReported = [
       ...dynamicReported,
       ..._staticReportedPosts,
