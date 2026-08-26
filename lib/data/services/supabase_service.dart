@@ -1891,6 +1891,20 @@ class SupabaseService {
             remote.add(ForumThread.fromMap(threadMap));
           }
         }
+
+        // Preserve locally created threads that are not yet returned in remote query
+        for (final localThread in _forumStore) {
+          if (!remote.any((r) => r.id == localThread.id)) {
+            final isDismissed = _dismissedPostIds.contains(localThread.id);
+            final isReportedLocally = !isDismissed && (_localReportQueue.any((r) => r['postId'] == localThread.id) || (localThread.isReported && !isDismissed));
+            remote.add(localThread.copyWith(
+              isReported: isReportedLocally,
+              reportReason: isReportedLocally ? localThread.reportReason : null,
+              reportNotes: isReportedLocally ? localThread.reportNotes : null,
+            ));
+          }
+        }
+
         _forumStore.clear();
         _forumStore.addAll(remote);
         return remote;
@@ -2084,6 +2098,14 @@ class SupabaseService {
         await client.from('forum_posts').insert(verifiedDbMap);
       } catch (e) {
         debugPrint('Supabase createThread insert note: $e');
+        if (e.toString().contains('23503') || e.toString().contains('foreign key') || e.toString().contains('user_id')) {
+          try {
+            final fallbackMap = Map<String, dynamic>.from(verifiedDbMap)..remove('user_id');
+            await client.from('forum_posts').insert(fallbackMap);
+          } catch (dbErr) {
+            debugPrint('Supabase createThread fallback insert error: $dbErr');
+          }
+        }
       }
 
       for (final reply in thread.replies) {
@@ -2100,6 +2122,18 @@ class SupabaseService {
           });
         } catch (re) {
           debugPrint('Supabase createThread initial reply note: $re');
+          if (re.toString().contains('23503') || re.toString().contains('foreign key') || re.toString().contains('user_id')) {
+            try {
+              await client.from('forum_replies').insert({
+                'id': reply.id,
+                'post_id': thread.id,
+                'content': reply.text,
+                'upvotes': reply.upvotes,
+                'is_verified_answer': reply.isVerifiedAnswer,
+                'is_edited': reply.isEdited,
+              });
+            } catch (_) {}
+          }
         }
       }
     }
@@ -2183,6 +2217,14 @@ class SupabaseService {
 
       } catch (e) {
         debugPrint('Supabase postReply insert/update note: $e');
+        if (e.toString().contains('23503') || e.toString().contains('foreign key') || e.toString().contains('user_id')) {
+          try {
+            final fallbackMap = Map<String, dynamic>.from(verifiedReplyMap)..remove('user_id');
+            await client.from('forum_replies').insert(fallbackMap);
+          } catch (dbErr) {
+            debugPrint('Supabase postReply fallback insert error: $dbErr');
+          }
+        }
       }
     }
   }
