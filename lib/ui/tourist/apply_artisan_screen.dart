@@ -68,7 +68,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
 
   Future<void> _pickSsmDocument() async {
     try {
-      final result = await FilePickerPlatform.instance.pickFiles(
+      final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf', 'png', 'jpg', 'jpeg'],
         withData: true,
@@ -93,7 +93,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
 
   Future<void> _pickKraftanganCertificate() async {
     try {
-      final result = await FilePickerPlatform.instance.pickFiles(
+      final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf', 'png', 'jpg', 'jpeg'],
         withData: true,
@@ -118,7 +118,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
 
   Future<void> _pickStudioPhotos() async {
     try {
-      final result = await FilePickerPlatform.instance.pickFiles(
+      final result = await FilePicker.platform.pickFiles(
         type: FileType.image,
         allowMultiple: true,
         withData: true,
@@ -420,8 +420,8 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                   _buildUploadTile(
                     icon: Icons.description_outlined,
                     title: 'SSM Business Registration PDF',
-                    subtitle: _ssmFileName != null ? 'Attached: $_ssmFileName ($_ssmFileSize)' : 'Upload PDF / PNG proof of registration',
-                    isAttached: _ssmFileName != null,
+                    subtitle: _ssmFile != null ? 'Attached: ${_ssmFile!.name}' : 'Upload PDF / PNG proof of registration',
+                    isAttached: _ssmFile != null,
                     onTap: _pickSsmDocument,
                   ),
 
@@ -430,8 +430,8 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                   _buildUploadTile(
                     icon: Icons.workspace_premium_outlined,
                     title: 'Kraftangan Master Certificate',
-                    subtitle: _kraftanganFileName != null ? 'Attached: $_kraftanganFileName ($_kraftanganFileSize)' : 'Upload accreditation certificate (Optional)',
-                    isAttached: _kraftanganFileName != null,
+                    subtitle: _kraftanganFile != null ? 'Attached: ${_kraftanganFile!.name}' : 'Upload accreditation certificate (Optional)',
+                    isAttached: _kraftanganFile != null,
                     onTap: _pickKraftanganCertificate,
                   ),
 
