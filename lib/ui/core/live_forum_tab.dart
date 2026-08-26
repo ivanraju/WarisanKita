@@ -1354,8 +1354,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
   ) {
     final forumVMWatch = context.watch<ForumViewModel>();
 
-    // Collect titles and IDs of posts that have been ACTIONED/DELETED by admin
-    final Set<String> deletedPostTitles = {};
+    // Collect IDs of posts that have been ACTIONED/DELETED by admin
     final Set<String> deletedPostIds = Set.from(_dismissedNoticeIds);
 
     for (final n in forumVMWatch.moderationHistory) {
@@ -1366,28 +1365,14 @@ class _LiveForumTabState extends State<LiveForumTab> {
       if (status != 'dismissed' && (actionType == 'deleted' || status == 'actioned')) {
         final String id = (n['post_id'] ?? n['id'])?.toString() ?? '';
         if (id.isNotEmpty) deletedPostIds.add(id);
-
-        final String postTitle = (n['post_title'] ?? '').toString().trim();
-        if (postTitle.isNotEmpty) {
-          deletedPostTitles.add(postTitle);
-        } else {
-          final String notes = (n['notes'] ?? '').toString();
-          if (notes.contains('"')) {
-            final match = RegExp(r'"([^"]*)"').firstMatch(notes);
-            if (match != null && match.group(1) != null) {
-              deletedPostTitles.add(match.group(1)!.trim());
-            }
-          }
-        }
       }
     }
 
     // Only show approved, non-flagged threads in public feed (EXCEPT for author, unless deleted by admin)
     List<Map<String, dynamic>> filteredThreads = threads.where((t) {
       final String threadId = t['id']?.toString() ?? '';
-      final String threadTitle = t['title']?.toString().trim() ?? '';
 
-      if (deletedPostIds.contains(threadId) || deletedPostTitles.contains(threadTitle)) {
+      if (deletedPostIds.contains(threadId)) {
         return false; // Actioned/deleted by admin, hide completely from feed
       }
       if (t['isReported'] == true) {
@@ -1399,9 +1384,8 @@ class _LiveForumTabState extends State<LiveForumTab> {
     // Check if the current user has any post ACTUALLY pending in moderation review (excluding deleted)
     final pendingMyPosts = threads.where((t) {
       final String threadId = t['id']?.toString() ?? '';
-      final String threadTitle = t['title']?.toString().trim() ?? '';
 
-      if (deletedPostIds.contains(threadId) || deletedPostTitles.contains(threadTitle)) {
+      if (deletedPostIds.contains(threadId)) {
         return false; // Actioned/deleted by admin, no longer pending review!
       }
       return t['isReported'] == true && t['isMe'] == true;
