@@ -1,4 +1,4 @@
-﻿import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:warisan_kita/data/repositories/forum_repository.dart';
 import 'package:warisan_kita/data/services/supabase_service.dart';
 import 'package:warisan_kita/domain/models/forum_post.dart';
@@ -172,6 +172,121 @@ void main() {
       final downvotedReply = viewModel.threads.firstWhere((t) => t.id == thread.id).replies.first;
       expect(downvotedReply.userVote, -1);
       expect(downvotedReply.upvotes, -1);
+    });
+  });
+
+  group('Forum Content Reporting & Admin Moderation Tests', () {
+    late SupabaseService service;
+    late ForumRepository repository;
+    late ForumViewModel viewModel;
+
+    setUp(() {
+      service = SupabaseService();
+      repository = ForumRepository(service: service);
+      viewModel = ForumViewModel(repository: repository);
+    });
+
+    test('Reporting a thread sets isReported and dynamically populates reportQueue', () async {
+      await viewModel.createThread(
+        community: 'c/Heritage',
+        title: 'Unauthorized craft workshop in Melaka',
+        authorName: 'BadActor',
+        authorEmail: 'bad@actor.my',
+        isArtisan: false,
+      );
+
+      final thread = viewModel.threads.firstWhere((t) => t.title == 'Unauthorized craft workshop in Melaka');
+      expect(thread.isReported, false);
+
+      final result = await viewModel.reportThread(
+        thread.id,
+        'Misinformation',
+        'Selling unauthorized factory items.',
+      );
+
+      expect(result['success'], true);
+      final reportedThread = viewModel.threads.firstWhere((t) => t.id == thread.id);
+      expect(reportedThread.isReported, true);
+      expect(reportedThread.reportReason, 'Misinformation');
+
+      // Verify report appears in reportQueue
+      expect(viewModel.reportQueue.any((r) => r['postId'] == thread.id), true);
+    });
+
+    test('Reporting a reply sets isReported and dynamically populates reportQueue', () async {
+      await viewModel.createThread(
+        community: 'c/Batik',
+        title: 'Traditional dyes inquiry',
+        authorName: 'Tourist1',
+        authorEmail: 'tourist1@test.my',
+        isArtisan: false,
+      );
+
+      final thread = viewModel.threads.firstWhere((t) => t.title == 'Traditional dyes inquiry');
+      await viewModel.postReply(
+        threadId: thread.id,
+        text: 'Inappropriate advertisement message http://spam.com',
+        authorName: 'Spammer',
+        authorEmail: 'spam@test.my',
+        isArtisan: false,
+      );
+
+      final threadWithReply = viewModel.threads.firstWhere((t) => t.id == thread.id);
+      final reply = threadWithReply.replies.first;
+
+      final result = await viewModel.reportReply(
+        thread.id,
+        reply.id,
+        'Spam/Off-topic',
+        'Automated bot spam link.',
+      );
+
+      expect(result['success'], true);
+      final updatedThread = viewModel.threads.firstWhere((t) => t.id == thread.id);
+      final reportedReply = updatedThread.replies.firstWhere((r) => r.id == reply.id);
+      expect(reportedReply.isReported, true);
+      expect(reportedReply.reportReason, 'Spam/Off-topic');
+
+      expect(viewModel.reportQueue.any((r) => r['replyId'] == reply.id), true);
+    });
+
+    test('Dismissing a report clears isReported and removes it from reportQueue', () async {
+      await viewModel.createThread(
+        community: 'c/Wau',
+        title: 'Valid Wau building discussion',
+        authorName: 'ArtisanWau',
+        authorEmail: 'wau@artisan.my',
+        isArtisan: true,
+      );
+
+      final thread = viewModel.threads.firstWhere((t) => t.title == 'Valid Wau building discussion');
+      await viewModel.reportThread(thread.id, 'Inappropriate Content', 'False alarm report');
+
+      expect(viewModel.reportQueue.any((r) => r['postId'] == thread.id), true);
+
+      // Admin dismisses report
+      await viewModel.dismissReport(thread.id);
+      final dismissedThread = viewModel.threads.firstWhere((t) => t.id == thread.id);
+      expect(dismissedThread.isReported, false);
+      expect(viewModel.reportQueue.any((r) => r['postId'] == thread.id), false);
+    });
+
+    test('Admin deleting reported thread removes it completely from threads and queue', () async {
+      await viewModel.createThread(
+        community: 'c/Songket',
+        title: 'Offensive thread content',
+        authorName: 'TrollUser',
+        authorEmail: 'troll@test.my',
+        isArtisan: false,
+      );
+
+      final thread = viewModel.threads.firstWhere((t) => t.title == 'Offensive thread content');
+      await viewModel.reportThread(thread.id, 'Harassment', 'Severe harassment content');
+
+      await viewModel.adminDeleteForumPost(thread.id, 'Violated community guidelines on harassment');
+
+      expect(viewModel.threads.any((t) => t.id == thread.id), false);
+      expect(viewModel.reportQueue.any((r) => r['postId'] == thread.id), false);
     });
   });
 }
