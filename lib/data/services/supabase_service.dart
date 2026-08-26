@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:async';
 import 'dart:math';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -1177,9 +1179,9 @@ class SupabaseService {
     String? bio,
     String? phone,
     String? state,
-    String? ssmFileName,
-    String? certFileName,
-    List<String>? photos,
+    PlatformFile? ssmFile,
+    PlatformFile? certFile,
+    List<PlatformFile>? photos,
   }) async {
     String cleanEmail = email.trim().toLowerCase();
     final client = _client;
@@ -1316,27 +1318,88 @@ class SupabaseService {
 
           if (profileRes != null) {
             final artisanId = profileRes['id'];
+            
+            Future<Map<String, String>?> uploadDoc(PlatformFile? file, String bucket, String folder) async {
+              if (file == null || file.bytes == null) return null;
+              try {
+                final fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.name.replaceAll(' ', '_')}';
+                final path = '$folder/$fileName';
+                await client.storage.from(bucket).uploadBinary(
+                  path,
+                  file.bytes!,
+                );
+                final url = client.storage.from(bucket).getPublicUrl(path);
+                return {'url': url, 'name': file.name};
+              } catch (e) {
+                debugPrint('Upload error: $e');
+                return null;
+              }
+            }
+
             try {
-              await client.from('artisan_documents').upsert([
-                {
+              final ssmUpload = await uploadDoc(ssmFile, 'artisan_private_docs', 'ssm');
+              final certUpload = await uploadDoc(certFile, 'artisan_private_docs', 'cert');
+              
+              final List<Map<String, dynamic>> docsToInsert = [];
+              
+              if (ssmUpload != null) {
+                docsToInsert.add({
+                   'artisan_id': artisanId,
+                   'doc_type': 'SSM_BUSINESS_CERT',
+                   'file_url': ssmUpload['url'],
+                   'file_name': ssmUpload['name']
+                });
+              } else {
+                docsToInsert.add({
                    'artisan_id': artisanId,
                    'doc_type': 'SSM_BUSINESS_CERT',
                    'file_url': 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-                   'file_name': ssmFileName ?? 'SSM_Registration.pdf'
-                },
-                {
+                   'file_name': 'SSM_Registration.pdf'
+                });
+              }
+
+              if (certUpload != null) {
+                docsToInsert.add({
+                   'artisan_id': artisanId,
+                   'doc_type': 'KRAFTANGAN_MASTER_CERT',
+                   'file_url': certUpload['url'],
+                   'file_name': certUpload['name']
+                });
+              } else {
+                docsToInsert.add({
                    'artisan_id': artisanId,
                    'doc_type': 'KRAFTANGAN_MASTER_CERT',
                    'file_url': 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-                   'file_name': certFileName ?? 'Kraftangan_Cert.pdf'
-                },
-                {
+                   'file_name': 'Kraftangan_Cert.pdf'
+                });
+              }
+
+              if (photos != null && photos.isNotEmpty) {
+                for (var p in photos) {
+                  final pUpload = await uploadDoc(p, 'artisan_public_media', 'studio');
+                  if (pUpload != null) {
+                    docsToInsert.add({
+                       'artisan_id': artisanId,
+                       'doc_type': 'STUDIO_PHOTO',
+                       'file_url': pUpload['url'],
+                       'file_name': pUpload['name']
+                    });
+                  }
+                }
+              }
+              
+              if (!docsToInsert.any((d) => d['doc_type'] == 'STUDIO_PHOTO')) {
+                docsToInsert.add({
                    'artisan_id': artisanId,
                    'doc_type': 'STUDIO_PHOTO',
                    'file_url': 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=600',
-                   'file_name': (photos != null && photos.isNotEmpty) ? photos.first : 'Studio_1.jpg'
-                }
-              ]);
+                   'file_name': 'Studio_1.jpg'
+                });
+              }
+
+              await client.from('artisan_documents').delete().eq('artisan_id', artisanId);
+              await client.from('artisan_documents').insert(docsToInsert);
+
             } catch (docErr) {
               debugPrint('Supabase linkArtisanRoleToTourist artisan_documents note: $docErr');
             }

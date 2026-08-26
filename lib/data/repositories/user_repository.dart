@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:warisan_kita/data/services/supabase_service.dart';
 import 'package:warisan_kita/domain/models/active_artisan_master.dart';
 import 'package:warisan_kita/domain/models/user.dart';
@@ -66,7 +67,6 @@ class UserRepository {
       newPassword: newPassword,
     );
   }
-
   Future<UserModel> linkArtisanRoleToTourist({
     required String email,
     required String studioName,
@@ -75,9 +75,9 @@ class UserRepository {
     String? bio,
     String? phone,
     String? state,
-    String? ssmFileName,
-    String? certFileName,
-    List<String>? photos,
+    PlatformFile? ssmFile,
+    PlatformFile? certFile,
+    List<PlatformFile>? photos,
   }) {
     return _service.linkArtisanRoleToTourist(
       email: email,
@@ -87,8 +87,8 @@ class UserRepository {
       bio: bio,
       phone: phone,
       state: state,
-      ssmFileName: ssmFileName,
-      certFileName: certFileName,
+      ssmFile: ssmFile,
+      certFile: certFile,
       photos: photos,
     );
   }

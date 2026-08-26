@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:warisan_kita/data/repositories/user_repository.dart';
 import 'package:warisan_kita/domain/models/user.dart';
 
@@ -459,9 +460,9 @@ class AuthViewModel extends ChangeNotifier {
     String? bio,
     String? phone,
     String? state,
-    String? ssmFileName,
-    String? certFileName,
-    List<String>? photos,
+    PlatformFile? ssmFile,
+    PlatformFile? certFile,
+    List<PlatformFile>? photos,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -476,8 +477,8 @@ class AuthViewModel extends ChangeNotifier {
         bio: bio,
         phone: phone,
         state: state,
-        ssmFileName: ssmFileName,
-        certFileName: certFileName,
+        ssmFile: ssmFile,
+        certFile: certFile,
         photos: photos,
       );
 

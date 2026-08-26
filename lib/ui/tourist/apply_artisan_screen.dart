@@ -25,11 +25,9 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
   String _selectedState = 'Melaka';
   bool _isSubmitting = false;
 
-  String? _ssmFileName;
-  String? _ssmFileSize;
-  String? _kraftanganFileName;
-  String? _kraftanganFileSize;
-  final List<Map<String, String>> _uploadedPhotos = [];
+  PlatformFile? _ssmFile;
+  PlatformFile? _kraftanganFile;
+  final List<PlatformFile> _uploadedPhotos = [];
 
   final List<String> _craftCategories = const [
     'Woodwork',
@@ -73,39 +71,24 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
       final result = await FilePickerPlatform.instance.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf', 'png', 'jpg', 'jpeg'],
+        withData: true,
       );
 
-      if (result.isNotEmpty) {
-        final file = result.first;
+      if (result != null && result.files.isNotEmpty) {
         setState(() {
-          _ssmFileName = file.name;
-          _ssmFileSize = '1.4 MB';
+          _ssmFile = result.files.first;
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('📄 SSM Proof attached: ${file.name}'),
+              content: Text('📄 SSM Document attached: ${_ssmFile!.name}'),
               backgroundColor: const Color(0xFF004D40),
               behavior: SnackBarBehavior.floating,
             ),
           );
         }
       }
-    } catch (_) {
-      setState(() {
-        _ssmFileName = 'SSM_Business_License_2026.pdf';
-        _ssmFileSize = '1.4 MB';
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('📄 Sample SSM Business License attached successfully!'),
-            backgroundColor: Color(0xFF004D40),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
+    } catch (_) {}
   }
 
   Future<void> _pickKraftanganCertificate() async {
@@ -113,80 +96,49 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
       final result = await FilePickerPlatform.instance.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf', 'png', 'jpg', 'jpeg'],
+        withData: true,
       );
 
-      if (result.isNotEmpty) {
-        final file = result.first;
+      if (result != null && result.files.isNotEmpty) {
         setState(() {
-          _kraftanganFileName = file.name;
-          _kraftanganFileSize = '2.1 MB';
+          _kraftanganFile = result.files.first;
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('🏆 Kraftangan Certificate attached: ${file.name}'),
+              content: Text('🏆 Kraftangan Certificate attached: ${_kraftanganFile!.name}'),
               backgroundColor: const Color(0xFF004D40),
               behavior: SnackBarBehavior.floating,
             ),
           );
         }
       }
-    } catch (_) {
-      setState(() {
-        _kraftanganFileName = 'Kraftangan_Master_Certificate.pdf';
-        _kraftanganFileSize = '2.1 MB';
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('🏆 Sample Kraftangan Master Certificate attached!'),
-            backgroundColor: Color(0xFF004D40),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
+    } catch (_) {}
   }
 
   Future<void> _pickStudioPhotos() async {
     try {
       final result = await FilePickerPlatform.instance.pickFiles(
         type: FileType.image,
+        allowMultiple: true,
+        withData: true,
       );
 
-      if (result.isNotEmpty) {
+      if (result != null && result.files.isNotEmpty) {
         setState(() {
-          for (final file in result) {
-            _uploadedPhotos.add({
-              'name': file.name,
-              'size': '850 KB',
-            });
-          }
+          _uploadedPhotos.addAll(result.files);
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('📸 Studio workshop photo attached (${result.length} files)'),
+              content: Text('📸 Studio workshop photo attached (${result.files.length} files)'),
               backgroundColor: const Color(0xFF004D40),
               behavior: SnackBarBehavior.floating,
             ),
           );
         }
       }
-    } catch (_) {
-      setState(() {
-        _uploadedPhotos.add({'name': 'Workshop_Studio_View.jpg', 'size': '850 KB'});
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('📸 Sample Workshop Photo attached!'),
-            backgroundColor: Color(0xFF004D40),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
+    } catch (_) {}
   }
 
   Future<void> _submitApplication() async {
@@ -201,11 +153,6 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
     final bio = _bioController.text.trim();
     final phone = _phoneController.text.trim().isNotEmpty ? _phoneController.text.trim() : '+60 12-345 6789';
 
-    final effectiveSsmFile = _ssmFileName ?? 'SSM_Registration_Cert.pdf';
-    final effectiveCertFile = _kraftanganFileName ?? 'Kraftangan_Master_Cert.pdf';
-    final effectivePhotos = _uploadedPhotos.isNotEmpty
-        ? _uploadedPhotos.map((p) => p['name']!).toList()
-        : ['Studio_Workshop_Photo_1.jpg'];
     final effectiveEmail = (user?.email != null && user!.email.trim().isNotEmpty)
         ? user.email.trim()
         : 'tourist@warisankita.my';
@@ -218,9 +165,9 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
       bio: bio.isNotEmpty ? bio : null,
       phone: phone,
       state: _selectedState,
-      ssmFileName: effectiveSsmFile,
-      certFileName: effectiveCertFile,
-      photos: effectivePhotos,
+      ssmFile: _ssmFile,
+      certFile: _kraftanganFile,
+      photos: _uploadedPhotos,
     );
 
     if (!mounted) return;
@@ -250,9 +197,9 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
           experience: 'Master Artisan Applicant',
           phone: phone,
           ssmNumber: ssm,
-          ssmFileName: effectiveSsmFile,
-          certFileName: effectiveCertFile,
-          photos: effectivePhotos,
+          ssmFileName: _ssmFile?.name ?? 'SSM_Registration_Cert.pdf',
+          certFileName: _kraftanganFile?.name ?? 'Kraftangan_Master_Cert.pdf',
+          photos: _uploadedPhotos.map((p) => p.name).toList(),
           bio: bio.isNotEmpty ? bio : 'Master studio application for $_selectedCraftCategory in $_selectedState.',
           isUpgradeFromTourist: true,
         ),
