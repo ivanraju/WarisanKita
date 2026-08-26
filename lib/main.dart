@@ -44,6 +44,29 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   usePathUrlStrategy();
 
+  // Gracefully handle upstream Flutter HardwareKeyboard KeyDownEvent assertions on Desktop/Web
+  FlutterError.onError = (FlutterErrorDetails details) {
+    final errorMsg = details.exceptionAsString();
+    if (errorMsg.contains('hardware_keyboard.dart') ||
+        errorMsg.contains('KeyDownEvent') ||
+        errorMsg.contains('_pressedKeys.containsKey')) {
+      debugPrint('Suppressed upstream HardwareKeyboard repeat event assertion: $errorMsg');
+      return;
+    }
+    FlutterError.presentError(details);
+  };
+
+  PlatformDispatcher.instance.onError = (error, stack) {
+    final errorStr = error.toString();
+    if (errorStr.contains('hardware_keyboard.dart') ||
+        errorStr.contains('KeyDownEvent') ||
+        errorStr.contains('_pressedKeys.containsKey')) {
+      debugPrint('Suppressed unhandled HardwareKeyboard repeat event exception: $errorStr');
+      return true;
+    }
+    return false;
+  };
+
   // Initialize Supabase
   await Supabase.initialize(
     url: 'https://zmvykemnpuremkebjvyo.supabase.co',

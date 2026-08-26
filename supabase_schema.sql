@@ -62,6 +62,7 @@ BEGIN
     -- Drop outdated/restrictive CHECK constraints from old migrations
     ALTER TABLE public.users DROP CONSTRAINT IF EXISTS users_role_check;
     ALTER TABLE public.users DROP CONSTRAINT IF EXISTS users_status_check;
+    ALTER TABLE public.forum_reports DROP CONSTRAINT IF EXISTS forum_reports_one_target_check;
 
     -- Artisan Details
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='studio_name') THEN
@@ -762,22 +763,96 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- Stored procedure for admin deleting forum content
 CREATE OR REPLACE FUNCTION public.admin_delete_forum_content(p_post_id UUID, p_reply_id UUID, p_deletion_reason TEXT)
 RETURNS JSONB AS $$
+DECLARE
+    v_post_title TEXT;
+    v_reply_text TEXT;
 BEGIN
     IF p_post_id IS NOT NULL THEN
+        SELECT title INTO v_post_title FROM public.forum_posts WHERE id = p_post_id;
+
+        -- Update existing reports to actioned, record deletion reason, and set post_id to NULL
+        -- so ON DELETE CASCADE doesn't wipe out moderation history
         UPDATE public.forum_reports
-        SET status = 'actioned', action_type = 'deleted', resolution_notes = p_deletion_reason, resolved_at = now()
+        SET status = 'actioned',
+            action_type = 'deleted',
+            resolution_notes = p_deletion_reason,
+            deletion_reason = p_deletion_reason,
+            notes = COALESCE(notes, '') || CASE WHEN v_post_title IS NOT NULL THEN ' [Post: ' || v_post_title || ']' ELSE '' END,
+            resolved_at = now(),
+            post_id = NULL
         WHERE post_id = p_post_id;
+
+        -- If no report record existed for this post, insert one for user/artisan moderation notice
+        IF NOT FOUND THEN
+            INSERT INTO public.forum_reports (
+                reason,
+                notes,
+                status,
+                action_type,
+                resolution_notes,
+                deletion_reason,
+                resolved_at
+            ) VALUES (
+                p_deletion_reason,
+                'Post "' || COALESCE(v_post_title, 'Untitled') || '" deleted by administrator',
+                'actioned',
+                'deleted',
+                p_deletion_reason,
+                p_deletion_reason,
+                now()
+            );
+        END IF;
 
         DELETE FROM public.forum_posts WHERE id = p_post_id;
     END IF;
 
     IF p_reply_id IS NOT NULL THEN
+        SELECT content INTO v_reply_text FROM public.forum_replies WHERE id = p_reply_id;
+
         UPDATE public.forum_reports
-        SET status = 'actioned', action_type = 'deleted', resolution_notes = p_deletion_reason, resolved_at = now()
+        SET status = 'actioned',
+            action_type = 'deleted',
+            resolution_notes = p_deletion_reason,
+            deletion_reason = p_deletion_reason,
+            notes = COALESCE(notes, '') || CASE WHEN v_reply_text IS NOT NULL THEN ' [Reply: ' || v_reply_text || ']' ELSE '' END,
+            resolved_at = now(),
+            reply_id = NULL
         WHERE reply_id = p_reply_id;
+
+        IF NOT FOUND THEN
+            INSERT INTO public.forum_reports (
+                reason,
+                notes,
+                status,
+                action_type,
+                resolution_notes,
+                deletion_reason,
+                resolved_at
+            ) VALUES (
+                p_deletion_reason,
+                'Reply deleted by administrator: ' || COALESCE(v_reply_text, ''),
+                'actioned',
+                'deleted',
+                p_deletion_reason,
+                p_deletion_reason,
+                now()
+            );
+        END IF;
 
         DELETE FROM public.forum_replies WHERE id = p_reply_id;
     END IF;
+
+    RETURN jsonb_build_object('success', true);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Stored procedure for user dismissing moderation notices
+CREATE OR REPLACE FUNCTION public.dismiss_moderation_notice(p_report_id UUID)
+RETURNS JSONB AS $$
+BEGIN
+    UPDATE public.forum_reports
+    SET status = 'dismissed_by_user', resolved_at = now()
+    WHERE id = p_report_id;
 
     RETURN jsonb_build_object('success', true);
 END;
@@ -795,6 +870,7 @@ GRANT EXECUTE ON FUNCTION public.report_forum_post(UUID, TEXT, TEXT) TO anon, au
 GRANT EXECUTE ON FUNCTION public.report_forum_reply(UUID, TEXT, TEXT) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.dismiss_forum_reports(UUID, UUID) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_delete_forum_content(UUID, UUID, TEXT) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.dismiss_moderation_notice(UUID) TO anon, authenticated;
 
 -- Enable RLS
 ALTER TABLE public.forum_posts ENABLE ROW LEVEL SECURITY;

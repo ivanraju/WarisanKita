@@ -13,6 +13,9 @@ class AdminForumModerationTab extends StatefulWidget {
 class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
   bool _showHistory = false;
   final List<Map<String, dynamic>> _staticReportedPosts = [];
+  // IDs deleted by admin this session - prevents them reappearing in the queue
+  // even if Supabase hasn't propagated the deletion yet
+  final Set<String> _deletedIds = {};
 
   @override
   void initState() {
@@ -28,36 +31,39 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
   }
 
   void _dismissFlag(Map<String, dynamic> post) async {
-    if (post['isDynamic'] == true) {
-      if (post['type'] == 'reply') {
-        await context.read<ForumViewModel>().dismissReplyReport(
-          post['threadId'].toString(),
-          post['id'].toString(),
-        );
-      } else {
-        await context.read<ForumViewModel>().dismissReport(
-          post['id'].toString(),
-        );
-      }
+    final type = post['type']?.toString();
+    final id = post['id']?.toString() ?? '';
+    final threadId = (post['threadId'] ?? id).toString();
+
+    if (type == 'reply') {
+      await context.read<ForumViewModel>().dismissReplyReport(
+        threadId,
+        id,
+      );
     } else {
-      setState(() {
-        _staticReportedPosts.removeWhere(
-              (p) => p['id'] == post['id'],
-        );
-      });
+      await context.read<ForumViewModel>().dismissReport(
+        id,
+      );
     }
+
+    setState(() {
+      _staticReportedPosts.removeWhere(
+        (p) => p['id'] == id,
+      );
+    });
 
     if (!mounted) return;
 
     final typeLabel =
-    post['type'] == 'reply' ? 'reply' : 'post';
+    type == 'reply' ? 'reply' : 'post';
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Flag dismissed for $typeLabel by ${post['author']}.',
+          'Flag dismissed for $typeLabel by ${post['author'] ?? 'author'}.',
         ),
         backgroundColor: const Color(0xFF004D40),
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }
@@ -71,6 +77,9 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
       builder: (dialogContext) {
         return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          actionsOverflowAlignment: OverflowBarAlignment.end,
+          actionsOverflowDirection: VerticalDirection.down,
+          actionsOverflowButtonSpacing: 8,
           title: Text(
             post['type'] == 'reply'
                 ? 'Delete Forum Reply'
@@ -79,24 +88,26 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
               color: const Color(0xFFEF4444),
             ),
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Please specify the administrative deletion reason (10 to 255 characters):',
-                style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.grey[700]),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: reasonController,
-                maxLines: 3,
-                decoration: InputDecoration(
-                  hintText: 'e.g. Violation of Community Guidelines Rule 4 (Spam & Harassment)',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Please specify the administrative deletion reason (10 to 255 characters):',
+                  style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.grey[700]),
                 ),
-              ),
-            ],
+                const SizedBox(height: 12),
+                TextField(
+                  controller: reasonController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    hintText: 'e.g. Violation of Community Guidelines Rule 4 (Spam & Harassment)',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Cancel')),
@@ -120,35 +131,30 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                 final forumVM = context.read<ForumViewModel>();
 
                 try {
-                  if (post['isDynamic'] == true) {
+                  final type = post['type']?.toString();
+                  final id = post['id']?.toString() ?? '';
+                  final threadId = (post['threadId'] ?? id).toString();
 
-                    // ============================
-                    // Admin delete reported REPLY
-                    // ============================
-                    if (post['type'] == 'reply') {
-                      await forumVM.adminDeleteForumReply(
-                        post['threadId'].toString(),
-                        post['id'].toString(),
-                        reason,
-                      );
-                    }
+                  // Admin delete reported REPLY
+                  if (type == 'reply') {
+                    await forumVM.adminDeleteForumReply(
+                      threadId,
+                      id,
+                      reason,
+                    );
+                  }
+                  // Admin delete reported POST
+                  else {
+                    await forumVM.adminDeleteForumPost(
+                      id,
+                      reason,
+                    );
+                  }
 
-                    // ============================
-                    // Admin delete reported POST
-                    // ============================
-                    else {
-                      await forumVM.adminDeleteForumPost(
-                        post['id'].toString(),
-                        reason,
-                      );
-                    }
-                  } else {
-                    if (!mounted) return;
-
+                  if (mounted) {
                     setState(() {
-                      _staticReportedPosts.removeWhere(
-                            (p) => p['id'] == post['id'],
-                      );
+                      _deletedIds.add(id); // prevent re-appearing in queue
+                      _staticReportedPosts.removeWhere((p) => p['id'] == id);
                     });
                   }
 
@@ -165,8 +171,7 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
-                        'Forum $typeLabel deleted successfully. '
-                            'Deletion reason stored in moderation history.',
+                        'Forum $typeLabel deleted. Check debug console for confirmation.',
                         style: GoogleFonts.plusJakartaSans(
                           fontWeight: FontWeight.bold,
                         ),
@@ -342,6 +347,9 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
         final String postId =
             item['postId']?.toString() ?? '';
 
+        // Skip items that were deleted this session
+        if (_deletedIds.contains(postId)) continue;
+
         dynamic foundThread;
 
         for (final thread in forumVM.threads) {
@@ -391,6 +399,9 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
       else if (type == 'reply') {
         final String replyId =
             item['replyId']?.toString() ?? '';
+
+        // Skip items that were deleted this session
+        if (_deletedIds.contains(replyId)) continue;
 
         dynamic foundThread;
         dynamic foundReply;
@@ -450,7 +461,7 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
 
     // Also include any reported threads/replies directly from forumVM.threads
     for (final thread in forumVM.threads) {
-      if (thread.isReported) {
+      if (thread.isReported && !_deletedIds.contains(thread.id)) {
         final bool alreadyInQueue = dynamicReported.any((item) => item['type'] == 'post' && item['id'] == thread.id);
         if (!alreadyInQueue) {
           dynamicReported.add({
@@ -474,7 +485,7 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
         }
       }
       for (final reply in thread.replies) {
-        if (reply.isReported) {
+        if (reply.isReported && !_deletedIds.contains(reply.id)) {
           final bool alreadyInQueue = dynamicReported.any((item) => item['type'] == 'reply' && item['id'] == reply.id);
           if (!alreadyInQueue) {
             dynamicReported.add({

@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:warisan_kita/data/repositories/forum_repository.dart';
 import 'package:warisan_kita/data/services/supabase_service.dart';
 import 'package:warisan_kita/domain/models/forum_post.dart';
@@ -48,12 +49,18 @@ void main() {
     });
   });
 
+  setUpAll(() {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    SharedPreferences.setMockInitialValues({});
+  });
+
   group('Forum Upvote, Downvote, & Self-Voting Prevention Tests', () {
     late SupabaseService service;
     late ForumRepository repository;
     late ForumViewModel viewModel;
 
     setUp(() {
+      SharedPreferences.setMockInitialValues({});
       service = SupabaseService();
       repository = ForumRepository(service: service);
       viewModel = ForumViewModel(repository: repository);
@@ -287,6 +294,66 @@ void main() {
 
       expect(viewModel.threads.any((t) => t.id == thread.id), false);
       expect(viewModel.reportQueue.any((r) => r['postId'] == thread.id), false);
+      expect(viewModel.moderationHistory.any((h) => h['post_id'] == thread.id), true);
+
+      // User dismisses moderation notice
+      final notice = viewModel.moderationHistory.firstWhere((h) => h['post_id'] == thread.id);
+      await viewModel.dismissModerationNotice(notice['id']?.toString() ?? thread.id);
+      expect(viewModel.moderationHistory.any((h) => h['post_id'] == thread.id), false);
+    });
+
+    test('Creating a post with sensitive keywords is automatically flagged into reportQueue', () async {
+      final safetyResult = await viewModel.createThread(
+        community: 'c/Keris',
+        title: 'Selling fake keris replicas online',
+        authorName: 'CounterfeitSeller',
+        authorEmail: 'seller@test.my',
+        isArtisan: false,
+      );
+
+      expect(safetyResult.isAutoFlagged, true);
+      final flaggedThread = viewModel.threads.firstWhere((t) => t.title == 'Selling fake keris replicas online');
+      expect(flaggedThread.isReported, true);
+      expect(flaggedThread.reportReason?.toLowerCase().contains('sensitive'), true);
+      expect(viewModel.reportQueue.any((r) => r['postId'] == flaggedThread.id), true);
+
+      // Admin dismisses the auto-flag
+      await viewModel.dismissReport(flaggedThread.id);
+      final unflaggedThread = viewModel.threads.firstWhere((t) => t.id == flaggedThread.id);
+      expect(unflaggedThread.isReported, false);
+      expect(viewModel.reportQueue.any((r) => r['postId'] == flaggedThread.id), false);
+    });
+
+    test('Posting a reply with sensitive keywords is automatically flagged into reportQueue', () async {
+      await viewModel.createThread(
+        community: 'c/Batik',
+        title: 'Authentic batik dyeing processes',
+        authorName: 'ArtisanBatik',
+        authorEmail: 'batik@artisan.my',
+        isArtisan: true,
+      );
+
+      final thread = viewModel.threads.firstWhere((t) => t.title == 'Authentic batik dyeing processes');
+      final replySafety = await viewModel.postReply(
+        threadId: thread.id,
+        text: 'This is a scam to steal money from buyers.',
+        authorName: 'AngryBuyer',
+        authorEmail: 'buyer@test.my',
+        isArtisan: false,
+      );
+
+      expect(replySafety.isAutoFlagged, true);
+      final updatedThread = viewModel.threads.firstWhere((t) => t.id == thread.id);
+      final flaggedReply = updatedThread.replies.firstWhere((r) => r.text.contains('scam'));
+      expect(flaggedReply.isReported, true);
+      expect(viewModel.reportQueue.any((r) => r['replyId'] == flaggedReply.id), true);
+
+      // Admin dismisses the reply auto-flag
+      await viewModel.dismissReplyReport(thread.id, flaggedReply.id);
+      final dismissedThread = viewModel.threads.firstWhere((t) => t.id == thread.id);
+      final unflaggedReply = dismissedThread.replies.firstWhere((r) => r.id == flaggedReply.id);
+      expect(unflaggedReply.isReported, false);
+      expect(viewModel.reportQueue.any((r) => r['replyId'] == flaggedReply.id), false);
     });
   });
 }

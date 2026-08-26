@@ -95,7 +95,8 @@ class SupabaseService {
       'studioName': 'Pak Mat Pottery Studio',
       'craftCategory': 'Pottery & Ceramics',
       'ssmNumber': 'SSM-TRG-2024-0981',
-      'bio': 'Master Pak Mat has been hand-crafting traditional clay labu sayong and ceramic vessels for over 25 years in Kampung Morten.',
+      'bio':
+          'Master Pak Mat has been hand-crafting traditional clay labu sayong and ceramic vessels for over 25 years in Kampung Morten.',
       'joinedDate': 'Nov 2025',
       'isSuspended': false,
     },
@@ -161,18 +162,35 @@ class SupabaseService {
 
   // --- Auth Services ---
 
-  Future<bool> isUsernameAvailable(String username, {String? excludeEmail}) async {
-    final cleanUsername = username.trim().toLowerCase().replaceAll('@', '').replaceAll(' ', '').replaceAll('_', '').replaceAll('-', '');
+  Future<bool> isUsernameAvailable(
+    String username, {
+    String? excludeEmail,
+  }) async {
+    final cleanUsername = username
+        .trim()
+        .toLowerCase()
+        .replaceAll('@', '')
+        .replaceAll(' ', '')
+        .replaceAll('_', '')
+        .replaceAll('-', '');
     if (cleanUsername.isEmpty) return false;
 
     // 1. Check local in-memory store for unique username/handle
     for (final entry in _userStore.entries) {
-      if (excludeEmail != null && entry.key.toLowerCase() == excludeEmail.toLowerCase()) {
+      if (excludeEmail != null &&
+          entry.key.toLowerCase() == excludeEmail.toLowerCase()) {
         continue;
       }
       final u = entry.value;
-      final existingUsername = (u['username'] as String?)?.toLowerCase().replaceAll('@', '').replaceAll(' ', '').replaceAll('_', '').replaceAll('-', '');
-      if (existingUsername != null && existingUsername.isNotEmpty && existingUsername == cleanUsername) {
+      final existingUsername = (u['username'] as String?)
+          ?.toLowerCase()
+          .replaceAll('@', '')
+          .replaceAll(' ', '')
+          .replaceAll('_', '')
+          .replaceAll('-', '');
+      if (existingUsername != null &&
+          existingUsername.isNotEmpty &&
+          existingUsername == cleanUsername) {
         return false;
       }
     }
@@ -189,13 +207,16 @@ class SupabaseService {
 
         if (res != null) {
           if (excludeEmail != null &&
-              (res['email'] as String?)?.toLowerCase() == excludeEmail.toLowerCase()) {
+              (res['email'] as String?)?.toLowerCase() ==
+                  excludeEmail.toLowerCase()) {
             return true;
           }
           return false;
         }
       } catch (e) {
-        debugPrint('Supabase username uniqueness check note (username column may not exist yet): $e');
+        debugPrint(
+          'Supabase username uniqueness check note (username column may not exist yet): $e',
+        );
       }
     }
 
@@ -212,32 +233,40 @@ class SupabaseService {
     if (_userStore.containsKey(cleanEmail)) {
       final u = _userStore[cleanEmail]!;
       final role = (u['role'] ?? '').toString();
-      final roles = (u['roles'] is List) ? List<String>.from(u['roles']) : <String>[role];
+      final roles = (u['roles'] is List)
+          ? List<String>.from(u['roles'])
+          : <String>[role];
       final studioName = (u['studioName'] ?? u['studio_name']) as String?;
       final ssm = (u['ssmNumber'] ?? u['ssm_number']) as String?;
 
       final cleanRole = role.trim().toLowerCase();
       final rolesLower = roles.map((r) => r.trim().toLowerCase()).toList();
 
-      final isDual = cleanRole.contains('artisan & tourist') ||
+      final isDual =
+          cleanRole.contains('artisan & tourist') ||
           cleanRole.contains('tourist & artisan') ||
           cleanRole.contains('artisan/tourist') ||
           cleanRole.contains('tourist/artisan') ||
           cleanRole.contains('artisan and tourist') ||
-          (rolesLower.any((r) => r.contains('tourist')) && rolesLower.any((r) => r.contains('artisan')));
+          (rolesLower.any((r) => r.contains('tourist')) &&
+              rolesLower.any((r) => r.contains('artisan')));
 
-      final isArtisan = isDual ||
+      final isArtisan =
+          isDual ||
           cleanRole.contains('artisan') ||
           rolesLower.any((r) => r.contains('artisan')) ||
           (studioName != null && studioName.trim().isNotEmpty) ||
           (ssm != null && ssm.trim().isNotEmpty);
 
-      final isTourist = isDual ||
+      final isTourist =
+          isDual ||
           cleanRole.contains('tourist') ||
           rolesLower.any((r) => r.contains('tourist')) ||
           (!isArtisan);
 
-      debugPrint('🔍 [checkExistingAccount] local found for $cleanEmail: isArtisan=$isArtisan, isTourist=$isTourist, isDual=$isDual, role=$role');
+      debugPrint(
+        '🔍 [checkExistingAccount] local found for $cleanEmail: isArtisan=$isArtisan, isTourist=$isTourist, isDual=$isDual, role=$role',
+      );
 
       return ExistingAccountCheck(
         exists: true,
@@ -258,7 +287,10 @@ class SupabaseService {
     if (client != null) {
       Map<String, dynamic>? res;
       try {
-        final rpcRes = await client.rpc('check_account_by_email', params: {'p_email': cleanEmail});
+        final rpcRes = await client.rpc(
+          'check_account_by_email',
+          params: {'p_email': cleanEmail},
+        );
         if (rpcRes is List && rpcRes.isNotEmpty) {
           res = Map<String, dynamic>.from(rpcRes.first);
         }
@@ -266,13 +298,25 @@ class SupabaseService {
 
       if (res == null) {
         try {
-          res = await client.from('users').select('*, artisan_profiles!artisan_profiles_user_id_fkey(*)').ilike('email', cleanEmail).maybeSingle();
+          res = await client
+              .from('users')
+              .select('*, artisan_profiles!artisan_profiles_user_id_fkey(*)')
+              .ilike('email', cleanEmail)
+              .maybeSingle();
         } catch (e) {
           try {
-            res = await client.from('users').select('*, artisan_profiles(*)').ilike('email', cleanEmail).maybeSingle();
+            res = await client
+                .from('users')
+                .select('*, artisan_profiles(*)')
+                .ilike('email', cleanEmail)
+                .maybeSingle();
           } catch (_) {
             try {
-              res = await client.from('users').select().ilike('email', cleanEmail).maybeSingle();
+              res = await client
+                  .from('users')
+                  .select()
+                  .ilike('email', cleanEmail)
+                  .maybeSingle();
             } catch (e2) {
               debugPrint('Supabase checkExistingAccount note: $e2');
             }
@@ -283,41 +327,62 @@ class SupabaseService {
       if (res != null) {
         final role = (res['role'] ?? '').toString();
         final rawRoles = res['roles'];
-        final roles = (rawRoles is List) ? List<String>.from(rawRoles) : <String>[role];
+        final roles = (rawRoles is List)
+            ? List<String>.from(rawRoles)
+            : <String>[role];
 
         Map<String, dynamic>? artisanMap;
         if (res['artisan_profiles'] is Map) {
           artisanMap = Map<String, dynamic>.from(res['artisan_profiles']);
-        } else if (res['artisan_profiles'] is List && (res['artisan_profiles'] as List).isNotEmpty) {
-          artisanMap = Map<String, dynamic>.from((res['artisan_profiles'] as List).first);
+        } else if (res['artisan_profiles'] is List &&
+            (res['artisan_profiles'] as List).isNotEmpty) {
+          artisanMap = Map<String, dynamic>.from(
+            (res['artisan_profiles'] as List).first,
+          );
         }
 
-        final studioName = (res['studio_name'] ?? res['studioName'] ?? artisanMap?['studio_name']) as String?;
-        final ssm = (res['ssm_number'] ?? res['ssmNumber'] ?? artisanMap?['ssm_number']) as String?;
-        final craftCat = (res['craft_category'] ?? res['craftCategory'] ?? artisanMap?['craft_category']) as String?;
+        final studioName =
+            (res['studio_name'] ??
+                    res['studioName'] ??
+                    artisanMap?['studio_name'])
+                as String?;
+        final ssm =
+            (res['ssm_number'] ?? res['ssmNumber'] ?? artisanMap?['ssm_number'])
+                as String?;
+        final craftCat =
+            (res['craft_category'] ??
+                    res['craftCategory'] ??
+                    artisanMap?['craft_category'])
+                as String?;
 
         final cleanRole = role.trim().toLowerCase();
         final rolesLower = roles.map((r) => r.trim().toLowerCase()).toList();
 
-        final isDual = cleanRole.contains('artisan & tourist') ||
+        final isDual =
+            cleanRole.contains('artisan & tourist') ||
             cleanRole.contains('tourist & artisan') ||
             cleanRole.contains('artisan/tourist') ||
             cleanRole.contains('tourist/artisan') ||
             cleanRole.contains('artisan and tourist') ||
-            (rolesLower.any((r) => r.contains('tourist')) && rolesLower.any((r) => r.contains('artisan')));
+            (rolesLower.any((r) => r.contains('tourist')) &&
+                rolesLower.any((r) => r.contains('artisan')));
 
-        final isArtisan = isDual ||
+        final isArtisan =
+            isDual ||
             cleanRole.contains('artisan') ||
             rolesLower.any((r) => r.contains('artisan')) ||
             (studioName != null && studioName.trim().isNotEmpty) ||
             (ssm != null && ssm.trim().isNotEmpty);
 
-        final isTourist = isDual ||
+        final isTourist =
+            isDual ||
             cleanRole.contains('tourist') ||
             rolesLower.any((r) => r.contains('tourist')) ||
             (!isArtisan);
 
-        debugPrint('🔍 [checkExistingAccount] DB found for $cleanEmail: isArtisan=$isArtisan, isTourist=$isTourist, isDual=$isDual, role=$role');
+        debugPrint(
+          '🔍 [checkExistingAccount] DB found for $cleanEmail: isArtisan=$isArtisan, isTourist=$isTourist, isDual=$isDual, role=$role',
+        );
 
         return ExistingAccountCheck(
           exists: true,
@@ -326,7 +391,8 @@ class SupabaseService {
           isTourist: isTourist,
           isArtisan: isArtisan,
           isDualRole: isDual,
-          displayName: res['full_name'] ?? res['display_name'] ?? res['displayName'],
+          displayName:
+              res['full_name'] ?? res['display_name'] ?? res['displayName'],
           username: res['username'],
           studioName: studioName,
           craftCategory: craftCat,
@@ -336,11 +402,17 @@ class SupabaseService {
 
     return const ExistingAccountCheck(exists: false);
   }
-  
+
   Future<UserModel> signIn(String emailOrUsername, String password) async {
-    final normInput = emailOrUsername.trim().toLowerCase().replaceAll('@', '').replaceAll(' ', '').replaceAll('_', '').replaceAll('-', '');
+    final normInput = emailOrUsername
+        .trim()
+        .toLowerCase()
+        .replaceAll('@', '')
+        .replaceAll(' ', '')
+        .replaceAll('_', '')
+        .replaceAll('-', '');
     final rawInput = emailOrUsername.trim().toLowerCase();
-    
+
     // Simulate network latency
     await Future.delayed(const Duration(milliseconds: 300));
 
@@ -352,18 +424,22 @@ class SupabaseService {
         normInput == 'administrator' ||
         normInput == 'adminnadia' ||
         rawInput == 'admin@warisankita.my') {
-      if (password == 'admin123' || password == 'password123' || password == _userStore['admin@warisankita.my']?['password']) {
-        final adminData = _userStore['admin@warisankita.my'] ?? {
-          'id': 'usr-admin-001',
-          'email': 'admin@warisankita.my',
-          'username': 'admin',
-          'displayName': 'Super Admin Nadia',
-          'role': 'Admin',
-          'roles': ['Admin'],
-          'status': 'ACTIVE',
-          'joinedDate': 'Jan 2025',
-          'isSuspended': false,
-        };
+      if (password == 'admin123' ||
+          password == 'password123' ||
+          password == _userStore['admin@warisankita.my']?['password']) {
+        final adminData =
+            _userStore['admin@warisankita.my'] ??
+            {
+              'id': 'usr-admin-001',
+              'email': 'admin@warisankita.my',
+              'username': 'admin',
+              'displayName': 'Super Admin Nadia',
+              'role': 'Admin',
+              'roles': ['Admin'],
+              'status': 'ACTIVE',
+              'joinedDate': 'Jan 2025',
+              'isSuspended': false,
+            };
         authenticatedUser = UserModel.fromMap(adminData);
         await _saveAuthSession(authenticatedUser);
         return authenticatedUser;
@@ -379,9 +455,17 @@ class SupabaseService {
     for (final entry in _userStore.entries) {
       final storedEmail = entry.key.toLowerCase();
       final u = entry.value;
-      final uNameNorm = (u['username'] as String?)?.toLowerCase().replaceAll('@', '').replaceAll(' ', '').replaceAll('_', '').replaceAll('-', '');
+      final uNameNorm = (u['username'] as String?)
+          ?.toLowerCase()
+          .replaceAll('@', '')
+          .replaceAll(' ', '')
+          .replaceAll('_', '')
+          .replaceAll('-', '');
 
-      if (storedEmail == rawInput || (uNameNorm != null && uNameNorm.isNotEmpty && uNameNorm == normInput)) {
+      if (storedEmail == rawInput ||
+          (uNameNorm != null &&
+              uNameNorm.isNotEmpty &&
+              uNameNorm == normInput)) {
         cleanEmail = entry.key;
         storeMatch = true;
         break;
@@ -393,7 +477,7 @@ class SupabaseService {
       // 2. If client connected and input does not contain '@', lookup email from Supabase users table by username only
       if (!rawInput.contains('@')) {
         bool emailFound = false;
-        
+
         try {
           final userRow = await client
               .from('users')
@@ -409,11 +493,15 @@ class SupabaseService {
         }
 
         if (!emailFound && !storeMatch) {
-          throw Exception('INVALID CREDENTIALS: User account not found with username "@$emailOrUsername".');
+          throw Exception(
+            'INVALID CREDENTIALS: User account not found with username "@$emailOrUsername".',
+          );
         }
       }
     } else if (!storeMatch && !_userStore.containsKey(rawInput)) {
-      throw Exception('INVALID CREDENTIALS: User account not found with identifier "$emailOrUsername".');
+      throw Exception(
+        'INVALID CREDENTIALS: User account not found with identifier "$emailOrUsername".',
+      );
     }
 
     if (client != null) {
@@ -425,14 +513,30 @@ class SupabaseService {
         if (authRes.user != null) {
           Map<String, dynamic>? profileData;
           try {
-            profileData = await client.from('users').select('*, artisan_profiles!artisan_profiles_user_id_fkey(*)').eq('id', authRes.user!.id).maybeSingle();
-            profileData ??= await client.from('users').select('*, artisan_profiles!artisan_profiles_user_id_fkey(*)').ilike('email', cleanEmail).maybeSingle();
+            profileData = await client
+                .from('users')
+                .select('*, artisan_profiles!artisan_profiles_user_id_fkey(*)')
+                .eq('id', authRes.user!.id)
+                .maybeSingle();
+            profileData ??= await client
+                .from('users')
+                .select('*, artisan_profiles!artisan_profiles_user_id_fkey(*)')
+                .ilike('email', cleanEmail)
+                .maybeSingle();
           } catch (e) {
             try {
-              profileData = await client.from('users').select('*, artisan_profiles(*)').eq('id', authRes.user!.id).maybeSingle();
+              profileData = await client
+                  .from('users')
+                  .select('*, artisan_profiles(*)')
+                  .eq('id', authRes.user!.id)
+                  .maybeSingle();
             } catch (_) {
               try {
-                profileData = await client.from('users').select().eq('id', authRes.user!.id).maybeSingle();
+                profileData = await client
+                    .from('users')
+                    .select()
+                    .eq('id', authRes.user!.id)
+                    .maybeSingle();
               } catch (_) {}
             }
             debugPrint('Supabase table select note: $e');
@@ -448,18 +552,24 @@ class SupabaseService {
 
           final meta = authRes.user!.userMetadata ?? {};
           final role = (meta['role'] as String?) ?? 'Tourist';
-          final roles = meta['roles'] != null ? List<String>.from(meta['roles']) : [role];
+          final roles = meta['roles'] != null
+              ? List<String>.from(meta['roles'])
+              : [role];
           final status = (meta['status'] as String?) ?? 'ACTIVE';
 
           if (status == 'SUSPENDED') {
-            throw Exception('ACCOUNT SUSPENDED BY ADMINISTRATOR: Contact support.');
+            throw Exception(
+              'ACCOUNT SUSPENDED BY ADMINISTRATOR: Contact support.',
+            );
           }
 
           authenticatedUser = UserModel(
             id: authRes.user!.id,
             email: authRes.user!.email ?? cleanEmail,
             username: meta['username'] as String?,
-            displayName: (meta['display_name'] ?? meta['full_name'] ?? meta['username']) as String?,
+            displayName:
+                (meta['display_name'] ?? meta['full_name'] ?? meta['username'])
+                    as String?,
             role: role,
             roles: roles,
             status: status,
@@ -488,8 +598,10 @@ class SupabaseService {
 
     final userData = _userStore[cleanEmail]!;
     final storedPass = userData['password'];
-    final isPasswordValid = storedPass == password ||
-        (cleanEmail == 'admin@warisankita.my' && (password == 'admin123' || password == 'password123'));
+    final isPasswordValid =
+        storedPass == password ||
+        (cleanEmail == 'admin@warisankita.my' &&
+            (password == 'admin123' || password == 'password123'));
     if (!isPasswordValid) {
       throw Exception('INVALID CREDENTIALS: Password incorrect.');
     }
@@ -533,14 +645,18 @@ class SupabaseService {
 
         final meta = authUser.userMetadata ?? {};
         final role = (meta['role'] as String?) ?? 'Tourist';
-        final roles = meta['roles'] != null ? List<String>.from(meta['roles']) : [role];
+        final roles = meta['roles'] != null
+            ? List<String>.from(meta['roles'])
+            : [role];
         final status = (meta['status'] as String?) ?? 'ACTIVE';
 
         final u = UserModel(
           id: authUser.id,
           email: authUser.email ?? '',
           username: meta['username'] as String?,
-          displayName: (meta['display_name'] ?? meta['full_name'] ?? meta['username']) as String?,
+          displayName:
+              (meta['display_name'] ?? meta['full_name'] ?? meta['username'])
+                  as String?,
           role: role,
           roles: roles,
           status: status,
@@ -593,15 +709,23 @@ class SupabaseService {
 
     // Account already exists check:
     if (_userStore.containsKey(cleanEmail)) {
-      throw Exception('ACCOUNT ALREADY REGISTERED: An account is already registered with email "$email". Please sign in instead.');
+      throw Exception(
+        'ACCOUNT ALREADY REGISTERED: An account is already registered with email "$email". Please sign in instead.',
+      );
     }
 
     final client = _client;
     if (client != null) {
       try {
-        final existingOnline = await client.from('users').select('id').eq('email', cleanEmail).maybeSingle();
+        final existingOnline = await client
+            .from('users')
+            .select('id')
+            .eq('email', cleanEmail)
+            .maybeSingle();
         if (existingOnline != null) {
-          throw Exception('ACCOUNT ALREADY REGISTERED: An account is already registered with email "$email". Please sign in instead.');
+          throw Exception(
+            'ACCOUNT ALREADY REGISTERED: An account is already registered with email "$email". Please sign in instead.',
+          );
         }
       } catch (e) {
         if (e.toString().contains('ACCOUNT ALREADY REGISTERED')) rethrow;
@@ -612,19 +736,23 @@ class SupabaseService {
         ? username.trim().replaceAll('@', '')
         : cleanEmail.split('@')[0];
 
-    final resolvedDisplayName = (displayName != null && displayName.trim().isNotEmpty)
+    final resolvedDisplayName =
+        (displayName != null && displayName.trim().isNotEmpty)
         ? displayName.trim()
         : ((username != null && username.trim().isNotEmpty)
-            ? username.trim()
-            : cleanEmail.split('@')[0]);
+              ? username.trim()
+              : cleanEmail.split('@')[0]);
 
     // Enforce unique username constraint
     final isAvailable = await isUsernameAvailable(resolvedUsername);
     if (!isAvailable) {
-      throw Exception('USERNAME ALREADY TAKEN: Please choose a unique username.');
+      throw Exception(
+        'USERNAME ALREADY TAKEN: Please choose a unique username.',
+      );
     }
 
-    final isDual = role == 'Artisan & Tourist' ||
+    final isDual =
+        role == 'Artisan & Tourist' ||
         role == 'Tourist & Artisan' ||
         role == 'Artisan and Tourist' ||
         role == 'Dual Role';
@@ -664,7 +792,9 @@ class SupabaseService {
       'studioName': studioName,
       'craftCategory': craftCategory,
       'ssmNumber': ssmNumber,
-      'bio': isArtisan ? 'New applicant studio registered on Warisan Kita.' : null,
+      'bio': isArtisan
+          ? 'New applicant studio registered on Warisan Kita.'
+          : null,
     };
 
     if (client != null) {
@@ -687,7 +817,7 @@ class SupabaseService {
 
         if (authRes.user != null) {
           newUser['id'] = authRes.user!.id;
-          
+
           // 1. Insert Core Identity into normalized public.users
           try {
             await client.from('users').upsert({
@@ -705,14 +835,16 @@ class SupabaseService {
           }
 
           // 2. If Artisan, insert professional details into public.artisan_profiles
-          if (finalRole.contains('Artisan') || (studioName != null && studioName.trim().isNotEmpty)) {
+          if (finalRole.contains('Artisan') ||
+              (studioName != null && studioName.trim().isNotEmpty)) {
             try {
               await client.from('artisan_profiles').upsert({
                 'user_id': authRes.user!.id,
                 'studio_name': studioName ?? resolvedDisplayName,
                 'craft_category': craftCategory ?? 'Pottery & Ceramics',
                 'ssm_number': ssmNumber,
-                'bio': 'Master artisan dedicated to traditional Malaysian craft.',
+                'bio':
+                    'Master artisan dedicated to traditional Malaysian craft.',
                 'address': 'Malaysia',
                 'state': 'Melaka',
                 'status': initialStatus,
@@ -720,14 +852,18 @@ class SupabaseService {
                 'updated_at': DateTime.now().toIso8601String(),
               });
             } catch (artisanErr) {
-              debugPrint('Supabase public.artisan_profiles table insert note: $artisanErr');
+              debugPrint(
+                'Supabase public.artisan_profiles table insert note: $artisanErr',
+              );
             }
           }
         }
       } catch (e) {
         final errString = e.toString();
         debugPrint('Supabase online signUp note: $errString');
-        if (errString.contains('user_already_exists') || errString.contains('User already registered') || errString.contains('already registered')) {
+        if (errString.contains('user_already_exists') ||
+            errString.contains('User already registered') ||
+            errString.contains('already registered')) {
           // Attempt cross-role authentication with existing password
           try {
             final loginRes = await client.auth.signInWithPassword(
@@ -737,18 +873,32 @@ class SupabaseService {
 
             if (loginRes.user != null) {
               // Retrieve existing user record from public.users table
-              final existingRow = await client.from('users').select().ilike('email', cleanEmail).maybeSingle();
-              final currentRole = (existingRow != null ? (existingRow['role'] ?? '') : '').toString().toLowerCase();
+              final existingRow = await client
+                  .from('users')
+                  .select()
+                  .ilike('email', cleanEmail)
+                  .maybeSingle();
+              final currentRole =
+                  (existingRow != null ? (existingRow['role'] ?? '') : '')
+                      .toString()
+                      .toLowerCase();
 
-              final isTargetTourist = role == 'Tourist' || role == 'Cultural Tourist';
-              final isTargetArtisan = role == 'Artisan' || role == 'Master Artisan' || role == 'Artisan & Tourist';
+              final isTargetTourist =
+                  role == 'Tourist' || role == 'Cultural Tourist';
+              final isTargetArtisan =
+                  role == 'Artisan' ||
+                  role == 'Master Artisan' ||
+                  role == 'Artisan & Tourist';
 
               if (currentRole.contains('artisan') && isTargetTourist) {
                 // Upgrade Artisan to Dual Role immediately
-                await client.from('users').update({
-                  'role': 'Artisan & Tourist',
-                  'updated_at': DateTime.now().toIso8601String(),
-                }).ilike('email', cleanEmail);
+                await client
+                    .from('users')
+                    .update({
+                      'role': 'Artisan & Tourist',
+                      'updated_at': DateTime.now().toIso8601String(),
+                    })
+                    .ilike('email', cleanEmail);
 
                 try {
                   await client.auth.updateUser(
@@ -772,14 +922,18 @@ class SupabaseService {
                 return UserModel.fromMap(upgraded);
               } else if (currentRole.contains('tourist') && isTargetArtisan) {
                 // 1. Update users table (role & status only)
-                await client.from('users').update({
-                  'role': 'Artisan & Tourist',
-                  'status': 'PENDING_APPROVAL',
-                  'updated_at': DateTime.now().toIso8601String(),
-                }).ilike('email', cleanEmail);
+                await client
+                    .from('users')
+                    .update({
+                      'role': 'Artisan & Tourist',
+                      'status': 'PENDING_APPROVAL',
+                      'updated_at': DateTime.now().toIso8601String(),
+                    })
+                    .ilike('email', cleanEmail);
 
                 // 2. Upsert artisan_profiles table
-                final String? effectiveUid = existingRow?['id']?.toString() ?? loginRes.user?.id;
+                final String? effectiveUid =
+                    existingRow?['id']?.toString() ?? loginRes.user?.id;
                 if (effectiveUid != null) {
                   try {
                     await client.from('artisan_profiles').upsert({
@@ -787,7 +941,8 @@ class SupabaseService {
                       'studio_name': studioName ?? resolvedDisplayName,
                       'craft_category': craftCategory ?? 'Pottery & Ceramics',
                       'ssm_number': ssmNumber,
-                      'bio': 'Master artisan dedicated to traditional Malaysian craft.',
+                      'bio':
+                          'Master artisan dedicated to traditional Malaysian craft.',
                       'address': 'Malaysia',
                       'state': 'Melaka',
                       'status': 'PENDING_APPROVAL',
@@ -830,11 +985,17 @@ class SupabaseService {
             }
           } catch (authErr) {
             final authErrStr = authErr.toString().toLowerCase();
-            if (authErrStr.contains('invalid') || authErrStr.contains('credentials') || authErrStr.contains('password')) {
-              throw Exception('INCORRECT PASSWORD: The password entered does not match your existing account. Please enter your existing account password to link this profile.');
+            if (authErrStr.contains('invalid') ||
+                authErrStr.contains('credentials') ||
+                authErrStr.contains('password')) {
+              throw Exception(
+                'INCORRECT PASSWORD: The password entered does not match your existing account. Please enter your existing account password to link this profile.',
+              );
             }
           }
-          throw Exception('ACCOUNT ALREADY REGISTERED: An account with this email already exists. Please sign in instead.');
+          throw Exception(
+            'ACCOUNT ALREADY REGISTERED: An account with this email already exists. Please sign in instead.',
+          );
         }
 
         // Direct table fallback if auth signup rate limited or offline
@@ -877,13 +1038,17 @@ class SupabaseService {
 
     // Admin security policy: Admins cannot reset password via consumer self-service
     if (cleanEmail == 'admin@warisankita.my') {
-      throw Exception('ADMIN SECURITY RESTRICTION: Administrator credentials cannot be reset via self-service. Please contact system security.');
+      throw Exception(
+        'ADMIN SECURITY RESTRICTION: Administrator credentials cannot be reset via self-service. Please contact system security.',
+      );
     }
 
     // 1. Verify existence in local store or Supabase DB
     final accountCheck = await checkExistingAccount(cleanEmail);
     if (accountCheck.existingRole == 'Admin') {
-      throw Exception('ADMIN SECURITY RESTRICTION: Administrator credentials cannot be reset via self-service. Please contact system security.');
+      throw Exception(
+        'ADMIN SECURITY RESTRICTION: Administrator credentials cannot be reset via self-service. Please contact system security.',
+      );
     }
     final existsLocally = _userStore.containsKey(cleanEmail);
     final existsInDb = accountCheck.exists;
@@ -891,7 +1056,9 @@ class SupabaseService {
     final client = _client;
 
     if (!existsLocally && !existsInDb && client == null) {
-      throw Exception('EMAIL NOT FOUND: No account registered with this email.');
+      throw Exception(
+        'EMAIL NOT FOUND: No account registered with this email.',
+      );
     }
 
     // Populate local store if discovered via DB
@@ -910,7 +1077,8 @@ class SupabaseService {
     }
 
     // UC003 - C1: Password reset tokens must expire after 15 minutes
-    final token = 'TOKEN-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
+    final token =
+        'TOKEN-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
     final expiresAt = DateTime.now().add(const Duration(minutes: 15));
 
     _resetTokens[token] = {
@@ -928,15 +1096,20 @@ class SupabaseService {
       } catch (e) {
         debugPrint('Supabase resetPasswordForEmail note: $e');
         final errStr = e.toString().toLowerCase();
-        if (errStr.contains('user not found') || errStr.contains('email not found')) {
+        if (errStr.contains('user not found') ||
+            errStr.contains('email not found')) {
           if (!existsLocally && !existsInDb) {
-            throw Exception('EMAIL NOT FOUND: No account registered with this email.');
+            throw Exception(
+              'EMAIL NOT FOUND: No account registered with this email.',
+            );
           }
         }
       }
     }
 
-    debugPrint('Generated 15-min password reset token for $cleanEmail: $token (Expires: $expiresAt)');
+    debugPrint(
+      'Generated 15-min password reset token for $cleanEmail: $token (Expires: $expiresAt)',
+    );
   }
 
   Future<void> resetPasswordWithToken({
@@ -1008,7 +1181,9 @@ class SupabaseService {
     String cleanEmail = email.trim().toLowerCase();
     final client = _client;
 
-    if (cleanEmail.isEmpty && client != null && client.auth.currentUser != null) {
+    if (cleanEmail.isEmpty &&
+        client != null &&
+        client.auth.currentUser != null) {
       cleanEmail = client.auth.currentUser!.email?.toLowerCase() ?? '';
     }
     if (cleanEmail.isEmpty) {
@@ -1022,7 +1197,11 @@ class SupabaseService {
     // If not in local store, query Supabase public.users table
     if (userRecord == null && client != null) {
       try {
-        final row = await client.from('users').select().ilike('email', cleanEmail).maybeSingle();
+        final row = await client
+            .from('users')
+            .select()
+            .ilike('email', cleanEmail)
+            .maybeSingle();
         if (row != null) {
           userRecord = Map<String, dynamic>.from(row);
           _userStore[cleanEmail] = userRecord;
@@ -1075,15 +1254,26 @@ class SupabaseService {
           );
         } catch (_) {}
 
-        final existing = await client.from('users').select('id').ilike('email', cleanEmail).maybeSingle();
-        final String userId = existing?['id']?.toString() ?? client.auth.currentUser?.id ?? userRecord['id'] ?? '00000000-0000-4000-8000-000000000001';
+        final existing = await client
+            .from('users')
+            .select('id')
+            .ilike('email', cleanEmail)
+            .maybeSingle();
+        final String userId =
+            existing?['id']?.toString() ??
+            client.auth.currentUser?.id ??
+            userRecord['id'] ??
+            '00000000-0000-4000-8000-000000000001';
 
         if (existing != null) {
-          await client.from('users').update({
-            'status': 'PENDING_APPROVAL',
-            'role': 'Artisan & Tourist',
-            'updated_at': DateTime.now().toIso8601String(),
-          }).ilike('email', cleanEmail);
+          await client
+              .from('users')
+              .update({
+                'status': 'PENDING_APPROVAL',
+                'role': 'Artisan & Tourist',
+                'updated_at': DateTime.now().toIso8601String(),
+              })
+              .ilike('email', cleanEmail);
         } else {
           await client.from('users').insert({
             'id': userId,
@@ -1139,20 +1329,40 @@ class SupabaseService {
 
     final userRecord = _userStore.containsKey(cleanEmail)
         ? _userStore[cleanEmail]!
-        : <String, dynamic>{'email': cleanEmail, 'role': 'Tourist', 'roles': ['Tourist'], 'status': 'ACTIVE'};
+        : <String, dynamic>{
+            'email': cleanEmail,
+            'role': 'Tourist',
+            'roles': ['Tourist'],
+            'status': 'ACTIVE',
+          };
 
     final roleStr = (userRecord['role'] ?? '').toString();
-    final rolesList = userRecord['roles'] is List ? List<String>.from(userRecord['roles']) : <String>[];
-    final isArtisanAccount = roleStr.toLowerCase().contains('artisan') || rolesList.any((r) => r.toLowerCase().contains('artisan'));
+    final rolesList = userRecord['roles'] is List
+        ? List<String>.from(userRecord['roles'])
+        : <String>[];
+    final isArtisanAccount =
+        roleStr.toLowerCase().contains('artisan') ||
+        rolesList.any((r) => r.toLowerCase().contains('artisan'));
 
     // Uniqueness validation: Ensure newly chosen username is available and not registered by another account
     if (username != null && username.trim().isNotEmpty) {
-      final currentUsername = (userRecord['username'] as String?)?.trim().toLowerCase().replaceAll('@', '');
-      final candidateUsername = username.trim().toLowerCase().replaceAll('@', '');
+      final currentUsername = (userRecord['username'] as String?)
+          ?.trim()
+          .toLowerCase()
+          .replaceAll('@', '');
+      final candidateUsername = username.trim().toLowerCase().replaceAll(
+        '@',
+        '',
+      );
       if (currentUsername != candidateUsername) {
-        final isAvailable = await isUsernameAvailable(username, excludeEmail: cleanEmail);
+        final isAvailable = await isUsernameAvailable(
+          username,
+          excludeEmail: cleanEmail,
+        );
         if (!isAvailable) {
-          throw Exception('USERNAME ALREADY TAKEN: "@${username.replaceAll('@', '')}" is registered by another user. Please choose a different username.');
+          throw Exception(
+            'USERNAME ALREADY TAKEN: "@${username.replaceAll('@', '')}" is registered by another user. Please choose a different username.',
+          );
         }
       }
     }
@@ -1198,7 +1408,8 @@ class SupabaseService {
         }
         if (studioName != null) {
           updateMap['studio_name'] = studioName.trim();
-        } else if (isArtisanAccount && (username != null || displayName != null)) {
+        } else if (isArtisanAccount &&
+            (username != null || displayName != null)) {
           updateMap['studio_name'] = displayName ?? username;
         }
         if (bio != null) updateMap['bio'] = bio;
@@ -1211,14 +1422,20 @@ class SupabaseService {
           // 1. Update Supabase Postgres 'users' table (Core identity columns only)
           try {
             final userUpdates = <String, dynamic>{
-              if (username != null) 'username': username.trim().replaceAll('@', ''),
-              if (displayName != null || username != null) 'display_name': displayName ?? username,
-              if (displayName != null || username != null) 'full_name': displayName ?? username,
+              if (username != null)
+                'username': username.trim().replaceAll('@', ''),
+              if (displayName != null || username != null)
+                'display_name': displayName ?? username,
+              if (displayName != null || username != null)
+                'full_name': displayName ?? username,
               if (phone != null) 'phone_number': phone,
               'updated_at': DateTime.now().toIso8601String(),
             };
             if (userUpdates.length > 1) {
-              await client.from('users').update(userUpdates).ilike('email', cleanEmail);
+              await client
+                  .from('users')
+                  .update(userUpdates)
+                  .ilike('email', cleanEmail);
             }
           } catch (e) {
             debugPrint('Supabase updateUserProfile users table note: $e');
@@ -1227,22 +1444,33 @@ class SupabaseService {
           // 2. Update Supabase Postgres 'artisan_profiles' table (Professional columns only, by user_id)
           if (isArtisanAccount) {
             try {
-              final userRow = await client.from('users').select('id').ilike('email', cleanEmail).maybeSingle();
-              final String? effectiveUid = userRow?['id']?.toString() ?? client.auth.currentUser?.id;
+              final userRow = await client
+                  .from('users')
+                  .select('id')
+                  .ilike('email', cleanEmail)
+                  .maybeSingle();
+              final String? effectiveUid =
+                  userRow?['id']?.toString() ?? client.auth.currentUser?.id;
               if (effectiveUid != null) {
                 final artisanUpdates = <String, dynamic>{
-                  if (studioName != null && studioName.trim().isNotEmpty) 'studio_name': studioName.trim(),
+                  if (studioName != null && studioName.trim().isNotEmpty)
+                    'studio_name': studioName.trim(),
                   if (bio != null) 'bio': bio,
                   if (state != null) 'state': state,
                   if (craftCategory != null) 'craft_category': craftCategory,
                   'updated_at': DateTime.now().toIso8601String(),
                 };
                 if (artisanUpdates.length > 1) {
-                  await client.from('artisan_profiles').update(artisanUpdates).eq('user_id', effectiveUid);
+                  await client
+                      .from('artisan_profiles')
+                      .update(artisanUpdates)
+                      .eq('user_id', effectiveUid);
                 }
               }
             } catch (e) {
-              debugPrint('Supabase updateUserProfile artisan_profiles table note: $e');
+              debugPrint(
+                'Supabase updateUserProfile artisan_profiles table note: $e',
+              );
             }
           }
 
@@ -1270,12 +1498,23 @@ class SupabaseService {
       try {
         dynamic res;
         try {
-          res = await client.from('users').select('*, artisan_profiles!artisan_profiles_user_id_fkey(*, artisan_documents(*))').ilike('status', '%PENDING%');
+          res = await client
+              .from('users')
+              .select(
+                '*, artisan_profiles!artisan_profiles_user_id_fkey(*, artisan_documents(*))',
+              )
+              .ilike('status', '%PENDING%');
         } catch (_) {
           try {
-            res = await client.from('users').select('*, artisan_profiles(*, artisan_documents(*))').ilike('status', '%PENDING%');
+            res = await client
+                .from('users')
+                .select('*, artisan_profiles(*, artisan_documents(*))')
+                .ilike('status', '%PENDING%');
           } catch (_) {
-            res = await client.from('users').select().ilike('status', '%PENDING%');
+            res = await client
+                .from('users')
+                .select()
+                .ilike('status', '%PENDING%');
           }
         }
         if (res is List && res.isNotEmpty) {
@@ -1284,10 +1523,13 @@ class SupabaseService {
             Map<String, dynamic>? ap;
             if (rowMap['artisan_profiles'] is Map) {
               ap = Map<String, dynamic>.from(rowMap['artisan_profiles']);
-            } else if (rowMap['artisan_profiles'] is List && (rowMap['artisan_profiles'] as List).isNotEmpty) {
-              ap = Map<String, dynamic>.from((rowMap['artisan_profiles'] as List).first);
+            } else if (rowMap['artisan_profiles'] is List &&
+                (rowMap['artisan_profiles'] as List).isNotEmpty) {
+              ap = Map<String, dynamic>.from(
+                (rowMap['artisan_profiles'] as List).first,
+              );
             }
-            
+
             if (ap != null) {
               rowMap['studio_name'] ??= ap['studio_name'];
               rowMap['craft_category'] ??= ap['craft_category'];
@@ -1309,7 +1551,7 @@ class SupabaseService {
                   final type = doc['doc_type']?.toString();
                   final url = doc['file_url']?.toString();
                   final name = doc['file_name']?.toString();
-                  
+
                   if (type == 'PORTFOLIO_IMAGE' || type == 'STUDIO_PHOTO') {
                     if (url != null) photos.add(url);
                   } else if (type == 'SSM_BUSINESS_CERT') {
@@ -1322,15 +1564,18 @@ class SupabaseService {
                     if (url != null) avatarUrl = url;
                   }
                 }
-                
+
                 if (photos.isNotEmpty) rowMap['photos'] = photos;
                 if (ssmFileName != null) rowMap['ssm_file_name'] = ssmFileName;
                 if (ssmFileUrl != null) rowMap['ssm_file_url'] = ssmFileUrl;
-                if (certFileName != null) rowMap['cert_file_name'] = certFileName;
+                if (certFileName != null)
+                  rowMap['cert_file_name'] = certFileName;
                 if (certFileUrl != null) rowMap['cert_file_url'] = certFileUrl;
-                
+
                 // fallback the avatar if users.avatar_url is empty
-                if ((rowMap['avatar_url'] == null || rowMap['avatar_url'].toString().isEmpty) && avatarUrl != null) {
+                if ((rowMap['avatar_url'] == null ||
+                        rowMap['avatar_url'].toString().isEmpty) &&
+                    avatarUrl != null) {
                   rowMap['imageUrl'] = avatarUrl;
                 }
               }
@@ -1349,7 +1594,9 @@ class SupabaseService {
       final status = (user['status'] ?? '').toString().toUpperCase();
       if (status.contains('PENDING')) {
         final userEmail = (user['email'] ?? entry.key).toString().toLowerCase();
-        if (!results.any((r) => (r['email'] ?? '').toString().toLowerCase() == userEmail)) {
+        if (!results.any(
+          (r) => (r['email'] ?? '').toString().toLowerCase() == userEmail,
+        )) {
           results.add(Map<String, dynamic>.from(user));
         }
       }
@@ -1378,13 +1625,19 @@ class SupabaseService {
                 .ilike('role', '%Artisan%')
                 .neq('status', 'PENDING_APPROVAL');
           } catch (_) {
-            res = await client.from('users').select().ilike('role', '%Artisan%').neq('status', 'PENDING_APPROVAL');
+            res = await client
+                .from('users')
+                .select()
+                .ilike('role', '%Artisan%')
+                .neq('status', 'PENDING_APPROVAL');
           }
         }
 
         if (res is List && res.isNotEmpty) {
           for (final row in res) {
-            results.add(ActiveArtisanMaster.fromMap(Map<String, dynamic>.from(row)));
+            results.add(
+              ActiveArtisanMaster.fromMap(Map<String, dynamic>.from(row)),
+            );
           }
         }
       } catch (e) {
@@ -1400,7 +1653,9 @@ class SupabaseService {
       if (role.contains('Artisan') && !status.contains('PENDING')) {
         final email = (user['email'] ?? entry.key).toString().toLowerCase();
         if (!results.any((a) => a.email.toLowerCase() == email)) {
-          results.add(ActiveArtisanMaster.fromMap(Map<String, dynamic>.from(user)));
+          results.add(
+            ActiveArtisanMaster.fromMap(Map<String, dynamic>.from(user)),
+          );
         }
       }
     }
@@ -1426,7 +1681,10 @@ class SupabaseService {
                 .select('*, artisan_profiles(*)')
                 .order('created_at', ascending: false);
           } catch (_) {
-            res = await client.from('users').select().order('created_at', ascending: false);
+            res = await client
+                .from('users')
+                .select()
+                .order('created_at', ascending: false);
           }
         }
 
@@ -1472,12 +1730,17 @@ class SupabaseService {
     if (client != null) {
       // 1. Try invoking PostgreSQL SECURITY DEFINER RPC
       try {
-        await client.rpc('admin_update_user_status', params: {
-          'p_email': cleanEmail,
-          'p_status': newStatus,
-          'p_role': newRole,
-        });
-        debugPrint('Supabase RPC admin_update_user_status succeeded for $cleanEmail');
+        await client.rpc(
+          'admin_update_user_status',
+          params: {
+            'p_email': cleanEmail,
+            'p_status': newStatus,
+            'p_role': newRole,
+          },
+        );
+        debugPrint(
+          'Supabase RPC admin_update_user_status succeeded for $cleanEmail',
+        );
       } catch (rpcError) {
         debugPrint('Supabase RPC admin_update_user_status note: $rpcError');
       }
@@ -1599,15 +1862,17 @@ class SupabaseService {
   Future<List<ArtisanModel>> fetchArtisans() async {
     // Simulate network delay for "expensive" feel
     await Future.delayed(const Duration(milliseconds: 800));
-    
+
     return [
       ArtisanModel(
         id: '1',
         name: 'Master Zaid',
         craftType: 'Woodwork',
         state: 'Terengganu',
-        description: 'A 5th generation master of the Cengal wood carving tradition. His intricate patterns represent the spiritual connection between nature and heritage.',
-        imageUrl: 'https://images.unsplash.com/photo-1605721911519-3dfeb3be25e7?w=800',
+        description:
+            'A 5th generation master of the Cengal wood carving tradition. His intricate patterns represent the spiritual connection between nature and heritage.',
+        imageUrl:
+            'https://images.unsplash.com/photo-1605721911519-3dfeb3be25e7?w=800',
         rating: 4.9,
         experience: '35 Years',
         workshopCount: 12,
@@ -1618,8 +1883,10 @@ class SupabaseService {
         name: 'Tok Wan',
         craftType: 'Songket',
         state: 'Kelantan',
-        description: 'Custodian of traditional "Bunga Dalam" weaving motifs. Each piece takes 3 months to complete using hand-spun silk and gold threads.',
-        imageUrl: 'https://images.unsplash.com/photo-1590739225287-bd31519780c3?w=800',
+        description:
+            'Custodian of traditional "Bunga Dalam" weaving motifs. Each piece takes 3 months to complete using hand-spun silk and gold threads.',
+        imageUrl:
+            'https://images.unsplash.com/photo-1590739225287-bd31519780c3?w=800',
         rating: 4.8,
         experience: '45 Years',
         workshopCount: 8,
@@ -1630,8 +1897,10 @@ class SupabaseService {
         name: 'Siti Rahmah',
         craftType: 'Batik',
         state: 'Terengganu',
-        description: 'Specialist in hand-drawn chanting batik using natural dyes extracted from rainforest barks and local fruits.',
-        imageUrl: 'https://images.unsplash.com/photo-1544967082-d9d25d867d66?w=800',
+        description:
+            'Specialist in hand-drawn chanting batik using natural dyes extracted from rainforest barks and local fruits.',
+        imageUrl:
+            'https://images.unsplash.com/photo-1544967082-d9d25d867d66?w=800',
         rating: 4.7,
         experience: '22 Years',
         workshopCount: 15,
@@ -1642,8 +1911,10 @@ class SupabaseService {
         name: 'Ahmad Fauzi',
         craftType: 'Keris',
         state: 'Melaka',
-        description: 'Master blacksmith forging the soul of the Malay archipelago. His keris blades are renowned for their strength and symbolic beauty.',
-        imageUrl: 'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?w=800',
+        description:
+            'Master blacksmith forging the soul of the Malay archipelago. His keris blades are renowned for their strength and symbolic beauty.',
+        imageUrl:
+            'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?w=800',
         rating: 4.9,
         experience: '30 Years',
         workshopCount: 4,
@@ -1659,6 +1930,9 @@ class SupabaseService {
   static final Map<String, int> _sessionReplyVotes = {};
   static final List<Map<String, dynamic>> _localReportQueue = [];
   static final List<Map<String, dynamic>> _localModerationHistory = [];
+  static final Set<String> _deletedPostIds = {};
+  static final Set<String> _dismissedReportPostIds = {};
+  static final Set<String> _dismissedReportReplyIds = {};
 
   String _threadVoteKey(String threadId) {
     final userId = _client?.auth.currentUser?.id ?? 'guest';
@@ -1672,15 +1946,29 @@ class SupabaseService {
 
   Future<List<ForumThread>> fetchThreads() async {
     await Future.delayed(const Duration(milliseconds: 300));
+    // Load persisted admin-deleted post IDs (survive app restart)
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getStringList('wk_admin_deleted_posts');
+      if (saved != null) _deletedPostIds.addAll(saved);
+    } catch (_) {}
     final client = _client;
     if (client != null) {
       try {
         dynamic res;
         try {
-          res = await client.from('forum_posts').select('*, users!forum_posts_user_id_fkey(id, email, full_name, username, avatar_url, role)');
+          res = await client
+              .from('forum_posts')
+              .select(
+                '*, users!forum_posts_user_id_fkey(id, email, full_name, username, avatar_url, role)',
+              );
         } catch (_) {
           try {
-            res = await client.from('forum_posts').select('*, users(id, email, full_name, username, avatar_url, role)');
+            res = await client
+                .from('forum_posts')
+                .select(
+                  '*, users(id, email, full_name, username, avatar_url, role)',
+                );
           } catch (_) {
             res = await client.from('forum_posts').select();
           }
@@ -1692,8 +1980,7 @@ class SupabaseService {
         final Map<String, int> persistedPostVotes = {};
         final Map<String, int> persistedReplyVotes = {};
 
-        final String? currentUserId =
-            client.auth.currentUser?.id;
+        final String? currentUserId = client.auth.currentUser?.id;
 
         if (currentUserId != null) {
           try {
@@ -1733,30 +2020,100 @@ class SupabaseService {
           }
         }
 
+        // =====================================================
+        // Query active pending reports from forum_reports table
+        // =====================================================
+        final Set<String> activePendingPostReports = {};
+        final Set<String> activePendingReplyReports = {};
+        final Map<String, Map<String, dynamic>> activeReportDetails = {};
+
+        try {
+          final pendingReportsRes = await client
+              .from('forum_reports')
+              .select('post_id, reply_id, reason, notes, status')
+              .eq('status', 'pending');
+
+          if (pendingReportsRes is List) {
+            for (final r in pendingReportsRes) {
+              final rMap = Map<String, dynamic>.from(r);
+              final pId = rMap['post_id']?.toString();
+              final repId = rMap['reply_id']?.toString();
+              if (pId != null && pId.isNotEmpty) {
+                activePendingPostReports.add(pId);
+                activeReportDetails['post_$pId'] = rMap;
+              }
+              if (repId != null && repId.isNotEmpty) {
+                activePendingReplyReports.add(repId);
+                activeReportDetails['reply_$repId'] = rMap;
+              }
+            }
+          }
+        } catch (e) {
+          debugPrint('fetch pending reports note: $e');
+        }
+
         final List<ForumThread> remote = [];
         if (res is List && res.isNotEmpty) {
           for (final row in res) {
             final threadMap = Map<String, dynamic>.from(row);
             final threadId = threadMap['id'].toString();
 
-            final int persistedVote = persistedPostVotes[threadId] ?? _sessionThreadVotes[_threadVoteKey(threadId)] ?? (threadMap['user_vote'] as num?)?.toInt() ?? 0;
+            final int persistedVote =
+                persistedPostVotes[threadId] ??
+                _sessionThreadVotes[_threadVoteKey(threadId)] ??
+                (threadMap['user_vote'] as num?)?.toInt() ??
+                0;
 
             // Keep session cache synchronized with database
             _sessionThreadVotes[_threadVoteKey(threadId)] = persistedVote;
             threadMap['userVote'] = persistedVote;
 
-            // Preserve local report status if recorded
-            final localPostReport = _localReportQueue.where((r) => r['postId'] == threadId && r['type'] == 'post').firstOrNull;
-            if (localPostReport != null) {
-              threadMap['is_reported'] = true;
-              final rList = (localPostReport['reports'] as List?) ?? [];
-              if (rList.isNotEmpty) {
-                threadMap['report_reason'] = rList.first['reason'];
-                threadMap['report_notes'] = rList.first['notes'];
+            // Content is reported ONLY if there is an active pending report in forum_reports or local queue, and NOT dismissed
+            bool isPostReported = false;
+            String? postReportReason;
+            String? postReportNotes;
+
+            if (!_deletedPostIds.contains(threadId) && !_dismissedReportPostIds.contains(threadId)) {
+              if (activePendingPostReports.contains(threadId)) {
+                isPostReported = true;
+                postReportReason =
+                    activeReportDetails['post_$threadId']?['reason']
+                        ?.toString() ??
+                    threadMap['report_reason']?.toString() ??
+                    'Reported Content';
+                postReportNotes =
+                    activeReportDetails['post_$threadId']?['notes']
+                        ?.toString() ??
+                    threadMap['report_notes']?.toString();
+              } else {
+                final localPostReport = _localReportQueue
+                    .where(
+                      (r) =>
+                          (r['postId']?.toString() == threadId ||
+                              r['id']?.toString() == threadId) &&
+                          (r['type'] == null || r['type'] == 'post'),
+                    )
+                    .firstOrNull;
+                if (localPostReport != null) {
+                  isPostReported = true;
+                  final rList = (localPostReport['reports'] as List?) ?? [];
+                  if (rList.isNotEmpty) {
+                    postReportReason = rList.first['reason']?.toString();
+                    postReportNotes = rList.first['notes']?.toString();
+                  }
+                }
               }
             }
 
-            final localMatch = _forumStore.where((l) => l.id == threadMap['id']).firstOrNull;
+            threadMap['is_reported'] = isPostReported;
+            threadMap['report_reason'] = isPostReported
+                ? postReportReason
+                : null;
+            threadMap['report_notes'] = isPostReported ? postReportNotes : null;
+
+            final localMatch = _forumStore
+                .where((l) => l.id == threadMap['id'])
+                .firstOrNull;
 
             try {
               dynamic repliesRes;
@@ -1764,8 +2121,8 @@ class SupabaseService {
                 repliesRes = await client
                     .from('forum_replies')
                     .select(
-                  '*, users!forum_replies_user_id_fkey(id, email, full_name, username, avatar_url, role)',
-                )
+                      '*, users!forum_replies_user_id_fkey(id, email, full_name, username, avatar_url, role)',
+                    )
                     .eq('post_id', threadMap['id'])
                     .order('created_at', ascending: true);
               } catch (_) {
@@ -1773,8 +2130,8 @@ class SupabaseService {
                   repliesRes = await client
                       .from('forum_replies')
                       .select(
-                    '*, users(id, email, full_name, username, avatar_url, role)',
-                  )
+                        '*, users(id, email, full_name, username, avatar_url, role)',
+                      )
                       .eq('post_id', threadMap['id'])
                       .order('created_at', ascending: true);
                 } catch (_) {
@@ -1791,20 +2148,58 @@ class SupabaseService {
                 for (final r in repliesRes) {
                   final rMap = Map<String, dynamic>.from(r);
                   final replyId = rMap['id'].toString();
-                  final int pReplyVote = persistedReplyVotes[replyId] ?? _sessionReplyVotes[_replyVoteKey(replyId)] ?? (rMap['user_vote'] as num?)?.toInt() ?? 0;
+                  final int pReplyVote =
+                      persistedReplyVotes[replyId] ??
+                      _sessionReplyVotes[_replyVoteKey(replyId)] ??
+                      (rMap['user_vote'] as num?)?.toInt() ??
+                      0;
                   _sessionReplyVotes[_replyVoteKey(replyId)] = pReplyVote;
                   rMap['userVote'] = pReplyVote;
 
-                  // Preserve local reply report status if recorded
-                  final localReplyReport = _localReportQueue.where((rep) => rep['replyId'] == replyId && rep['type'] == 'reply').firstOrNull;
-                  if (localReplyReport != null) {
-                    rMap['is_reported'] = true;
-                    final rList = (localReplyReport['reports'] as List?) ?? [];
-                    if (rList.isNotEmpty) {
-                      rMap['report_reason'] = rList.first['reason'];
-                      rMap['report_notes'] = rList.first['notes'];
+                  // Reply is reported ONLY if there is an active pending report, and NOT dismissed
+                  bool isReplyReported = false;
+                  String? replyReportReason;
+                  String? replyReportNotes;
+
+                  if (!_dismissedReportReplyIds.contains(replyId)) {
+                    if (activePendingReplyReports.contains(replyId)) {
+                      isReplyReported = true;
+                      replyReportReason =
+                          activeReportDetails['reply_$replyId']?['reason']
+                              ?.toString() ??
+                          rMap['report_reason']?.toString() ??
+                          'Reported Reply';
+                      replyReportNotes =
+                          activeReportDetails['reply_$replyId']?['notes']
+                              ?.toString() ??
+                          rMap['report_notes']?.toString();
+                    } else {
+                      final localReplyReport = _localReportQueue
+                          .where(
+                            (rep) =>
+                                rep['replyId'] == replyId &&
+                                rep['type'] == 'reply',
+                          )
+                          .firstOrNull;
+                      if (localReplyReport != null) {
+                        isReplyReported = true;
+                        final rList =
+                            (localReplyReport['reports'] as List?) ?? [];
+                        if (rList.isNotEmpty) {
+                          replyReportReason = rList.first['reason']?.toString();
+                          replyReportNotes = rList.first['notes']?.toString();
+                        }
+                      }
                     }
                   }
+
+                  rMap['is_reported'] = isReplyReported;
+                  rMap['report_reason'] = isReplyReported
+                      ? replyReportReason
+                      : null;
+                  rMap['report_notes'] = isReplyReported
+                      ? replyReportNotes
+                      : null;
 
                   processedReplies.add(rMap);
                 }
@@ -1813,14 +2208,22 @@ class SupabaseService {
               threadMap['replies'] = processedReplies;
             } catch (_) {
               if (localMatch != null && localMatch.replies.isNotEmpty) {
-                threadMap['replies'] = localMatch.replies.map((r) => r.toMap()).toList();
+                threadMap['replies'] = localMatch.replies
+                    .map((r) => r.toMap())
+                    .toList();
               }
+            }
+            // Skip posts that have been admin-deleted (_deletedPostIds)
+            if (_deletedPostIds.contains(threadMap['id']?.toString())) {
+              continue;
             }
             remote.add(ForumThread.fromMap(threadMap));
           }
         }
+
         _forumStore.clear();
         _forumStore.addAll(remote);
+        _forumStore.removeWhere((t) => _deletedPostIds.contains(t.id));
         return remote;
       } catch (e) {
         debugPrint('Supabase fetchThreads error: $e');
@@ -1832,17 +2235,19 @@ class SupabaseService {
   Future<List<Map<String, dynamic>>> fetchForumReportQueue() async {
     final Map<String, Map<String, dynamic>> groupedReports = {};
 
-    // 1. Add all from _localReportQueue
+    // 1. Add all from _localReportQueue (excluding dismissed)
     for (final item in _localReportQueue) {
-      final String? postId = item['postId']?.toString();
-      final String? replyId = item['replyId']?.toString();
+      final String? postId = (item['postId'] ?? (item['type'] == 'post' ? item['id'] : null))?.toString();
+      final String? replyId = (item['replyId'] ?? (item['type'] == 'reply' ? item['id'] : null))?.toString();
+      if (postId != null && (_deletedPostIds.contains(postId) || _dismissedReportPostIds.contains(postId))) continue;
+      if (replyId != null && _dismissedReportReplyIds.contains(replyId)) continue;
       final String key = postId != null ? 'post_$postId' : 'reply_$replyId';
       groupedReports[key] = Map<String, dynamic>.from(item);
     }
 
-    // 2. Add reported items from _forumStore
+    // 2. Add reported items from _forumStore (excluding dismissed)
     for (final thread in _forumStore) {
-      if (thread.isReported) {
+      if (thread.isReported && !_deletedPostIds.contains(thread.id) && !_dismissedReportPostIds.contains(thread.id)) {
         final key = 'post_${thread.id}';
         if (!groupedReports.containsKey(key)) {
           groupedReports[key] = {
@@ -1853,14 +2258,14 @@ class SupabaseService {
                 'reason': thread.reportReason ?? 'Inappropriate Content',
                 'notes': thread.reportNotes ?? '',
                 'created_at': thread.timestamp,
-              }
+              },
             ],
             'reportsCount': 1,
           };
         }
       }
       for (final reply in thread.replies) {
-        if (reply.isReported) {
+        if (reply.isReported && !_dismissedReportReplyIds.contains(reply.id)) {
           final key = 'reply_${reply.id}';
           if (!groupedReports.containsKey(key)) {
             groupedReports[key] = {
@@ -1872,7 +2277,7 @@ class SupabaseService {
                   'reason': reply.reportReason ?? 'Inappropriate Content',
                   'notes': reply.reportNotes ?? '',
                   'created_at': reply.timestamp,
-                }
+                },
               ],
               'reportsCount': 1,
             };
@@ -1895,6 +2300,8 @@ class SupabaseService {
         for (final report in reports) {
           final postId = report['post_id']?.toString();
           final replyId = report['reply_id']?.toString();
+          if (postId != null && (_deletedPostIds.contains(postId) || _dismissedReportPostIds.contains(postId))) continue;
+          if (replyId != null && _dismissedReportReplyIds.contains(replyId)) continue;
           final String key;
           if (postId != null) {
             key = 'post_$postId';
@@ -1913,9 +2320,28 @@ class SupabaseService {
             };
           }
 
-          final reportList = groupedReports[key]!['reports'] as List<Map<String, dynamic>>;
-          reportList.add(report);
-          groupedReports[key]!['reportsCount'] = reportList.length;
+          final reportList = List<Map<String, dynamic>>.from(
+            groupedReports[key]!['reports'] ?? [],
+          );
+
+          final String? repId = report['id']?.toString();
+          final String repReason = report['reason']?.toString() ?? '';
+          final String repNotes = report['notes']?.toString() ?? '';
+
+          final bool isDuplicate = reportList.any((r) {
+            final String? existingId = r['id']?.toString();
+            if (repId != null && existingId != null && repId == existingId) {
+              return true;
+            }
+            return (r['reason']?.toString() ?? '') == repReason &&
+                (r['notes']?.toString() ?? '') == repNotes;
+          });
+
+          if (!isDuplicate) {
+            reportList.add(report);
+            groupedReports[key]!['reports'] = reportList;
+            groupedReports[key]!['reportsCount'] = reportList.length;
+          }
         }
       } catch (e) {
         debugPrint('fetchForumReportQueue Supabase note: $e');
@@ -1925,27 +2351,49 @@ class SupabaseService {
     return groupedReports.values.toList();
   }
 
+  static const String _keyDismissedNotices = 'wk_dismissed_moderation_notices';
+  static final Set<String> _dismissedNoticeIds = {};
+
   Future<List<Map<String, dynamic>>> fetchForumModerationHistory() async {
-    final List<Map<String, dynamic>> history = List.from(_localModerationHistory);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getStringList(_keyDismissedNotices);
+      if (saved != null) {
+        _dismissedNoticeIds.addAll(saved);
+      }
+    } catch (_) {}
+
+    final List<Map<String, dynamic>> history =
+        List.from(_localModerationHistory)..removeWhere(
+          (h) =>
+              _dismissedNoticeIds.contains(h['id']?.toString()) ||
+              _dismissedNoticeIds.contains(h['resolved_at']?.toString()),
+        );
+
     final client = _client;
     if (client != null) {
       try {
-        final response = await client
-            .from('forum_reports')
-            .select()
-            .inFilter(
-          'status',
-          ['dismissed', 'actioned'],
-        )
-            .order(
-          'resolved_at',
-          ascending: false,
-        );
+        dynamic response;
+        try {
+          response = await client
+              .from('forum_reports')
+              .select()
+              .inFilter('status', ['dismissed', 'actioned'])
+              .order('resolved_at', ascending: false);
+        } catch (_) {
+          // Fallback if resolved_at column does not exist yet
+          response = await client
+              .from('forum_reports')
+              .select()
+              .inFilter('status', ['dismissed', 'actioned']);
+        }
 
-        final remoteHistory = List<Map<String, dynamic>>.from(response);
+        final remoteHistory = List<Map<String, dynamic>>.from(response ?? []);
         for (final item in remoteHistory) {
           final id = item['id']?.toString();
-          if (id != null && !history.any((h) => h['id']?.toString() == id)) {
+          if (id != null &&
+              !_dismissedNoticeIds.contains(id) &&
+              !history.any((h) => h['id']?.toString() == id)) {
             history.add(item);
           }
         }
@@ -1956,16 +2404,85 @@ class SupabaseService {
     return history;
   }
 
+  Future<void> dismissModerationNotice(String reportId) async {
+    _dismissedNoticeIds.add(reportId);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(
+        _keyDismissedNotices,
+        _dismissedNoticeIds.toList(),
+      );
+    } catch (_) {}
+
+    _localModerationHistory.removeWhere(
+      (item) =>
+          item['id']?.toString() == reportId ||
+          item['resolved_at']?.toString() == reportId,
+    );
+
+    final client = _client;
+    if (client != null) {
+      try {
+        await client.rpc(
+          'dismiss_moderation_notice',
+          params: {'p_report_id': reportId},
+        );
+      } catch (_) {}
+
+      try {
+        await client.from('forum_reports').update({
+          'status': 'dismissed_by_user',
+          'resolved_at': DateTime.now().toIso8601String(),
+        }).eq('id', reportId);
+      } catch (_) {}
+    }
+  }
+
   Future<void> createThread(ForumThread thread) async {
+    _deletedPostIds.remove(thread.id);
+    _dismissedReportPostIds.remove(thread.id);
     _forumStore.insert(0, thread);
     _sessionThreadVotes[_threadVoteKey(thread.id)] = 0; // Initial neutral vote
+
+    if (thread.isReported) {
+      final existingIdx = _localReportQueue.indexWhere(
+        (r) => r['postId'] == thread.id && r['type'] == 'post',
+      );
+      final newReportItem = {
+        'reason': thread.reportReason ?? 'Automated content flag',
+        'notes': thread.reportNotes ?? '',
+        'created_at': DateTime.now().toIso8601String(),
+      };
+      if (existingIdx != -1) {
+        final existingReports = List<Map<String, dynamic>>.from(
+          _localReportQueue[existingIdx]['reports'] ?? [],
+        );
+        existingReports.add(newReportItem);
+        _localReportQueue[existingIdx]['reports'] = existingReports;
+        _localReportQueue[existingIdx]['reportsCount'] = existingReports.length;
+      } else {
+        _localReportQueue.add({
+          'type': 'post',
+          'postId': thread.id,
+          'reports': [newReportItem],
+          'reportsCount': 1,
+        });
+      }
+    }
 
     final client = _client;
     if (client != null) {
       final String? authUid = client.auth.currentUser?.id;
-      final String? userStoreUid = _userStore[thread.authorEmail]?['id']?.toString();
-      final String effectiveUid = thread.userId ?? authUid ?? userStoreUid ?? '00000000-0000-4000-8000-000000000001';
-      final String postContent = thread.replies.isNotEmpty ? thread.replies.first.text : thread.title;
+      final String? userStoreUid = _userStore[thread.authorEmail]?['id']
+          ?.toString();
+      final String effectiveUid =
+          thread.userId ??
+          authUid ??
+          userStoreUid ??
+          '00000000-0000-4000-8000-000000000001';
+      final String postContent = thread.replies.isNotEmpty
+          ? thread.replies.first.text
+          : thread.title;
       final String tagValue = thread.community.replaceAll('c/', '');
 
       final Map<String, dynamic> verifiedDbMap = {
@@ -1985,6 +2502,17 @@ class SupabaseService {
         await client.from('forum_posts').insert(verifiedDbMap);
       } catch (e) {
         debugPrint('Supabase createThread insert note: $e');
+        if (e.toString().contains('23503') ||
+            e.toString().contains('foreign key') ||
+            e.toString().contains('user_id')) {
+          try {
+            final fallbackMap = Map<String, dynamic>.from(verifiedDbMap)
+              ..remove('user_id');
+            await client.from('forum_posts').insert(fallbackMap);
+          } catch (dbErr) {
+            debugPrint('Supabase createThread fallback insert error: $dbErr');
+          }
+        }
       }
 
       for (final reply in thread.replies) {
@@ -2001,14 +2529,56 @@ class SupabaseService {
           });
         } catch (re) {
           debugPrint('Supabase createThread initial reply note: $re');
+          if (re.toString().contains('23503') ||
+              re.toString().contains('foreign key') ||
+              re.toString().contains('user_id')) {
+            try {
+              await client.from('forum_replies').insert({
+                'id': reply.id,
+                'post_id': thread.id,
+                'content': reply.text,
+                'upvotes': reply.upvotes,
+                'is_verified_answer': reply.isVerifiedAnswer,
+                'is_edited': reply.isEdited,
+              });
+            } catch (_) {}
+          }
         }
       }
     }
   }
 
   Future<void> postReply(String threadId, ThreadReply reply) async {
+    _dismissedReportReplyIds.remove(reply.id);
     final postVoteKey = _replyVoteKey(reply.id);
     _sessionReplyVotes[postVoteKey] = 0;
+
+    if (reply.isReported) {
+      final existingIdx = _localReportQueue.indexWhere(
+        (r) => r['replyId'] == reply.id && r['type'] == 'reply',
+      );
+      final newReportItem = {
+        'reason': reply.reportReason ?? 'Automated reply flag',
+        'notes': reply.reportNotes ?? '',
+        'created_at': DateTime.now().toIso8601String(),
+      };
+      if (existingIdx != -1) {
+        final existingReports = List<Map<String, dynamic>>.from(
+          _localReportQueue[existingIdx]['reports'] ?? [],
+        );
+        existingReports.add(newReportItem);
+        _localReportQueue[existingIdx]['reports'] = existingReports;
+        _localReportQueue[existingIdx]['reportsCount'] = existingReports.length;
+      } else {
+        _localReportQueue.add({
+          'type': 'reply',
+          'postId': threadId,
+          'replyId': reply.id,
+          'reports': [newReportItem],
+          'reportsCount': 1,
+        });
+      }
+    }
 
     final idx = _forumStore.indexWhere((t) => t.id == threadId);
     if (idx != -1) {
@@ -2024,8 +2594,10 @@ class SupabaseService {
     final client = _client;
     if (client != null) {
       final String? authUid = client.auth.currentUser?.id;
-      final String? userStoreUid = _userStore[reply.authorEmail]?['id']?.toString();
-      final String effectiveUid = authUid ?? userStoreUid ?? '00000000-0000-4000-8000-000000000001';
+      final String? userStoreUid = _userStore[reply.authorEmail]?['id']
+          ?.toString();
+      final String effectiveUid =
+          authUid ?? userStoreUid ?? '00000000-0000-4000-8000-000000000001';
 
       final Map<String, dynamic> verifiedReplyMap = {
         'id': reply.id,
@@ -2035,36 +2607,41 @@ class SupabaseService {
         'upvotes': reply.upvotes,
         'is_verified_answer': reply.isVerifiedAnswer,
         'is_edited': reply.isEdited,
-        if (reply.parentReplyId != null)
-          'parent_reply_id': reply.parentReplyId,
+        'is_reported': reply.isReported,
+        if (reply.reportReason != null) 'report_reason': reply.reportReason,
+        if (reply.reportNotes != null) 'report_notes': reply.reportNotes,
+        if (reply.parentReplyId != null) 'parent_reply_id': reply.parentReplyId,
       };
 
       try {
-        await client
-            .from('forum_replies')
-            .insert(verifiedReplyMap);
+        await client.from('forum_replies').insert(verifiedReplyMap);
 
         // If a verified Artisan replies,
         // mark the thread as having a verified Artisan answer.
         if (reply.isArtisan) {
           await client
               .from('forum_posts')
-              .update({
-            'is_solved': true,
-          })
+              .update({'is_solved': true})
               .eq('id', threadId);
         }
-
       } catch (e) {
         debugPrint('Supabase postReply insert/update note: $e');
+        if (e.toString().contains('23503') ||
+            e.toString().contains('foreign key') ||
+            e.toString().contains('user_id')) {
+          try {
+            final fallbackMap = Map<String, dynamic>.from(verifiedReplyMap)
+              ..remove('user_id');
+            await client.from('forum_replies').insert(fallbackMap);
+          } catch (dbErr) {
+            debugPrint('Supabase postReply fallback insert error: $dbErr');
+          }
+        }
       }
     }
   }
 
-  Future<void> voteThread(
-      String threadId,
-      int voteDirection,
-      ) async {
+  Future<void> voteThread(String threadId, int voteDirection) async {
     if (voteDirection != 1 && voteDirection != -1) {
       return;
     }
@@ -2078,15 +2655,24 @@ class SupabaseService {
     final String? currentUserEmail = client?.auth.currentUser?.email;
 
     // Self-vote prevention: Author cannot vote on their own thread
-    final bool isAuthor = (currentUserId != null && currentThread.userId != null && currentThread.userId == currentUserId) ||
-        (currentUserEmail != null && currentThread.authorEmail.isNotEmpty && currentThread.authorEmail.toLowerCase() == currentUserEmail.toLowerCase());
+    final bool isAuthor =
+        (currentUserId != null &&
+            currentThread.userId != null &&
+            currentThread.userId == currentUserId) ||
+        (currentUserEmail != null &&
+            currentThread.authorEmail.isNotEmpty &&
+            currentThread.authorEmail.toLowerCase() ==
+                currentUserEmail.toLowerCase());
     if (isAuthor) {
-      debugPrint('Self-vote prevention: Author cannot vote on their own thread');
+      debugPrint(
+        'Self-vote prevention: Author cannot vote on their own thread',
+      );
       return;
     }
 
     final String voteKey = _threadVoteKey(threadId);
-    final int currentVote = _sessionThreadVotes[voteKey] ?? currentThread.userVote;
+    final int currentVote =
+        _sessionThreadVotes[voteKey] ?? currentThread.userVote;
 
     // Toggle off if same vote direction, else switch direction
     final int newVote = (currentVote == voteDirection) ? 0 : voteDirection;
@@ -2105,16 +2691,17 @@ class SupabaseService {
     try {
       final result = await client.rpc(
         'vote_forum_post',
-        params: {
-          'p_post_id': threadId,
-          'p_vote': voteDirection,
-        },
+        params: {'p_post_id': threadId, 'p_vote': voteDirection},
       );
 
       if (result is Map) {
-        final Map<String, dynamic> resultMap = Map<String, dynamic>.from(result);
-        final int rpcUpvotes = (resultMap['upvotes'] as num?)?.toInt() ?? newUpvotes;
-        final int rpcUserVote = (resultMap['user_vote'] as num?)?.toInt() ?? newVote;
+        final Map<String, dynamic> resultMap = Map<String, dynamic>.from(
+          result,
+        );
+        final int rpcUpvotes =
+            (resultMap['upvotes'] as num?)?.toInt() ?? newUpvotes;
+        final int rpcUserVote =
+            (resultMap['user_vote'] as num?)?.toInt() ?? newVote;
 
         _sessionThreadVotes[voteKey] = rpcUserVote;
         final int latestIndex = _forumStore.indexWhere((t) => t.id == threadId);
@@ -2132,7 +2719,10 @@ class SupabaseService {
 
     // Direct table fallback if RPC is not available
     try {
-      await client.from('forum_posts').update({'upvotes': newUpvotes}).eq('id', threadId);
+      await client
+          .from('forum_posts')
+          .update({'upvotes': newUpvotes})
+          .eq('id', threadId);
       if (currentUserId != null) {
         if (newVote == 0) {
           await client.from('forum_post_votes').delete().match({
@@ -2154,10 +2744,10 @@ class SupabaseService {
   }
 
   Future<void> voteReply(
-      String threadId,
-      String replyId,
-      int voteDirection,
-      ) async {
+    String threadId,
+    String replyId,
+    int voteDirection,
+  ) async {
     if (voteDirection != 1 && voteDirection != -1) {
       return;
     }
@@ -2175,7 +2765,11 @@ class SupabaseService {
     final String? currentUserEmail = client?.auth.currentUser?.email;
 
     // Self-vote prevention: Author cannot vote on their own reply
-    final bool isAuthor = (currentUserEmail != null && currentReply.authorEmail.isNotEmpty && currentReply.authorEmail.toLowerCase() == currentUserEmail.toLowerCase()) ||
+    final bool isAuthor =
+        (currentUserEmail != null &&
+            currentReply.authorEmail.isNotEmpty &&
+            currentReply.authorEmail.toLowerCase() ==
+                currentUserEmail.toLowerCase()) ||
         (currentReply.isMe && currentUserId != null);
     if (isAuthor) {
       debugPrint('Self-vote prevention: Author cannot vote on their own reply');
@@ -2183,7 +2777,8 @@ class SupabaseService {
     }
 
     final String voteKey = _replyVoteKey(replyId);
-    final int currentVote = _sessionReplyVotes[voteKey] ?? currentReply.userVote;
+    final int currentVote =
+        _sessionReplyVotes[voteKey] ?? currentReply.userVote;
 
     // Toggle off if same direction, else switch
     final int newVote = (currentVote == voteDirection) ? 0 : voteDirection;
@@ -2192,7 +2787,9 @@ class SupabaseService {
 
     // Optimistic local update
     _sessionReplyVotes[voteKey] = newVote;
-    final List<ThreadReply> updatedReplies = List<ThreadReply>.from(thread.replies);
+    final List<ThreadReply> updatedReplies = List<ThreadReply>.from(
+      thread.replies,
+    );
     updatedReplies[rIdx] = currentReply.copyWith(
       upvotes: newUpvotes,
       userVote: newVote,
@@ -2204,16 +2801,17 @@ class SupabaseService {
     try {
       final result = await client.rpc(
         'vote_forum_reply',
-        params: {
-          'p_reply_id': replyId,
-          'p_vote': voteDirection,
-        },
+        params: {'p_reply_id': replyId, 'p_vote': voteDirection},
       );
 
       if (result is Map) {
-        final Map<String, dynamic> resultMap = Map<String, dynamic>.from(result);
-        final int rpcUpvotes = (resultMap['upvotes'] as num?)?.toInt() ?? newUpvotes;
-        final int rpcUserVote = (resultMap['user_vote'] as num?)?.toInt() ?? newVote;
+        final Map<String, dynamic> resultMap = Map<String, dynamic>.from(
+          result,
+        );
+        final int rpcUpvotes =
+            (resultMap['upvotes'] as num?)?.toInt() ?? newUpvotes;
+        final int rpcUserVote =
+            (resultMap['user_vote'] as num?)?.toInt() ?? newVote;
 
         _sessionReplyVotes[voteKey] = rpcUserVote;
         final int latestTIdx = _forumStore.indexWhere((t) => t.id == threadId);
@@ -2237,7 +2835,10 @@ class SupabaseService {
 
     // Direct table fallback if RPC is not available
     try {
-      await client.from('forum_replies').update({'upvotes': newUpvotes}).eq('id', replyId);
+      await client
+          .from('forum_replies')
+          .update({'upvotes': newUpvotes})
+          .eq('id', replyId);
       if (currentUserId != null) {
         if (newVote == 0) {
           await client.from('forum_reply_votes').delete().match({
@@ -2258,8 +2859,6 @@ class SupabaseService {
     }
   }
 
-
-
   Future<void> editThread(String threadId, String newTitle) async {
     final idx = _forumStore.indexWhere((t) => t.id == threadId);
     if (idx != -1) {
@@ -2271,15 +2870,16 @@ class SupabaseService {
     final client = _client;
     if (client != null) {
       try {
-        await client.from('forum_posts').update({
-          'title': newTitle,
-          'is_edited': true,
-        }).eq('id', threadId);
+        await client
+            .from('forum_posts')
+            .update({'title': newTitle, 'is_edited': true})
+            .eq('id', threadId);
       } catch (e) {
         try {
-          await client.from('forum_posts').update({
-            'title': newTitle,
-          }).eq('id', threadId);
+          await client
+              .from('forum_posts')
+              .update({'title': newTitle})
+              .eq('id', threadId);
         } catch (e2) {
           debugPrint('Supabase editThread note: $e2');
         }
@@ -2292,39 +2892,127 @@ class SupabaseService {
     final client = _client;
     if (client != null) {
       try {
-        await client.from('forum_posts').delete().eq('id', threadId);
+        // 1. Delete post votes
+        try {
+          await client
+              .from('forum_post_votes')
+              .delete()
+              .eq('post_id', threadId);
+        } catch (_) {}
+
+        // 2. Delete reply votes and reports
+        try {
+          final repliesRes = await client
+              .from('forum_replies')
+              .select('id')
+              .eq('post_id', threadId);
+          if (repliesRes is List && repliesRes.isNotEmpty) {
+            final replyIds =
+                repliesRes.map((r) => r['id'].toString()).toList();
+            try {
+              await client
+                  .from('forum_reply_votes')
+                  .delete()
+                  .inFilter('reply_id', replyIds);
+            } catch (_) {}
+            try {
+              await client
+                  .from('forum_reports')
+                  .delete()
+                  .inFilter('reply_id', replyIds);
+            } catch (_) {}
+          }
+        } catch (_) {}
+
+        // 3. Nullify parent_reply_id to prevent nested constraint violations, then delete replies
+        try {
+          await client
+              .from('forum_replies')
+              .update({'parent_reply_id': null})
+              .eq('post_id', threadId);
+        } catch (_) {}
         try {
           await client.from('forum_replies').delete().eq('post_id', threadId);
         } catch (_) {}
+
+        // 4. Delete reports referencing this post
+        try {
+          await client.from('forum_reports').delete().eq('post_id', threadId);
+        } catch (_) {}
+
+        // 5. Delete the post
+        await client.from('forum_posts').delete().eq('id', threadId);
       } catch (e) {
         debugPrint('Supabase deleteThread note: $e');
       }
     }
   }
 
-  Future<void> adminDeleteForumPost(
-      String postId,
-      String deletionReason,
-      ) async {
-    // Remove deleted post from local forum state and report queue
-    _forumStore.removeWhere(
-      (thread) => thread.id == postId,
+  // Returns empty string on full success, or an error/status message.
+  Future<String> adminDeleteForumPost(
+    String postId,
+    String deletionReason,
+  ) async {
+    // 1. Capture post metadata BEFORE removing from local store
+    final foundThread = _forumStore.where((t) => t.id == postId).firstOrNull;
+    final authorEmail = foundThread?.authorEmail ?? '';
+    final authorName = foundThread?.authorName ?? '';
+    final postTitle = foundThread?.title ?? 'Post';
+
+    // 2. Immediately update local state (admin sees deletion instantly)
+    _forumStore.removeWhere((thread) => thread.id == postId);
+    _deletedPostIds.add(postId);
+    _dismissedReportPostIds.remove(postId);
+    // Persist so deletion survives app restart
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(
+        'wk_admin_deleted_posts',
+        _deletedPostIds.toList(),
+      );
+    } catch (_) {}
+    _localReportQueue.removeWhere(
+      (r) =>
+          (r['postId']?.toString() == postId || r['id']?.toString() == postId) &&
+          (r['type'] == null || r['type'] == 'post'),
     );
-    _localReportQueue.removeWhere((r) => r['postId'] == postId && r['type'] == 'post');
+
+    // 3. Add a local moderation history entry (user gets notification even if network fails)
     _localModerationHistory.insert(0, {
       'id': 'hist_${DateTime.now().millisecondsSinceEpoch}',
       'post_id': postId,
+      'post_title': postTitle,
+      'author_email': authorEmail,
+      'author_name': authorName,
       'status': 'actioned',
       'action_type': 'deleted',
+      'reason': deletionReason,
+      'admin_reason': deletionReason,
+      'notes':
+          'Post "$postTitle" by $authorName ($authorEmail) deleted: $deletionReason',
       'resolution_notes': deletionReason,
       'resolved_at': DateTime.now().toIso8601String(),
     });
 
     final client = _client;
-    if (client == null) return;
+    if (client == null) return 'Supabase client not initialized';
 
+    String deleteError = '';
+
+    // Mark existing reports for this post as actioned in Supabase DB immediately
     try {
-      final result = await client.rpc(
+      await client.from('forum_reports').update({
+        'status': 'actioned',
+        'action_type': 'deleted',
+        'resolution_notes': deletionReason,
+        'deletion_reason': deletionReason,
+        'resolved_at': DateTime.now().toIso8601String(),
+      }).eq('post_id', postId);
+    } catch (_) {}
+
+    // 4. Try stored procedure
+    try {
+      await client.rpc(
         'admin_delete_forum_content',
         params: {
           'p_post_id': postId,
@@ -2332,58 +3020,154 @@ class SupabaseService {
           'p_deletion_reason': deletionReason,
         },
       );
-      debugPrint('Admin deleted forum post RPC: $result');
+      debugPrint('adminDeleteForumPost: RPC succeeded for $postId');
+      deleteError = '';
     } catch (e) {
-      debugPrint('adminDeleteForumPost RPC note: $e, using direct table fallback');
+      deleteError = e.toString();
+      debugPrint('adminDeleteForumPost: RPC failed ($e)');
+    }
+
+    // 5. If RPC failed, try direct delete with .select() to confirm result
+    if (deleteError.isNotEmpty) {
       try {
-        await client.from('forum_reports').update({
-          'status': 'actioned',
-          'action_type': 'deleted',
-          'resolution_notes': deletionReason,
-          'resolved_at': DateTime.now().toIso8601String(),
-        }).eq('post_id', postId);
-        await client.from('forum_posts').delete().eq('id', postId);
-      } catch (dbErr) {
-        debugPrint('adminDeleteForumPost direct table error: $dbErr');
+        // Unlink reports so ON DELETE CASCADE does not wipe out moderation history
+        try {
+          await client.from('forum_reports').update({
+            'status': 'actioned',
+            'action_type': 'deleted',
+            'resolution_notes': deletionReason,
+            'deletion_reason': deletionReason,
+            'resolved_at': DateTime.now().toIso8601String(),
+            'post_id': null,
+          }).eq('post_id', postId);
+        } catch (_) {}
+
+        final result = await client
+            .from('forum_posts')
+            .delete()
+            .eq('id', postId)
+            .select('id');
+        debugPrint('adminDeleteForumPost: direct delete result: $result');
+        if (result is List && result.isEmpty) {
+          // Deleted successfully (no rows returned means the row is gone)
+          deleteError = '';
+        } else if (result is List && result.isNotEmpty) {
+          // Row still exists somehow - report as error
+          deleteError = 'Post still exists after delete (rows returned: ${result.length})';
+        } else {
+          deleteError = '';
+        }
+      } catch (e) {
+        deleteError = 'Direct delete FAILED: $e';
+        debugPrint('adminDeleteForumPost: direct delete FAILED ($e)');
       }
     }
+
+    // 6. Insert a standalone forum_reports record for the artisan/tourist notification
+    try {
+      try {
+        await client.from('forum_reports').insert({
+          'reason': deletionReason,
+          'status': 'actioned',
+          'action_type': 'deleted',
+          'notes':
+              'Post "$postTitle" by $authorName ($authorEmail) deleted: $deletionReason',
+          'resolution_notes': deletionReason,
+          'deletion_reason': deletionReason,
+          'resolved_at': DateTime.now().toIso8601String(),
+        });
+      } catch (_) {
+        // Fallback for older database schemas missing action_type / resolution_notes columns
+        await client.from('forum_reports').insert({
+          'reason': deletionReason,
+          'status': 'actioned',
+          'notes':
+              'Post "$postTitle" by $authorName ($authorEmail) deleted: $deletionReason',
+        });
+      }
+      debugPrint('adminDeleteForumPost: standalone report inserted');
+    } catch (e) {
+      debugPrint('adminDeleteForumPost: report insert FAILED ($e)');
+      if (deleteError.isEmpty) deleteError = 'Report insert failed: $e';
+    }
+
+    return deleteError;
   }
 
-  Future<void> adminDeleteForumReply(
-      String threadId,
-      String replyId,
-      String deletionReason,
-      ) async {
-    // Remove deleted reply from local forum state and report queue
-    final threadIndex = _forumStore.indexWhere(
-      (thread) => thread.id == threadId,
+  Future<String> adminDeleteForumReply(
+    String threadId,
+    String replyId,
+    String deletionReason,
+  ) async {
+    // 1. Capture reply metadata BEFORE removing from local store
+    String authorEmail = '';
+    String authorName = '';
+    String replyText = '';
+    for (final t in _forumStore) {
+      final r = t.replies.where((rep) => rep.id == replyId).firstOrNull;
+      if (r != null) {
+        authorEmail = r.authorEmail;
+        authorName = r.sender;
+        replyText = r.text;
+        break;
+      }
+    }
+
+    // 2. Immediately update local state
+    for (int i = 0; i < _forumStore.length; i++) {
+      final t = _forumStore[i];
+      final rIdx = t.replies.indexWhere((r) => r.id == replyId);
+      if (rIdx != -1) {
+        final updatedReplies = List<ThreadReply>.from(t.replies)
+          ..removeAt(rIdx);
+        _forumStore[i] = t.copyWith(
+          replies: updatedReplies,
+          replyCount: updatedReplies.length,
+        );
+      }
+    }
+    _dismissedReportReplyIds.add(replyId);
+    _localReportQueue.removeWhere(
+      (r) =>
+          (r['replyId']?.toString() == replyId || r['id']?.toString() == replyId) &&
+          (r['type'] == null || r['type'] == 'reply'),
     );
 
-    if (threadIndex != -1) {
-      final thread = _forumStore[threadIndex];
-      final updatedReplies = List<ThreadReply>.from(thread.replies)
-        ..removeWhere((reply) => reply.id == replyId);
-
-      _forumStore[threadIndex] = thread.copyWith(
-        replies: updatedReplies,
-        replyCount: updatedReplies.length,
-      );
-    }
-    _localReportQueue.removeWhere((r) => r['replyId'] == replyId && r['type'] == 'reply');
+    // 3. Add local moderation history entry
     _localModerationHistory.insert(0, {
       'id': 'hist_${DateTime.now().millisecondsSinceEpoch}',
       'reply_id': replyId,
+      'reply_text': replyText,
+      'author_email': authorEmail,
+      'author_name': authorName,
       'status': 'actioned',
       'action_type': 'deleted',
+      'reason': deletionReason,
+      'admin_reason': deletionReason,
+      'notes': 'Reply by $authorName ($authorEmail) deleted: $deletionReason',
       'resolution_notes': deletionReason,
       'resolved_at': DateTime.now().toIso8601String(),
     });
 
     final client = _client;
-    if (client == null) return;
+    if (client == null) return 'Supabase client not initialized';
 
+    String deleteError = '';
+
+    // Mark existing reports for this reply as actioned in Supabase DB immediately
     try {
-      final result = await client.rpc(
+      await client.from('forum_reports').update({
+        'status': 'actioned',
+        'action_type': 'deleted',
+        'resolution_notes': deletionReason,
+        'deletion_reason': deletionReason,
+        'resolved_at': DateTime.now().toIso8601String(),
+      }).eq('reply_id', replyId);
+    } catch (_) {}
+
+    // 4. Try stored procedure
+    try {
+      await client.rpc(
         'admin_delete_forum_content',
         params: {
           'p_post_id': null,
@@ -2391,41 +3175,89 @@ class SupabaseService {
           'p_deletion_reason': deletionReason,
         },
       );
-      debugPrint('Admin deleted forum reply RPC: $result');
+      debugPrint('adminDeleteForumReply: RPC succeeded for $replyId');
     } catch (e) {
-      debugPrint('adminDeleteForumReply RPC note: $e, using direct table fallback');
+      deleteError = e.toString();
+      debugPrint('adminDeleteForumReply: RPC failed ($e)');
+    }
+
+    // 5. If RPC failed, direct delete
+    if (deleteError.isNotEmpty) {
       try {
-        await client.from('forum_reports').update({
-          'status': 'actioned',
-          'action_type': 'deleted',
-          'resolution_notes': deletionReason,
-          'resolved_at': DateTime.now().toIso8601String(),
-        }).eq('reply_id', replyId);
-        await client.from('forum_replies').delete().eq('id', replyId);
-      } catch (dbErr) {
-        debugPrint('adminDeleteForumReply direct table error: $dbErr');
+        try {
+          await client.from('forum_reports').update({
+            'status': 'actioned',
+            'action_type': 'deleted',
+            'resolution_notes': deletionReason,
+            'deletion_reason': deletionReason,
+            'resolved_at': DateTime.now().toIso8601String(),
+            'reply_id': null,
+          }).eq('reply_id', replyId);
+        } catch (_) {}
+
+        await client.from('forum_replies').delete().eq('id', replyId).select('id');
+        debugPrint('adminDeleteForumReply: direct delete succeeded for $replyId');
+        deleteError = '';
+      } catch (e) {
+        deleteError = 'Direct delete FAILED: $e';
+        debugPrint('adminDeleteForumReply: direct delete FAILED ($e)');
       }
     }
+
+    // 6. Insert standalone report record
+    try {
+      try {
+        await client.from('forum_reports').insert({
+          'reason': deletionReason,
+          'status': 'actioned',
+          'action_type': 'deleted',
+          'notes': 'Reply by $authorName ($authorEmail) deleted: $deletionReason',
+          'resolution_notes': deletionReason,
+          'deletion_reason': deletionReason,
+          'resolved_at': DateTime.now().toIso8601String(),
+        });
+      } catch (_) {
+        await client.from('forum_reports').insert({
+          'reason': deletionReason,
+          'status': 'actioned',
+          'notes': 'Reply by $authorName ($authorEmail) deleted: $deletionReason',
+        });
+      }
+      debugPrint('adminDeleteForumReply: report record inserted for $replyId');
+    } catch (e) {
+      debugPrint('adminDeleteForumReply: report insert FAILED ($e)');
+      if (deleteError.isEmpty) deleteError = 'Report insert failed: $e';
+    }
+
+    return deleteError;
   }
 
-  Future<void> editReply(String threadId, String replyId, String newText) async {
+  Future<void> editReply(
+    String threadId,
+    String replyId,
+    String newText,
+  ) async {
     final tIdx = _forumStore.indexWhere((t) => t.id == threadId);
     if (tIdx != -1) {
       final t = _forumStore[tIdx];
       final rIdx = t.replies.indexWhere((r) => r.id == replyId);
       if (rIdx != -1) {
-        final updatedReply = t.replies[rIdx].copyWith(text: newText, isEdited: true);
-        final updatedReplies = List<ThreadReply>.from(t.replies)..[rIdx] = updatedReply;
+        final updatedReply = t.replies[rIdx].copyWith(
+          text: newText,
+          isEdited: true,
+        );
+        final updatedReplies = List<ThreadReply>.from(t.replies)
+          ..[rIdx] = updatedReply;
         _forumStore[tIdx] = t.copyWith(replies: updatedReplies);
       }
     }
     final client = _client;
     if (client != null) {
       try {
-        await client.from('forum_replies').update({
-          'content': newText,
-          'is_edited': true,
-        }).eq('id', replyId);
+        await client
+            .from('forum_replies')
+            .update({'content': newText, 'is_edited': true})
+            .eq('id', replyId);
       } catch (e) {
         debugPrint('Supabase editReply note: $e');
       }
@@ -2436,12 +3268,44 @@ class SupabaseService {
     final tIdx = _forumStore.indexWhere((t) => t.id == threadId);
     if (tIdx != -1) {
       final t = _forumStore[tIdx];
-      final updatedReplies = List<ThreadReply>.from(t.replies)..removeWhere((r) => r.id == replyId);
-      _forumStore[tIdx] = t.copyWith(replies: updatedReplies, replyCount: updatedReplies.length);
+      final updatedReplies = List<ThreadReply>.from(t.replies)
+        ..removeWhere((r) => r.id == replyId);
+      _forumStore[tIdx] = t.copyWith(
+        replies: updatedReplies,
+        replyCount: updatedReplies.length,
+      );
     }
     final client = _client;
     if (client != null) {
       try {
+        // 1. Delete reply votes
+        try {
+          await client
+              .from('forum_reply_votes')
+              .delete()
+              .eq('reply_id', replyId);
+        } catch (_) {}
+
+        // 2. Unlink child replies then delete them
+        try {
+          await client
+              .from('forum_replies')
+              .update({'parent_reply_id': null})
+              .eq('parent_reply_id', replyId);
+        } catch (_) {}
+        try {
+          await client
+              .from('forum_replies')
+              .delete()
+              .eq('parent_reply_id', replyId);
+        } catch (_) {}
+
+        // 3. Delete reports referencing this reply
+        try {
+          await client.from('forum_reports').delete().eq('reply_id', replyId);
+        } catch (_) {}
+
+        // 4. Delete the reply
         await client.from('forum_replies').delete().eq('id', replyId);
       } catch (e) {
         debugPrint('Supabase deleteReply note: $e');
@@ -2450,37 +3314,43 @@ class SupabaseService {
   }
 
   Future<Map<String, dynamic>> reportReply(
-      String threadId,
-      String replyId,
-      String reason,
-      String notes,
-      ) async {
-    // 1. Update local store
-    final tIdx = _forumStore.indexWhere((t) => t.id == threadId);
-    if (tIdx != -1) {
-      final thread = _forumStore[tIdx];
-      final rIdx = thread.replies.indexWhere((r) => r.id == replyId);
+    String threadId,
+    String replyId,
+    String reason,
+    String notes,
+  ) async {
+    // 1. Unmark dismissed if reported anew
+    _dismissedReportReplyIds.remove(replyId);
+
+    // 2. Update local store
+    for (int i = 0; i < _forumStore.length; i++) {
+      final t = _forumStore[i];
+      final rIdx = t.replies.indexWhere((r) => r.id == replyId);
       if (rIdx != -1) {
-        final updatedReply = thread.replies[rIdx].copyWith(
+        final updatedReply = t.replies[rIdx].copyWith(
           isReported: true,
           reportReason: reason,
           reportNotes: notes,
         );
-        final updatedReplies = List<ThreadReply>.from(thread.replies);
+        final updatedReplies = List<ThreadReply>.from(t.replies);
         updatedReplies[rIdx] = updatedReply;
-        _forumStore[tIdx] = thread.copyWith(replies: updatedReplies);
+        _forumStore[i] = t.copyWith(replies: updatedReplies);
       }
     }
 
-    // 2. Add to _localReportQueue
-    final existingIdx = _localReportQueue.indexWhere((r) => r['replyId'] == replyId && r['type'] == 'reply');
+    // 3. Add to _localReportQueue
+    final existingIdx = _localReportQueue.indexWhere(
+      (r) => r['replyId'] == replyId && r['type'] == 'reply',
+    );
     final newReportItem = {
       'reason': reason,
       'notes': notes,
       'created_at': DateTime.now().toIso8601String(),
     };
     if (existingIdx != -1) {
-      final existingReports = List<Map<String, dynamic>>.from(_localReportQueue[existingIdx]['reports'] ?? []);
+      final existingReports = List<Map<String, dynamic>>.from(
+        _localReportQueue[existingIdx]['reports'] ?? [],
+      );
       existingReports.add(newReportItem);
       _localReportQueue[existingIdx]['reports'] = existingReports;
       _localReportQueue[existingIdx]['reportsCount'] = existingReports.length;
@@ -2504,11 +3374,7 @@ class SupabaseService {
     try {
       final result = await client.rpc(
         'report_forum_reply',
-        params: {
-          'p_reply_id': replyId,
-          'p_reason': reason,
-          'p_notes': notes,
-        },
+        params: {'p_reply_id': replyId, 'p_reason': reason, 'p_notes': notes},
       );
 
       if (result is Map) {
@@ -2517,7 +3383,8 @@ class SupabaseService {
       return {'success': true, 'already_reported': false};
     } catch (e) {
       final error = e.toString();
-      if (error.contains('23505') || error.toLowerCase().contains('duplicate key')) {
+      if (error.contains('23505') ||
+          error.toLowerCase().contains('duplicate key')) {
         return {'success': false, 'already_reported': true};
       }
       debugPrint('reportReply RPC note: $e, using direct table fallback');
@@ -2529,11 +3396,14 @@ class SupabaseService {
           'notes': notes,
           'status': 'pending',
         });
-        await client.from('forum_replies').update({
-          'is_reported': true,
-          'report_reason': reason,
-          'report_notes': notes,
-        }).eq('id', replyId);
+        await client
+            .from('forum_replies')
+            .update({
+              'is_reported': true,
+              'report_reason': reason,
+              'report_notes': notes,
+            })
+            .eq('id', replyId);
         return {'success': true, 'already_reported': false};
       } catch (dbErr) {
         debugPrint('reportReply direct fallback note: $dbErr');
@@ -2542,26 +3412,28 @@ class SupabaseService {
     }
   }
 
-  Future<void> dismissReplyReport(
-      String threadId,
-      String replyId,
-      ) async {
-    final tIdx = _forumStore.indexWhere((t) => t.id == threadId);
-    if (tIdx != -1) {
-      final thread = _forumStore[tIdx];
-      final rIdx = thread.replies.indexWhere((r) => r.id == replyId);
+  Future<void> dismissReplyReport(String threadId, String replyId) async {
+    for (int i = 0; i < _forumStore.length; i++) {
+      final t = _forumStore[i];
+      final rIdx = t.replies.indexWhere((r) => r.id == replyId);
       if (rIdx != -1) {
-        final updatedReplies = List<ThreadReply>.from(thread.replies);
+        final updatedReplies = List<ThreadReply>.from(t.replies);
         updatedReplies[rIdx] = updatedReplies[rIdx].copyWith(
           isReported: false,
           reportReason: null,
           reportNotes: null,
         );
-        _forumStore[tIdx] = thread.copyWith(replies: updatedReplies);
+        _forumStore[i] = t.copyWith(replies: updatedReplies);
       }
     }
 
-    _localReportQueue.removeWhere((r) => r['replyId'] == replyId && r['type'] == 'reply');
+    _dismissedReportReplyIds.add(replyId);
+    _localReportQueue.removeWhere(
+      (r) =>
+          (r['replyId']?.toString() == replyId ||
+              r['id']?.toString() == replyId) &&
+          (r['type'] == null || r['type'] == 'reply'),
+    );
     _localModerationHistory.insert(0, {
       'id': 'hist_${DateTime.now().millisecondsSinceEpoch}',
       'reply_id': replyId,
@@ -2575,23 +3447,28 @@ class SupabaseService {
     try {
       await client.rpc(
         'dismiss_forum_reports',
-        params: {
-          'p_post_id': null,
-          'p_reply_id': replyId,
-        },
+        params: {'p_post_id': null, 'p_reply_id': replyId},
       );
     } catch (e) {
-      debugPrint('dismissReplyReport RPC note: $e, using direct table fallback');
+      debugPrint(
+        'dismissReplyReport RPC note: $e, using direct table fallback',
+      );
       try {
-        await client.from('forum_reports').update({
-          'status': 'dismissed',
-          'resolved_at': DateTime.now().toIso8601String(),
-        }).eq('reply_id', replyId);
-        await client.from('forum_replies').update({
-          'is_reported': false,
-          'report_reason': null,
-          'report_notes': null,
-        }).eq('id', replyId);
+        await client
+            .from('forum_reports')
+            .update({
+              'status': 'dismissed',
+              'resolved_at': DateTime.now().toIso8601String(),
+            })
+            .eq('reply_id', replyId);
+        await client
+            .from('forum_replies')
+            .update({
+              'is_reported': false,
+              'report_reason': null,
+              'report_notes': null,
+            })
+            .eq('id', replyId);
       } catch (dbErr) {
         debugPrint('dismissReplyReport direct fallback note: $dbErr');
       }
@@ -2599,10 +3476,13 @@ class SupabaseService {
   }
 
   Future<Map<String, dynamic>> reportThread(
-      String threadId,
-      String reason,
-      String notes,
-      ) async {
+    String threadId,
+    String reason,
+    String notes,
+  ) async {
+    _dismissedReportPostIds.remove(threadId);
+    _deletedPostIds.remove(threadId);
+
     final tIdx = _forumStore.indexWhere((t) => t.id == threadId);
     if (tIdx != -1) {
       _forumStore[tIdx] = _forumStore[tIdx].copyWith(
@@ -2612,14 +3492,18 @@ class SupabaseService {
       );
     }
 
-    final existingIdx = _localReportQueue.indexWhere((r) => r['postId'] == threadId && r['type'] == 'post');
+    final existingIdx = _localReportQueue.indexWhere(
+      (r) => r['postId'] == threadId && r['type'] == 'post',
+    );
     final newReportItem = {
       'reason': reason,
       'notes': notes,
       'created_at': DateTime.now().toIso8601String(),
     };
     if (existingIdx != -1) {
-      final existingReports = List<Map<String, dynamic>>.from(_localReportQueue[existingIdx]['reports'] ?? []);
+      final existingReports = List<Map<String, dynamic>>.from(
+        _localReportQueue[existingIdx]['reports'] ?? [],
+      );
       existingReports.add(newReportItem);
       _localReportQueue[existingIdx]['reports'] = existingReports;
       _localReportQueue[existingIdx]['reportsCount'] = existingReports.length;
@@ -2642,11 +3526,7 @@ class SupabaseService {
     try {
       final result = await client.rpc(
         'report_forum_post',
-        params: {
-          'p_post_id': threadId,
-          'p_reason': reason,
-          'p_notes': notes,
-        },
+        params: {'p_post_id': threadId, 'p_reason': reason, 'p_notes': notes},
       );
 
       if (result is Map) {
@@ -2655,7 +3535,8 @@ class SupabaseService {
       return {'success': true, 'already_reported': false};
     } catch (e) {
       final error = e.toString();
-      if (error.contains('23505') || error.toLowerCase().contains('duplicate key')) {
+      if (error.contains('23505') ||
+          error.toLowerCase().contains('duplicate key')) {
         return {'success': false, 'already_reported': true};
       }
       debugPrint('reportThread RPC note: $e, using direct table fallback');
@@ -2667,11 +3548,14 @@ class SupabaseService {
           'notes': notes,
           'status': 'pending',
         });
-        await client.from('forum_posts').update({
-          'is_reported': true,
-          'report_reason': reason,
-          'report_notes': notes,
-        }).eq('id', threadId);
+        await client
+            .from('forum_posts')
+            .update({
+              'is_reported': true,
+              'report_reason': reason,
+              'report_notes': notes,
+            })
+            .eq('id', threadId);
         return {'success': true, 'already_reported': false};
       } catch (dbErr) {
         debugPrint('reportThread direct fallback note: $dbErr');
@@ -2681,6 +3565,9 @@ class SupabaseService {
   }
 
   Future<void> dismissReport(String threadId) async {
+    _deletedPostIds.remove(threadId);
+    _dismissedReportPostIds.add(threadId);
+
     final idx = _forumStore.indexWhere((t) => t.id == threadId);
     if (idx != -1) {
       _forumStore[idx] = _forumStore[idx].copyWith(
@@ -2690,7 +3577,12 @@ class SupabaseService {
       );
     }
 
-    _localReportQueue.removeWhere((r) => r['postId'] == threadId && r['type'] == 'post');
+    _localReportQueue.removeWhere(
+      (r) =>
+          (r['postId']?.toString() == threadId ||
+              r['id']?.toString() == threadId) &&
+          (r['type'] == null || r['type'] == 'post'),
+    );
     _localModerationHistory.insert(0, {
       'id': 'hist_${DateTime.now().millisecondsSinceEpoch}',
       'post_id': threadId,
@@ -2704,23 +3596,26 @@ class SupabaseService {
     try {
       await client.rpc(
         'dismiss_forum_reports',
-        params: {
-          'p_post_id': threadId,
-          'p_reply_id': null,
-        },
+        params: {'p_post_id': threadId, 'p_reply_id': null},
       );
     } catch (e) {
       debugPrint('dismissReport RPC note: $e, using direct table fallback');
       try {
-        await client.from('forum_reports').update({
-          'status': 'dismissed',
-          'resolved_at': DateTime.now().toIso8601String(),
-        }).eq('post_id', threadId);
-        await client.from('forum_posts').update({
-          'is_reported': false,
-          'report_reason': null,
-          'report_notes': null,
-        }).eq('id', threadId);
+        await client
+            .from('forum_reports')
+            .update({
+              'status': 'dismissed',
+              'resolved_at': DateTime.now().toIso8601String(),
+            })
+            .eq('post_id', threadId);
+        await client
+            .from('forum_posts')
+            .update({
+              'is_reported': false,
+              'report_reason': null,
+              'report_notes': null,
+            })
+            .eq('id', threadId);
       } catch (dbErr) {
         debugPrint('dismissReport direct fallback note: $dbErr');
       }
@@ -2735,16 +3630,19 @@ class SupabaseService {
       HeritageStamp(
         id: 's1',
         title: 'Batik Apprentice',
-        iconUrl: 'https://images.unsplash.com/photo-1544967082-d9d25d867d66?w=200',
+        iconUrl:
+            'https://images.unsplash.com/photo-1544967082-d9d25d867d66?w=200',
         isUnlocked: true,
         description: 'Earned for visiting a master batik chanting workshop.',
       ),
       HeritageStamp(
         id: 's2',
         title: 'Wood Guardian',
-        iconUrl: 'https://images.unsplash.com/photo-1605721911519-3dfeb3be25e7?w=200',
+        iconUrl:
+            'https://images.unsplash.com/photo-1605721911519-3dfeb3be25e7?w=200',
         isUnlocked: true,
-        description: 'Earned for identifying three royal Cengal carving motifs.',
+        description:
+            'Earned for identifying three royal Cengal carving motifs.',
       ),
     ];
   }
@@ -3109,8 +4007,8 @@ class SupabaseService {
       final response = await client
           .from('artisan_profiles')
           .select(
-        'id, studio_name, craft_category, address, state, latitude, longitude',
-      )
+            'id, studio_name, craft_category, address, state, latitude, longitude',
+          )
           .eq('status', 'APPROVED')
           .not('latitude', 'is', null)
           .not('longitude', 'is', null);

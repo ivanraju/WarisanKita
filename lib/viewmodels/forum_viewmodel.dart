@@ -39,6 +39,9 @@ class ForumViewModel extends ChangeNotifier {
     notifyListeners();
 
     _threads = await _repository.getThreads();
+    try {
+      _moderationHistory = await _repository.fetchForumModerationHistory();
+    } catch (_) {}
 
     _isLoading = false;
     notifyListeners();
@@ -134,7 +137,15 @@ class ForumViewModel extends ChangeNotifier {
     );
 
     await _repository.createThread(newThread);
+    if (safety.isAutoFlagged) {
+      await _repository.reportThread(
+        threadId,
+        safety.flagReason ?? 'Automated content flag',
+        'Flagged content created by $authorName: "$title"',
+      );
+    }
     await fetchThreads();
+    await fetchForumReportQueue();
     return safety;
   }
 
@@ -163,6 +174,9 @@ class ForumViewModel extends ChangeNotifier {
       parentReplyId: parentReplyId,
       timestamp: 'Just now',
       text: text,
+      isReported: safety.isAutoFlagged,
+      reportReason: safety.isAutoFlagged ? safety.flagReason : null,
+      reportNotes: safety.isAutoFlagged ? 'Automated system flag triggered upon reply creation.' : null,
     );
 
     await _repository.postReply(threadId, reply);
@@ -175,6 +189,7 @@ class ForumViewModel extends ChangeNotifier {
       );
     }
     await fetchThreads();
+    await fetchForumReportQueue();
     return safety;
   }
 
@@ -225,9 +240,10 @@ class ForumViewModel extends ChangeNotifier {
       deletionReason,
     );
 
-    // Refresh forum + moderation queue
+    // Refresh forum + moderation queue + moderation notices
     await fetchThreads();
     await fetchForumReportQueue();
+    await fetchForumModerationHistory();
 
     notifyListeners();
   }
@@ -243,9 +259,10 @@ class ForumViewModel extends ChangeNotifier {
       deletionReason,
     );
 
-    // Refresh forum + moderation queue
+    // Refresh forum + moderation queue + moderation notices
     await fetchThreads();
     await fetchForumReportQueue();
+    await fetchForumModerationHistory();
 
     notifyListeners();
   }
@@ -334,6 +351,14 @@ class ForumViewModel extends ChangeNotifier {
     await fetchThreads();
     await fetchForumReportQueue();
     await fetchForumModerationHistory();
+    notifyListeners();
+  }
+
+  Future<void> dismissModerationNotice(String reportId) async {
+    await _repository.dismissModerationNotice(reportId);
+    _moderationHistory.removeWhere((item) =>
+        item['id']?.toString() == reportId ||
+        item['resolved_at']?.toString() == reportId);
     notifyListeners();
   }
 }
