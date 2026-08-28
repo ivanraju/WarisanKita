@@ -13,6 +13,8 @@ class AuthResult {
   final bool requiresRoleSelection;
   final List<String> availableRoles;
   final String? route;
+  final bool requiresEmailVerification;
+  final String? unverifiedEmail;
 
   const AuthResult({
     required this.success,
@@ -21,6 +23,8 @@ class AuthResult {
     this.requiresRoleSelection = false,
     this.availableRoles = const [],
     this.route,
+    this.requiresEmailVerification = false,
+    this.unverifiedEmail,
   });
 }
 
@@ -254,10 +258,89 @@ class AuthViewModel extends ChangeNotifier {
         message: _statusMessage,
       );
     } catch (e) {
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      final rawError = e.toString().replaceAll('Exception: ', '');
+      final lower = rawError.toLowerCase();
+      _isLoading = false;
+
+      if (lower.contains('email not confirmed') ||
+          lower.contains('email_not_confirmed') ||
+          lower.contains('not confirmed') ||
+          lower.contains('not verified')) {
+        _errorMessage = 'EMAIL NOT VERIFIED: Please enter the 6-digit verification code sent to your email.';
+        notifyListeners();
+        return AuthResult(
+          success: false,
+          requiresEmailVerification: true,
+          unverifiedEmail: cleanEmail,
+          message: _errorMessage,
+        );
+      }
+
+      _errorMessage = rawError;
+      notifyListeners();
+      return AuthResult(success: false, message: _errorMessage);
+    }
+  }
+
+  Future<AuthResult> verifyEmailOtp({
+    required String email,
+    required String token,
+    String? targetRoute,
+  }) async {
+    final cleanEmail = email.trim().toLowerCase();
+    final cleanToken = token.trim();
+    if (cleanToken.length != 6) {
+      _errorMessage = 'PLEASE ENTER A 6-DIGIT VERIFICATION CODE';
+      notifyListeners();
+      return AuthResult(success: false, message: _errorMessage);
+    }
+
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final user = await _repository.verifyEmailOtp(
+        email: cleanEmail,
+        token: cleanToken,
+      );
+      _currentUser = user;
+      _activeRole = user.role;
+      _statusMessage = 'EMAIL VERIFIED SUCCESSFULLY: WELCOME TO WARISAN KITA';
+      _isLoading = false;
+      notifyListeners();
+
+      final route = targetRoute ?? (user.role.contains('Artisan') ? 'pending_artisan' : '/tourist');
+      return AuthResult(
+        success: true,
+        user: user,
+        route: route,
+        message: _statusMessage,
+      );
+    } catch (e) {
+      _errorMessage = e
+          .toString()
+          .replaceAll('Exception: ', '')
+          .replaceAll('INVALID_OTP: ', '')
+          .replaceAll('OTP_EXPIRED: ', '');
       _isLoading = false;
       notifyListeners();
       return AuthResult(success: false, message: _errorMessage);
+    }
+  }
+
+  Future<bool> resendVerificationOtp(String email) async {
+    final cleanEmail = email.trim().toLowerCase();
+    if (cleanEmail.isEmpty) return false;
+    try {
+      await _repository.resendVerificationOtp(email: cleanEmail);
+      _statusMessage = 'A new 6-digit verification code has been sent to your email.';
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = 'Failed to resend verification code. Please try again.';
+      notifyListeners();
+      return false;
     }
   }
 
@@ -330,15 +413,15 @@ class AuthViewModel extends ChangeNotifier {
             : null,
       );
 
-      _currentUser = user;
-      _activeRole = 'Tourist';
-      _statusMessage = 'REGISTRATION SUCCESSFUL: WELCOME CULTURAL EXPLORER';
+      _statusMessage = 'REGISTRATION SUCCESSFUL: PLEASE VERIFY YOUR EMAIL';
       _isLoading = false;
       notifyListeners();
 
       return AuthResult(
         success: true,
         user: user,
+        requiresEmailVerification: true,
+        unverifiedEmail: cleanEmail,
         route: '/tourist',
         message: _statusMessage,
       );
@@ -466,6 +549,8 @@ class AuthViewModel extends ChangeNotifier {
       return AuthResult(
         success: true,
         user: user,
+        requiresEmailVerification: true,
+        unverifiedEmail: cleanEmail,
         route: 'pending_artisan',
         message: _statusMessage,
       );

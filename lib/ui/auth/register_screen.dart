@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:warisan_kita/domain/models/user.dart';
+import 'package:warisan_kita/ui/auth/email_verification_screen.dart';
 import 'package:warisan_kita/ui/auth/widgets/password_strength_meter.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 
@@ -170,6 +171,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
           content: Text(result.message ?? 'Registration failed'),
           backgroundColor: const Color(0xFFEF4444),
           behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    if (result.requiresEmailVerification) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('📨 Verification code sent! Please check your email inbox.'),
+          backgroundColor: Color(0xFF0284C7),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => EmailVerificationScreen(
+            email: email,
+            targetRoute: result.route ?? '/tourist',
+            role: 'Tourist',
+          ),
         ),
       );
       return;

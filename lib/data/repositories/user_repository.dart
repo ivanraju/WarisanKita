@@ -69,6 +69,17 @@ class UserRepository {
     );
   }
 
+  Future<UserModel> verifyEmailOtp({
+    required String email,
+    required String token,
+  }) {
+    return _service.verifyEmailOtp(email: email, token: token);
+  }
+
+  Future<void> resendVerificationOtp({required String email}) {
+    return _service.resendVerificationOtp(email: email);
+  }
+
   Future<UserModel> linkArtisanRoleToTourist({
     required String email,
     required String studioName,
