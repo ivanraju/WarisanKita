@@ -4,6 +4,7 @@ import 'package:warisan_kita/domain/models/badge.dart' show HeritageStamp;
 import 'package:warisan_kita/domain/models/heritage_task.dart';
 import 'package:warisan_kita/domain/models/heritage_task_change_request.dart';
 import 'package:warisan_kita/domain/models/quest.dart';
+import 'package:warisan_kita/domain/models/task_progress.dart';
 
 class GamificationRepository {
   final SupabaseService _service;
@@ -51,6 +52,51 @@ class GamificationRepository {
     required List<String> taskIds,
   }) {
     return _service.startQuest(questId: questId, taskIds: taskIds);
+  }
+
+  Future<List<TaskProgress>> getTaskProgress(List<String> taskIds) async {
+    final rows = await _service.fetchTaskProgress(taskIds);
+    return rows.map(TaskProgress.fromMap).toList(growable: false);
+  }
+
+  Future<TaskProgress> completeTask(String taskId) async {
+    return TaskProgress.fromMap(await _service.completeTask(taskId));
+  }
+
+  Future<TaskProgress> completeTaskWithArtisanQr({
+    required String questId,
+    required String artisanId,
+    required String taskId,
+    required String qrPayload,
+  }) async {
+    return TaskProgress.fromMap(
+      await _service.completeTaskWithArtisanQr(
+        questId: questId,
+        artisanId: artisanId,
+        taskId: taskId,
+        qrPayload: qrPayload,
+      ),
+    );
+  }
+
+  Future<TaskProgress> startTimedTask(String taskId) async {
+    return TaskProgress.fromMap(await _service.startTimedTask(taskId));
+  }
+
+  Future<TaskProgress> pauseTimedTask({
+    required String taskId,
+    required int progressSeconds,
+  }) async {
+    return TaskProgress.fromMap(
+      await _service.pauseTimedTask(
+        taskId: taskId,
+        progressSeconds: progressSeconds,
+      ),
+    );
+  }
+
+  Future<TaskProgress> completeTimedTask(String taskId) async {
+    return TaskProgress.fromMap(await _service.completeTimedTask(taskId));
   }
 
   List<HeritageTask> _mapAndSortTasks(List<Map<String, dynamic>> rows) {

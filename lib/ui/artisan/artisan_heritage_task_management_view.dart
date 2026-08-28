@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:warisan_kita/domain/models/heritage_task.dart';
 import 'package:warisan_kita/domain/models/quest.dart';
 import 'package:warisan_kita/ui/artisan/artisan_task_requests_view.dart';
@@ -125,6 +126,92 @@ class _ArtisanHeritageTaskManagementViewState
         ),
       );
     }
+  }
+
+  void _showWorkshopQr(Quest quest) {
+    final secret = quest.qrCodeSecret;
+    if (secret == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('This workshop QR has not been configured yet.'),
+          backgroundColor: Color(0xFFB42318),
+        ),
+      );
+      return;
+    }
+
+    final payload = 'WK_ARTISAN:${quest.artisanId}:$secret';
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        backgroundColor: Colors.white,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 360),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Workshop QR',
+                  style: GoogleFonts.dmSerifDisplay(
+                    color: _green,
+                    fontSize: 24,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: _green, width: 2),
+                  ),
+                  child: SizedBox.square(
+                    dimension: 200,
+                    child: QrImageView(
+                      data: payload,
+                      padding: EdgeInsets.zero,
+                      eyeStyle: const QrEyeStyle(
+                        eyeShape: QrEyeShape.square,
+                        color: _green,
+                      ),
+                      dataModuleStyle: const QrDataModuleStyle(
+                        dataModuleShape: QrDataModuleShape.square,
+                        color: _green,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Display this single QR at your workshop. Tourists scan the '
+                  'same code to verify each completed task.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.plusJakartaSans(
+                    color: const Color(0xFF64748B),
+                    fontSize: 12,
+                    height: 1.45,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(),
+                    style: FilledButton.styleFrom(backgroundColor: _green),
+                    child: const Text('Done'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -337,6 +424,20 @@ class _ArtisanHeritageTaskManagementViewState
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => _showWorkshopQr(quest),
+              icon: const Icon(Icons.qr_code_2_rounded),
+              label: const Text('View Workshop QR'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFFFFD166),
+                side: const BorderSide(color: Color(0xFFFFD166)),
+                textStyle: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+            ),
           ),
         ],
       ),

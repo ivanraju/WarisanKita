@@ -1,7 +1,13 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:warisan_kita/domain/models/pending_artisan_profile.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/moderation_viewmodel.dart';
@@ -20,6 +26,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
   final _ssmController = TextEditingController();
   final _bioController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _locationSearchController = TextEditingController();
 
   String _selectedCraftCategory = 'Woodwork';
   String _selectedState = 'Melaka';
@@ -28,6 +35,38 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
   PlatformFile? _ssmFile;
   PlatformFile? _kraftanganFile;
   final List<PlatformFile> _uploadedPhotos = [];
+  String? _ssmFileSizeLabel;
+  String? _kraftanganFileSizeLabel;
+  GoogleMapController? _workshopMapController;
+  LatLng? _workshopLocation;
+  String? _workshopAddress;
+  String? _locationError;
+  bool _isSearchingLocation = false;
+
+  static const Map<String, LatLng> _stateCenters = {
+    'Johor': LatLng(1.4927, 103.7414),
+    'Kedah': LatLng(6.1184, 100.3685),
+    'Kelantan': LatLng(6.1254, 102.2381),
+    'Melaka': LatLng(2.1896, 102.2501),
+    'Negeri Sembilan': LatLng(2.7258, 101.9424),
+    'Pahang': LatLng(3.8077, 103.3260),
+    'Penang': LatLng(5.4141, 100.3288),
+    'Perak': LatLng(4.5975, 101.0901),
+    'Perlis': LatLng(6.4414, 100.1986),
+    'Sabah': LatLng(5.9804, 116.0735),
+    'Sarawak': LatLng(1.5533, 110.3592),
+    'Selangor': LatLng(3.0738, 101.5183),
+    'Terengganu': LatLng(5.3296, 103.1370),
+    'Kuala Lumpur': LatLng(3.1390, 101.6869),
+  };
+
+  String _formatFileSize(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) {
+      return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    }
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
 
   final List<String> _craftCategories = const [
     'Woodwork',
@@ -63,20 +102,159 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
     _ssmController.dispose();
     _bioController.dispose();
     _phoneController.dispose();
+    _locationSearchController.dispose();
+    _workshopMapController?.dispose();
     super.dispose();
+  }
+
+  LatLng get _selectedStateCenter =>
+      _stateCenters[_selectedState] ?? _stateCenters['Melaka']!;
+
+  Future<void> _searchWorkshopLocation() async {
+    final query = _locationSearchController.text.trim();
+    if (query.isEmpty) {
+      setState(() => _locationError = 'Enter a workshop name or address.');
+      return;
+    }
+
+    setState(() {
+      _isSearchingLocation = true;
+      _locationError = null;
+    });
+
+    try {
+      final matches = await _WorkshopPlaceSearch.search(query: query);
+      if (matches.isEmpty) {
+        throw StateError('No matching place was found.');
+      }
+
+      if (!mounted) return;
+      final match = matches.length == 1
+          ? matches.first
+          : await _chooseWorkshopPlace(matches);
+      if (match == null || !mounted) return;
+
+      _applyWorkshopPlace(match);
+      await _workshopMapController?.animateCamera(
+        CameraUpdate.newLatLngZoom(match.position, 17),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _locationError =
+            'Place not found. Try a complete workshop name or street address.';
+      });
+    } finally {
+      if (mounted) setState(() => _isSearchingLocation = false);
+    }
+  }
+
+  void _applyWorkshopPlace(_WorkshopPlaceResult place) {
+    setState(() {
+      _workshopLocation = place.position;
+      _workshopAddress = place.displayName;
+      _locationSearchController.text = place.displayName;
+      if (place.malaysiaState != null) {
+        _selectedState = place.malaysiaState!;
+      }
+      _locationError = null;
+    });
+  }
+
+  Future<_WorkshopPlaceResult?> _chooseWorkshopPlace(
+    List<_WorkshopPlaceResult> matches,
+  ) {
+    return showModalBottomSheet<_WorkshopPlaceResult>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: Colors.white,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 10),
+              child: Text(
+                'Choose Workshop Location',
+                style: GoogleFonts.dmSerifDisplay(
+                  color: const Color(0xFF004D40),
+                  fontSize: 21,
+                ),
+              ),
+            ),
+            Flexible(
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: matches.length,
+                separatorBuilder: (_, _) => const Divider(height: 1),
+                itemBuilder: (_, index) {
+                  final place = matches[index];
+                  return ListTile(
+                    leading: const CircleAvatar(
+                      backgroundColor: Color(0xFFFFF3D6),
+                      foregroundColor: Color(0xFFD97706),
+                      child: Icon(Icons.location_on_rounded),
+                    ),
+                    title: Text(
+                      place.displayName,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    onTap: () => Navigator.of(sheetContext).pop(place),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _moveMapToSelectedState(String state) async {
+    final center = _stateCenters[state];
+    if (center == null) return;
+    await _workshopMapController?.animateCamera(
+      CameraUpdate.newLatLngZoom(center, 12),
+    );
+  }
+
+  Future<void> _openWorkshopMapPicker() async {
+    final selected = await Navigator.of(context).push<_WorkshopPlaceResult>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => _WorkshopMapPickerPage(
+          initialState: _selectedState,
+          initialLocation: _workshopLocation,
+          initialAddress: _workshopAddress,
+          stateCenters: _stateCenters,
+        ),
+      ),
+    );
+    if (selected == null || !mounted) return;
+
+    _applyWorkshopPlace(selected);
+    await _workshopMapController?.animateCamera(
+      CameraUpdate.newLatLngZoom(selected.position, 17),
+    );
   }
 
   Future<void> _pickSsmDocument() async {
     try {
-      final result = await FilePickerPlatform.instance.pickFiles(
+      final file = await FilePicker.pickFile(
         type: FileType.custom,
         allowedExtensions: ['pdf', 'png', 'jpg', 'jpeg'],
-        withData: true,
       );
 
-      if (result != null && result.files.isNotEmpty) {
+      if (file != null) {
+        final sizeLabel = _formatFileSize(await file.length());
+        if (!mounted) return;
         setState(() {
-          _ssmFile = result.files.first;
+          _ssmFile = file;
+          _ssmFileSizeLabel = sizeLabel;
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -93,20 +271,24 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
 
   Future<void> _pickKraftanganCertificate() async {
     try {
-      final result = await FilePickerPlatform.instance.pickFiles(
+      final file = await FilePicker.pickFile(
         type: FileType.custom,
         allowedExtensions: ['pdf', 'png', 'jpg', 'jpeg'],
-        withData: true,
       );
 
-      if (result != null && result.files.isNotEmpty) {
+      if (file != null) {
+        final sizeLabel = _formatFileSize(await file.length());
+        if (!mounted) return;
         setState(() {
-          _kraftanganFile = result.files.first;
+          _kraftanganFile = file;
+          _kraftanganFileSizeLabel = sizeLabel;
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('🏆 Kraftangan Certificate attached: ${_kraftanganFile!.name}'),
+              content: Text(
+                '🏆 Kraftangan Certificate attached: ${_kraftanganFile!.name}',
+              ),
               backgroundColor: const Color(0xFF004D40),
               behavior: SnackBarBehavior.floating,
             ),
@@ -118,20 +300,18 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
 
   Future<void> _pickStudioPhotos() async {
     try {
-      final result = await FilePickerPlatform.instance.pickFiles(
-        type: FileType.image,
-        allowMultiple: true,
-        withData: true,
-      );
+      final files = await FilePicker.pickFiles(type: FileType.image);
 
-      if (result != null && result.files.isNotEmpty) {
+      if (files.isNotEmpty) {
         setState(() {
-          _uploadedPhotos.addAll(result.files);
+          _uploadedPhotos.addAll(files);
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('📸 Studio workshop photo attached (${result.files.length} files)'),
+              content: Text(
+                '📸 Studio workshop photo attached (${files.length} files)',
+              ),
               backgroundColor: const Color(0xFF004D40),
               behavior: SnackBarBehavior.floating,
             ),
@@ -143,6 +323,20 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
 
   Future<void> _submitApplication() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_workshopLocation == null || _workshopAddress == null) {
+      setState(() {
+        _locationError =
+            'Search for your workshop or tap the map to place its pin.';
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please pin your workshop location before submitting.'),
+          backgroundColor: Color(0xFFB42318),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
 
     setState(() => _isSubmitting = true);
 
@@ -151,9 +345,12 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
     final studioName = _studioNameController.text.trim();
     final ssm = _ssmController.text.trim();
     final bio = _bioController.text.trim();
-    final phone = _phoneController.text.trim().isNotEmpty ? _phoneController.text.trim() : '+60 12-345 6789';
+    final phone = _phoneController.text.trim().isNotEmpty
+        ? _phoneController.text.trim()
+        : '+60 12-345 6789';
 
-    final effectiveEmail = (user?.email != null && user!.email.trim().isNotEmpty)
+    final effectiveEmail =
+        (user?.email != null && user!.email.trim().isNotEmpty)
         ? user.email.trim()
         : 'tourist@warisankita.my';
 
@@ -165,6 +362,9 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
       bio: bio.isNotEmpty ? bio : null,
       phone: phone,
       state: _selectedState,
+      address: _workshopAddress,
+      latitude: _workshopLocation!.latitude,
+      longitude: _workshopLocation!.longitude,
       ssmFile: _ssmFile,
       certFile: _kraftanganFile,
       photos: _uploadedPhotos,
@@ -192,7 +392,8 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
           craftCategory: _selectedCraftCategory,
           state: _selectedState,
           dateSubmitted: 'Just Now',
-          imageUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600',
+          imageUrl:
+              'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600',
           email: user?.email ?? '',
           experience: 'Master Artisan Applicant',
           phone: phone,
@@ -200,7 +401,9 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
           ssmFileName: _ssmFile?.name ?? 'SSM_Registration_Cert.pdf',
           certFileName: _kraftanganFile?.name ?? 'Kraftangan_Master_Cert.pdf',
           photos: _uploadedPhotos.map((p) => p.name).toList(),
-          bio: bio.isNotEmpty ? bio : 'Master studio application for $_selectedCraftCategory in $_selectedState.',
+          bio: bio.isNotEmpty
+              ? bio
+              : 'Master studio application for $_selectedCraftCategory in $_selectedState.',
           isUpgradeFromTourist: true,
         ),
       );
@@ -212,7 +415,11 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
           children: [
             Icon(Icons.hourglass_top_rounded, color: Colors.white, size: 18),
             SizedBox(width: 10),
-            Expanded(child: Text('STUDIO APPLICATION SUBMITTED: Under Kraftangan Admin Review!')),
+            Expanded(
+              child: Text(
+                'STUDIO APPLICATION SUBMITTED: Under Kraftangan Admin Review!',
+              ),
+            ),
           ],
         ),
         backgroundColor: Color(0xFFD97706),
@@ -246,7 +453,10 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
         ),
         title: Text(
           'Apply for Master Artisan',
-          style: GoogleFonts.dmSerifDisplay(color: const Color(0xFF004D40), fontSize: 22),
+          style: GoogleFonts.dmSerifDisplay(
+            color: const Color(0xFF004D40),
+            fontSize: 22,
+          ),
         ),
         centerTitle: true,
       ),
@@ -264,7 +474,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                   color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 20,
                   offset: const Offset(0, 8),
-                )
+                ),
               ],
             ),
             child: Form(
@@ -283,7 +493,11 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.verified_rounded, color: Color(0xFFD97706), size: 24),
+                        const Icon(
+                          Icons.verified_rounded,
+                          color: Color(0xFFD97706),
+                          size: 24,
+                        ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
@@ -300,7 +514,11 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                               const SizedBox(height: 4),
                               Text(
                                 'Register your heritage workshop to host interactive quests, create unique QR keys, and gain verified status on the live directory.',
-                                style: GoogleFonts.plusJakartaSans(fontSize: 11, color: const Color(0xFF78350F), height: 1.3),
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11,
+                                  color: const Color(0xFF78350F),
+                                  height: 1.3,
+                                ),
                               ),
                             ],
                           ),
@@ -311,7 +529,13 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
 
                   const SizedBox(height: 24),
 
-                  Text('Studio & Workshop Details', style: GoogleFonts.dmSerifDisplay(fontSize: 18, color: const Color(0xFF004D40))),
+                  Text(
+                    'Studio & Workshop Details',
+                    style: GoogleFonts.dmSerifDisplay(
+                      fontSize: 18,
+                      color: const Color(0xFF004D40),
+                    ),
+                  ),
                   const SizedBox(height: 16),
 
                   // Studio Name
@@ -320,12 +544,20 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                     decoration: InputDecoration(
                       labelText: 'Studio Name *',
                       hintText: 'e.g. Pak Mat Pottery & Ceramics Studio',
-                      prefixIcon: const Icon(Icons.storefront_rounded, color: Color(0xFF004D40)),
+                      prefixIcon: const Icon(
+                        Icons.storefront_rounded,
+                        color: Color(0xFF004D40),
+                      ),
                       filled: true,
                       fillColor: const Color(0xFFF8F9FA),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none,
+                      ),
                     ),
-                    validator: (v) => (v == null || v.trim().isEmpty) ? 'Please enter your studio or workshop name' : null,
+                    validator: (v) => (v == null || v.trim().isEmpty)
+                        ? 'Please enter your studio or workshop name'
+                        : null,
                   ),
 
                   const SizedBox(height: 16),
@@ -335,13 +567,30 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                     value: _selectedCraftCategory,
                     decoration: InputDecoration(
                       labelText: 'Heritage Craft Category *',
-                      prefixIcon: const Icon(Icons.palette_outlined, color: Color(0xFF004D40)),
+                      prefixIcon: const Icon(
+                        Icons.palette_outlined,
+                        color: Color(0xFF004D40),
+                      ),
                       filled: true,
                       fillColor: const Color(0xFFF8F9FA),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none,
+                      ),
                     ),
-                    items: _craftCategories.map((c) => DropdownMenuItem(value: c, child: Text(c, style: GoogleFonts.plusJakartaSans(fontSize: 13)))).toList(),
-                    onChanged: (v) => setState(() => _selectedCraftCategory = v!),
+                    items: _craftCategories
+                        .map(
+                          (c) => DropdownMenuItem(
+                            value: c,
+                            child: Text(
+                              c,
+                              style: GoogleFonts.plusJakartaSans(fontSize: 13),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) =>
+                        setState(() => _selectedCraftCategory = v!),
                   ),
 
                   const SizedBox(height: 16),
@@ -351,14 +600,44 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                     value: _selectedState,
                     decoration: InputDecoration(
                       labelText: 'Workshop State / Region *',
-                      prefixIcon: const Icon(Icons.location_on_outlined, color: Color(0xFF004D40)),
+                      prefixIcon: const Icon(
+                        Icons.location_on_outlined,
+                        color: Color(0xFF004D40),
+                      ),
                       filled: true,
                       fillColor: const Color(0xFFF8F9FA),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none,
+                      ),
                     ),
-                    items: _malaysiaStates.map((s) => DropdownMenuItem(value: s, child: Text(s, style: GoogleFonts.plusJakartaSans(fontSize: 13)))).toList(),
-                    onChanged: (v) => setState(() => _selectedState = v!),
+                    items: _malaysiaStates
+                        .map(
+                          (s) => DropdownMenuItem(
+                            value: s,
+                            child: Text(
+                              s,
+                              style: GoogleFonts.plusJakartaSans(fontSize: 13),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) {
+                      if (v == null) return;
+                      setState(() {
+                        _selectedState = v;
+                        _workshopLocation = null;
+                        _workshopAddress = null;
+                        _locationError = null;
+                        _locationSearchController.clear();
+                      });
+                      _moveMapToSelectedState(v);
+                    },
                   ),
+
+                  const SizedBox(height: 16),
+
+                  _buildWorkshopLocationPicker(),
 
                   const SizedBox(height: 16),
 
@@ -368,12 +647,20 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                     decoration: InputDecoration(
                       labelText: 'SSM Business / Kraftangan Registration No. *',
                       hintText: 'e.g. 202601004821 or KT/2026/0491',
-                      prefixIcon: const Icon(Icons.badge_outlined, color: Color(0xFF004D40)),
+                      prefixIcon: const Icon(
+                        Icons.badge_outlined,
+                        color: Color(0xFF004D40),
+                      ),
                       filled: true,
                       fillColor: const Color(0xFFF8F9FA),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none,
+                      ),
                     ),
-                    validator: (v) => (v == null || v.trim().isEmpty) ? 'Please enter SSM or Kraftangan registration number' : null,
+                    validator: (v) => (v == null || v.trim().isEmpty)
+                        ? 'Please enter SSM or Kraftangan registration number'
+                        : null,
                   ),
 
                   const SizedBox(height: 16),
@@ -385,10 +672,16 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                     decoration: InputDecoration(
                       labelText: 'Studio Contact Phone',
                       hintText: '+60 12-345 6789',
-                      prefixIcon: const Icon(Icons.phone_outlined, color: Color(0xFF004D40)),
+                      prefixIcon: const Icon(
+                        Icons.phone_outlined,
+                        color: Color(0xFF004D40),
+                      ),
                       filled: true,
                       fillColor: const Color(0xFFF8F9FA),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none,
+                      ),
                     ),
                   ),
 
@@ -400,28 +693,43 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                     maxLines: 3,
                     decoration: InputDecoration(
                       labelText: 'Studio Heritage Bio & Master Story',
-                      hintText: 'Describe your heritage craft experience, workshop history, and master lineage...',
+                      hintText:
+                          'Describe your heritage craft experience, workshop history, and master lineage...',
                       prefixIcon: const Padding(
                         padding: EdgeInsets.only(bottom: 45),
-                        child: Icon(Icons.history_edu_rounded, color: Color(0xFF004D40)),
+                        child: Icon(
+                          Icons.history_edu_rounded,
+                          color: Color(0xFF004D40),
+                        ),
                       ),
                       filled: true,
                       fillColor: const Color(0xFFF8F9FA),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none,
+                      ),
                     ),
                   ),
 
                   const SizedBox(height: 24),
 
-                  Text('Verification Documents (Optional)', style: GoogleFonts.dmSerifDisplay(fontSize: 16, color: const Color(0xFF004D40))),
+                  Text(
+                    'Verification Documents (Optional)',
+                    style: GoogleFonts.dmSerifDisplay(
+                      fontSize: 16,
+                      color: const Color(0xFF004D40),
+                    ),
+                  ),
                   const SizedBox(height: 12),
 
                   // Document Pickers
                   _buildUploadTile(
                     icon: Icons.description_outlined,
                     title: 'SSM Business Registration PDF',
-                    subtitle: _ssmFileName != null ? 'Attached: $_ssmFileName ($_ssmFileSize)' : 'Upload PDF / PNG proof of registration',
-                    isAttached: _ssmFileName != null,
+                    subtitle: _ssmFile != null
+                        ? 'Attached: ${_ssmFile!.name} ($_ssmFileSizeLabel)'
+                        : 'Upload PDF / PNG proof of registration',
+                    isAttached: _ssmFile != null,
                     onTap: _pickSsmDocument,
                   ),
 
@@ -430,8 +738,10 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                   _buildUploadTile(
                     icon: Icons.workspace_premium_outlined,
                     title: 'Kraftangan Master Certificate',
-                    subtitle: _kraftanganFileName != null ? 'Attached: $_kraftanganFileName ($_kraftanganFileSize)' : 'Upload accreditation certificate (Optional)',
-                    isAttached: _kraftanganFileName != null,
+                    subtitle: _kraftanganFile != null
+                        ? 'Attached: ${_kraftanganFile!.name} ($_kraftanganFileSizeLabel)'
+                        : 'Upload accreditation certificate (Optional)',
+                    isAttached: _kraftanganFile != null,
                     onTap: _pickKraftanganCertificate,
                   ),
 
@@ -440,7 +750,9 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                   _buildUploadTile(
                     icon: Icons.photo_camera_outlined,
                     title: 'Studio Workshop Photos',
-                    subtitle: _uploadedPhotos.isNotEmpty ? 'Attached ${_uploadedPhotos.length} photo(s)' : 'Upload photos of your craft studio',
+                    subtitle: _uploadedPhotos.isNotEmpty
+                        ? 'Attached ${_uploadedPhotos.length} photo(s)'
+                        : 'Upload photos of your craft studio',
                     isAttached: _uploadedPhotos.isNotEmpty,
                     onTap: _pickStudioPhotos,
                   ),
@@ -455,13 +767,26 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                       onPressed: _isSubmitting ? null : _submitApplication,
                       style: FilledButton.styleFrom(
                         backgroundColor: const Color(0xFF004D40),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                       ),
                       child: _isSubmitting
-                          ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2.5,
+                              ),
+                            )
                           : Text(
                               'Submit Artisan Application',
-                              style: GoogleFonts.plusJakartaSans(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
                             ),
                     ),
                   ),
@@ -471,6 +796,181 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildWorkshopLocationPicker() {
+    final pin = _workshopLocation;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Workshop Location *',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF004D40),
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: _locationSearchController,
+          textInputAction: TextInputAction.search,
+          onFieldSubmitted: (_) => _searchWorkshopLocation(),
+          decoration: InputDecoration(
+            hintText: 'Search workshop name or full address',
+            prefixIcon: const Icon(
+              Icons.search_rounded,
+              color: Color(0xFF004D40),
+            ),
+            suffixIcon: _isSearchingLocation
+                ? const Padding(
+                    padding: EdgeInsets.all(14),
+                    child: SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                : IconButton(
+                    tooltip: 'Search place',
+                    onPressed: _searchWorkshopLocation,
+                    icon: const Icon(Icons.arrow_forward_rounded),
+                  ),
+            filled: true,
+            fillColor: const Color(0xFFF8F9FA),
+            errorText: _locationError,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Container(
+          height: 240,
+          decoration: BoxDecoration(
+            color: const Color(0xFFE8EFEC),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: pin == null
+                  ? const Color(0xFFD7E0DC)
+                  : const Color(0xFF10B981),
+              width: pin == null ? 1 : 2,
+            ),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: GoogleMap(
+                    initialCameraPosition: CameraPosition(
+                      target: _selectedStateCenter,
+                      zoom: 12,
+                    ),
+                    onMapCreated: (controller) {
+                      _workshopMapController = controller;
+                    },
+                    markers: pin == null
+                        ? const <Marker>{}
+                        : {
+                            Marker(
+                              markerId: const MarkerId('workshop-location'),
+                              position: pin,
+                              icon: BitmapDescriptor.defaultMarkerWithHue(
+                                BitmapDescriptor.hueOrange,
+                              ),
+                            ),
+                          },
+                    myLocationButtonEnabled: false,
+                    myLocationEnabled: false,
+                    mapToolbarEnabled: false,
+                    zoomControlsEnabled: false,
+                    compassEnabled: false,
+                  ),
+                ),
+              ),
+              Positioned.fill(
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(onTap: _openWorkshopMapPicker),
+                ),
+              ),
+              Positioned(
+                top: 10,
+                right: 10,
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF004D40),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: const [
+                        BoxShadow(color: Colors.black26, blurRadius: 8),
+                      ],
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.open_in_full_rounded,
+                            color: Colors.white,
+                            size: 15,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Open Large Map',
+                            style: GoogleFonts.plusJakartaSans(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              pin == null
+                  ? Icons.touch_app_rounded
+                  : Icons.check_circle_rounded,
+              size: 16,
+              color: pin == null
+                  ? const Color(0xFF64748B)
+                  : const Color(0xFF047857),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                pin == null
+                    ? 'Search above or open the large map to place the exact workshop pin.'
+                    : _workshopAddress ?? 'Resolving the selected address…',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 10.5,
+                  height: 1.35,
+                  color: pin == null
+                      ? const Color(0xFF64748B)
+                      : const Color(0xFF047857),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -489,31 +989,750 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
         decoration: BoxDecoration(
           color: isAttached ? const Color(0xFFECFDF5) : const Color(0xFFF8F9FA),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: isAttached ? const Color(0xFF10B981) : Colors.grey[300]!),
+          border: Border.all(
+            color: isAttached ? const Color(0xFF10B981) : Colors.grey[300]!,
+          ),
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: isAttached ? const Color(0xFF10B981).withValues(alpha: 0.15) : Colors.grey[200],
+                color: isAttached
+                    ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                    : Colors.grey[200],
                 shape: BoxShape.circle,
               ),
-              child: Icon(isAttached ? Icons.check_circle_rounded : icon, color: isAttached ? const Color(0xFF10B981) : const Color(0xFF004D40), size: 20),
+              child: Icon(
+                isAttached ? Icons.check_circle_rounded : icon,
+                color: isAttached
+                    ? const Color(0xFF10B981)
+                    : const Color(0xFF004D40),
+                size: 20,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 12, color: const Color(0xFF0F172A))),
-                  Text(subtitle, style: GoogleFonts.plusJakartaSans(fontSize: 10.5, color: isAttached ? const Color(0xFF047857) : Colors.grey[600])),
+                  Text(
+                    title,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                      color: const Color(0xFF0F172A),
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 10.5,
+                      color: isAttached
+                          ? const Color(0xFF047857)
+                          : Colors.grey[600],
+                    ),
+                  ),
                 ],
               ),
             ),
-            Icon(Icons.upload_file_rounded, size: 18, color: isAttached ? const Color(0xFF10B981) : Colors.grey[500]),
+            Icon(
+              Icons.upload_file_rounded,
+              size: 18,
+              color: isAttached ? const Color(0xFF10B981) : Colors.grey[500],
+            ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _WorkshopPlaceResult {
+  final String displayName;
+  final LatLng position;
+  final String? countryCode;
+  final String? malaysiaState;
+
+  const _WorkshopPlaceResult({
+    required this.displayName,
+    required this.position,
+    this.countryCode,
+    this.malaysiaState,
+  });
+
+  bool get isInMalaysia => countryCode?.toLowerCase() == 'my';
+
+  static _WorkshopPlaceResult? fromMap(Map<String, dynamic> map) {
+    final displayName = map['display_name']?.toString().trim();
+    final latitude = double.tryParse(map['lat']?.toString() ?? '');
+    final longitude = double.tryParse(map['lon']?.toString() ?? '');
+    final address = map['address'] is Map
+        ? Map<String, dynamic>.from(map['address'] as Map)
+        : const <String, dynamic>{};
+    if (displayName == null ||
+        displayName.isEmpty ||
+        latitude == null ||
+        longitude == null) {
+      return null;
+    }
+
+    return _WorkshopPlaceResult(
+      displayName: displayName,
+      position: LatLng(latitude, longitude),
+      countryCode:
+          address['country_code']?.toString() ??
+          map['country_code']?.toString(),
+      malaysiaState: _resolveMalaysiaState(address, displayName),
+    );
+  }
+
+  static _WorkshopPlaceResult? fromGooglePlace(Map<String, dynamic> map) {
+    final location = map['location'] is Map
+        ? Map<String, dynamic>.from(map['location'] as Map)
+        : const <String, dynamic>{};
+    final latitude = (location['latitude'] as num?)?.toDouble();
+    final longitude = (location['longitude'] as num?)?.toDouble();
+    final formattedAddress = map['formattedAddress']?.toString().trim();
+    final displayNameMap = map['displayName'] is Map
+        ? Map<String, dynamic>.from(map['displayName'] as Map)
+        : const <String, dynamic>{};
+    final placeName = displayNameMap['text']?.toString().trim();
+    if (latitude == null || longitude == null) return null;
+
+    String? countryCode;
+    String? stateName;
+    final components = map['addressComponents'];
+    if (components is List) {
+      for (final component in components.whereType<Map>()) {
+        final value = Map<String, dynamic>.from(component);
+        final types =
+            (value['types'] as List?)?.map((type) => type.toString()).toSet() ??
+            const <String>{};
+        if (types.contains('country')) {
+          countryCode = value['shortText']?.toString();
+        }
+        if (types.contains('administrative_area_level_1')) {
+          stateName = value['longText']?.toString();
+        }
+      }
+    }
+
+    final address = formattedAddress?.isNotEmpty == true
+        ? formattedAddress!
+        : placeName;
+    if (address == null || address.isEmpty) return null;
+    final label =
+        placeName != null &&
+            placeName.isNotEmpty &&
+            !address.toLowerCase().startsWith(placeName.toLowerCase())
+        ? '$placeName, $address'
+        : address;
+
+    return _WorkshopPlaceResult(
+      displayName: label,
+      position: LatLng(latitude, longitude),
+      countryCode: countryCode,
+      malaysiaState: _resolveMalaysiaState({
+        'state': stateName,
+      }, '$label ${stateName ?? ''}'),
+    );
+  }
+
+  static String? _resolveMalaysiaState(
+    Map<String, dynamic> address,
+    String displayName,
+  ) {
+    final locationText = <Object?>[
+      address['state'],
+      address['region'],
+      address['city'],
+      address['county'],
+      displayName,
+    ].whereType<Object>().join(' ').toLowerCase();
+
+    const aliases = <String, List<String>>{
+      'Kuala Lumpur': ['kuala lumpur'],
+      'Negeri Sembilan': ['negeri sembilan'],
+      'Penang': ['pulau pinang', 'penang'],
+      'Melaka': ['malacca', 'melaka'],
+      'Terengganu': ['terengganu'],
+      'Selangor': ['selangor'],
+      'Sarawak': ['sarawak'],
+      'Sabah': ['sabah'],
+      'Perlis': ['perlis'],
+      'Perak': ['perak'],
+      'Pahang': ['pahang'],
+      'Kelantan': ['kelantan'],
+      'Kedah': ['kedah'],
+      'Johor': ['johor'],
+    };
+    for (final entry in aliases.entries) {
+      if (entry.value.any(locationText.contains)) return entry.key;
+    }
+    return null;
+  }
+}
+
+class _WorkshopPlaceSearch {
+  static const MethodChannel _mapsChannel = MethodChannel(
+    'warisan_kita/google_maps',
+  );
+  static const Map<String, String> _headers = {
+    'User-Agent': 'WarisanKita/1.0 (workshop location picker)',
+    'Accept-Language': 'en-MY,en',
+  };
+
+  static Future<List<_WorkshopPlaceResult>> search({
+    required String query,
+  }) async {
+    try {
+      final googleResults = await _searchGooglePlaces(query);
+      if (googleResults.isNotEmpty) return googleResults;
+    } catch (_) {
+      // Keep the location picker usable if Google Places is unavailable.
+    }
+
+    return _searchOpenStreetMap(query);
+  }
+
+  static Future<List<_WorkshopPlaceResult>> _searchGooglePlaces(
+    String query,
+  ) async {
+    final apiKey = await _mapsChannel.invokeMethod<String>('getApiKey');
+    if (apiKey == null || apiKey.trim().isEmpty) return const [];
+
+    final malaysiaQuery = query.toLowerCase().contains('malaysia')
+        ? query
+        : '$query, Malaysia';
+    final response = await http
+        .post(
+          Uri.https('places.googleapis.com', '/v1/places:searchText'),
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Goog-Api-Key': apiKey,
+            'X-Goog-FieldMask':
+                'places.displayName,places.formattedAddress,'
+                'places.location,places.addressComponents',
+          },
+          body: jsonEncode({
+            'textQuery': malaysiaQuery,
+            'languageCode': 'en',
+            'regionCode': 'MY',
+            'pageSize': 8,
+          }),
+        )
+        .timeout(const Duration(seconds: 12));
+    if (response.statusCode != 200) {
+      throw StateError('Google Places search is temporarily unavailable.');
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw const FormatException('Invalid Google Places response.');
+    }
+    final places = decoded['places'];
+    if (places is! List) return const [];
+    return places
+        .whereType<Map>()
+        .map(
+          (place) => _WorkshopPlaceResult.fromGooglePlace(
+            Map<String, dynamic>.from(place),
+          ),
+        )
+        .whereType<_WorkshopPlaceResult>()
+        .where((place) => place.isInMalaysia)
+        .toList(growable: false);
+  }
+
+  static Future<List<_WorkshopPlaceResult>> _searchOpenStreetMap(
+    String query,
+  ) async {
+    final uri = Uri.https('nominatim.openstreetmap.org', '/search', {
+      'q': query,
+      'format': 'jsonv2',
+      'addressdetails': '1',
+      'namedetails': '1',
+      'countrycodes': 'my',
+      'limit': '5',
+    });
+    final response = await http.get(uri, headers: _headers);
+    if (response.statusCode != 200) {
+      throw StateError('Place search is temporarily unavailable.');
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! List) {
+      throw const FormatException('Invalid place search response.');
+    }
+    return decoded
+        .whereType<Map<String, dynamic>>()
+        .map(_WorkshopPlaceResult.fromMap)
+        .whereType<_WorkshopPlaceResult>()
+        .where((place) => place.isInMalaysia)
+        .toList(growable: false);
+  }
+
+  static Future<_WorkshopPlaceResult?> reverse(LatLng position) async {
+    try {
+      final uri = Uri.https('nominatim.openstreetmap.org', '/reverse', {
+        'lat': position.latitude.toString(),
+        'lon': position.longitude.toString(),
+        'format': 'jsonv2',
+        'addressdetails': '1',
+        'zoom': '18',
+      });
+      final response = await http.get(uri, headers: _headers);
+      if (response.statusCode != 200) return null;
+
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map<String, dynamic>) return null;
+      return _WorkshopPlaceResult.fromMap(decoded);
+    } catch (_) {
+      return null;
+    }
+  }
+}
+
+class _WorkshopMapPickerPage extends StatefulWidget {
+  final String initialState;
+  final LatLng? initialLocation;
+  final String? initialAddress;
+  final Map<String, LatLng> stateCenters;
+
+  const _WorkshopMapPickerPage({
+    required this.initialState,
+    required this.initialLocation,
+    required this.initialAddress,
+    required this.stateCenters,
+  });
+
+  @override
+  State<_WorkshopMapPickerPage> createState() => _WorkshopMapPickerPageState();
+}
+
+class _WorkshopMapPickerPageState extends State<_WorkshopMapPickerPage> {
+  final _searchController = TextEditingController();
+  GoogleMapController? _mapController;
+  _WorkshopPlaceResult? _selection;
+  LatLng? _pendingPosition;
+  late String _detectedState;
+  bool _isLoading = false;
+  bool _isLocating = false;
+  bool _hasLocationPermission = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _detectedState = widget.initialState;
+    if (widget.initialLocation != null && widget.initialAddress != null) {
+      _selection = _WorkshopPlaceResult(
+        displayName: widget.initialAddress!,
+        position: widget.initialLocation!,
+        countryCode: 'my',
+        malaysiaState: widget.initialState,
+      );
+      _searchController.text = widget.initialAddress!;
+    }
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _mapController?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _search() async {
+    final query = _searchController.text.trim();
+    if (query.isEmpty) {
+      setState(() => _error = 'Enter a workshop name or address.');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      final results = await _WorkshopPlaceSearch.search(query: query);
+      if (results.isEmpty) {
+        throw StateError('No Malaysian place found.');
+      }
+      if (!mounted) return;
+      final place = results.length == 1
+          ? results.first
+          : await _chooseResult(results);
+      if (place != null && mounted) await _applySelection(place);
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _error = 'No Malaysian location found. Try a more complete address.';
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _pin(LatLng position) async {
+    setState(() {
+      _isLoading = true;
+      _pendingPosition = position;
+      _error = null;
+    });
+    final place = await _WorkshopPlaceSearch.reverse(position);
+    if (!mounted) return;
+    if (place == null || !place.isInMalaysia) {
+      setState(() {
+        _isLoading = false;
+        _pendingPosition = null;
+        _error = 'That pin is outside Malaysia. Choose a Malaysian location.';
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Workshop pins must be located within Malaysia.'),
+          backgroundColor: Color(0xFFB42318),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    await _applySelection(
+      _WorkshopPlaceResult(
+        displayName: place.displayName,
+        position: position,
+        countryCode: place.countryCode,
+        malaysiaState: place.malaysiaState,
+      ),
+      moveCamera: false,
+    );
+    if (mounted) setState(() => _isLoading = false);
+  }
+
+  Future<void> _moveToCurrentLocation() async {
+    if (_isLocating) return;
+    setState(() => _isLocating = true);
+    try {
+      if (!await Geolocator.isLocationServiceEnabled()) {
+        throw StateError('Enable location services to find your position.');
+      }
+
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        throw StateError('Location permission is required for this button.');
+      }
+
+      final current = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
+      );
+      if (!mounted) return;
+      final target = LatLng(current.latitude, current.longitude);
+      setState(() => _hasLocationPermission = true);
+      await _mapController?.animateCamera(
+        CameraUpdate.newLatLngZoom(target, 17),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.toString().replaceFirst('Bad state: ', '')),
+          backgroundColor: const Color(0xFFB42318),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isLocating = false);
+    }
+  }
+
+  Future<void> _adjustZoom(double amount) async {
+    final controller = _mapController;
+    if (controller == null) return;
+    final currentZoom = await controller.getZoomLevel();
+    final targetZoom = (currentZoom + amount).clamp(3.0, 21.0);
+    await controller.animateCamera(CameraUpdate.zoomTo(targetZoom));
+  }
+
+  Widget _mapControlButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback? onPressed,
+    BorderRadius? borderRadius,
+  }) {
+    return Material(
+      color: Colors.white,
+      elevation: 4,
+      borderRadius: borderRadius ?? BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: borderRadius ?? BorderRadius.circular(14),
+        child: SizedBox.square(
+          dimension: 46,
+          child: Center(
+            child: _isLocating && icon == Icons.my_location_rounded
+                ? const SizedBox.square(
+                    dimension: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Tooltip(
+                    message: tooltip,
+                    child: Icon(icon, color: const Color(0xFF004D40)),
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _applySelection(
+    _WorkshopPlaceResult place, {
+    bool moveCamera = true,
+  }) async {
+    setState(() {
+      _selection = place;
+      _pendingPosition = null;
+      _detectedState = place.malaysiaState ?? _detectedState;
+      _searchController.text = place.displayName;
+      _error = null;
+    });
+    if (moveCamera) {
+      await _mapController?.animateCamera(
+        CameraUpdate.newLatLngZoom(place.position, 17),
+      );
+    }
+  }
+
+  Future<_WorkshopPlaceResult?> _chooseResult(
+    List<_WorkshopPlaceResult> results,
+  ) {
+    return showModalBottomSheet<_WorkshopPlaceResult>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 430),
+          child: ListView.separated(
+            shrinkWrap: true,
+            itemCount: results.length,
+            separatorBuilder: (_, _) => const Divider(height: 1),
+            itemBuilder: (_, index) {
+              final result = results[index];
+              return ListTile(
+                leading: const Icon(
+                  Icons.location_on_rounded,
+                  color: Color(0xFFD97706),
+                ),
+                title: Text(
+                  result.displayName,
+                  style: GoogleFonts.plusJakartaSans(fontSize: 12),
+                ),
+                onTap: () => Navigator.of(sheetContext).pop(result),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = _selection;
+    final markerPosition = _pendingPosition ?? selected?.position;
+    final initialTarget =
+        selected?.position ??
+        widget.stateCenters[_detectedState] ??
+        const LatLng(4.2105, 101.9758);
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF7F5EF),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF004D40),
+        title: Text(
+          'Pin Workshop Location',
+          style: GoogleFonts.dmSerifDisplay(fontSize: 22),
+        ),
+        actions: [
+          TextButton(
+            onPressed: selected == null
+                ? null
+                : () => Navigator.of(context).pop(selected),
+            child: const Text('Done'),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: GoogleMap(
+              initialCameraPosition: CameraPosition(
+                target: initialTarget,
+                zoom: selected == null ? 12 : 17,
+              ),
+              onMapCreated: (controller) => _mapController = controller,
+              onTap: _isLoading ? null : _pin,
+              onLongPress: _isLoading ? null : _pin,
+              markers: markerPosition == null
+                  ? const <Marker>{}
+                  : {
+                      Marker(
+                        markerId: const MarkerId('large-workshop-pin'),
+                        position: markerPosition,
+                        draggable: !_isLoading,
+                        onDragEnd: _pin,
+                        icon: BitmapDescriptor.defaultMarkerWithHue(
+                          BitmapDescriptor.hueOrange,
+                        ),
+                      ),
+                    },
+              myLocationButtonEnabled: false,
+              myLocationEnabled: _hasLocationPermission,
+              mapToolbarEnabled: false,
+              zoomControlsEnabled: false,
+              compassEnabled: true,
+            ),
+          ),
+          Positioned(
+            top: 88,
+            right: 14,
+            child: SafeArea(
+              child: Column(
+                children: [
+                  _mapControlButton(
+                    icon: Icons.my_location_rounded,
+                    tooltip: 'Go to my location',
+                    onPressed: _isLocating ? null : _moveToCurrentLocation,
+                  ),
+                  const SizedBox(height: 12),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: Column(
+                      children: [
+                        _mapControlButton(
+                          icon: Icons.add_rounded,
+                          tooltip: 'Zoom in',
+                          onPressed: () => _adjustZoom(1),
+                          borderRadius: BorderRadius.zero,
+                        ),
+                        Container(
+                          width: 32,
+                          height: 1,
+                          color: const Color(0xFFE2E8F0),
+                        ),
+                        _mapControlButton(
+                          icon: Icons.remove_rounded,
+                          tooltip: 'Zoom out',
+                          onPressed: () => _adjustZoom(-1),
+                          borderRadius: BorderRadius.zero,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                children: [
+                  Material(
+                    elevation: 5,
+                    borderRadius: BorderRadius.circular(16),
+                    child: TextField(
+                      controller: _searchController,
+                      textInputAction: TextInputAction.search,
+                      onSubmitted: (_) => _search(),
+                      decoration: InputDecoration(
+                        hintText: 'Search a workshop or address',
+                        prefixIcon: const Icon(Icons.search_rounded),
+                        suffixIcon: IconButton(
+                          onPressed: _isLoading ? null : _search,
+                          icon: const Icon(Icons.arrow_forward_rounded),
+                        ),
+                        errorText: _error,
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (_isLoading)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 12),
+                      child: LinearProgressIndicator(
+                        color: Color(0xFFD97706),
+                        minHeight: 3,
+                      ),
+                    ),
+                  const Spacer(),
+                  Material(
+                    elevation: 5,
+                    borderRadius: BorderRadius.circular(16),
+                    color: Colors.white,
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            selected == null
+                                ? Icons.touch_app_rounded
+                                : Icons.location_on_rounded,
+                            color: const Color(0xFFD97706),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  selected == null
+                                      ? 'Tap anywhere in Malaysia to place the pin'
+                                      : _detectedState,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF004D40),
+                                  ),
+                                ),
+                                if (selected != null) ...[
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    selected.displayName,
+                                    maxLines: 3,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 10.5,
+                                      color: const Color(0xFF64748B),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

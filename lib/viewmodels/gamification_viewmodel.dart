@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:warisan_kita/data/repositories/gamification_repository.dart';
 import 'package:warisan_kita/domain/models/artisan_task_request.dart';
@@ -5,6 +7,7 @@ import 'package:warisan_kita/domain/models/badge.dart';
 import 'package:warisan_kita/domain/models/heritage_task.dart' as quest_domain;
 import 'package:warisan_kita/domain/models/heritage_task_change_request.dart';
 import 'package:warisan_kita/domain/models/quest.dart';
+import 'package:warisan_kita/domain/models/task_progress.dart';
 
 class GamificationViewModel extends ChangeNotifier {
   final GamificationRepository _repository;
@@ -34,6 +37,32 @@ class GamificationViewModel extends ChangeNotifier {
   String? get error => _error;
 
   int _loadRequestId = 0;
+
+  static const int dwellRequiredSeconds = 900;
+  Timer? _dwellTimer;
+  quest_domain.HeritageTask? _goToWorkshopTask;
+  quest_domain.HeritageTask? _stayFifteenMinutesTask;
+  final Map<String, TaskProgress> _taskProgress = {};
+  bool _isInsideQuestGeofence = false;
+  bool get isInsideQuestGeofence => _isInsideQuestGeofence;
+  bool _isDwellTracking = false;
+  bool get isDwellTracking => _isDwellTracking;
+  int _displayedDwellSeconds = 0;
+  int get displayedDwellSeconds => _displayedDwellSeconds;
+  bool _isCompletingDwellTask = false;
+  bool _isProcessingProximity = false;
+  bool? _pendingProximity;
+  bool _requiresManualResume = false;
+
+  bool get canResumeDwellTracking {
+    final dwellTask = _stayFifteenMinutesTask;
+    return _questProgressStatus?.toUpperCase() == 'IN_PROGRESS' &&
+        _isInsideQuestGeofence &&
+        _requiresManualResume &&
+        !_isDwellTracking &&
+        dwellTask != null &&
+        !isTaskCompleted(dwellTask);
+  }
 
   Quest? _artisanQuest;
   Quest? get artisanQuest => _artisanQuest;
@@ -119,6 +148,7 @@ class GamificationViewModel extends ChangeNotifier {
     _selectedQuest = null;
     _heritageTasks = [];
     _questProgressStatus = null;
+    _resetTouristTaskProgress();
     _startQuestError = null;
     _error = null;
     _isLoading = true;
@@ -156,6 +186,7 @@ class GamificationViewModel extends ChangeNotifier {
     _selectedQuest = quest;
     _heritageTasks = [];
     _questProgressStatus = null;
+    _resetTouristTaskProgress();
     _startQuestError = null;
     _error = null;
     _isLoading = true;
@@ -179,6 +210,36 @@ class GamificationViewModel extends ChangeNotifier {
 
       _heritageTasks = tasks;
       _questProgressStatus = progressStatus;
+      _identifySystemTasks();
+
+      final progress = await _repository.getTaskProgress(
+        tasks.map((task) => task.id).toList(growable: false),
+      );
+      if (requestId != _loadRequestId) return;
+      for (final item in progress) {
+        _taskProgress[item.taskId] = item;
+      }
+
+      final dwellTask = _stayFifteenMinutesTask;
+      final dwellProgress = dwellTask == null
+          ? null
+          : _taskProgress[dwellTask.id];
+      if (dwellTask != null &&
+          dwellProgress != null &&
+          !dwellProgress.isCompleted &&
+          dwellProgress.trackingStartedAt != null) {
+        final paused = await _repository.pauseTimedTask(
+          taskId: dwellTask.id,
+          progressSeconds: dwellProgress.progressSeconds,
+        );
+        if (requestId != _loadRequestId) return;
+        _taskProgress[dwellTask.id] = paused;
+      }
+      _syncDisplayedDwellProgress();
+      _requiresManualResume =
+          progressStatus?.toUpperCase() == 'IN_PROGRESS' &&
+          dwellTask != null &&
+          !(dwellProgress?.isCompleted ?? false);
     } catch (error, stackTrace) {
       if (requestId != _loadRequestId) {
         return;
@@ -218,16 +279,302 @@ class GamificationViewModel extends ChangeNotifier {
         questId: quest.id,
         taskIds: _heritageTasks.map((task) => task.id).toList(growable: false),
       );
+      _identifySystemTasks();
+      final arrivalTask = _goToWorkshopTask;
+      final dwellTask = _stayFifteenMinutesTask;
+      if (arrivalTask == null || dwellTask == null) {
+        throw StateError(
+          'The two required system activities are not configured correctly.',
+        );
+      }
+
+      _isInsideQuestGeofence = true;
+      final dwellProgress = await _repository.startTimedTask(dwellTask.id);
+      _taskProgress[dwellTask.id] = dwellProgress;
+      _requiresManualResume = false;
+      _beginLocalDwellTimer(dwellProgress);
       return true;
     } catch (error, stackTrace) {
       debugPrint('GamificationViewModel start quest error: $error');
       debugPrintStack(stackTrace: stackTrace);
+      if (_questProgressStatus?.toUpperCase() == 'IN_PROGRESS') {
+        _requiresManualResume = true;
+      }
       _startQuestError = _friendlyStartQuestError(error);
       return false;
     } finally {
       _isStartingQuest = false;
       notifyListeners();
     }
+  }
+
+  bool isTaskCompleted(quest_domain.HeritageTask task) {
+    return _taskProgress[task.id]?.isCompleted ?? false;
+  }
+
+  bool get areAllHeritageTasksCompleted {
+    return _heritageTasks.isNotEmpty && _heritageTasks.every(isTaskCompleted);
+  }
+
+  bool isStayFifteenMinutesTask(quest_domain.HeritageTask task) {
+    return task.isSystemTask && task.sortOrder == 2;
+  }
+
+  bool canVerifyTaskWithQr(quest_domain.HeritageTask task) {
+    if (_questProgressStatus?.toUpperCase() != 'IN_PROGRESS' ||
+        isTaskCompleted(task)) {
+      return false;
+    }
+    return !isStayFifteenMinutesTask(task) ||
+        _displayedDwellSeconds >= dwellRequiredSeconds;
+  }
+
+  String qrVerificationLabel(quest_domain.HeritageTask task) {
+    if (_questProgressStatus?.toUpperCase() != 'IN_PROGRESS') {
+      return 'Start Quest to Scan';
+    }
+    if (isStayFifteenMinutesTask(task) &&
+        _displayedDwellSeconds < dwellRequiredSeconds) {
+      return 'Complete 15 Minutes First';
+    }
+    return 'Scan Workshop QR';
+  }
+
+  Future<bool> verifyArtisanQrForTask({
+    required quest_domain.HeritageTask task,
+    required String qrPayload,
+  }) async {
+    final quest = _selectedQuest;
+    if (quest == null || !canVerifyTaskWithQr(task)) return false;
+
+    _startQuestError = null;
+    notifyListeners();
+    try {
+      _taskProgress[task.id] = await _repository.completeTaskWithArtisanQr(
+        questId: quest.id,
+        artisanId: quest.artisanId,
+        taskId: task.id,
+        qrPayload: qrPayload,
+      );
+      if (areAllHeritageTasksCompleted) {
+        _questProgressStatus = 'COMPLETED';
+        _cancelDwellTimer();
+      }
+      notifyListeners();
+      return true;
+    } catch (error, stackTrace) {
+      debugPrint('GamificationViewModel QR verification error: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      _startQuestError = error
+          .toString()
+          .replaceFirst('Bad state: ', '')
+          .replaceFirst('Exception: ', '');
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> resumeSelectedQuest() async {
+    if (!canResumeDwellTracking || _isStartingQuest) return false;
+    final dwellTask = _stayFifteenMinutesTask!;
+
+    _isStartingQuest = true;
+    _startQuestError = null;
+    notifyListeners();
+    try {
+      final progress = await _repository.startTimedTask(dwellTask.id);
+      _taskProgress[dwellTask.id] = progress;
+      _requiresManualResume = false;
+      _beginLocalDwellTimer(progress);
+      return true;
+    } catch (error, stackTrace) {
+      debugPrint('GamificationViewModel manual resume error: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      _startQuestError = 'Unable to resume this quest right now.';
+      return false;
+    } finally {
+      _isStartingQuest = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> handleQuestProximityChanged(bool isInside) async {
+    _pendingProximity = isInside;
+    if (_isProcessingProximity) return;
+
+    _isProcessingProximity = true;
+    try {
+      while (_pendingProximity != null) {
+        final next = _pendingProximity!;
+        _pendingProximity = null;
+        await _applyQuestProximity(next);
+      }
+    } finally {
+      _isProcessingProximity = false;
+    }
+  }
+
+  Future<void> _applyQuestProximity(bool isInside) async {
+    if (_questProgressStatus?.toUpperCase() != 'IN_PROGRESS') {
+      if (_isInsideQuestGeofence != isInside) {
+        _isInsideQuestGeofence = isInside;
+        notifyListeners();
+      }
+      return;
+    }
+
+    final dwellTask = _stayFifteenMinutesTask;
+
+    if (isInside) {
+      _isInsideQuestGeofence = true;
+      notifyListeners();
+      return;
+    }
+
+    _isInsideQuestGeofence = false;
+    if (dwellTask != null && !isTaskCompleted(dwellTask)) {
+      _requiresManualResume = true;
+    }
+    await _pauseDwellTracking();
+    notifyListeners();
+  }
+
+  Future<void> pauseDwellTrackingForInterruption() async {
+    await handleQuestProximityChanged(false);
+  }
+
+  Future<void> _pauseDwellTracking() async {
+    final dwellTask = _stayFifteenMinutesTask;
+    final progress = dwellTask == null ? null : _taskProgress[dwellTask.id];
+    if (dwellTask == null || progress == null || progress.isCompleted) {
+      _cancelDwellTimer();
+      return;
+    }
+
+    _refreshDisplayedDwellProgress();
+    _cancelDwellTimer();
+    if (_displayedDwellSeconds >= dwellRequiredSeconds) {
+      await _completeDwellTask();
+      return;
+    }
+    if (progress.trackingStartedAt == null) return;
+
+    try {
+      final paused = await _repository.pauseTimedTask(
+        taskId: dwellTask.id,
+        progressSeconds: _displayedDwellSeconds,
+      );
+      _taskProgress[dwellTask.id] = paused;
+      _displayedDwellSeconds = paused.progressSeconds.clamp(
+        0,
+        dwellRequiredSeconds,
+      );
+    } catch (error, stackTrace) {
+      debugPrint('GamificationViewModel pause dwell error: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      _startQuestError = 'Unable to save the workshop timer right now.';
+    }
+    notifyListeners();
+  }
+
+  void _beginLocalDwellTimer(TaskProgress progress) {
+    _cancelDwellTimer();
+    _syncDisplayedDwellProgress();
+    if (progress.isCompleted || progress.trackingStartedAt == null) return;
+
+    _isDwellTracking = true;
+    _dwellTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      _refreshDisplayedDwellProgress();
+      if (_displayedDwellSeconds >= dwellRequiredSeconds) {
+        unawaited(_completeDwellTask());
+      } else {
+        notifyListeners();
+      }
+    });
+  }
+
+  void _refreshDisplayedDwellProgress() {
+    final dwellTask = _stayFifteenMinutesTask;
+    final progress = dwellTask == null ? null : _taskProgress[dwellTask.id];
+    if (progress == null) {
+      _displayedDwellSeconds = 0;
+      return;
+    }
+
+    var seconds = progress.progressSeconds;
+    final startedAt = progress.trackingStartedAt;
+    if (!progress.isCompleted && _isDwellTracking && startedAt != null) {
+      final elapsed = DateTime.now().toUtc().difference(startedAt).inSeconds;
+      seconds += elapsed < 0 ? 0 : elapsed;
+    }
+    _displayedDwellSeconds = seconds.clamp(0, dwellRequiredSeconds);
+  }
+
+  void _syncDisplayedDwellProgress() {
+    final dwellTask = _stayFifteenMinutesTask;
+    final progress = dwellTask == null ? null : _taskProgress[dwellTask.id];
+    _displayedDwellSeconds = (progress?.progressSeconds ?? 0).clamp(
+      0,
+      dwellRequiredSeconds,
+    );
+  }
+
+  Future<void> _completeDwellTask() async {
+    if (_isCompletingDwellTask) return;
+    final dwellTask = _stayFifteenMinutesTask;
+    if (dwellTask == null || isTaskCompleted(dwellTask)) return;
+
+    _isCompletingDwellTask = true;
+    _cancelDwellTimer();
+    try {
+      _taskProgress[dwellTask.id] = await _repository.pauseTimedTask(
+        taskId: dwellTask.id,
+        progressSeconds: dwellRequiredSeconds,
+      );
+      _displayedDwellSeconds = dwellRequiredSeconds;
+    } catch (error, stackTrace) {
+      debugPrint('GamificationViewModel complete dwell error: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      _startQuestError = 'Unable to complete the workshop timer right now.';
+    } finally {
+      _isCompletingDwellTask = false;
+      notifyListeners();
+    }
+  }
+
+  void _identifySystemTasks() {
+    _goToWorkshopTask = _systemTaskAtSortOrder(1);
+    _stayFifteenMinutesTask = _systemTaskAtSortOrder(2);
+  }
+
+  quest_domain.HeritageTask? _systemTaskAtSortOrder(int sortOrder) {
+    for (final task in _heritageTasks) {
+      if (task.isSystemTask && task.sortOrder == sortOrder) return task;
+    }
+    return null;
+  }
+
+  void _resetTouristTaskProgress() {
+    _cancelDwellTimer();
+    _goToWorkshopTask = null;
+    _stayFifteenMinutesTask = null;
+    _taskProgress.clear();
+    _isInsideQuestGeofence = false;
+    _displayedDwellSeconds = 0;
+    _pendingProximity = null;
+    _requiresManualResume = false;
+  }
+
+  void _cancelDwellTimer() {
+    _dwellTimer?.cancel();
+    _dwellTimer = null;
+    _isDwellTracking = false;
+  }
+
+  @override
+  void dispose() {
+    _cancelDwellTimer();
+    super.dispose();
   }
 
   void clearStartQuestError() {

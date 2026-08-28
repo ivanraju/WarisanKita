@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -7,8 +9,9 @@ import 'package:warisan_kita/domain/models/quest.dart';
 import 'package:warisan_kita/domain/models/workshop_location.dart';
 import 'package:warisan_kita/viewmodels/map_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/gamification_viewmodel.dart';
+import 'package:warisan_kita/ui/gamification/qr_scanner_view.dart';
 
-class QuestDetailView extends StatelessWidget {
+class QuestDetailView extends StatefulWidget {
   final Quest quest;
   final WorkshopLocation workshop;
 
@@ -19,11 +22,77 @@ class QuestDetailView extends StatelessWidget {
   });
 
   @override
+  State<QuestDetailView> createState() => _QuestDetailViewState();
+}
+
+class _QuestDetailViewState extends State<QuestDetailView>
+    with WidgetsBindingObserver {
+  Quest get quest => widget.quest;
+  WorkshopLocation get workshop => widget.workshop;
+
+  late GamificationViewModel _viewModel;
+  bool? _lastReportedInside;
+  String? _lastReportedStatus;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(_resumeTracking());
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _viewModel = context.read<GamificationViewModel>();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_resumeTracking());
+      return;
+    }
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached ||
+        state == AppLifecycleState.hidden) {
+      _lastReportedInside = null;
+      unawaited(_viewModel.pauseDwellTrackingForInterruption());
+    }
+  }
+
+  Future<void> _resumeTracking() async {
+    final mapViewModel = context.read<MapViewModel>();
+    if (mapViewModel.userLocation == null) {
+      await mapViewModel.startLocationTracking();
+    } else if (!await mapViewModel.refreshCurrentLocation()) {
+      return;
+    }
+    if (!mounted) return;
+    final distance = mapViewModel.getDistanceToWorkshop(workshop);
+    if (distance == null) return;
+    final inside = distance <= quest.geofenceRadiusMeters;
+    _lastReportedInside = inside;
+    await _viewModel.handleQuestProximityChanged(inside);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    unawaited(_viewModel.pauseDwellTrackingForInterruption());
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final gamificationVM = context.watch<GamificationViewModel>();
     final mapViewModel = context.watch<MapViewModel>();
     final tasks = gamificationVM.heritageTasks;
     final distance = mapViewModel.getDistanceToWorkshop(workshop);
+    _reportProximityAfterBuild(gamificationVM, distance);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -39,7 +108,7 @@ class QuestDetailView extends StatelessWidget {
           const SizedBox(height: 20),
           _buildLocationSection(distance),
           const SizedBox(height: 20),
-          _buildActivitiesSection(tasks),
+          _buildActivitiesSection(tasks, gamificationVM),
           const SizedBox(height: 20),
           _buildXpSummary(gamificationVM.totalPotentialXp),
           const SizedBox(height: 20),
@@ -48,6 +117,22 @@ class QuestDetailView extends StatelessWidget {
       ),
       bottomNavigationBar: _buildStartBar(context, gamificationVM, distance),
     );
+  }
+
+  void _reportProximityAfterBuild(
+    GamificationViewModel viewModel,
+    double? distance,
+  ) {
+    if (distance == null) return;
+    final inside = distance <= quest.geofenceRadiusMeters;
+    final status = viewModel.questProgressStatus?.toUpperCase();
+    if (_lastReportedInside == inside && _lastReportedStatus == status) return;
+
+    _lastReportedInside = inside;
+    _lastReportedStatus = status;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(viewModel.handleQuestProximityChanged(inside));
+    });
   }
 
   Widget _buildQuestHeader() {
@@ -206,7 +291,10 @@ class QuestDetailView extends StatelessWidget {
     );
   }
 
-  Widget _buildActivitiesSection(List<HeritageTask> tasks) {
+  Widget _buildActivitiesSection(
+    List<HeritageTask> tasks,
+    GamificationViewModel viewModel,
+  ) {
     return _buildSectionCard(
       title: 'Heritage Activities',
       icon: Icons.auto_awesome_rounded,
@@ -221,7 +309,7 @@ class QuestDetailView extends StatelessWidget {
           : Column(
               children: [
                 for (var index = 0; index < tasks.length; index++) ...[
-                  _buildTaskRow(index + 1, tasks[index]),
+                  _buildTaskRow(index + 1, tasks[index], viewModel),
                   if (index != tasks.length - 1)
                     const Divider(height: 24, color: Color(0xFFE2E8F0)),
                 ],
@@ -230,10 +318,16 @@ class QuestDetailView extends StatelessWidget {
     );
   }
 
-  Widget _buildTaskRow(int number, HeritageTask task) {
+  Widget _buildTaskRow(
+    int number,
+    HeritageTask task,
+    GamificationViewModel viewModel,
+  ) {
     final badgeColor = task.isRequired
         ? const Color(0xFF004D40)
         : const Color(0xFF64748B);
+    final isCompleted = viewModel.isTaskCompleted(task);
+    final isDwellTask = viewModel.isStayFifteenMinutesTask(task);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -242,18 +336,26 @@ class QuestDetailView extends StatelessWidget {
           width: 30,
           height: 30,
           alignment: Alignment.center,
-          decoration: const BoxDecoration(
-            color: Color(0xFFFFF3C4),
+          decoration: BoxDecoration(
+            color: isCompleted
+                ? const Color(0xFFDDF5EC)
+                : const Color(0xFFFFF3C4),
             shape: BoxShape.circle,
           ),
-          child: Text(
-            '$number',
-            style: GoogleFonts.plusJakartaSans(
-              color: const Color(0xFF92400E),
-              fontSize: 12,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
+          child: isCompleted
+              ? const Icon(
+                  Icons.check_rounded,
+                  size: 18,
+                  color: Color(0xFF087F5B),
+                )
+              : Text(
+                  '$number',
+                  style: GoogleFonts.plusJakartaSans(
+                    color: const Color(0xFF92400E),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -301,12 +403,103 @@ class QuestDetailView extends StatelessWidget {
                       fontWeight: FontWeight.w900,
                     ),
                   ),
+                  if (isCompleted)
+                    _buildTaskStatusBadge('COMPLETED', const Color(0xFF087F5B)),
                 ],
               ),
+              if (isDwellTask &&
+                  !isCompleted &&
+                  viewModel.questProgressStatus?.toUpperCase() ==
+                      'IN_PROGRESS') ...[
+                const SizedBox(height: 10),
+                Text(
+                  '${_formatDuration(viewModel.displayedDwellSeconds)} / 15:00',
+                  style: GoogleFonts.plusJakartaSans(
+                    color: const Color(0xFF004D40),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  viewModel.displayedDwellSeconds >=
+                          GamificationViewModel.dwellRequiredSeconds
+                      ? '15 minutes complete • Scan the workshop QR to verify'
+                      : viewModel.isInsideQuestGeofence
+                      ? viewModel.isDwellTracking
+                            ? 'Inside quest area • Timer running'
+                            : viewModel.canResumeDwellTracking
+                            ? 'Inside quest area • Tap Resume Quest to continue'
+                            : 'Inside quest area • Timer paused'
+                      : 'Outside quest area • Timer paused',
+                  style: GoogleFonts.plusJakartaSans(
+                    color: viewModel.isInsideQuestGeofence
+                        ? const Color(0xFF087F5B)
+                        : const Color(0xFFB45309),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+              if (!isCompleted) ...[
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: viewModel.canVerifyTaskWithQr(task)
+                        ? () => _openTaskScanner(task)
+                        : null,
+                    icon: const Icon(Icons.qr_code_scanner_rounded, size: 17),
+                    label: Text(viewModel.qrVerificationLabel(task)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF005B4F),
+                      side: const BorderSide(color: Color(0xFF005B4F)),
+                      textStyle: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildTaskStatusBadge(String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.plusJakartaSans(
+          color: color,
+          fontSize: 9,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 0.5,
+        ),
+      ),
+    );
+  }
+
+  String _formatDuration(int totalSeconds) {
+    final minutes = totalSeconds ~/ 60;
+    final seconds = totalSeconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:'
+        '${seconds.toString().padLeft(2, '0')}';
+  }
+
+  Future<void> _openTaskScanner(HeritageTask task) async {
+    await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => QRScannerScreen(quest: quest, task: task),
+      ),
     );
   }
 
@@ -410,8 +603,15 @@ class QuestDetailView extends StatelessWidget {
     double? distance,
   ) {
     final status = viewModel.questProgressStatus?.toUpperCase();
-    final isCompleted = status == 'COMPLETED';
+    final isCompleted =
+        status == 'COMPLETED' || viewModel.areAllHeritageTasksCompleted;
     final isInProgress = status == 'IN_PROGRESS';
+    final isOutOfRange =
+        isInProgress &&
+        !isCompleted &&
+        distance != null &&
+        distance > quest.geofenceRadiusMeters;
+    final canResume = viewModel.canResumeDwellTracking;
     final canStart =
         viewModel.heritageTasks.isNotEmpty &&
         !isCompleted &&
@@ -441,12 +641,18 @@ class QuestDetailView extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
-                onPressed: canStart
+                onPressed: canResume
+                    ? () => _resumeQuest(context, viewModel)
+                    : canStart
                     ? () => _startQuest(context, viewModel, distance)
                     : null,
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF004D40),
-                  disabledBackgroundColor: isCompleted || isInProgress
+                  backgroundColor: canResume
+                      ? const Color(0xFF087F5B)
+                      : const Color(0xFF004D40),
+                  disabledBackgroundColor: isOutOfRange
+                      ? const Color(0xFFB45309)
+                      : isCompleted || isInProgress
                       ? const Color(0xFF087F5B)
                       : const Color(0xFFCBD5E1),
                   disabledForegroundColor: Colors.white,
@@ -463,6 +669,10 @@ class QuestDetailView extends StatelessWidget {
                     : Icon(
                         isCompleted
                             ? Icons.workspace_premium_rounded
+                            : isOutOfRange
+                            ? Icons.location_off_rounded
+                            : canResume
+                            ? Icons.play_arrow_rounded
                             : isInProgress
                             ? Icons.directions_walk_rounded
                             : Icons.play_arrow_rounded,
@@ -472,6 +682,10 @@ class QuestDetailView extends StatelessWidget {
                       ? 'Starting Quest...'
                       : isCompleted
                       ? 'Quest Completed'
+                      : isOutOfRange
+                      ? 'Out of Range'
+                      : canResume
+                      ? 'Resume Quest'
                       : isInProgress
                       ? 'Quest In Progress'
                       : 'Start Quest',
@@ -483,6 +697,21 @@ class QuestDetailView extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Future<void> _resumeQuest(
+    BuildContext context,
+    GamificationViewModel viewModel,
+  ) async {
+    final resumed = await viewModel.resumeSelectedQuest();
+    if (!context.mounted || !resumed) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Quest resumed. The workshop timer is running.'),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Color(0xFF005B4F),
       ),
     );
   }

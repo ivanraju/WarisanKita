@@ -28,7 +28,7 @@ class AuthViewModel extends ChangeNotifier {
   final UserRepository _repository;
 
   AuthViewModel({UserRepository? repository})
-      : _repository = repository ?? UserRepository();
+    : _repository = repository ?? UserRepository();
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
@@ -87,9 +87,15 @@ class AuthViewModel extends ChangeNotifier {
     return _repository.isUsernameAvailable(username.trim());
   }
 
-  Future<bool> isUsernameAvailable(String username, {String? excludeEmail}) async {
+  Future<bool> isUsernameAvailable(
+    String username, {
+    String? excludeEmail,
+  }) async {
     if (username.trim().isEmpty) return false;
-    return _repository.isUsernameAvailable(username.trim(), excludeEmail: excludeEmail);
+    return _repository.isUsernameAvailable(
+      username.trim(),
+      excludeEmail: excludeEmail,
+    );
   }
 
   Future<ExistingAccountCheck> checkExistingAccount(String email) async {
@@ -108,9 +114,16 @@ class AuthViewModel extends ChangeNotifier {
   }) async {
     final email = _currentUser?.email ?? 'tourist@warisankita.my';
     final cleanUsername = username?.trim().replaceAll('@', '');
-    final newUsername = (cleanUsername != null && cleanUsername.isNotEmpty) ? cleanUsername : _currentUser?.username;
-    final newDisplayName = (displayName != null && displayName.trim().isNotEmpty) ? displayName.trim() : (newUsername ?? _currentUser?.displayName);
-    final newStudioName = (studioName != null && studioName.trim().isNotEmpty) ? studioName.trim() : _currentUser?.studioName;
+    final newUsername = (cleanUsername != null && cleanUsername.isNotEmpty)
+        ? cleanUsername
+        : _currentUser?.username;
+    final newDisplayName =
+        (displayName != null && displayName.trim().isNotEmpty)
+        ? displayName.trim()
+        : (newUsername ?? _currentUser?.displayName);
+    final newStudioName = (studioName != null && studioName.trim().isNotEmpty)
+        ? studioName.trim()
+        : _currentUser?.studioName;
 
     try {
       final updated = await _repository.updateUserProfile(
@@ -165,7 +178,8 @@ class AuthViewModel extends ChangeNotifier {
       }
 
       // Alternate Flow A1: Email format validation (only if attempting email login)
-      final isEmailAttempt = cleanEmail.contains('@') && !cleanEmail.startsWith('@');
+      final isEmailAttempt =
+          cleanEmail.contains('@') && !cleanEmail.startsWith('@');
       if (isEmailAttempt) {
         final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
         if (!emailRegex.hasMatch(cleanEmail)) {
@@ -189,16 +203,13 @@ class AuthViewModel extends ChangeNotifier {
 
       // 🌐 UC102: Web Moderation Portal Strict RBAC Guard
       if (kIsWeb && user.role != 'Admin') {
-        _errorMessage = 'ACCESS DENIED: The Web Portal is exclusively for Administrators.';
+        _errorMessage =
+            'ACCESS DENIED: The Web Portal is exclusively for Administrators.';
         _isLoading = false;
         _currentUser = null;
         _activeRole = null;
         notifyListeners();
-        return AuthResult(
-          success: false,
-          user: user,
-          message: _errorMessage,
-        );
+        return AuthResult(success: false, user: user, message: _errorMessage);
       }
 
       _currentUser = user;
@@ -252,7 +263,9 @@ class AuthViewModel extends ChangeNotifier {
 
   // UC001 - A5: Select Active Session Role
   void selectActiveRole(String role) {
-    if (role.contains('Artisan') && _currentUser != null && !_currentUser!.isApprovedArtisan) {
+    if (role.contains('Artisan') &&
+        _currentUser != null &&
+        !_currentUser!.isApprovedArtisan) {
       // Security guard: Cannot select Master Artisan role unless approved by admin
       return;
     }
@@ -312,7 +325,9 @@ class AuthViewModel extends ChangeNotifier {
         password: cleanPassword,
         role: 'Tourist',
         username: cleanUsername.isNotEmpty ? cleanUsername : null,
-        displayName: (cleanFullName != null && cleanFullName.isNotEmpty) ? cleanFullName : null,
+        displayName: (cleanFullName != null && cleanFullName.isNotEmpty)
+            ? cleanFullName
+            : null,
       );
 
       _currentUser = user;
@@ -336,7 +351,13 @@ class AuthViewModel extends ChangeNotifier {
   }
 
   // Generic signUp handler for legacy/direct views
-  Future<AuthResult> signUp(String email, String password, String role, {String? username, String? displayName}) async {
+  Future<AuthResult> signUp(
+    String email,
+    String password,
+    String role, {
+    String? username,
+    String? displayName,
+  }) async {
     final cleanEmail = email.trim();
     final cleanPassword = password.trim();
     _isLoading = true;
@@ -410,7 +431,8 @@ class AuthViewModel extends ChangeNotifier {
 
       // Alternate Flow A4-1: Missing proof documents
       if (ssmFileName == null && cleanSsm.isEmpty) {
-        _errorMessage = 'PLEASE PROVIDE REQUIRED VERIFICATION PROOFS (SSM OR CERTIFICATE)';
+        _errorMessage =
+            'PLEASE PROVIDE REQUIRED VERIFICATION PROOFS (SSM OR CERTIFICATE)';
         _isLoading = false;
         notifyListeners();
         return AuthResult(success: false, message: _errorMessage);
@@ -422,8 +444,12 @@ class AuthViewModel extends ChangeNotifier {
         password: cleanPassword,
         role: role,
         username: username,
-        displayName: (cleanFullName != null && cleanFullName.isNotEmpty) ? cleanFullName : null,
-        studioName: cleanStudio.isNotEmpty ? cleanStudio : 'MASTER ARTISAN STUDIO',
+        displayName: (cleanFullName != null && cleanFullName.isNotEmpty)
+            ? cleanFullName
+            : null,
+        studioName: cleanStudio.isNotEmpty
+            ? cleanStudio
+            : 'MASTER ARTISAN STUDIO',
         craftCategory: craftCategory,
         ssmNumber: cleanSsm.isNotEmpty ? cleanSsm : 'SSM-PENDING-VERIFY',
         ssmFileName: ssmFileName,
@@ -460,6 +486,11 @@ class AuthViewModel extends ChangeNotifier {
     String? bio,
     String? phone,
     String? state,
+    String? address,
+    double? latitude,
+    double? longitude,
+    String? ssmFileName,
+    String? certFileName,
     PlatformFile? ssmFile,
     PlatformFile? certFile,
     List<PlatformFile>? photos,
@@ -477,6 +508,9 @@ class AuthViewModel extends ChangeNotifier {
         bio: bio,
         phone: phone,
         state: state,
+        address: address,
+        latitude: latitude,
+        longitude: longitude,
         ssmFile: ssmFile,
         certFile: certFile,
         photos: photos,
@@ -525,10 +559,7 @@ class AuthViewModel extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
 
-      return AuthResult(
-        success: true,
-        message: _statusMessage,
-      );
+      return AuthResult(success: true, message: _statusMessage);
     } catch (e) {
       _errorMessage = e.toString().replaceAll('Exception: ', '');
       _isLoading = false;
@@ -581,10 +612,7 @@ class AuthViewModel extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
 
-      return AuthResult(
-        success: true,
-        message: _statusMessage,
-      );
+      return AuthResult(success: true, message: _statusMessage);
     } catch (e) {
       _errorMessage = e.toString().replaceAll('Exception: ', '');
       _isLoading = false;

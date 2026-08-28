@@ -1179,6 +1179,9 @@ class SupabaseService {
     String? bio,
     String? phone,
     String? state,
+    String? address,
+    double? latitude,
+    double? longitude,
     PlatformFile? ssmFile,
     PlatformFile? certFile,
     List<PlatformFile>? photos,
@@ -1239,6 +1242,8 @@ class SupabaseService {
     userRecord['studioName'] = studioName;
     userRecord['craftCategory'] = craftCategory;
     userRecord['ssmNumber'] = ssmNumber;
+    if (address != null) userRecord['address'] = address;
+    if (state != null) userRecord['state'] = state;
     userRecord['status'] = 'PENDING_APPROVAL';
     userRecord['role'] = 'Artisan & Tourist';
     userRecord['roles'] = ['Tourist', 'Artisan'];
@@ -1295,39 +1300,57 @@ class SupabaseService {
         }
 
         try {
-          dynamic profileRes = await client.from('artisan_profiles').select('id').eq('user_id', userId).maybeSingle();
-          
+          dynamic profileRes = await client
+              .from('artisan_profiles')
+              .select('id')
+              .eq('user_id', userId)
+              .maybeSingle();
+
           final profileData = {
             'studio_name': studioName,
             'craft_category': craftCategory,
             'ssm_number': ssmNumber,
-            'bio': bio ?? 'Master artisan dedicated to traditional Malaysian craft.',
-            'address': state ?? 'Malaysia',
+            'bio':
+                bio ??
+                'Master artisan dedicated to traditional Malaysian craft.',
+            'address': address ?? state ?? 'Malaysia',
             'state': state ?? 'Malaysia',
+            if (latitude != null) 'latitude': latitude,
+            if (longitude != null) 'longitude': longitude,
             'status': 'PENDING_APPROVAL',
             'updated_at': DateTime.now().toIso8601String(),
           };
 
           if (profileRes != null) {
-            await client.from('artisan_profiles').update(profileData).eq('user_id', userId);
+            await client
+                .from('artisan_profiles')
+                .update(profileData)
+                .eq('user_id', userId);
           } else {
             profileData['user_id'] = userId;
             profileData['created_at'] = DateTime.now().toIso8601String();
-            profileRes = await client.from('artisan_profiles').insert(profileData).select('id').maybeSingle();
+            profileRes = await client
+                .from('artisan_profiles')
+                .insert(profileData)
+                .select('id')
+                .maybeSingle();
           }
 
           if (profileRes != null) {
             final artisanId = profileRes['id'];
-            
-            Future<Map<String, String>?> uploadDoc(PlatformFile? file, String bucket, String folder) async {
-              if (file == null || file.bytes == null) return null;
+
+            Future<Map<String, String>?> uploadDoc(
+              PlatformFile? file,
+              String bucket,
+              String folder,
+            ) async {
+              if (file == null) return null;
               try {
-                final fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.name.replaceAll(' ', '_')}';
+                final bytes = await file.readAsBytes();
+                final fileName =
+                    '${DateTime.now().millisecondsSinceEpoch}_${file.name.replaceAll(' ', '_')}';
                 final path = '$folder/$fileName';
-                await client.storage.from(bucket).uploadBinary(
-                  path,
-                  file.bytes!,
-                );
+                await client.storage.from(bucket).uploadBinary(path, bytes);
                 final url = client.storage.from(bucket).getPublicUrl(path);
                 return {'url': url, 'name': file.name};
               } catch (e) {
@@ -1337,71 +1360,90 @@ class SupabaseService {
             }
 
             try {
-              final ssmUpload = await uploadDoc(ssmFile, 'artisan_private_docs', 'ssm');
-              final certUpload = await uploadDoc(certFile, 'artisan_private_docs', 'cert');
-              
+              final ssmUpload = await uploadDoc(
+                ssmFile,
+                'artisan_private_docs',
+                'ssm',
+              );
+              final certUpload = await uploadDoc(
+                certFile,
+                'artisan_private_docs',
+                'cert',
+              );
+
               final List<Map<String, dynamic>> docsToInsert = [];
-              
+
               if (ssmUpload != null) {
                 docsToInsert.add({
-                   'artisan_id': artisanId,
-                   'doc_type': 'SSM_BUSINESS_CERT',
-                   'file_url': ssmUpload['url'],
-                   'file_name': ssmUpload['name']
+                  'artisan_id': artisanId,
+                  'doc_type': 'SSM_BUSINESS_CERT',
+                  'file_url': ssmUpload['url'],
+                  'file_name': ssmUpload['name'],
                 });
               } else {
                 docsToInsert.add({
-                   'artisan_id': artisanId,
-                   'doc_type': 'SSM_BUSINESS_CERT',
-                   'file_url': 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-                   'file_name': 'SSM_Registration.pdf'
+                  'artisan_id': artisanId,
+                  'doc_type': 'SSM_BUSINESS_CERT',
+                  'file_url':
+                      'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+                  'file_name': 'SSM_Registration.pdf',
                 });
               }
 
               if (certUpload != null) {
                 docsToInsert.add({
-                   'artisan_id': artisanId,
-                   'doc_type': 'KRAFTANGAN_MASTER_CERT',
-                   'file_url': certUpload['url'],
-                   'file_name': certUpload['name']
+                  'artisan_id': artisanId,
+                  'doc_type': 'KRAFTANGAN_MASTER_CERT',
+                  'file_url': certUpload['url'],
+                  'file_name': certUpload['name'],
                 });
               } else {
                 docsToInsert.add({
-                   'artisan_id': artisanId,
-                   'doc_type': 'KRAFTANGAN_MASTER_CERT',
-                   'file_url': 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-                   'file_name': 'Kraftangan_Cert.pdf'
+                  'artisan_id': artisanId,
+                  'doc_type': 'KRAFTANGAN_MASTER_CERT',
+                  'file_url':
+                      'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+                  'file_name': 'Kraftangan_Cert.pdf',
                 });
               }
 
               if (photos != null && photos.isNotEmpty) {
                 for (var p in photos) {
-                  final pUpload = await uploadDoc(p, 'artisan_public_media', 'studio');
+                  final pUpload = await uploadDoc(
+                    p,
+                    'artisan_public_media',
+                    'studio',
+                  );
                   if (pUpload != null) {
                     docsToInsert.add({
-                       'artisan_id': artisanId,
-                       'doc_type': 'STUDIO_PHOTO',
-                       'file_url': pUpload['url'],
-                       'file_name': pUpload['name']
+                      'artisan_id': artisanId,
+                      'doc_type': 'STUDIO_PHOTO',
+                      'file_url': pUpload['url'],
+                      'file_name': pUpload['name'],
                     });
                   }
                 }
               }
-              
+
               if (!docsToInsert.any((d) => d['doc_type'] == 'STUDIO_PHOTO')) {
                 docsToInsert.add({
-                   'artisan_id': artisanId,
-                   'doc_type': 'STUDIO_PHOTO',
-                   'file_url': 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=600',
-                   'file_name': 'Studio_1.jpg'
+                  'artisan_id': artisanId,
+                  'doc_type': 'STUDIO_PHOTO',
+                  'file_url':
+                      'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=600',
+                  'file_name': 'Studio_1.jpg',
                 });
               }
 
-              await client.from('artisan_documents').delete().eq('artisan_id', artisanId);
+              await client
+                  .from('artisan_documents')
+                  .delete()
+                  .eq('artisan_id', artisanId);
               await client.from('artisan_documents').insert(docsToInsert);
-
             } catch (docErr) {
-              debugPrint('Supabase linkArtisanRoleToTourist artisan_documents note: $docErr');
+              debugPrint(
+                'Supabase linkArtisanRoleToTourist artisan_documents note: $docErr',
+              );
             }
           }
         } catch (apErr) {
@@ -1889,15 +1931,11 @@ class SupabaseService {
               })
               .eq('user_id', userRow['id']);
 
-          final previousArtisanStatus = artisanProfileBeforeUpdate?['status']
-              ?.toString()
-              .toUpperCase();
-          final isInitialApproval =
-              artisanStatus == 'APPROVED' &&
-              (previousArtisanStatus == 'PENDING_APPROVAL' ||
-                  previousArtisanStatus == 'REJECTED');
-
-          if (isInitialApproval && artisanProfileBeforeUpdate != null) {
+          // The RPC above may already have changed the profile to APPROVED.
+          // Always reconcile the quest and its system tasks when approving so
+          // the flow is idempotent: artisan -> quest -> default tasks.
+          if (artisanStatus == 'APPROVED' &&
+              artisanProfileBeforeUpdate != null) {
             final artisanProfileId = artisanProfileBeforeUpdate['id']
                 .toString();
 
@@ -1927,21 +1965,67 @@ class SupabaseService {
                   'reviewed_by': client.auth.currentUser!.id,
               };
 
-              await client
-                  .from('heritage_tasks')
-                  .update(reviewPayload)
-                  .inFilter('quest_id', questIds)
-                  .eq('title', 'Go to the workshop')
-                  .eq('sort_order', 1)
-                  .eq('status', 'PENDING_APPROVAL');
+              for (final questId in questIds) {
+                final existingSystemTasks = List<Map<String, dynamic>>.from(
+                  await client
+                      .from('heritage_tasks')
+                      .select('id, title, sort_order, is_system_task')
+                      .eq('quest_id', questId)
+                      .inFilter('sort_order', const [1, 2]),
+                );
 
-              await client
-                  .from('heritage_tasks')
-                  .update(reviewPayload)
-                  .inFilter('quest_id', questIds)
-                  .eq('title', 'Stay for 15 minutes')
-                  .eq('sort_order', 2)
-                  .eq('status', 'PENDING_APPROVAL');
+                final defaultTasks = <Map<String, dynamic>>[
+                  {
+                    'title': 'Go to the workshop',
+                    'sort_order': 1,
+                    'xp_reward': 50,
+                  },
+                  {
+                    'title': 'Stay for 15 minutes',
+                    'sort_order': 2,
+                    'xp_reward': 50,
+                  },
+                ];
+
+                for (final defaultTask in defaultTasks) {
+                  final sortOrder = defaultTask['sort_order'] as int;
+                  final matchingTasks = existingSystemTasks.where(
+                    (task) =>
+                        task['title'] == defaultTask['title'] ||
+                        (task['is_system_task'] == true &&
+                            task['sort_order'] == sortOrder),
+                  );
+
+                  if (matchingTasks.isEmpty) {
+                    await client.from('heritage_tasks').insert({
+                      'quest_id': questId,
+                      'title': defaultTask['title'],
+                      'is_required': true,
+                      'xp_reward': defaultTask['xp_reward'],
+                      'sort_order': sortOrder,
+                      'status': 'APPROVED',
+                      'is_system_task': true,
+                      'is_archived': false,
+                      ...reviewPayload,
+                    });
+                  } else {
+                    for (final task in matchingTasks) {
+                      await client
+                          .from('heritage_tasks')
+                          .update({
+                            'title': defaultTask['title'],
+                            'is_required': true,
+                            'xp_reward': defaultTask['xp_reward'],
+                            'sort_order': sortOrder,
+                            'is_system_task': true,
+                            'is_archived': false,
+                            ...reviewPayload,
+                          })
+                          .eq('id', task['id']);
+                    }
+                  }
+                }
+              }
             }
           }
         }
@@ -2180,7 +2264,8 @@ class SupabaseService {
             String? postReportReason;
             String? postReportNotes;
 
-            if (!_deletedPostIds.contains(threadId) && !_dismissedReportPostIds.contains(threadId)) {
+            if (!_deletedPostIds.contains(threadId) &&
+                !_dismissedReportPostIds.contains(threadId)) {
               if (activePendingPostReports.contains(threadId)) {
                 isPostReported = true;
                 postReportReason =
@@ -2274,8 +2359,7 @@ class SupabaseService {
                     } else {
                       _localReportQueue.removeWhere(
                         (rep) =>
-                            rep['replyId'] == replyId &&
-                            rep['type'] == 'reply',
+                            rep['replyId'] == replyId && rep['type'] == 'reply',
                       );
                     }
                   }
@@ -2324,13 +2408,23 @@ class SupabaseService {
 
     // 1. Add all from _localReportQueue (excluding dismissed & deleted)
     for (final item in _localReportQueue) {
-      final String? postId = (item['postId'] ?? (item['type'] == 'post' ? item['id'] : null))?.toString();
-      final String? replyId = (item['replyId'] ?? (item['type'] == 'reply' ? item['id'] : null))?.toString();
-      if (postId != null && (_deletedPostIds.contains(postId) || _dismissedReportPostIds.contains(postId))) continue;
-      if (replyId != null && _dismissedReportReplyIds.contains(replyId)) continue;
+      final String? postId =
+          (item['postId'] ?? (item['type'] == 'post' ? item['id'] : null))
+              ?.toString();
+      final String? replyId =
+          (item['replyId'] ?? (item['type'] == 'reply' ? item['id'] : null))
+              ?.toString();
+      if (postId != null &&
+          (_deletedPostIds.contains(postId) ||
+              _dismissedReportPostIds.contains(postId)))
+        continue;
+      if (replyId != null && _dismissedReportReplyIds.contains(replyId))
+        continue;
       if (_forumStore.isNotEmpty) {
         if (postId != null && !_forumStore.any((t) => t.id == postId)) continue;
-        if (replyId != null && !_forumStore.any((t) => t.replies.any((r) => r.id == replyId))) continue;
+        if (replyId != null &&
+            !_forumStore.any((t) => t.replies.any((r) => r.id == replyId)))
+          continue;
       }
       final String key = postId != null ? 'post_$postId' : 'reply_$replyId';
       groupedReports[key] = Map<String, dynamic>.from(item);
@@ -2338,7 +2432,9 @@ class SupabaseService {
 
     // 2. Add reported items from _forumStore (excluding dismissed)
     for (final thread in _forumStore) {
-      if (thread.isReported && !_deletedPostIds.contains(thread.id) && !_dismissedReportPostIds.contains(thread.id)) {
+      if (thread.isReported &&
+          !_deletedPostIds.contains(thread.id) &&
+          !_dismissedReportPostIds.contains(thread.id)) {
         final key = 'post_${thread.id}';
         if (!groupedReports.containsKey(key)) {
           groupedReports[key] = {
@@ -2391,11 +2487,18 @@ class SupabaseService {
         for (final report in reports) {
           final postId = report['post_id']?.toString();
           final replyId = report['reply_id']?.toString();
-          if (postId != null && (_deletedPostIds.contains(postId) || _dismissedReportPostIds.contains(postId))) continue;
-          if (replyId != null && _dismissedReportReplyIds.contains(replyId)) continue;
+          if (postId != null &&
+              (_deletedPostIds.contains(postId) ||
+                  _dismissedReportPostIds.contains(postId)))
+            continue;
+          if (replyId != null && _dismissedReportReplyIds.contains(replyId))
+            continue;
           if (_forumStore.isNotEmpty) {
-            if (postId != null && !_forumStore.any((t) => t.id == postId)) continue;
-            if (replyId != null && !_forumStore.any((t) => t.replies.any((r) => r.id == replyId))) continue;
+            if (postId != null && !_forumStore.any((t) => t.id == postId))
+              continue;
+            if (replyId != null &&
+                !_forumStore.any((t) => t.replies.any((r) => r.id == replyId)))
+              continue;
           }
           final String key;
           if (postId != null) {
@@ -2477,10 +2580,10 @@ class SupabaseService {
               .order('resolved_at', ascending: false);
         } catch (_) {
           // Fallback if resolved_at column does not exist yet
-          response = await client
-              .from('forum_reports')
-              .select()
-              .inFilter('status', ['dismissed', 'actioned']);
+          response = await client.from('forum_reports').select().inFilter(
+            'status',
+            ['dismissed', 'actioned'],
+          );
         }
 
         final remoteHistory = List<Map<String, dynamic>>.from(response ?? []);
@@ -2491,10 +2594,16 @@ class SupabaseService {
 
           if (id != null && !_dismissedNoticeIds.contains(id)) {
             // Check if this post or reply is already in history (e.g. from local history)
-            final existingIdx = history.indexWhere((h) =>
-                h['id']?.toString() == id ||
-                (postId != null && postId.isNotEmpty && h['post_id']?.toString() == postId) ||
-                (replyId != null && replyId.isNotEmpty && h['reply_id']?.toString() == replyId));
+            final existingIdx = history.indexWhere(
+              (h) =>
+                  h['id']?.toString() == id ||
+                  (postId != null &&
+                      postId.isNotEmpty &&
+                      h['post_id']?.toString() == postId) ||
+                  (replyId != null &&
+                      replyId.isNotEmpty &&
+                      h['reply_id']?.toString() == replyId),
+            );
 
             if (existingIdx != -1) {
               // Merge remote item with local item, preserving moderator_name if local has it
@@ -2545,10 +2654,13 @@ class SupabaseService {
       } catch (_) {}
 
       try {
-        await client.from('forum_reports').update({
-          'status': 'dismissed_by_user',
-          'resolved_at': DateTime.now().toIso8601String(),
-        }).eq('id', reportId);
+        await client
+            .from('forum_reports')
+            .update({
+              'status': 'dismissed_by_user',
+              'resolved_at': DateTime.now().toIso8601String(),
+            })
+            .eq('id', reportId);
       } catch (_) {}
     }
   }
@@ -3022,8 +3134,7 @@ class SupabaseService {
               .select('id')
               .eq('post_id', threadId);
           if (repliesRes is List && repliesRes.isNotEmpty) {
-            final replyIds =
-                repliesRes.map((r) => r['id'].toString()).toList();
+            final replyIds = repliesRes.map((r) => r['id'].toString()).toList();
             try {
               await client
                   .from('forum_reply_votes')
@@ -3090,7 +3201,8 @@ class SupabaseService {
     } catch (_) {}
     _localReportQueue.removeWhere(
       (r) =>
-          (r['postId']?.toString() == postId || r['id']?.toString() == postId) &&
+          (r['postId']?.toString() == postId ||
+              r['id']?.toString() == postId) &&
           (r['type'] == null || r['type'] == 'post'),
     );
 
@@ -3119,15 +3231,18 @@ class SupabaseService {
 
     // Mark existing reports for this post as actioned in Supabase DB immediately
     try {
-      await client.from('forum_reports').update({
-        'status': 'actioned',
-        'action_type': 'deleted',
-        'resolution_notes': deletionReason,
-        'deletion_reason': deletionReason,
-        'notes':
-            'Post "$postTitle" by $authorName ($authorEmail) deleted by Admin $modName: $deletionReason',
-        'resolved_at': DateTime.now().toIso8601String(),
-      }).eq('post_id', postId);
+      await client
+          .from('forum_reports')
+          .update({
+            'status': 'actioned',
+            'action_type': 'deleted',
+            'resolution_notes': deletionReason,
+            'deletion_reason': deletionReason,
+            'notes':
+                'Post "$postTitle" by $authorName ($authorEmail) deleted by Admin $modName: $deletionReason',
+            'resolved_at': DateTime.now().toIso8601String(),
+          })
+          .eq('post_id', postId);
     } catch (_) {}
 
     // 4. Try stored procedure
@@ -3152,14 +3267,17 @@ class SupabaseService {
       try {
         // Unlink reports so ON DELETE CASCADE does not wipe out moderation history
         try {
-          await client.from('forum_reports').update({
-            'status': 'actioned',
-            'action_type': 'deleted',
-            'resolution_notes': deletionReason,
-            'deletion_reason': deletionReason,
-            'resolved_at': DateTime.now().toIso8601String(),
-            'post_id': null,
-          }).eq('post_id', postId);
+          await client
+              .from('forum_reports')
+              .update({
+                'status': 'actioned',
+                'action_type': 'deleted',
+                'resolution_notes': deletionReason,
+                'deletion_reason': deletionReason,
+                'resolved_at': DateTime.now().toIso8601String(),
+                'post_id': null,
+              })
+              .eq('post_id', postId);
         } catch (_) {}
 
         final result = await client
@@ -3173,7 +3291,8 @@ class SupabaseService {
           deleteError = '';
         } else if (result is List && result.isNotEmpty) {
           // Row still exists somehow - report as error
-          deleteError = 'Post still exists after delete (rows returned: ${result.length})';
+          deleteError =
+              'Post still exists after delete (rows returned: ${result.length})';
         } else {
           deleteError = '';
         }
@@ -3251,7 +3370,8 @@ class SupabaseService {
     _dismissedReportReplyIds.add(replyId);
     _localReportQueue.removeWhere(
       (r) =>
-          (r['replyId']?.toString() == replyId || r['id']?.toString() == replyId) &&
+          (r['replyId']?.toString() == replyId ||
+              r['id']?.toString() == replyId) &&
           (r['type'] == null || r['type'] == 'reply'),
     );
 
@@ -3267,7 +3387,8 @@ class SupabaseService {
       'action_type': 'deleted',
       'reason': deletionReason,
       'admin_reason': deletionReason,
-      'notes': 'Reply by $authorName ($authorEmail) deleted by Admin $modName: $deletionReason',
+      'notes':
+          'Reply by $authorName ($authorEmail) deleted by Admin $modName: $deletionReason',
       'resolution_notes': deletionReason,
       'resolved_at': DateTime.now().toIso8601String(),
     });
@@ -3279,14 +3400,18 @@ class SupabaseService {
 
     // Mark existing reports for this reply as actioned in Supabase DB immediately
     try {
-      await client.from('forum_reports').update({
-        'status': 'actioned',
-        'action_type': 'deleted',
-        'resolution_notes': deletionReason,
-        'deletion_reason': deletionReason,
-        'notes': 'Reply by $authorName ($authorEmail) deleted by Admin $modName: $deletionReason',
-        'resolved_at': DateTime.now().toIso8601String(),
-      }).eq('reply_id', replyId);
+      await client
+          .from('forum_reports')
+          .update({
+            'status': 'actioned',
+            'action_type': 'deleted',
+            'resolution_notes': deletionReason,
+            'deletion_reason': deletionReason,
+            'notes':
+                'Reply by $authorName ($authorEmail) deleted by Admin $modName: $deletionReason',
+            'resolved_at': DateTime.now().toIso8601String(),
+          })
+          .eq('reply_id', replyId);
     } catch (_) {}
 
     // 4. Try stored procedure
@@ -3309,18 +3434,27 @@ class SupabaseService {
     if (deleteError.isNotEmpty) {
       try {
         try {
-          await client.from('forum_reports').update({
-            'status': 'actioned',
-            'action_type': 'deleted',
-            'resolution_notes': deletionReason,
-            'deletion_reason': deletionReason,
-            'resolved_at': DateTime.now().toIso8601String(),
-            'reply_id': null,
-          }).eq('reply_id', replyId);
+          await client
+              .from('forum_reports')
+              .update({
+                'status': 'actioned',
+                'action_type': 'deleted',
+                'resolution_notes': deletionReason,
+                'deletion_reason': deletionReason,
+                'resolved_at': DateTime.now().toIso8601String(),
+                'reply_id': null,
+              })
+              .eq('reply_id', replyId);
         } catch (_) {}
 
-        await client.from('forum_replies').delete().eq('id', replyId).select('id');
-        debugPrint('adminDeleteForumReply: direct delete succeeded for $replyId');
+        await client
+            .from('forum_replies')
+            .delete()
+            .eq('id', replyId)
+            .select('id');
+        debugPrint(
+          'adminDeleteForumReply: direct delete succeeded for $replyId',
+        );
         deleteError = '';
       } catch (e) {
         deleteError = 'Direct delete FAILED: $e';
@@ -3335,7 +3469,8 @@ class SupabaseService {
           'reason': deletionReason,
           'status': 'actioned',
           'action_type': 'deleted',
-          'notes': 'Reply by $authorName ($authorEmail) deleted: $deletionReason',
+          'notes':
+              'Reply by $authorName ($authorEmail) deleted: $deletionReason',
           'resolution_notes': deletionReason,
           'deletion_reason': deletionReason,
           'resolved_at': DateTime.now().toIso8601String(),
@@ -3344,7 +3479,8 @@ class SupabaseService {
         await client.from('forum_reports').insert({
           'reason': deletionReason,
           'status': 'actioned',
-          'notes': 'Reply by $authorName ($authorEmail) deleted: $deletionReason',
+          'notes':
+              'Reply by $authorName ($authorEmail) deleted: $deletionReason',
         });
       }
       debugPrint('adminDeleteForumReply: report record inserted for $replyId');
@@ -3695,10 +3831,7 @@ class SupabaseService {
     }
   }
 
-  Future<void> dismissReport(
-    String threadId, [
-    String? adminUsername,
-  ]) async {
+  Future<void> dismissReport(String threadId, [String? adminUsername]) async {
     final modName = adminUsername ?? 'Admin';
     _deletedPostIds.remove(threadId);
     _dismissedReportPostIds.add(threadId);
@@ -3839,7 +3972,7 @@ class SupabaseService {
         .from('quests')
         .select(
           'id, artisan_id, title, description, category, '
-          'geofence_radius_meters, stamp_title, stamp_image_url, status, '
+          'qr_code_secret, geofence_radius_meters, stamp_title, stamp_image_url, status, '
           'created_at',
         )
         .eq('artisan_id', artisanProfileId)
@@ -3882,7 +4015,7 @@ class SupabaseService {
         .eq('artisan_id', artisanProfile['id'])
         .select(
           'id, artisan_id, title, description, category, '
-          'geofence_radius_meters, stamp_title, stamp_image_url, status, '
+          'qr_code_secret, geofence_radius_meters, stamp_title, stamp_image_url, status, '
           'created_at',
         )
         .single();
@@ -4022,6 +4155,289 @@ class SupabaseService {
     }
 
     return await fetchCurrentQuestProgressStatus(questId) ?? 'IN_PROGRESS';
+  }
+
+  Future<List<Map<String, dynamic>>> fetchTaskProgress(
+    List<String> taskIds,
+  ) async {
+    final client = _requireSupabaseClient();
+    final user = _requireAuthenticatedUser(
+      client,
+      'You must be signed in to view task progress.',
+    );
+    if (taskIds.isEmpty) return const [];
+
+    final rows = await client
+        .from('task_progress')
+        .select(_taskProgressColumns)
+        .eq('user_id', user.id)
+        .inFilter('task_id', taskIds);
+    return List<Map<String, dynamic>>.from(rows);
+  }
+
+  Future<Map<String, dynamic>> completeTask(String taskId) async {
+    final client = _requireSupabaseClient();
+    final user = _requireAuthenticatedUser(
+      client,
+      'You must be signed in to complete a task.',
+    );
+    await _ensureTaskProgress(client, user.id, taskId);
+
+    final now = DateTime.now().toUtc().toIso8601String();
+    await client
+        .from('task_progress')
+        .update({
+          'is_completed': true,
+          'completed_at': now,
+          'progress_seconds': 0,
+          'tracking_started_at': null,
+          'updated_at': now,
+        })
+        .eq('user_id', user.id)
+        .eq('task_id', taskId)
+        .eq('is_completed', false);
+    return _fetchTaskProgressRow(client, user.id, taskId);
+  }
+
+  Future<Map<String, dynamic>> completeTaskWithArtisanQr({
+    required String questId,
+    required String artisanId,
+    required String taskId,
+    required String qrPayload,
+  }) async {
+    final client = _requireSupabaseClient();
+    final user = _requireAuthenticatedUser(
+      client,
+      'You must be signed in to verify a workshop task.',
+    );
+
+    final parts = qrPayload.trim().split(':');
+    if (parts.length != 3 ||
+        parts[0] != 'WK_ARTISAN' ||
+        parts[1] != artisanId ||
+        parts[2].trim().isEmpty) {
+      throw StateError('This QR code does not belong to this artisan.');
+    }
+
+    final matchingQuest = await client
+        .from('quests')
+        .select('id')
+        .eq('id', questId)
+        .eq('artisan_id', artisanId)
+        .eq('qr_code_secret', parts[2])
+        .eq('status', 'APPROVED')
+        .maybeSingle();
+    if (matchingQuest == null) {
+      throw StateError('This QR code does not belong to this artisan.');
+    }
+
+    final task = await client
+        .from('heritage_tasks')
+        .select('id, is_system_task, sort_order')
+        .eq('id', taskId)
+        .eq('quest_id', questId)
+        .eq('status', 'APPROVED')
+        .eq('is_archived', false)
+        .maybeSingle();
+    if (task == null) {
+      throw StateError('This task is not available for verification.');
+    }
+
+    final questProgress = await client
+        .from('quest_progress')
+        .select('status')
+        .eq('user_id', user.id)
+        .eq('quest_id', questId)
+        .maybeSingle();
+    if (questProgress?['status']?.toString().toUpperCase() != 'IN_PROGRESS') {
+      throw StateError('Start this quest before scanning the workshop QR.');
+    }
+
+    await _ensureTaskProgress(client, user.id, taskId);
+    final current = await _fetchTaskProgressRow(client, user.id, taskId);
+    if (current['is_completed'] == true) return current;
+
+    if (task['is_system_task'] == true && task['sort_order'] == 2) {
+      final seconds = (current['progress_seconds'] as num?)?.toInt() ?? 0;
+      if (seconds < 900) {
+        throw StateError(
+          'Stay at the workshop for 15 minutes before scanning this task.',
+        );
+      }
+    }
+
+    final completed = await completeTask(taskId);
+    await _completeQuestWhenAllTasksAreDone(
+      client: client,
+      userId: user.id,
+      questId: questId,
+    );
+    return completed;
+  }
+
+  Future<void> _completeQuestWhenAllTasksAreDone({
+    required SupabaseClient client,
+    required String userId,
+    required String questId,
+  }) async {
+    final taskRows = await client
+        .from('heritage_tasks')
+        .select('id')
+        .eq('quest_id', questId)
+        .eq('status', 'APPROVED')
+        .eq('is_archived', false);
+    final taskIds = List<Map<String, dynamic>>.from(
+      taskRows,
+    ).map((row) => row['id'].toString()).toList(growable: false);
+    if (taskIds.isEmpty) return;
+
+    final progressRows = await client
+        .from('task_progress')
+        .select('task_id')
+        .eq('user_id', userId)
+        .eq('is_completed', true)
+        .inFilter('task_id', taskIds);
+    final completedIds = List<Map<String, dynamic>>.from(
+      progressRows,
+    ).map((row) => row['task_id'].toString()).toSet();
+    if (!taskIds.every(completedIds.contains)) return;
+
+    final now = DateTime.now().toUtc().toIso8601String();
+    await client
+        .from('quest_progress')
+        .update({'status': 'COMPLETED', 'completed_at': now})
+        .eq('user_id', userId)
+        .eq('quest_id', questId);
+
+    final existingStamp = await client
+        .from('passport_stamps')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('quest_id', questId)
+        .maybeSingle();
+    if (existingStamp == null) {
+      await client.from('passport_stamps').insert({
+        'user_id': userId,
+        'quest_id': questId,
+        'stamp_code': 'QUEST_$questId',
+      });
+    }
+  }
+
+  Future<Map<String, dynamic>> startTimedTask(String taskId) async {
+    final client = _requireSupabaseClient();
+    final user = _requireAuthenticatedUser(
+      client,
+      'You must be signed in to track a task.',
+    );
+    await _ensureTaskProgress(client, user.id, taskId);
+
+    final current = await _fetchTaskProgressRow(client, user.id, taskId);
+    if (current['is_completed'] == true ||
+        current['tracking_started_at'] != null) {
+      return current;
+    }
+
+    final now = DateTime.now().toUtc().toIso8601String();
+    await client
+        .from('task_progress')
+        .update({'tracking_started_at': now, 'updated_at': now})
+        .eq('user_id', user.id)
+        .eq('task_id', taskId)
+        .eq('is_completed', false);
+    return _fetchTaskProgressRow(client, user.id, taskId);
+  }
+
+  Future<Map<String, dynamic>> pauseTimedTask({
+    required String taskId,
+    required int progressSeconds,
+  }) async {
+    final client = _requireSupabaseClient();
+    final user = _requireAuthenticatedUser(
+      client,
+      'You must be signed in to save task progress.',
+    );
+    await _ensureTaskProgress(client, user.id, taskId);
+
+    final now = DateTime.now().toUtc().toIso8601String();
+    await client
+        .from('task_progress')
+        .update({
+          'progress_seconds': progressSeconds.clamp(0, 900),
+          'tracking_started_at': null,
+          'updated_at': now,
+        })
+        .eq('user_id', user.id)
+        .eq('task_id', taskId)
+        .eq('is_completed', false);
+    return _fetchTaskProgressRow(client, user.id, taskId);
+  }
+
+  Future<Map<String, dynamic>> completeTimedTask(String taskId) async {
+    final client = _requireSupabaseClient();
+    final user = _requireAuthenticatedUser(
+      client,
+      'You must be signed in to complete a task.',
+    );
+    await _ensureTaskProgress(client, user.id, taskId);
+
+    final now = DateTime.now().toUtc().toIso8601String();
+    await client
+        .from('task_progress')
+        .update({
+          'is_completed': true,
+          'completed_at': now,
+          'progress_seconds': 900,
+          'tracking_started_at': null,
+          'updated_at': now,
+        })
+        .eq('user_id', user.id)
+        .eq('task_id', taskId)
+        .eq('is_completed', false);
+    return _fetchTaskProgressRow(client, user.id, taskId);
+  }
+
+  static const String _taskProgressColumns =
+      'user_id, task_id, is_completed, completed_at, progress_seconds, '
+      'tracking_started_at';
+
+  SupabaseClient _requireSupabaseClient() {
+    final client = _client;
+    if (client == null) throw StateError('Supabase is not initialized.');
+    return client;
+  }
+
+  User _requireAuthenticatedUser(SupabaseClient client, String message) {
+    final user = client.auth.currentUser;
+    if (user == null) throw StateError(message);
+    return user;
+  }
+
+  Future<void> _ensureTaskProgress(
+    SupabaseClient client,
+    String userId,
+    String taskId,
+  ) async {
+    await client
+        .from('task_progress')
+        .upsert(
+          {'user_id': userId, 'task_id': taskId},
+          onConflict: 'user_id,task_id',
+          ignoreDuplicates: true,
+        );
+  }
+
+  Future<Map<String, dynamic>> _fetchTaskProgressRow(
+    SupabaseClient client,
+    String userId,
+    String taskId,
+  ) async {
+    return client
+        .from('task_progress')
+        .select(_taskProgressColumns)
+        .eq('user_id', userId)
+        .eq('task_id', taskId)
+        .single();
   }
 
   Future<Map<String, dynamic>> updateUnapprovedHeritageTask({
