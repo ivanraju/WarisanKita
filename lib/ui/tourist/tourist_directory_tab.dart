@@ -341,7 +341,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
       'state': a.state,
       'rating': a.rating,
       'image': a.imageUrl,
-      'images': [a.imageUrl],
+      'images': a.images,
       'bio': a.description,
       'exp': '+150 EXP',
       'experienceYears': a.experience,
