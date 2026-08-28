@@ -71,6 +71,7 @@ class _ArtisanHeritageTaskManagementViewState
 
   Future<void> _showEditTaskSheet(HeritageTask task) async {
     final viewModel = context.read<GamificationViewModel>();
+    final isResubmission = task.status.toUpperCase() == 'REJECTED';
     viewModel.clearArtisanTaskError();
     final submitted = await showModalBottomSheet<bool>(
       context: context,
@@ -83,8 +84,12 @@ class _ArtisanHeritageTaskManagementViewState
     );
     if (submitted == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Task edit request submitted for admin approval.'),
+        SnackBar(
+          content: Text(
+            isResubmission
+                ? 'Task updated and resubmitted for admin approval.'
+                : 'Task edit request submitted for admin approval.',
+          ),
           backgroundColor: _green,
         ),
       );
@@ -150,6 +155,54 @@ class _ArtisanHeritageTaskManagementViewState
               ),
               ('XP reward', '${change.proposedXpReward ?? task.xpReward} XP'),
             ],
+    );
+  }
+
+  void _showPendingTaskSubmission(HeritageTask task) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => Container(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+        decoration: const BoxDecoration(
+          color: Color(0xFFF7F5EF),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'New Task Submission',
+                style: GoogleFonts.dmSerifDisplay(color: _green, fontSize: 25),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'This task will become active only after an admin approves it.',
+                style: TextStyle(color: Color(0xFF64748B), fontSize: 12),
+              ),
+              const SizedBox(height: 18),
+              _changeVersion('SUBMITTED TASK', [
+                ('Title', task.title),
+                ('Type', task.isRequired ? 'Required' : 'Optional'),
+                ('XP reward', '${task.xpReward} XP'),
+              ], pending: true),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () => Navigator.pop(sheetContext),
+                  style: FilledButton.styleFrom(backgroundColor: _green),
+                  child: const Text('Done'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -293,6 +346,44 @@ class _ArtisanHeritageTaskManagementViewState
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Task deletion request submitted for admin approval.'),
+          backgroundColor: _green,
+        ),
+      );
+    }
+  }
+
+  Future<void> _deleteRejectedTask(HeritageTask task) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete rejected task?'),
+        content: Text(
+          '“${task.title}” was rejected and can be deleted without another admin review.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFB42318),
+            ),
+            child: const Text('Delete Task'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final success = await context
+        .read<GamificationViewModel>()
+        .cancelNewTaskSubmission(task);
+    if (success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Rejected task deleted.'),
           backgroundColor: _green,
         ),
       );
@@ -471,7 +562,7 @@ class _ArtisanHeritageTaskManagementViewState
           children: [
             Expanded(
               child: Text(
-                'ACTIVE TASKS',
+                'TASKS',
                 style: GoogleFonts.plusJakartaSans(
                   color: _green,
                   fontWeight: FontWeight.w800,
@@ -764,6 +855,11 @@ class _ArtisanHeritageTaskManagementViewState
   Widget _taskCard(int index, HeritageTask task) {
     final viewModel = context.read<GamificationViewModel>();
     final pendingChange = viewModel.pendingChangeForTask(task.id);
+    final isPendingSubmission = task.status.toUpperCase() == 'PENDING_APPROVAL';
+    final isRejectedSubmission = task.status.toUpperCase() == 'REJECTED';
+    final isTaskActionBusy = isRejectedSubmission
+        ? viewModel.isUpdatingNewTask
+        : viewModel.isSubmittingTaskChange;
     final statusColor = switch (task.status.toUpperCase()) {
       'APPROVED' => const Color(0xFF087F5B),
       'REJECTED' => const Color(0xFFB42318),
@@ -871,6 +967,36 @@ class _ArtisanHeritageTaskManagementViewState
                 ),
               ],
             )
+          else if (isPendingSubmission)
+            InkWell(
+              onTap: () => _showPendingTaskSubmission(task),
+              borderRadius: BorderRadius.circular(12),
+              child: const Padding(
+                padding: EdgeInsets.symmetric(vertical: 4),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '🕒 Task pending admin review',
+                      style: TextStyle(
+                        color: Color(0xFF9A6700),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'View submission ›',
+                      style: TextStyle(
+                        color: _green,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
           else if (pendingChange != null)
             InkWell(
               onTap: () => _showTaskChanges(task, pendingChange),
@@ -906,16 +1032,18 @@ class _ArtisanHeritageTaskManagementViewState
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 TextButton.icon(
-                  onPressed: viewModel.isSubmittingTaskChange
+                  onPressed: isTaskActionBusy
                       ? null
                       : () => _showEditTaskSheet(task),
                   icon: const Icon(Icons.edit_outlined, size: 17),
                   label: const Text('Edit'),
                 ),
                 TextButton.icon(
-                  onPressed: viewModel.isSubmittingTaskChange
+                  onPressed: isTaskActionBusy
                       ? null
-                      : () => _requestTaskDeletion(task),
+                      : () => isRejectedSubmission
+                            ? _deleteRejectedTask(task)
+                            : _requestTaskDeletion(task),
                   style: TextButton.styleFrom(
                     foregroundColor: const Color(0xFFB42318),
                   ),
@@ -940,7 +1068,7 @@ class _ArtisanHeritageTaskManagementViewState
       children: [
         Icon(Icons.playlist_add_rounded, color: _gold, size: 38),
         SizedBox(height: 10),
-        Text('No approved active tasks yet.'),
+        Text('No tasks yet.'),
       ],
     ),
   );
@@ -1451,6 +1579,8 @@ class _EditHeritageTaskSheetState extends State<_EditHeritageTaskSheet> {
   late final TextEditingController _xp;
   late bool _required;
 
+  bool get _isResubmission => widget.task.status.toUpperCase() == 'REJECTED';
+
   @override
   void initState() {
     super.initState();
@@ -1468,14 +1598,20 @@ class _EditHeritageTaskSheetState extends State<_EditHeritageTaskSheet> {
 
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
-    final success = await context
-        .read<GamificationViewModel>()
-        .requestHeritageTaskEdit(
-          task: widget.task,
-          title: _title.text,
-          isRequired: _required,
-          xpReward: int.parse(_xp.text.trim()),
-        );
+    final viewModel = context.read<GamificationViewModel>();
+    final success = _isResubmission
+        ? await viewModel.updateNewTaskSubmission(
+            task: widget.task,
+            title: _title.text,
+            isRequired: _required,
+            xpReward: int.parse(_xp.text.trim()),
+          )
+        : await viewModel.requestHeritageTaskEdit(
+            task: widget.task,
+            title: _title.text,
+            isRequired: _required,
+            xpReward: int.parse(_xp.text.trim()),
+          );
     if (mounted && success) {
       Navigator.of(context).pop(true);
     }
@@ -1484,6 +1620,9 @@ class _EditHeritageTaskSheetState extends State<_EditHeritageTaskSheet> {
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<GamificationViewModel>();
+    final isBusy = _isResubmission
+        ? viewModel.isUpdatingNewTask
+        : viewModel.isSubmittingTaskChange;
     return Container(
       padding: EdgeInsets.fromLTRB(
         20,
@@ -1505,16 +1644,23 @@ class _EditHeritageTaskSheetState extends State<_EditHeritageTaskSheet> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Request Task Edit',
+                  _isResubmission
+                      ? 'Edit & Resubmit Task'
+                      : 'Request Task Edit',
                   style: GoogleFonts.dmSerifDisplay(
                     color: _green,
                     fontSize: 25,
                   ),
                 ),
                 const SizedBox(height: 6),
-                const Text(
-                  'The existing task remains unchanged until an admin approves this request.',
-                  style: TextStyle(color: Color(0xFF64748B), fontSize: 12),
+                Text(
+                  _isResubmission
+                      ? 'Update the rejected task and submit it for admin review again.'
+                      : 'The existing task remains unchanged until an admin approves this request.',
+                  style: const TextStyle(
+                    color: Color(0xFF64748B),
+                    fontSize: 12,
+                  ),
                 ),
                 const SizedBox(height: 18),
                 TextFormField(
@@ -1537,7 +1683,7 @@ class _EditHeritageTaskSheetState extends State<_EditHeritageTaskSheet> {
                     ButtonSegment(value: false, label: Text('Optional')),
                   ],
                   selected: {_required},
-                  onSelectionChanged: viewModel.isSubmittingTaskChange
+                  onSelectionChanged: isBusy
                       ? null
                       : (selection) =>
                             setState(() => _required = selection.first),
@@ -1566,7 +1712,7 @@ class _EditHeritageTaskSheetState extends State<_EditHeritageTaskSheet> {
                   children: [
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: viewModel.isSubmittingTaskChange
+                        onPressed: isBusy
                             ? null
                             : () => Navigator.of(context).pop(),
                         child: const Text('Cancel'),
@@ -1575,11 +1721,9 @@ class _EditHeritageTaskSheetState extends State<_EditHeritageTaskSheet> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: FilledButton(
-                        onPressed: viewModel.isSubmittingTaskChange
-                            ? null
-                            : _submit,
+                        onPressed: isBusy ? null : _submit,
                         style: FilledButton.styleFrom(backgroundColor: _green),
-                        child: viewModel.isSubmittingTaskChange
+                        child: isBusy
                             ? const SizedBox.square(
                                 dimension: 18,
                                 child: CircularProgressIndicator(
@@ -1587,7 +1731,11 @@ class _EditHeritageTaskSheetState extends State<_EditHeritageTaskSheet> {
                                   color: Colors.white,
                                 ),
                               )
-                            : const Text('Submit Request'),
+                            : Text(
+                                _isResubmission
+                                    ? 'Resubmit Task'
+                                    : 'Submit Request',
+                              ),
                       ),
                     ),
                   ],

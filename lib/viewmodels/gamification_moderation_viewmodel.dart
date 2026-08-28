@@ -2,7 +2,13 @@ import 'package:flutter/foundation.dart';
 import 'package:warisan_kita/data/repositories/gamification_repository.dart';
 import 'package:warisan_kita/domain/models/gamification_moderation_request.dart';
 
-enum GamificationModerationFilter { all, newTasks, taskChanges, questChanges }
+enum GamificationModerationFilter {
+  all,
+  newTasks,
+  taskChanges,
+  deleteRequests,
+  questChanges,
+}
 
 class GamificationModerationViewModel extends ChangeNotifier {
   final GamificationRepository _repository;
@@ -28,8 +34,11 @@ class GamificationModerationViewModel extends ChangeNotifier {
 
   int get totalCount => _requests.length;
   int get newTaskCount => _requests.where((item) => item.isNewTask).length;
-  int get taskChangeCount =>
-      _requests.where((item) => item.isTaskChange).length;
+  int get taskChangeCount => _requests
+      .where((item) => item.isTaskChange && !item.isDeleteRequest)
+      .length;
+  int get deleteRequestCount =>
+      _requests.where((item) => item.isDeleteRequest).length;
   int get questChangeCount =>
       _requests.where((item) => item.isQuestChange).length;
 
@@ -39,7 +48,11 @@ class GamificationModerationViewModel extends ChangeNotifier {
       GamificationModerationFilter.newTasks =>
         requests.where((item) => item.isNewTask).toList(growable: false),
       GamificationModerationFilter.taskChanges =>
-        requests.where((item) => item.isTaskChange).toList(growable: false),
+        requests
+            .where((item) => item.isTaskChange && !item.isDeleteRequest)
+            .toList(growable: false),
+      GamificationModerationFilter.deleteRequests =>
+        requests.where((item) => item.isDeleteRequest).toList(growable: false),
       GamificationModerationFilter.questChanges =>
         requests.where((item) => item.isQuestChange).toList(growable: false),
     };
