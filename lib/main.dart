@@ -124,10 +124,19 @@ void main() async {
             repository: context.read<GamificationRepository>(),
           ),
         ),
-        ChangeNotifierProvider(
+        ChangeNotifierProxyProvider<AuthViewModel, MatchmakerViewModel>(
           create: (context) => MatchmakerViewModel(
             repository: context.read<MatchmakerRepository>(),
+            initialUserEmail: context.read<AuthViewModel>().currentUser?.email,
           ),
+          update: (context, authVM, matchmakerVM) {
+            matchmakerVM?.updateUserContext(authVM.currentUser?.email);
+            return matchmakerVM ??
+                MatchmakerViewModel(
+                  repository: context.read<MatchmakerRepository>(),
+                  initialUserEmail: authVM.currentUser?.email,
+                );
+          },
         ),
         ChangeNotifierProvider<MapViewModel>(
           create: (context) => MapViewModel(

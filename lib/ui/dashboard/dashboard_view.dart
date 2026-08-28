@@ -3,9 +3,11 @@ import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:warisan_kita/ui/directory/directory_view.dart';
 import 'package:warisan_kita/ui/matchmaker/matchmaker_view.dart';
+import 'package:warisan_kita/ui/matchmaker/quiz_results_view.dart';
 import 'package:warisan_kita/ui/matchmaker/tourist_matchmaker_view.dart';
 import 'package:warisan_kita/ui/forum/forum_view.dart';
 import 'package:warisan_kita/ui/gamification/gamification_view.dart';
+import 'package:warisan_kita/viewmodels/matchmaker_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/navigation_viewmodel.dart';
 
 class TouristDashboardScreen extends StatelessWidget {
@@ -150,6 +152,10 @@ class TouristHomeContent extends StatelessWidget {
   }
 
   Widget _buildHeroCard(BuildContext context) {
+    final matchmakerVM = context.watch<MatchmakerViewModel>();
+    final isQuizCompleted = matchmakerVM.isQuizCompleted;
+    final personality = matchmakerVM.currentPersonality;
+
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -180,13 +186,17 @@ class TouristHomeContent extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Discovery\nBegins Here',
-                  style: GoogleFonts.dmSerifDisplay(color: Colors.white, fontSize: 32, height: 1.1),
+                  isQuizCompleted && personality != null
+                      ? 'Your Craft Soul:\n${personality.title}'
+                      : 'Discovery\nBegins Here',
+                  style: GoogleFonts.dmSerifDisplay(color: Colors.white, fontSize: 30, height: 1.1),
                 ),
                 const SizedBox(height: 12),
-                const Text(
-                  'Match your soul with nearby Malaysian artisans.',
-                  style: TextStyle(color: Colors.white70, fontSize: 14),
+                Text(
+                  isQuizCompleted && personality != null
+                      ? (personality.tagline.isNotEmpty ? personality.tagline : 'Matched with authentic Malaysian heritage masters.')
+                      : 'Match your soul with nearby Malaysian artisans.',
+                  style: const TextStyle(color: Colors.white70, fontSize: 14),
                 ),
                 const SizedBox(height: 24),
                 Wrap(
@@ -194,12 +204,22 @@ class TouristHomeContent extends StatelessWidget {
                   runSpacing: 12,
                   children: [
                     ElevatedButton(
-                      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QuizWizardScreen())),
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => isQuizCompleted
+                              ? const QuizResultsScreen()
+                              : const QuizWizardScreen(),
+                        ),
+                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFFFD54F),
                         foregroundColor: const Color(0xFF004D40),
                       ),
-                      child: const Text('START QUIZ', style: TextStyle(fontWeight: FontWeight.bold)),
+                      child: Text(
+                        isQuizCompleted ? 'VIEW CRAFT SOUL' : 'START QUIZ',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     ),
                     OutlinedButton.icon(
                       onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TouristMatchmakerView())),

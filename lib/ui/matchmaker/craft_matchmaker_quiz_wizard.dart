@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
+import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
+import 'package:warisan_kita/viewmodels/matchmaker_viewmodel.dart';
 
 class CraftMatchmakerQuizWizard extends StatefulWidget {
-  final Function(List<String> preferenceTags) onCompleted;
+  final Function(List<String> preferenceTags)? onCompleted;
 
   const CraftMatchmakerQuizWizard({
     super.key,
-    required this.onCompleted,
+    this.onCompleted,
   });
 
   @override
@@ -15,6 +19,7 @@ class CraftMatchmakerQuizWizard extends StatefulWidget {
 
 class _CraftMatchmakerQuizWizardState extends State<CraftMatchmakerQuizWizard> {
   int _currentStep = 0;
+  bool _isInitialized = false;
 
   // 4 Preference Questions (C3: Quiz Completion = all 4 questions answered)
   String? _q1ExperienceType; // Hands-on workshop vs Observing master
@@ -29,18 +34,36 @@ class _CraftMatchmakerQuizWizardState extends State<CraftMatchmakerQuizWizard> {
     'Royal Pewter & Metal',
   ];
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isInitialized) {
+      final matchmakerVM = context.read<MatchmakerViewModel>();
+      final answers = matchmakerVM.answers;
+      final personality = matchmakerVM.currentPersonality;
+
+      _q1ExperienceType = answers[0] ?? personality?.experienceType;
+      _q2Environment = answers[1] ?? personality?.environment;
+      _q3MaterialPreference = answers[2] ?? personality?.material;
+      _q4CraftOrigin = answers[3] ?? personality?.region;
+
+      _isInitialized = true;
+    }
+  }
+
   bool get _isAllQuestionsAnswered =>
       _q1ExperienceType != null &&
       _q2Environment != null &&
       _q3MaterialPreference != null &&
       _q4CraftOrigin != null;
 
-  void _submitQuiz() {
+  Future<void> _submitQuiz() async {
+    final langVM = context.read<LanguageViewModel>();
     if (!_isAllQuestionsAnswered) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please answer all 4 questions to save your preferences.'),
-          backgroundColor: Color(0xFFEF4444),
+        SnackBar(
+          content: Text(langVM.translate('Please answer all 4 questions to save your preferences.')),
+          backgroundColor: const Color(0xFFEF4444),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -54,25 +77,42 @@ class _CraftMatchmakerQuizWizardState extends State<CraftMatchmakerQuizWizard> {
       _q4CraftOrigin!,
     ];
 
-    // M3: Profile Updated Successfully / Preferences Saved
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Craft Preference Tags Saved! Your Heritage Directory recommendations are updated.',
-          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: const Color(0xFF004D40),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
+    final authVM = context.read<AuthViewModel>();
+    final matchmakerVM = context.read<MatchmakerViewModel>();
+
+    final personality = await matchmakerVM.saveQuizResults(
+      experienceType: _q1ExperienceType!,
+      environment: _q2Environment!,
+      material: _q3MaterialPreference!,
+      region: _q4CraftOrigin!,
+      userEmail: authVM.currentUser?.email,
     );
 
-    widget.onCompleted(tags);
-    Navigator.of(context).pop();
+    if (mounted) {
+      // M3: Profile Updated Successfully / Preferences Saved
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '✨ ${langVM.translate('Your Craft Soul:')} ${personality.title}! ${langVM.translate('Preferences updated successfully.')}',
+            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold),
+          ),
+          backgroundColor: const Color(0xFF004D40),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+
+      widget.onCompleted?.call(tags);
+      Navigator.of(context).pop();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final langVM = context.watch<LanguageViewModel>();
+    final matchmakerVM = context.watch<MatchmakerViewModel>();
+    final isUpdating = matchmakerVM.isQuizCompleted;
+
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
       backgroundColor: Colors.white,
@@ -102,7 +142,9 @@ class _CraftMatchmakerQuizWizardState extends State<CraftMatchmakerQuizWizard> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            'Craft Matchmaker Wizard',
+                            isUpdating
+                                ? langVM.translate('Update Craft Matchmaker')
+                                : langVM.translate('Craft Matchmaker Wizard'),
                             softWrap: true,
                             style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
                           ),
@@ -147,7 +189,7 @@ class _CraftMatchmakerQuizWizardState extends State<CraftMatchmakerQuizWizard> {
                         foregroundColor: const Color(0xFF004D40),
                         side: const BorderSide(color: Color(0xFF004D40)),
                       ),
-                      child: const Text('Back'),
+                      child: Text(langVM.translate('Back')),
                     )
                   else
                     const SizedBox.shrink(),
@@ -156,13 +198,18 @@ class _CraftMatchmakerQuizWizardState extends State<CraftMatchmakerQuizWizard> {
                     FilledButton(
                       onPressed: () => setState(() => _currentStep++),
                       style: FilledButton.styleFrom(backgroundColor: const Color(0xFF004D40)),
-                      child: const Text('Next Question'),
+                      child: Text(langVM.translate('Next Question')),
                     )
                   else
                     FilledButton(
                       onPressed: _submitQuiz,
                       style: FilledButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
-                      child: const Text('SAVE PREFERENCES'),
+                      child: Text(
+                        isUpdating
+                            ? langVM.translate('UPDATE PREFERENCES')
+                            : langVM.translate('SAVE PREFERENCES'),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     ),
                 ],
               ),
@@ -307,31 +354,33 @@ class _CraftMatchmakerQuizWizardState extends State<CraftMatchmakerQuizWizard> {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
+      child: Material(
         color: isSelected ? const Color(0xFF004D40).withOpacity(0.06) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isSelected ? const Color(0xFF004D40) : Colors.black.withOpacity(0.08),
-          width: isSelected ? 1.8 : 1.0,
-        ),
-      ),
-      child: ListTile(
-        onTap: () => onSelect(value),
-        title: Text(
-          title,
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: isSelected ? const Color(0xFF004D40) : const Color(0xFF1E293B),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: isSelected ? const Color(0xFF004D40) : Colors.black.withOpacity(0.08),
+            width: isSelected ? 1.8 : 1.0,
           ),
         ),
-        subtitle: Text(
-          subtitle,
-          style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[600]),
+        child: ListTile(
+          onTap: () => onSelect(value),
+          title: Text(
+            title,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: isSelected ? const Color(0xFF004D40) : const Color(0xFF1E293B),
+            ),
+          ),
+          subtitle: Text(
+            subtitle,
+            style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[600]),
+          ),
+          trailing: isSelected
+              ? const Icon(Icons.check_circle_rounded, color: Color(0xFF004D40))
+              : const Icon(Icons.radio_button_unchecked_rounded, color: Colors.grey),
         ),
-        trailing: isSelected
-            ? const Icon(Icons.check_circle_rounded, color: Color(0xFF004D40))
-            : const Icon(Icons.radio_button_unchecked_rounded, color: Colors.grey),
       ),
     );
   }
