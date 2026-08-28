@@ -3644,44 +3644,78 @@ class SupabaseService {
     if (tIdx != -1) {
       final t = _forumStore[tIdx];
       final updatedReplies = List<ThreadReply>.from(t.replies)
-        ..removeWhere((r) => r.id == replyId);
+        ..removeWhere((r) => r.id == replyId || r.parentReplyId == replyId);
       _forumStore[tIdx] = t.copyWith(
         replies: updatedReplies,
         replyCount: updatedReplies.length,
       );
     }
+    _localReportQueue.removeWhere(
+      (r) =>
+          (r['replyId']?.toString() == replyId ||
+              r['id']?.toString() == replyId) &&
+          (r['type'] == null || r['type'] == 'reply'),
+    );
+    _dismissedReportReplyIds.add(replyId);
+
     final client = _client;
     if (client != null) {
       try {
-        // 1. Delete reply votes
+        // 1. Try RPC admin_delete_forum_content first (handles all constraints with SECURITY DEFINER)
+        bool rpcSuccess = false;
         try {
-          await client
-              .from('forum_reply_votes')
-              .delete()
-              .eq('reply_id', replyId);
+          await client.rpc(
+            'admin_delete_forum_content',
+            params: {
+              'p_post_id': null,
+              'p_reply_id': replyId,
+              'p_deletion_reason': 'Deleted by author/user',
+            },
+          );
+          rpcSuccess = true;
         } catch (_) {}
 
-        // 2. Unlink child replies then delete them
-        try {
-          await client
-              .from('forum_replies')
-              .update({'parent_reply_id': null})
-              .eq('parent_reply_id', replyId);
-        } catch (_) {}
-        try {
-          await client
-              .from('forum_replies')
-              .delete()
-              .eq('parent_reply_id', replyId);
-        } catch (_) {}
+        if (!rpcSuccess) {
+          // 2. Delete reply votes
+          try {
+            await client
+                .from('forum_reply_votes')
+                .delete()
+                .eq('reply_id', replyId);
+          } catch (_) {}
 
-        // 3. Delete reports referencing this reply
-        try {
-          await client.from('forum_reports').delete().eq('reply_id', replyId);
-        } catch (_) {}
+          // 3. Unlink/nullify child replies then delete them
+          try {
+            await client
+                .from('forum_replies')
+                .update({'parent_reply_id': null})
+                .eq('parent_reply_id', replyId);
+          } catch (_) {}
+          try {
+            await client
+                .from('forum_replies')
+                .delete()
+                .eq('parent_reply_id', replyId);
+          } catch (_) {}
 
-        // 4. Delete the reply
-        await client.from('forum_replies').delete().eq('id', replyId);
+          // 4. Nullify or delete reports referencing this reply
+          try {
+            await client
+                .from('forum_reports')
+                .update({
+                  'status': 'actioned',
+                  'action_type': 'deleted',
+                  'reply_id': null,
+                })
+                .eq('reply_id', replyId);
+          } catch (_) {}
+          try {
+            await client.from('forum_reports').delete().eq('reply_id', replyId);
+          } catch (_) {}
+
+          // 5. Delete the reply
+          await client.from('forum_replies').delete().eq('id', replyId);
+        }
       } catch (e) {
         debugPrint('Supabase deleteReply note: $e');
       }

@@ -292,6 +292,8 @@ class ForumViewModel extends ChangeNotifier {
   Future<void> deleteReply(String threadId, String replyId) async {
     await _repository.deleteReply(threadId, replyId);
     await fetchThreads();
+    await fetchForumReportQueue();
+    notifyListeners();
   }
 
   Future<Map<String, dynamic>> reportReply(

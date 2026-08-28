@@ -649,16 +649,30 @@ class _LiveForumTabState extends State<LiveForumTab> {
             child: const Text('CANCEL'),
           ),
           FilledButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(dialogContext);
-              context.read<ForumViewModel>().deleteReply(threadId, replyId);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('🗑️ Response deleted successfully.'),
-                  backgroundColor: Color(0xFFEF4444),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
+              setState(() {
+                if (_activeThread != null && _activeThread!['messages'] is List) {
+                  final List msgs = List.from(_activeThread!['messages']);
+                  msgs.removeWhere((m) =>
+                      m is Map &&
+                      (m['id']?.toString() == replyId ||
+                          m['parentReplyId']?.toString() == replyId));
+                  _activeThread!['messages'] = msgs;
+                  _activeThread!['replies'] = msgs.length;
+                  _activeThread!['replyCount'] = msgs.length;
+                }
+              });
+              await context.read<ForumViewModel>().deleteReply(threadId, replyId);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('🗑️ Response deleted successfully.'),
+                    backgroundColor: Color(0xFFEF4444),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
             },
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFFEF4444),
