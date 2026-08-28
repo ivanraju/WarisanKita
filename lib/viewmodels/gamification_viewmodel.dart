@@ -7,9 +7,10 @@ import 'package:warisan_kita/domain/models/badge.dart';
 import 'package:warisan_kita/domain/models/heritage_task.dart' as quest_domain;
 import 'package:warisan_kita/domain/models/heritage_task_change_request.dart';
 import 'package:warisan_kita/domain/models/quest.dart';
+import 'package:warisan_kita/domain/models/quest_change_request.dart';
 import 'package:warisan_kita/domain/models/task_progress.dart';
 
-class GamificationViewModel extends ChangeNotifier {
+class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
   final GamificationRepository _repository;
 
   List<Quest> _availableQuests = [];
@@ -53,6 +54,11 @@ class GamificationViewModel extends ChangeNotifier {
   bool _isProcessingProximity = false;
   bool? _pendingProximity;
   bool _requiresManualResume = false;
+  bool _isQuestBadgeEarned = false;
+  bool get isQuestBadgeEarned => _isQuestBadgeEarned;
+  bool _hasPendingQuestCompletionCelebration = false;
+  bool get hasPendingQuestCompletionCelebration =>
+      _hasPendingQuestCompletionCelebration;
 
   bool get canResumeDwellTracking {
     final dwellTask = _stayFifteenMinutesTask;
@@ -66,6 +72,10 @@ class GamificationViewModel extends ChangeNotifier {
 
   Quest? _artisanQuest;
   Quest? get artisanQuest => _artisanQuest;
+
+  QuestChangeRequest? _pendingArtisanQuestChange;
+  QuestChangeRequest? get pendingArtisanQuestChange =>
+      _pendingArtisanQuestChange;
 
   List<quest_domain.HeritageTask> _artisanTasks = [];
   List<quest_domain.HeritageTask> get artisanTasks => _artisanTasks
@@ -130,7 +140,17 @@ class GamificationViewModel extends ChangeNotifier {
 
   GamificationViewModel({required GamificationRepository repository})
     : _repository = repository {
+    WidgetsBinding.instance.addObserver(this);
     _initializeMockData();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.detached) {
+      unawaited(pauseDwellTrackingForInterruption());
+    }
   }
 
   int get totalPotentialXp {
@@ -143,12 +163,14 @@ class GamificationViewModel extends ChangeNotifier {
 
   Future<void> loadQuestsForArtisan(String artisanProfileId) async {
     final requestId = ++_loadRequestId;
+    final runningQuestId =
+        _selectedQuest != null &&
+            _heritageTasks.isNotEmpty &&
+            _questProgressStatus?.toUpperCase() == 'IN_PROGRESS' &&
+            _isDwellTracking
+        ? _selectedQuest!.id
+        : null;
 
-    _availableQuests = [];
-    _selectedQuest = null;
-    _heritageTasks = [];
-    _questProgressStatus = null;
-    _resetTouristTaskProgress();
     _startQuestError = null;
     _error = null;
     _isLoading = true;
@@ -163,6 +185,15 @@ class GamificationViewModel extends ChangeNotifier {
         return;
       }
 
+      final preserveRunningQuest =
+          runningQuestId != null &&
+          quests.any((quest) => quest.id == runningQuestId);
+      if (!preserveRunningQuest) {
+        _selectedQuest = null;
+        _heritageTasks = [];
+        _questProgressStatus = null;
+        _resetTouristTaskProgress();
+      }
       _availableQuests = quests;
     } catch (error, stackTrace) {
       if (requestId != _loadRequestId) {
@@ -181,6 +212,19 @@ class GamificationViewModel extends ChangeNotifier {
   }
 
   Future<void> selectQuest(Quest quest) async {
+    final isReopeningRunningQuest =
+        _selectedQuest?.id == quest.id &&
+        _heritageTasks.isNotEmpty &&
+        _questProgressStatus?.toUpperCase() == 'IN_PROGRESS' &&
+        _isDwellTracking;
+    if (isReopeningRunningQuest) {
+      _selectedQuest = quest;
+      _startQuestError = null;
+      _error = null;
+      notifyListeners();
+      return;
+    }
+
     final requestId = ++_loadRequestId;
 
     _selectedQuest = quest;
@@ -195,10 +239,12 @@ class GamificationViewModel extends ChangeNotifier {
     try {
       final tasks = await _repository.getHeritageTasks(quest.id);
       String? progressStatus;
+      var badgeEarned = false;
       try {
         progressStatus = await _repository.getCurrentQuestProgressStatus(
           quest.id,
         );
+        badgeEarned = await _repository.hasEarnedQuestStamp(quest.id);
       } catch (error, stackTrace) {
         debugPrint('GamificationViewModel load quest progress error: $error');
         debugPrintStack(stackTrace: stackTrace);
@@ -210,6 +256,7 @@ class GamificationViewModel extends ChangeNotifier {
 
       _heritageTasks = tasks;
       _questProgressStatus = progressStatus;
+      _isQuestBadgeEarned = badgeEarned;
       _identifySystemTasks();
 
       final progress = await _repository.getTaskProgress(
@@ -289,6 +336,9 @@ class GamificationViewModel extends ChangeNotifier {
       }
 
       _isInsideQuestGeofence = true;
+      _taskProgress[arrivalTask.id] = await _repository.completeTask(
+        arrivalTask.id,
+      );
       final dwellProgress = await _repository.startTimedTask(dwellTask.id);
       _taskProgress[dwellTask.id] = dwellProgress;
       _requiresManualResume = false;
@@ -316,11 +366,37 @@ class GamificationViewModel extends ChangeNotifier {
     return _heritageTasks.isNotEmpty && _heritageTasks.every(isTaskCompleted);
   }
 
+  bool get areAllRequiredHeritageTasksCompleted {
+    final requiredTasks = _heritageTasks
+        .where((task) => task.isRequired)
+        .toList(growable: false);
+    return requiredTasks.isNotEmpty && requiredTasks.every(isTaskCompleted);
+  }
+
+  bool consumeQuestCompletionCelebration() {
+    if (!_hasPendingQuestCompletionCelebration) return false;
+    _hasPendingQuestCompletionCelebration = false;
+    return true;
+  }
+
+  void _markQuestBadgeEarned() {
+    if (!_isQuestBadgeEarned) {
+      _hasPendingQuestCompletionCelebration = true;
+    }
+    _isQuestBadgeEarned = true;
+  }
+
+  void _markQuestFullyCompleted() {
+    _questProgressStatus = 'COMPLETED';
+    _cancelDwellTimer();
+  }
+
   bool isStayFifteenMinutesTask(quest_domain.HeritageTask task) {
     return task.isSystemTask && task.sortOrder == 2;
   }
 
   bool canVerifyTaskWithQr(quest_domain.HeritageTask task) {
+    if (task.isSystemTask) return false;
     if (_questProgressStatus?.toUpperCase() != 'IN_PROGRESS' ||
         isTaskCompleted(task)) {
       return false;
@@ -330,6 +406,9 @@ class GamificationViewModel extends ChangeNotifier {
   }
 
   String qrVerificationLabel(quest_domain.HeritageTask task) {
+    if (task.isSystemTask) {
+      return 'Completes Automatically';
+    }
     if (_questProgressStatus?.toUpperCase() != 'IN_PROGRESS') {
       return 'Start Quest to Scan';
     }
@@ -356,9 +435,11 @@ class GamificationViewModel extends ChangeNotifier {
         taskId: task.id,
         qrPayload: qrPayload,
       );
+      if (areAllRequiredHeritageTasksCompleted) {
+        _markQuestBadgeEarned();
+      }
       if (areAllHeritageTasksCompleted) {
-        _questProgressStatus = 'COMPLETED';
-        _cancelDwellTimer();
+        _markQuestFullyCompleted();
       }
       notifyListeners();
       return true;
@@ -527,11 +608,16 @@ class GamificationViewModel extends ChangeNotifier {
     _isCompletingDwellTask = true;
     _cancelDwellTimer();
     try {
-      _taskProgress[dwellTask.id] = await _repository.pauseTimedTask(
-        taskId: dwellTask.id,
-        progressSeconds: dwellRequiredSeconds,
+      _taskProgress[dwellTask.id] = await _repository.completeTimedTask(
+        dwellTask.id,
       );
       _displayedDwellSeconds = dwellRequiredSeconds;
+      if (areAllRequiredHeritageTasksCompleted) {
+        _markQuestBadgeEarned();
+      }
+      if (areAllHeritageTasksCompleted) {
+        _markQuestFullyCompleted();
+      }
     } catch (error, stackTrace) {
       debugPrint('GamificationViewModel complete dwell error: $error');
       debugPrintStack(stackTrace: stackTrace);
@@ -563,6 +649,8 @@ class GamificationViewModel extends ChangeNotifier {
     _displayedDwellSeconds = 0;
     _pendingProximity = null;
     _requiresManualResume = false;
+    _isQuestBadgeEarned = false;
+    _hasPendingQuestCompletionCelebration = false;
   }
 
   void _cancelDwellTimer() {
@@ -573,6 +661,7 @@ class GamificationViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _cancelDwellTimer();
     super.dispose();
   }
@@ -598,6 +687,7 @@ class GamificationViewModel extends ChangeNotifier {
 
     _artisanQuest = null;
     _artisanTasks = [];
+    _pendingArtisanQuestChange = null;
     _artisanTaskChangeRequests = [];
     _artisanTaskError = null;
     _isLoadingArtisanQuest = true;
@@ -607,6 +697,7 @@ class GamificationViewModel extends ChangeNotifier {
       final quest = await _repository.getQuestForCurrentArtisan();
       _artisanQuest = quest;
       if (quest != null) {
+        await _loadArtisanQuestChangeRequest(quest.id);
         _artisanTasks = await _repository.getArtisanHeritageTasks(quest.id);
         await _loadArtisanTaskChangeRequests();
       }
@@ -733,11 +824,11 @@ class GamificationViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _artisanQuest = await _repository.updateCurrentArtisanQuest(
+      _pendingArtisanQuestChange = await _repository.requestQuestUpdate(
         questId: quest.id,
-        title: cleanTitle,
-        description: cleanDescription,
-        category: cleanCategory,
+        proposedTitle: cleanTitle,
+        proposedDescription: cleanDescription,
+        proposedCategory: cleanCategory,
       );
       return true;
     } catch (error, stackTrace) {
@@ -752,6 +843,13 @@ class GamificationViewModel extends ChangeNotifier {
       _isUpdatingArtisanQuest = false;
       notifyListeners();
     }
+  }
+
+  Future<void> _loadArtisanQuestChangeRequest(String questId) async {
+    final requests = await _repository.getQuestChangeRequests(questId);
+    _pendingArtisanQuestChange = requests
+        .where((request) => request.isPending)
+        .firstOrNull;
   }
 
   HeritageTaskChangeRequest? pendingChangeForTask(String taskId) {

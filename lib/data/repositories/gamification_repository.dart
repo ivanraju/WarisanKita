@@ -1,9 +1,11 @@
 import 'package:warisan_kita/data/services/supabase_service.dart';
 import 'package:warisan_kita/domain/models/artisan_quest_profile.dart';
 import 'package:warisan_kita/domain/models/badge.dart' show HeritageStamp;
+import 'package:warisan_kita/domain/models/gamification_moderation_request.dart';
 import 'package:warisan_kita/domain/models/heritage_task.dart';
 import 'package:warisan_kita/domain/models/heritage_task_change_request.dart';
 import 'package:warisan_kita/domain/models/quest.dart';
+import 'package:warisan_kita/domain/models/quest_change_request.dart';
 import 'package:warisan_kita/domain/models/task_progress.dart';
 
 class GamificationRepository {
@@ -45,6 +47,10 @@ class GamificationRepository {
 
   Future<String?> getCurrentQuestProgressStatus(String questId) {
     return _service.fetchCurrentQuestProgressStatus(questId);
+  }
+
+  Future<bool> hasEarnedQuestStamp(String questId) {
+    return _service.hasEarnedQuestStamp(questId);
   }
 
   Future<String> startQuest({
@@ -152,6 +158,28 @@ class GamificationRepository {
     return quests.singleOrNull;
   }
 
+  Future<List<QuestChangeRequest>> getQuestChangeRequests(
+    String questId,
+  ) async {
+    final rows = await _service.fetchQuestChangeRequests(questId);
+    return rows.map(QuestChangeRequest.fromMap).toList(growable: false);
+  }
+
+  Future<QuestChangeRequest> requestQuestUpdate({
+    required String questId,
+    required String proposedTitle,
+    required String proposedDescription,
+    required String proposedCategory,
+  }) async {
+    final row = await _service.insertQuestChangeRequest(
+      questId: questId,
+      proposedTitle: proposedTitle,
+      proposedDescription: proposedDescription,
+      proposedCategory: proposedCategory,
+    );
+    return QuestChangeRequest.fromMap(row);
+  }
+
   Future<Quest> updateCurrentArtisanQuest({
     required String questId,
     required String title,
@@ -234,5 +262,49 @@ class GamificationRepository {
 
   Future<void> deleteUnapprovedHeritageTask(String taskId) {
     return _service.deleteUnapprovedHeritageTask(taskId);
+  }
+
+  Future<List<GamificationModerationRequest>>
+  getPendingGamificationModerationRequests() async {
+    final rows = await _service.fetchPendingGamificationModerationRequests();
+    return rows
+        .map(GamificationModerationRequest.fromMap)
+        .toList(growable: false);
+  }
+
+  Future<void> reviewNewHeritageTask({
+    required String taskId,
+    required bool approve,
+    String? rejectionReason,
+  }) {
+    return _service.reviewNewHeritageTask(
+      taskId: taskId,
+      approve: approve,
+      rejectionReason: rejectionReason,
+    );
+  }
+
+  Future<void> reviewHeritageTaskChange({
+    required String requestId,
+    required bool approve,
+    String? rejectionReason,
+  }) {
+    return _service.reviewHeritageTaskChange(
+      requestId: requestId,
+      approve: approve,
+      rejectionReason: rejectionReason,
+    );
+  }
+
+  Future<void> reviewQuestChange({
+    required String requestId,
+    required bool approve,
+    String? rejectionReason,
+  }) {
+    return _service.reviewQuestChange(
+      requestId: requestId,
+      approve: approve,
+      rejectionReason: rejectionReason,
+    );
   }
 }

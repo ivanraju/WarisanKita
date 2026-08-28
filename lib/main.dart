@@ -20,6 +20,7 @@ import 'package:warisan_kita/viewmodels/directory_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/itinerary_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/forum_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/gamification_viewmodel.dart';
+import 'package:warisan_kita/viewmodels/gamification_moderation_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/matchmaker_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/map_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/moderation_viewmodel.dart';
@@ -50,7 +51,9 @@ void main() async {
     if (errorMsg.contains('hardware_keyboard.dart') ||
         errorMsg.contains('KeyDownEvent') ||
         errorMsg.contains('_pressedKeys.containsKey')) {
-      debugPrint('Suppressed upstream HardwareKeyboard repeat event assertion: $errorMsg');
+      debugPrint(
+        'Suppressed upstream HardwareKeyboard repeat event assertion: $errorMsg',
+      );
       return;
     }
     FlutterError.presentError(details);
@@ -61,7 +64,9 @@ void main() async {
     if (errorStr.contains('hardware_keyboard.dart') ||
         errorStr.contains('KeyDownEvent') ||
         errorStr.contains('_pressedKeys.containsKey')) {
-      debugPrint('Suppressed unhandled HardwareKeyboard repeat event exception: $errorStr');
+      debugPrint(
+        'Suppressed unhandled HardwareKeyboard repeat event exception: $errorStr',
+      );
       return true;
     }
     return false;
@@ -77,15 +82,10 @@ void main() async {
     MultiProvider(
       providers: [
         Provider(create: (_) => SupabaseService()),
-        Provider<LocationService>(
-          create: (_) => const LocationService(),
-        ),
+        Provider<LocationService>(create: (_) => const LocationService()),
         Provider<LocationRepository>(
           create: (context) =>
-              LocationRepository(
-                service:
-                context.read<LocationService>(),
-              ),
+              LocationRepository(service: context.read<LocationService>()),
         ),
         Provider(
           create: (context) =>
@@ -100,9 +100,8 @@ void main() async {
               ForumRepository(service: context.read<SupabaseService>()),
         ),
         Provider(
-          create: (context) => GamificationRepository(
-            service: context.read<SupabaseService>(),
-          ),
+          create: (context) =>
+              GamificationRepository(service: context.read<SupabaseService>()),
         ),
         Provider(create: (_) => const MatchmakerRepository()),
         ChangeNotifierProvider(create: (_) => ThemeViewModel()),
@@ -124,6 +123,11 @@ void main() async {
             repository: context.read<GamificationRepository>(),
           ),
         ),
+        ChangeNotifierProvider(
+          create: (context) => GamificationModerationViewModel(
+            repository: context.read<GamificationRepository>(),
+          ),
+        ),
         ChangeNotifierProxyProvider<AuthViewModel, MatchmakerViewModel>(
           create: (context) => MatchmakerViewModel(
             repository: context.read<MatchmakerRepository>(),
@@ -140,11 +144,9 @@ void main() async {
         ),
         ChangeNotifierProvider<MapViewModel>(
           create: (context) => MapViewModel(
-            artisanRepository:
-            context.read<ArtisanRepository>(),
+            artisanRepository: context.read<ArtisanRepository>(),
 
-            locationRepository:
-            context.read<LocationRepository>(),
+            locationRepository: context.read<LocationRepository>(),
           ),
         ),
 

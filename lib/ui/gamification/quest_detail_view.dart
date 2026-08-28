@@ -33,6 +33,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
   late GamificationViewModel _viewModel;
   bool? _lastReportedInside;
   String? _lastReportedStatus;
+  bool _isShowingCompletionDialog = false;
 
   @override
   void initState() {
@@ -53,14 +54,6 @@ class _QuestDetailViewState extends State<QuestDetailView>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       unawaited(_resumeTracking());
-      return;
-    }
-    if (state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.paused ||
-        state == AppLifecycleState.detached ||
-        state == AppLifecycleState.hidden) {
-      _lastReportedInside = null;
-      unawaited(_viewModel.pauseDwellTrackingForInterruption());
     }
   }
 
@@ -82,7 +75,6 @@ class _QuestDetailViewState extends State<QuestDetailView>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    unawaited(_viewModel.pauseDwellTrackingForInterruption());
     super.dispose();
   }
 
@@ -93,6 +85,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
     final tasks = gamificationVM.heritageTasks;
     final distance = mapViewModel.getDistanceToWorkshop(workshop);
     _reportProximityAfterBuild(gamificationVM, distance);
+    _scheduleQuestCompletionDialog(gamificationVM);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -112,7 +105,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
           const SizedBox(height: 20),
           _buildXpSummary(gamificationVM.totalPotentialXp),
           const SizedBox(height: 20),
-          _buildStampPreview(),
+          _buildStampPreview(gamificationVM),
         ],
       ),
       bottomNavigationBar: _buildStartBar(context, gamificationVM, distance),
@@ -132,6 +125,25 @@ class _QuestDetailViewState extends State<QuestDetailView>
     _lastReportedStatus = status;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) unawaited(viewModel.handleQuestProximityChanged(inside));
+    });
+  }
+
+  void _scheduleQuestCompletionDialog(GamificationViewModel viewModel) {
+    if (!viewModel.hasPendingQuestCompletionCelebration ||
+        _isShowingCompletionDialog ||
+        !(ModalRoute.of(context)?.isCurrent ?? false)) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted ||
+          _isShowingCompletionDialog ||
+          !(ModalRoute.of(context)?.isCurrent ?? false) ||
+          !viewModel.consumeQuestCompletionCelebration()) {
+        return;
+      }
+      _isShowingCompletionDialog = true;
+      await _showQuestCompletionDialog();
+      _isShowingCompletionDialog = false;
     });
   }
 
@@ -424,7 +436,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
                 Text(
                   viewModel.displayedDwellSeconds >=
                           GamificationViewModel.dwellRequiredSeconds
-                      ? '15 minutes complete • Scan the workshop QR to verify'
+                      ? '15 minutes complete • Saving completion'
                       : viewModel.isInsideQuestGeofence
                       ? viewModel.isDwellTracking
                             ? 'Inside quest area • Timer running'
@@ -441,7 +453,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
                   ),
                 ),
               ],
-              if (!isCompleted) ...[
+              if (!isCompleted && !task.isSystemTask) ...[
                 const SizedBox(height: 10),
                 SizedBox(
                   width: double.infinity,
@@ -501,6 +513,105 @@ class _QuestDetailViewState extends State<QuestDetailView>
         builder: (_) => QRScannerScreen(quest: quest, task: task),
       ),
     );
+    if (!mounted) return;
+    _scheduleQuestCompletionDialog(context.read<GamificationViewModel>());
+  }
+
+  Future<void> _showQuestCompletionDialog() {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        contentPadding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: const BoxDecoration(
+                color: Color(0xFFFFF3C4),
+                shape: BoxShape.circle,
+              ),
+              child: ClipOval(
+                child: SizedBox.square(
+                  dimension: 92,
+                  child: Image.network(
+                    quest.stampImageUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => _buildStampFallback(),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              'Congratulations!',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.dmSerifDisplay(
+                color: const Color(0xFF004D40),
+                fontSize: 28,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'You completed every required activity for ${quest.title}.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.plusJakartaSans(
+                color: const Color(0xFF475569),
+                fontSize: 13,
+                height: 1.45,
+              ),
+            ),
+            const SizedBox(height: 14),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE8F5F1),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Column(
+                children: [
+                  const Text(
+                    'BADGE AWARDED',
+                    style: TextStyle(
+                      color: Color(0xFF087F5B),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.1,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    quest.stampTitle,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.plusJakartaSans(
+                      color: const Color(0xFF004D40),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                icon: const Icon(Icons.workspace_premium_rounded),
+                label: const Text('Collect Badge'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF005B4F),
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildXpSummary(int totalXp) {
@@ -537,9 +648,10 @@ class _QuestDetailViewState extends State<QuestDetailView>
     );
   }
 
-  Widget _buildStampPreview() {
+  Widget _buildStampPreview(GamificationViewModel viewModel) {
+    final isEarned = viewModel.isQuestBadgeEarned;
     return _buildSectionCard(
-      title: 'Quest Reward Preview',
+      title: isEarned ? 'Quest Reward' : 'Quest Reward Preview',
       icon: Icons.workspace_premium_rounded,
       child: Row(
         children: [
@@ -569,15 +681,35 @@ class _QuestDetailViewState extends State<QuestDetailView>
                     fontSize: 19,
                   ),
                 ),
-                const SizedBox(height: 5),
-                Text(
-                  'Preview only — this stamp has not been earned.',
-                  style: GoogleFonts.plusJakartaSans(
-                    color: const Color(0xFF64748B),
-                    fontSize: 11,
-                    height: 1.35,
+                const SizedBox(height: 7),
+                if (isEarned)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE4F3EE),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      '✓ ACHIEVED • ADDED TO PASSPORT',
+                      style: GoogleFonts.plusJakartaSans(
+                        color: const Color(0xFF087F5B),
+                        fontSize: 9,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  )
+                else
+                  Text(
+                    'Preview only — this stamp has not been earned.',
+                    style: GoogleFonts.plusJakartaSans(
+                      color: const Color(0xFF64748B),
+                      fontSize: 11,
+                      height: 1.35,
+                    ),
                   ),
-                ),
               ],
             ),
           ),

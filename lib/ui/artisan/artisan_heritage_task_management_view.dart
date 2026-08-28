@@ -3,8 +3,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:warisan_kita/domain/models/heritage_task.dart';
+import 'package:warisan_kita/domain/models/heritage_task_change_request.dart';
 import 'package:warisan_kita/domain/models/quest.dart';
-import 'package:warisan_kita/ui/artisan/artisan_task_requests_view.dart';
+import 'package:warisan_kita/domain/models/quest_change_request.dart';
 import 'package:warisan_kita/viewmodels/gamification_viewmodel.dart';
 
 class ArtisanHeritageTaskManagementView extends StatefulWidget {
@@ -88,6 +89,176 @@ class _ArtisanHeritageTaskManagementViewState
         ),
       );
     }
+  }
+
+  Future<void> _showEditQuestSheet(Quest quest) async {
+    final viewModel = context.read<GamificationViewModel>();
+    viewModel.clearArtisanTaskError();
+    final submitted = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => ChangeNotifierProvider.value(
+        value: viewModel,
+        child: _EditQuestSheet(quest: quest),
+      ),
+    );
+    if (submitted == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Quest update submitted for admin approval.'),
+          backgroundColor: _green,
+        ),
+      );
+    }
+  }
+
+  void _showQuestChanges(Quest quest, QuestChangeRequest change) {
+    _showChangesSheet(
+      title: 'Quest Update Request',
+      current: [
+        ('Title', quest.title),
+        ('Category', quest.category),
+        ('Description', quest.description),
+      ],
+      requested: [
+        ('Title', change.proposedTitle),
+        ('Category', change.proposedCategory),
+        ('Description', change.proposedDescription),
+      ],
+    );
+  }
+
+  void _showTaskChanges(HeritageTask task, HeritageTaskChangeRequest change) {
+    final isDelete = change.requestType.toUpperCase() == 'DELETE';
+    _showChangesSheet(
+      title: isDelete ? 'Task Deletion Request' : 'Task Update Request',
+      current: [
+        ('Title', task.title),
+        ('Type', task.isRequired ? 'Required' : 'Optional'),
+        ('XP reward', '${task.xpReward} XP'),
+      ],
+      requested: isDelete
+          ? [('Requested action', 'Delete this task after admin approval')]
+          : [
+              ('Title', change.proposedTitle ?? task.title),
+              (
+                'Type',
+                (change.proposedIsRequired ?? task.isRequired)
+                    ? 'Required'
+                    : 'Optional',
+              ),
+              ('XP reward', '${change.proposedXpReward ?? task.xpReward} XP'),
+            ],
+    );
+  }
+
+  void _showChangesSheet({
+    required String title,
+    required List<(String, String)> current,
+    required List<(String, String)> requested,
+  }) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => Container(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+        decoration: const BoxDecoration(
+          color: Color(0xFFF7F5EF),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.dmSerifDisplay(
+                    color: _green,
+                    fontSize: 25,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'The approved information remains active until an admin approves this request.',
+                  style: TextStyle(color: Color(0xFF64748B), fontSize: 12),
+                ),
+                const SizedBox(height: 18),
+                _changeVersion('CURRENT / APPROVED', current),
+                const SizedBox(height: 14),
+                _changeVersion('REQUESTED CHANGES', requested, pending: true),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () => Navigator.pop(sheetContext),
+                    style: FilledButton.styleFrom(backgroundColor: _green),
+                    child: const Text('Done'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _changeVersion(
+    String heading,
+    List<(String, String)> values, {
+    bool pending = false,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: pending ? const Color(0xFFFFF8E6) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: pending ? const Color(0xFFE4B64D) : const Color(0xFFE1E5E2),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            heading,
+            style: const TextStyle(
+              color: Color(0xFF64748B),
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.7,
+            ),
+          ),
+          const SizedBox(height: 10),
+          for (var index = 0; index < values.length; index++) ...[
+            Text(
+              values[index].$1,
+              style: const TextStyle(
+                color: Color(0xFF64748B),
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              values[index].$2,
+              style: const TextStyle(
+                color: Color(0xFF183B34),
+                fontWeight: FontWeight.w700,
+                height: 1.35,
+              ),
+            ),
+            if (index != values.length - 1) const SizedBox(height: 10),
+          ],
+        ],
+      ),
+    );
   }
 
   Future<void> _requestTaskDeletion(HeritageTask task) async {
@@ -294,7 +465,7 @@ class _ArtisanHeritageTaskManagementViewState
           ),
         ),
         const SizedBox(height: 12),
-        _questSummary(quest),
+        _questSummary(quest, viewModel),
         const SizedBox(height: 22),
         Row(
           children: [
@@ -311,17 +482,6 @@ class _ArtisanHeritageTaskManagementViewState
             Text(
               '${viewModel.artisanTasks.length}',
               style: const TextStyle(color: _gold, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(width: 8),
-            TextButton.icon(
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const ArtisanTaskRequestsView(),
-                ),
-              ),
-              icon: const Icon(Icons.receipt_long_outlined, size: 17),
-              label: const Text('View Requests'),
-              style: TextButton.styleFrom(foregroundColor: _green),
             ),
           ],
         ),
@@ -358,7 +518,8 @@ class _ArtisanHeritageTaskManagementViewState
     );
   }
 
-  Widget _questSummary(Quest quest) {
+  Widget _questSummary(Quest quest, GamificationViewModel viewModel) {
+    final pendingChange = viewModel.pendingArtisanQuestChange;
     final statusColor = switch (quest.status.toUpperCase()) {
       'APPROVED' => const Color(0xFF087F5B),
       'REJECTED' => const Color(0xFFB42318),
@@ -373,12 +534,35 @@ class _ArtisanHeritageTaskManagementViewState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            quest.title,
-            style: GoogleFonts.dmSerifDisplay(
-              color: Colors.white,
-              fontSize: 25,
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  quest.title,
+                  style: GoogleFonts.dmSerifDisplay(
+                    color: Colors.white,
+                    fontSize: 25,
+                  ),
+                ),
+              ),
+              IconButton.filled(
+                tooltip: pendingChange == null
+                    ? 'Edit quest information'
+                    : 'Update awaiting approval',
+                onPressed:
+                    pendingChange == null &&
+                        quest.status.toUpperCase() == 'APPROVED' &&
+                        !viewModel.isUpdatingArtisanQuest
+                    ? () => _showEditQuestSheet(quest)
+                    : null,
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.white.withValues(alpha: 0.12),
+                  disabledBackgroundColor: Colors.white.withValues(alpha: 0.07),
+                ),
+                icon: const Icon(Icons.edit_rounded, color: Color(0xFFFFD166)),
+              ),
+            ],
           ),
           const SizedBox(height: 6),
           Text(
@@ -426,6 +610,89 @@ class _ArtisanHeritageTaskManagementViewState
             ],
           ),
           const SizedBox(height: 14),
+          const Text(
+            'QUEST REWARD',
+            style: TextStyle(
+              color: Color(0xFFFFD166),
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.1,
+            ),
+          ),
+          const SizedBox(height: 7),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+            ),
+            child: Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: SizedBox.square(
+                    dimension: 42,
+                    child: Image.network(
+                      quest.stampImageUrl,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, progress) =>
+                          progress == null
+                          ? child
+                          : const ColoredBox(
+                              color: Color(0xFF0B7062),
+                              child: Center(
+                                child: SizedBox.square(
+                                  dimension: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Color(0xFFFFD166),
+                                  ),
+                                ),
+                              ),
+                            ),
+                      errorBuilder: (context, error, stackTrace) =>
+                          const ColoredBox(
+                            color: Color(0xFF0B7062),
+                            child: Icon(
+                              Icons.workspace_premium_rounded,
+                              color: Color(0xFFFFD166),
+                            ),
+                          ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 11),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        quest.stampTitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      const Text(
+                        'Workshop passport stamp',
+                        style: TextStyle(
+                          color: Color(0xFFD6E7E2),
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
@@ -439,6 +706,41 @@ class _ArtisanHeritageTaskManagementViewState
               ),
             ),
           ),
+          if (pendingChange != null) ...[
+            const SizedBox(height: 12),
+            InkWell(
+              onTap: () => _showQuestChanges(quest, pendingChange),
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '🕒 Update pending admin review',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    SizedBox(height: 5),
+                    Text(
+                      'View changes ›',
+                      style: TextStyle(
+                        color: Color(0xFFFFD166),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -570,25 +872,34 @@ class _ArtisanHeritageTaskManagementViewState
               ],
             )
           else if (pendingChange != null)
-            Row(
-              children: [
-                const Icon(
-                  Icons.hourglass_top_rounded,
-                  size: 15,
-                  color: Color(0xFF9A6700),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    '${pendingChange.requestType} REQUEST PENDING APPROVAL',
-                    style: const TextStyle(
-                      color: Color(0xFF9A6700),
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
+            InkWell(
+              onTap: () => _showTaskChanges(task, pendingChange),
+              borderRadius: BorderRadius.circular(12),
+              child: const Padding(
+                padding: EdgeInsets.symmetric(vertical: 4),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '🕒 Update pending admin review',
+                      style: TextStyle(
+                        color: Color(0xFF9A6700),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
-                  ),
+                    SizedBox(height: 4),
+                    Text(
+                      'View changes ›',
+                      style: TextStyle(
+                        color: _green,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             )
           else
             Row(
@@ -680,6 +991,289 @@ class _ArtisanHeritageTaskManagementViewState
         ),
       ],
     ],
+  );
+}
+
+class _EditQuestSheet extends StatefulWidget {
+  final Quest quest;
+
+  const _EditQuestSheet({required this.quest});
+
+  @override
+  State<_EditQuestSheet> createState() => _EditQuestSheetState();
+}
+
+class _EditQuestSheetState extends State<_EditQuestSheet> {
+  static const _green = Color(0xFF005B4F);
+  static const _questCategories = <String>[
+    'Demonstration & Lore',
+    'Hands-on Crafting',
+    'Guided Workshop',
+    'Cultural Storytelling',
+  ];
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _title;
+  late final TextEditingController _description;
+  late String _selectedCategory;
+
+  @override
+  void initState() {
+    super.initState();
+    _title = TextEditingController(text: widget.quest.title);
+    _description = TextEditingController(text: widget.quest.description);
+    _selectedCategory = _questCategories.contains(widget.quest.category)
+        ? widget.quest.category
+        : _questCategories.first;
+  }
+
+  @override
+  void dispose() {
+    _title.dispose();
+    _description.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    final success = await context
+        .read<GamificationViewModel>()
+        .updateArtisanQuest(
+          title: _title.text,
+          category: _selectedCategory,
+          description: _description.text,
+        );
+    if (mounted && success) Navigator.pop(context, true);
+  }
+
+  IconData _categoryIcon(String category) => switch (category) {
+    'Hands-on Crafting' => Icons.front_hand_outlined,
+    'Guided Workshop' => Icons.groups_2_outlined,
+    'Cultural Storytelling' => Icons.auto_stories_outlined,
+    _ => Icons.theater_comedy_outlined,
+  };
+
+  Widget _categoryRow(String category, {bool highlighted = false}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: highlighted ? const Color(0xFFE4F3EE) : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: const BoxDecoration(
+              color: Color(0xFFFFF0CF),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              _categoryIcon(category),
+              color: const Color(0xFFD27A00),
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 11),
+          Expanded(
+            child: Text(
+              category,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: _green,
+                fontSize: 14,
+                fontWeight: highlighted ? FontWeight.w700 : FontWeight.w600,
+              ),
+            ),
+          ),
+          if (highlighted)
+            const Icon(Icons.check_circle, color: _green, size: 19),
+        ],
+      ),
+    );
+  }
+
+  Widget _selectedCategoryRow(String category) {
+    return Row(
+      children: [
+        Container(
+          width: 24,
+          height: 24,
+          decoration: const BoxDecoration(
+            color: Color(0xFFFFF0CF),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            _categoryIcon(category),
+            color: const Color(0xFFD27A00),
+            size: 15,
+          ),
+        ),
+        const SizedBox(width: 9),
+        Expanded(
+          child: Text(
+            category,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: _green,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final viewModel = context.watch<GamificationViewModel>();
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+        20,
+        20,
+        20,
+        MediaQuery.viewInsetsOf(context).bottom + 24,
+      ),
+      decoration: const BoxDecoration(
+        color: Color(0xFFF7F5EF),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Edit Cultural Quest',
+                  style: GoogleFonts.dmSerifDisplay(
+                    color: _green,
+                    fontSize: 25,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Only the title, category, and description can be changed. The approved version remains visible during admin review.',
+                  style: TextStyle(color: Color(0xFF64748B), fontSize: 12),
+                ),
+                const SizedBox(height: 18),
+                TextFormField(
+                  controller: _title,
+                  decoration: _decoration('Quest title'),
+                  validator: _required('Quest title'),
+                ),
+                const SizedBox(height: 14),
+                DropdownButtonFormField<String>(
+                  initialValue: _selectedCategory,
+                  isExpanded: true,
+                  borderRadius: BorderRadius.circular(18),
+                  dropdownColor: const Color(0xFFFFFCF6),
+                  elevation: 8,
+                  menuMaxHeight: 280,
+                  icon: Container(
+                    width: 30,
+                    height: 30,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFE4F3EE),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      color: _green,
+                    ),
+                  ),
+                  decoration: _decoration('Category'),
+                  selectedItemBuilder: (context) => _questCategories
+                      .map((category) => _selectedCategoryRow(category))
+                      .toList(),
+                  items: _questCategories
+                      .map(
+                        (category) => DropdownMenuItem<String>(
+                          value: category,
+                          child: _categoryRow(
+                            category,
+                            highlighted: category == _selectedCategory,
+                          ),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: viewModel.isUpdatingArtisanQuest
+                      ? null
+                      : (category) {
+                          if (category != null) {
+                            setState(() => _selectedCategory = category);
+                          }
+                        },
+                ),
+                const SizedBox(height: 14),
+                TextFormField(
+                  controller: _description,
+                  minLines: 3,
+                  maxLines: 5,
+                  decoration: _decoration('Description'),
+                  validator: _required('Description'),
+                ),
+                if (viewModel.artisanTaskError != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    viewModel.artisanTaskError!,
+                    style: const TextStyle(color: Color(0xFFB42318)),
+                  ),
+                ],
+                const SizedBox(height: 22),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: viewModel.isUpdatingArtisanQuest
+                            ? null
+                            : () => Navigator.pop(context),
+                        child: const Text('Cancel'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: viewModel.isUpdatingArtisanQuest
+                            ? null
+                            : _submit,
+                        style: FilledButton.styleFrom(backgroundColor: _green),
+                        child: viewModel.isUpdatingArtisanQuest
+                            ? const SizedBox.square(
+                                dimension: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text('Submit Update'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String? Function(String?) _required(String label) {
+    return (value) =>
+        value == null || value.trim().isEmpty ? '$label is required.' : null;
+  }
+
+  InputDecoration _decoration(String label) => InputDecoration(
+    labelText: label,
+    filled: true,
+    fillColor: Colors.white,
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
   );
 }
 

@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import 'package:warisan_kita/viewmodels/map_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
+import 'package:warisan_kita/viewmodels/gamification_viewmodel.dart';
 
 import 'package:warisan_kita/domain/models/nearby_artisan.dart';
 import 'package:warisan_kita/domain/models/workshop_location.dart';
@@ -15,7 +18,6 @@ import 'package:warisan_kita/ui/matchmaker/widgets/shimmer_loading_card.dart';
 import 'package:warisan_kita/ui/map/widgets/google_map_widget.dart';
 import 'package:warisan_kita/ui/gamification/quest_view.dart';
 
-import 'package:warisan_kita/ui/tourist/widgets/geofence_unlocked_dialog.dart';
 import 'package:warisan_kita/ui/tourist/widgets/daily_mood_checkin_dialog.dart';
 import 'package:warisan_kita/ui/core/widgets/translation_language_dialog.dart';
 
@@ -24,10 +26,7 @@ import 'package:warisan_kita/ui/tourist/artisan_detail_screen.dart';
 class TouristMatchmakerView extends StatefulWidget {
   final bool isActive;
 
-  const TouristMatchmakerView({
-    super.key,
-    this.isActive = true,
-  });
+  const TouristMatchmakerView({super.key, this.isActive = true});
 
   @override
   State<TouristMatchmakerView> createState() => _TouristMatchmakerViewState();
@@ -35,7 +34,7 @@ class TouristMatchmakerView extends StatefulWidget {
 
 class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
   final DraggableScrollableController _sheetController =
-  DraggableScrollableController();
+      DraggableScrollableController();
 
   ScrollController? _sheetScrollController;
   final Map<String, GlobalKey> _artisanCardKeys = {};
@@ -44,6 +43,8 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
   MapViewModel? _mapVM;
   bool _locationTrackingStarted = false;
   bool _isOpeningQuest = false;
+  String? _proximityQuestId;
+  bool? _lastReportedQuestInside;
 
   // ============================================================
   // START LIVE GPS
@@ -76,10 +77,7 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
   // MAP WORKSHOP SELECTION
   // ============================================================
 
-  void _onWorkshopSelected(
-      BuildContext context,
-      WorkshopLocation workshop,
-      ) {
+  void _onWorkshopSelected(BuildContext context, WorkshopLocation workshop) {
     final mapVM = context.read<MapViewModel>();
     mapVM.selectWorkshop(workshop);
 
@@ -138,11 +136,13 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
     double? estimatedOffset;
 
     if (nearbyIndex >= 0) {
-      estimatedOffset = sheetHeaderExtent +
+      estimatedOffset =
+          sheetHeaderExtent +
           sectionHeaderExtent +
           (nearbyIndex * estimatedCardExtent);
     } else if (otherIndex >= 0) {
-      estimatedOffset = sheetHeaderExtent +
+      estimatedOffset =
+          sheetHeaderExtent +
           sectionHeaderExtent +
           (mapVM.nearbyArtisans.length * estimatedCardExtent) +
           otherSectionDividerExtent +
@@ -192,10 +192,7 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
   // NEARBY ARTISAN SELECTION
   // ============================================================
 
-  void _onNearbyArtisanSelected(
-      BuildContext context,
-      NearbyArtisan artisan,
-      ) {
+  void _onNearbyArtisanSelected(BuildContext context, NearbyArtisan artisan) {
     final mapVM = context.read<MapViewModel>();
     _revealRequestId++;
 
@@ -217,10 +214,7 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
   // VIEW ARTISAN PROFILE
   // ============================================================
 
-  void _handleViewProfile(
-      BuildContext context,
-      NearbyArtisan artisan,
-      ) {
+  void _handleViewProfile(BuildContext context, NearbyArtisan artisan) {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => ArtisanDetailScreen(
@@ -239,9 +233,9 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
   // ============================================================
 
   Future<void> _handleViewQuest(
-      BuildContext context,
-      NearbyArtisan artisan,
-      ) async {
+    BuildContext context,
+    NearbyArtisan artisan,
+  ) async {
     final workshop = artisan.workshop;
 
     if (workshop == null) {
@@ -261,23 +255,19 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
     _isOpeningQuest = true;
 
     try {
-      await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => QuestView(
-            workshop: workshop,
-          ),
-        ),
-      );
+      await Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => QuestView(workshop: workshop)));
     } finally {
       _isOpeningQuest = false;
     }
   }
 
   Widget _buildArtisanCard(
-      BuildContext context,
-      MapViewModel mapVM,
-      NearbyArtisan artisan,
-      ) {
+    BuildContext context,
+    MapViewModel mapVM,
+    NearbyArtisan artisan,
+  ) {
     return ArtisanMatchCard(
       key: _artisanCardKeys.putIfAbsent(
         artisan.id,
@@ -319,10 +309,7 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 9,
-                  vertical: 4,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                 decoration: BoxDecoration(
                   color: const Color(0xFF004D40).withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(12),
@@ -381,43 +368,58 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
     );
   }
 
-  // ============================================================
-  // GEOFENCE DEMO
-  // ============================================================
+  void _reportActiveQuestProximity(
+    MapViewModel mapViewModel,
+    GamificationViewModel gamificationViewModel,
+  ) {
+    if (!(ModalRoute.of(context)?.isCurrent ?? false)) return;
 
-  void _triggerGeofencePopup(
-      BuildContext context,
-      ) {
-    showDialog(
-      context: context,
-      builder: (_) => GeofenceUnlockedDialog(
-        artisanName: 'Pak Mat Pottery Studio',
-        craftCategory: 'Pottery & Ceramics',
-        onClaim: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text(
-                '🎉 Heritage Badge added to your Tourist Passport! (+150 XP)',
-              ),
-              backgroundColor: const Color(0xFF004D40),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          );
-        },
-      ),
-    );
+    final quest = gamificationViewModel.selectedQuest;
+    final isQuestInProgress =
+        gamificationViewModel.questProgressStatus?.toUpperCase() ==
+        'IN_PROGRESS';
+    if (quest == null || !isQuestInProgress) {
+      _proximityQuestId = null;
+      _lastReportedQuestInside = null;
+      return;
+    }
+
+    WorkshopLocation? workshop;
+    for (final candidate in mapViewModel.workshops) {
+      if (candidate.id == quest.artisanId) {
+        workshop = candidate;
+        break;
+      }
+    }
+
+    if (workshop == null) return;
+    final distance = mapViewModel.getDistanceToWorkshop(workshop);
+    if (distance == null) return;
+
+    final isInside = distance <= quest.geofenceRadiusMeters;
+    if (_proximityQuestId == quest.id && _lastReportedQuestInside == isInside) {
+      return;
+    }
+
+    _proximityQuestId = quest.id;
+    _lastReportedQuestInside = isInside;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted ||
+          !(ModalRoute.of(context)?.isCurrent ?? false) ||
+          gamificationViewModel.selectedQuest?.id != quest.id ||
+          gamificationViewModel.questProgressStatus?.toUpperCase() !=
+              'IN_PROGRESS') {
+        return;
+      }
+      unawaited(gamificationViewModel.handleQuestProximityChanged(isInside));
+    });
   }
 
   // ============================================================
   // MOOD CHECK-IN
   // ============================================================
 
-  void _triggerMoodCheckin(
-      BuildContext context,
-      ) {
+  void _triggerMoodCheckin(BuildContext context) {
     showDialog(
       context: context,
       builder: (_) => DailyMoodCheckinDialog(
@@ -460,6 +462,16 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
   Widget build(BuildContext context) {
     final langVM = context.watch<LanguageViewModel>();
     final mapVM = context.watch<MapViewModel>();
+    final gamificationVM = context.watch<GamificationViewModel>();
+    _reportActiveQuestProximity(mapVM, gamificationVM);
+    NearbyArtisan? nearestQuestArtisan;
+    for (final artisan in mapVM.nearbyArtisans) {
+      if (artisan.workshop != null &&
+          artisan.distanceMeters <= mapVM.questInteractionRadiusMeters) {
+        nearestQuestArtisan = artisan;
+        break;
+      }
+    }
 
     const double navigationBarHeight = 58.0;
     final double bottomSafeArea = MediaQuery.of(context).padding.bottom;
@@ -481,8 +493,7 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
               // only after permission has been granted.
               myLocationEnabled: mapVM.hasLocationPermission,
               userLocation: mapVM.userLocation,
-              interactionRadiusMeters:
-                  mapVM.questInteractionRadiusMeters,
+              interactionRadiusMeters: mapVM.questInteractionRadiusMeters,
               isActive: widget.isActive,
               isLoading: mapVM.isLoading,
             ),
@@ -543,9 +554,10 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
                       builder: (_) => TranslationLanguageDialog(
                         currentLanguage: langVM.currentLanguageCode,
                         onLanguageChanged: (code, name) {
-                          context
-                              .read<LanguageViewModel>()
-                              .setLanguage(code, name);
+                          context.read<LanguageViewModel>().setLanguage(
+                            code,
+                            name,
+                          );
                         },
                       ),
                     );
@@ -553,22 +565,6 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
                   backgroundColor: Colors.white,
                   child: const Icon(
                     Icons.g_translate_rounded,
-                    color: Color(0xFF004D40),
-                    size: 18,
-                  ),
-                ),
-
-                const SizedBox(width: 8),
-
-                // Geofence demo
-                FloatingActionButton.small(
-                  heroTag: 'geofence_demo',
-                  onPressed: () {
-                    _triggerGeofencePopup(context);
-                  },
-                  backgroundColor: const Color(0xFFFFD54F),
-                  child: const Icon(
-                    Icons.radar_rounded,
                     color: Color(0xFF004D40),
                     size: 18,
                   ),
@@ -596,122 +592,116 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
           // ======================================================
           // 3. PROXIMITY QUEST BANNER
           // ======================================================
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 64,
-            left: 16,
-            right: 16,
-            child: GestureDetector(
-              onTap: () {
-                _triggerGeofencePopup(context);
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [
-                      Color(0xFF004D40),
-                      Color(0xFF065F46),
+          if (nearestQuestArtisan != null)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 64,
+              left: 16,
+              right: 16,
+              child: GestureDetector(
+                onTap: () => _handleViewQuest(context, nearestQuestArtisan!),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF004D40), Color(0xFF065F46)],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.15),
+                        blurRadius: 14,
+                        offset: const Offset(0, 4),
+                      ),
                     ],
                   ),
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.15),
-                      blurRadius: 14,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: const BoxDecoration(
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFFFD54F),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.radar_rounded,
+                          color: Color(0xFF004D40),
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    langVM.translate('PROXIMITY QUEST RADAR'),
+                                    softWrap: true,
+                                    style: GoogleFonts.plusJakartaSans(
+                                      color: const Color(0xFFFFD54F),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 1.1,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF10B981),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    '${nearestQuestArtisan.distanceMeters.round()}m AWAY',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${nearestQuestArtisan.name} Quest Ready!',
+                              style: GoogleFonts.dmSerifDisplay(
+                                color: Colors.white,
+                                fontSize: 15,
+                              ),
+                            ),
+                            Text(
+                              langVM.translate(
+                                'Tap to view this cultural quest',
+                              ),
+                              style: GoogleFonts.plusJakartaSans(
+                                color: Colors.white70,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(
+                        Icons.arrow_forward_ios_rounded,
                         color: Color(0xFFFFD54F),
-                        shape: BoxShape.circle,
+                        size: 14,
                       ),
-                      child: const Icon(
-                        Icons.radar_rounded,
-                        color: Color(0xFF004D40),
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Row(
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  langVM.translate('PROXIMITY QUEST RADAR'),
-                                  softWrap: true,
-                                  style: GoogleFonts.plusJakartaSans(
-                                    color: const Color(0xFFFFD54F),
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: 1.1,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF10B981),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: const Text(
-                                  '35m AWAY',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            langVM.translate(
-                              'Pak Mat Pottery Studio Quest Ready!',
-                            ),
-                            style: GoogleFonts.dmSerifDisplay(
-                              color: Colors.white,
-                              fontSize: 15,
-                            ),
-                          ),
-                          Text(
-                            langVM.translate(
-                              'Earn +500 EXP & Plaque of Authenticity',
-                            ),
-                            style: GoogleFonts.plusJakartaSans(
-                              color: Colors.white70,
-                              fontSize: 11,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Icon(
-                      Icons.arrow_forward_ios_rounded,
-                      color: Color(0xFFFFD54F),
-                      size: 14,
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
 
           // ======================================================
           // 4. DRAGGABLE NEARBY ARTISAN SHEET
@@ -722,11 +712,7 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
             minChildSize: 0.20,
             maxChildSize: 0.88,
             snap: true,
-            snapSizes: const [
-              0.20,
-              0.50,
-              0.88,
-            ],
+            snapSizes: const [0.20, 0.50, 0.88],
             builder: (context, scrollController) {
               _sheetScrollController = scrollController;
 
@@ -778,17 +764,15 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
                                 ),
                                 child: Row(
                                   mainAxisAlignment:
-                                  MainAxisAlignment.spaceBetween,
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     Expanded(
                                       child: Column(
                                         crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            langVM.translate(
-                                              'Master Studios',
-                                            ),
+                                            langVM.translate('Master Studios'),
                                             softWrap: true,
                                             style: GoogleFonts.dmSerifDisplay(
                                               fontSize: 20,
@@ -801,8 +785,7 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
                                               'Tap or slide up to view master studios',
                                             ),
                                             softWrap: true,
-                                            style:
-                                            GoogleFonts.plusJakartaSans(
+                                            style: GoogleFonts.plusJakartaSans(
                                               fontSize: 11,
                                               color: Colors.grey[600],
                                             ),
@@ -863,22 +846,19 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
                       SliverPadding(
                         padding: const EdgeInsets.symmetric(horizontal: 20),
                         sliver: SliverList(
-                          delegate: SliverChildBuilderDelegate(
-                                (context, index) {
-                              return const ShimmerLoadingCard();
-                            },
-                            childCount: 3,
-                          ),
+                          delegate: SliverChildBuilderDelegate((
+                            context,
+                            index,
+                          ) {
+                            return const ShimmerLoadingCard();
+                          }, childCount: 3),
                         ),
                       )
-
                     // ==========================================
                     // NO APPROVED WORKSHOPS IN DATABASE
                     // ==========================================
                     else if (mapVM.workshops.isEmpty)
-                      const SliverToBoxAdapter(
-                        child: EmptyMatchmakerWidget(),
-                      ),
+                      const SliverToBoxAdapter(child: EmptyMatchmakerWidget()),
 
                     // ==========================================
                     // NEARBY MASTER STUDIOS
@@ -886,9 +866,7 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
                     if (!mapVM.isLoading && mapVM.workshops.isNotEmpty)
                       SliverToBoxAdapter(
                         child: _buildStudioSectionHeader(
-                          title: langVM.translate(
-                            'Nearby Master Studios',
-                          ),
+                          title: langVM.translate('Nearby Master Studios'),
                           subtitle: langVM.translate(
                             'Within 5 km of your current location',
                           ),
@@ -917,18 +895,14 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
                       SliverPadding(
                         padding: const EdgeInsets.symmetric(horizontal: 20),
                         sliver: SliverList(
-                          delegate: SliverChildBuilderDelegate(
-                                (context, index) {
-                              final artisan = mapVM.nearbyArtisans[index];
+                          delegate: SliverChildBuilderDelegate((
+                            context,
+                            index,
+                          ) {
+                            final artisan = mapVM.nearbyArtisans[index];
 
-                              return _buildArtisanCard(
-                                context,
-                                mapVM,
-                                artisan,
-                              );
-                            },
-                            childCount: mapVM.nearbyArtisans.length,
-                          ),
+                            return _buildArtisanCard(context, mapVM, artisan);
+                          }, childCount: mapVM.nearbyArtisans.length),
                         ),
                       ),
 
@@ -947,9 +921,7 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
                               ),
                             ),
                             _buildStudioSectionHeader(
-                              title: langVM.translate(
-                                'Other Master Studios',
-                              ),
+                              title: langVM.translate('Other Master Studios'),
                               subtitle: langVM.translate(
                                 'Explore artisan studios across Malaysia',
                               ),
@@ -980,18 +952,14 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
                       SliverPadding(
                         padding: const EdgeInsets.symmetric(horizontal: 20),
                         sliver: SliverList(
-                          delegate: SliverChildBuilderDelegate(
-                                (context, index) {
-                              final artisan = mapVM.otherArtisans[index];
+                          delegate: SliverChildBuilderDelegate((
+                            context,
+                            index,
+                          ) {
+                            final artisan = mapVM.otherArtisans[index];
 
-                              return _buildArtisanCard(
-                                context,
-                                mapVM,
-                                artisan,
-                              );
-                            },
-                            childCount: mapVM.otherArtisans.length,
-                          ),
+                            return _buildArtisanCard(context, mapVM, artisan);
+                          }, childCount: mapVM.otherArtisans.length),
                         ),
                       ),
 
