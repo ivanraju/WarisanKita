@@ -1340,23 +1340,32 @@ class SupabaseService {
           if (profileRes != null) {
             final artisanId = profileRes['id'];
 
-            Future<Map<String, String>?> uploadDoc(
-              PlatformFile? file,
-              String bucket,
-              String folder,
-            ) async {
+            Future<Map<String, String>?> uploadDoc(PlatformFile? file, String bucket, String folder) async {
               if (file == null) return null;
               try {
-                final Uint8List bytes;
-                if (!kIsWeb && file.path != null) {
+                Uint8List? bytes;
+                if (kIsWeb) {
+                  // Fallback for web
+                } else if (file.path != null) {
                   bytes = await io.File(file.path!).readAsBytes();
-                } else {
-                  bytes = await file.readAsBytes();
                 }
-                final fileName =
-                    '${DateTime.now().millisecondsSinceEpoch}_${file.name.replaceAll(' ', '_')}';
+                
+                if (bytes == null) return null;
+
+                final fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.name.replaceAll(' ', '_')}';
                 final path = '$folder/$fileName';
-                await client.storage.from(bucket).uploadBinary(path, bytes);
+                
+                String mimeType = 'application/octet-stream';
+                final lcName = file.name.toLowerCase();
+                if (lcName.endsWith('.pdf')) mimeType = 'application/pdf';
+                else if (lcName.endsWith('.png')) mimeType = 'image/png';
+                else if (lcName.endsWith('.jpg') || lcName.endsWith('.jpeg')) mimeType = 'image/jpeg';
+
+                await client.storage.from(bucket).uploadBinary(
+                  path,
+                  bytes,
+                  fileOptions: FileOptions(contentType: mimeType),
+                );
                 final url = client.storage.from(bucket).getPublicUrl(path);
                 return {'url': url, 'name': file.name};
               } catch (e) {
