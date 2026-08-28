@@ -33,6 +33,7 @@ import 'package:warisan_kita/ui/auth/login_screen.dart';
 import 'package:warisan_kita/ui/auth/register_screen.dart';
 import 'package:warisan_kita/ui/auth/role_selection_screen.dart';
 import 'package:warisan_kita/ui/auth/forgot_password_screen.dart';
+import 'package:warisan_kita/ui/auth/email_verification_screen.dart';
 import 'package:warisan_kita/ui/tourist/tourist_main_scaffold.dart';
 import 'package:warisan_kita/ui/tourist/apply_artisan_screen.dart';
 import 'package:warisan_kita/ui/artisan/artisan_main_scaffold.dart';
@@ -206,6 +207,7 @@ class _WarisanKitaAppState extends State<WarisanKitaApp> {
     '/role-selection': (context) =>
         kIsWeb ? const LoginScreen() : const RoleSelectionScreen(),
     '/forgot-password': (context) => const ForgotPasswordScreen(),
+    '/verify-email': (context) => const EmailVerificationScreen(email: 'user@warisankita.my'),
     '/tourist': (context) =>
         kIsWeb ? const LoginScreen() : const TouristMainScaffold(),
     '/apply-artisan': (context) =>
