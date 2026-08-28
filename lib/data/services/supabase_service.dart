@@ -4631,12 +4631,19 @@ class SupabaseService {
       throw StateError('You must be signed in to cancel a task submission.');
     }
 
-    await client
+    final deletedTask = await client
         .from('heritage_tasks')
         .delete()
         .eq('id', taskId)
         .eq('is_system_task', false)
-        .inFilter('status', ['PENDING_APPROVAL', 'REJECTED']);
+        .inFilter('status', ['PENDING_APPROVAL', 'REJECTED'])
+        .select('id')
+        .maybeSingle();
+    if (deletedTask == null) {
+      throw StateError(
+        'This task is no longer pending/rejected or cannot be deleted.',
+      );
+    }
   }
 
   Future<List<Map<String, dynamic>>> fetchHeritageTaskChangeRequests(

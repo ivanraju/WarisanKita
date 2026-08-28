@@ -112,6 +112,11 @@ class _AdminQuestApprovalsTabState extends State<AdminQuestApprovalsTab> {
           ),
           _filterChip(
             viewModel,
+            GamificationModerationFilter.deleteRequests,
+            'Delete Requests ${viewModel.deleteRequestCount}',
+          ),
+          _filterChip(
+            viewModel,
             GamificationModerationFilter.questChanges,
             'Quest Changes ${viewModel.questChangeCount}',
           ),

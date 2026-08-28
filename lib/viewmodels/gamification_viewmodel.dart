@@ -78,11 +78,8 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
       _pendingArtisanQuestChange;
 
   List<quest_domain.HeritageTask> _artisanTasks = [];
-  List<quest_domain.HeritageTask> get artisanTasks => _artisanTasks
-      .where(
-        (task) => task.status.toUpperCase() == 'APPROVED' && !task.isArchived,
-      )
-      .toList(growable: false);
+  List<quest_domain.HeritageTask> get artisanTasks =>
+      _artisanTasks.where((task) => !task.isArchived).toList(growable: false);
 
   bool _isLoadingArtisanQuest = false;
   bool get isLoadingArtisanQuest => _isLoadingArtisanQuest;
@@ -158,7 +155,11 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   int get artisanTotalPotentialXp {
-    return artisanTasks.fold(0, (total, task) => total + task.xpReward);
+    return _artisanTasks
+        .where(
+          (task) => task.status.toUpperCase() == 'APPROVED' && !task.isArchived,
+        )
+        .fold(0, (total, task) => total + task.xpReward);
   }
 
   Future<void> loadQuestsForArtisan(String artisanProfileId) async {
