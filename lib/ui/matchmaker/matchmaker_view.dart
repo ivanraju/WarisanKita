@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:warisan_kita/ui/matchmaker/quiz_results_view.dart';
+import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
+import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/matchmaker_viewmodel.dart';
 
 class QuizWizardScreen extends StatefulWidget {
@@ -17,32 +19,110 @@ class _QuizWizardScreenState extends State<QuizWizardScreen> {
 
   final List<Map<String, dynamic>> _questions = [
     {
-      'question': 'Which color palette speaks to your soul?',
+      'question': 'What type of craft experience do you prefer?',
       'options': [
-        {'label': 'Deep Rainforest', 'image': 'https://images.unsplash.com/photo-1502622645667-f7ed8fa4d99c?w=600', 'color': Color(0xFF004D40)},
-        {'label': 'Sunset Glow', 'image': 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?w=600', 'color': Color(0xFFFF7043)},
+        {
+          'label': 'Hands-on Workshop',
+          'subtitle': 'Craft your own pottery or dye batik fabric',
+          'image': 'https://images.unsplash.com/photo-1502622645667-f7ed8fa4d99c?w=600',
+          'color': Color(0xFF004D40),
+        },
+        {
+          'label': 'Observing Master Artisans',
+          'subtitle': 'Watch skilled masters demonstrate traditional techniques',
+          'image': 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?w=600',
+          'color': Color(0xFFFF7043),
+        },
       ],
     },
     {
-      'question': 'How do you prefer to feel your art?',
+      'question': 'Which studio setting do you enjoy most?',
       'options': [
-        {'label': 'Silky Threads', 'image': 'https://images.unsplash.com/photo-1528459801416-a9e53bbf4e17?w=600', 'color': Color(0xFFFFD54F)},
-        {'label': 'Hand-Carved Grain', 'image': 'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?w=600', 'color': Color(0xFF5D4037)},
+        {
+          'label': 'Indoor Studio',
+          'subtitle': 'Air-conditioned gallery & structured workshop',
+          'image': 'https://images.unsplash.com/photo-1528459801416-a9e53bbf4e17?w=600',
+          'color': const Color(0xFF0284C7),
+        },
+        {
+          'label': 'Outdoor Village',
+          'subtitle': 'Open-air traditional wooden kampong workshop setup',
+          'image': 'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?w=600',
+          'color': const Color(0xFF16A34A),
+        },
+      ],
+    },
+    {
+      'question': 'What is your favorite craft material?',
+      'options': [
+        {
+          'label': 'Batik & Songket Textiles',
+          'subtitle': 'Silk, cotton, wax canting & golden thread',
+          'image': 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=600',
+          'color': const Color(0xFFFF7043),
+        },
+        {
+          'label': 'Pottery & Clay',
+          'subtitle': 'Terrakotta clay, Labu Sayong & kiln ceramics',
+          'image': 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600',
+          'color': const Color(0xFFD97706),
+        },
+        {
+          'label': 'Carved Timber & Wood',
+          'subtitle': 'Hardwood timbers, Ukiran motifs & woodwork',
+          'image': 'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?w=600',
+          'color': const Color(0xFF5D4037),
+        },
+        {
+          'label': 'Royal Pewter & Metal',
+          'subtitle': 'Metallic sheen, pewter casting & keris forging',
+          'image': 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600',
+          'color': const Color(0xFF475569),
+        },
+      ],
+    },
+    {
+      'question': 'Which Malaysian heritage region interests you?',
+      'options': [
+        {
+          'label': 'East Coast Heritage',
+          'subtitle': 'Kelantan & Terengganu: Songket, Wau kites & Batik',
+          'image': 'https://images.unsplash.com/photo-1596401057633-54a8fe8ef647?w=600',
+          'color': const Color(0xFF004D40),
+        },
+        {
+          'label': 'West Coast Historic',
+          'subtitle': 'Melaka & Perak: Labu Sayong pottery & carvings',
+          'image': 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600',
+          'color': const Color(0xFFB45309),
+        },
       ],
     },
   ];
 
-  void _handleSelection(String label) {
-    // Functional Gap: Storing the choice in State
-    context.read<MatchmakerViewModel>().setAnswer(_currentStep, label);
+  Future<void> _handleSelection(String label) async {
+    final matchmakerVM = context.read<MatchmakerViewModel>();
+    final authVM = context.read<AuthViewModel>();
+
+    matchmakerVM.setAnswer(_currentStep, label);
 
     if (_currentStep < _questions.length - 1) {
       setState(() => _currentStep++);
     } else {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const QuizResultsScreen()),
+      await matchmakerVM.saveQuizResults(
+        experienceType: matchmakerVM.answers[0] ?? 'Hands-on Workshop',
+        environment: matchmakerVM.answers[1] ?? 'Indoor Studio',
+        material: matchmakerVM.answers[2] ?? 'Batik & Songket Textiles',
+        region: matchmakerVM.answers[3] ?? 'East Coast Heritage',
+        userEmail: authVM.currentUser?.email,
       );
+
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const QuizResultsScreen()),
+        );
+      }
     }
   }
 

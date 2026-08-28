@@ -8,6 +8,7 @@ import 'package:warisan_kita/ui/core/widgets/translation_language_dialog.dart';
 import 'package:warisan_kita/viewmodels/theme_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
+import 'package:warisan_kita/viewmodels/matchmaker_viewmodel.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -76,6 +77,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final isDark = context.watch<ThemeViewModel>().isDarkMode;
     final langVM = context.watch<LanguageViewModel>();
     final authVM = context.watch<AuthViewModel>();
+    final matchmakerVM = context.watch<MatchmakerViewModel>();
+    final isQuizCompleted = matchmakerVM.isQuizCompleted;
+    final personality = matchmakerVM.currentPersonality;
     final user = authVM.currentUser;
     final username = user?.effectiveUsername ?? 'Aiman Haziq';
     final initials = user?.initials ?? 'AH';
@@ -183,8 +187,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _buildSettingsTile(
             context,
             icon: Icons.auto_awesome_outlined,
-            title: langVM.translate('Take / Update Craft Matchmaker Quiz'),
-            subtitle: langVM.translate('Customize your cultural preferences'),
+            title: langVM.translate(
+              isQuizCompleted
+                  ? 'Update Craft Matchmaker Quiz'
+                  : 'Take / Update Craft Matchmaker Quiz',
+            ),
+            subtitle: isQuizCompleted && personality != null
+                ? '${langVM.translate('Your Craft Soul:')} ${personality.title} • ${personality.primaryCategory}'
+                : langVM.translate('Customize your cultural preferences'),
+            trailing: isQuizCompleted
+                ? Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF004D40).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFF004D40).withOpacity(0.2)),
+                    ),
+                    child: Text(
+                      langVM.translate('MATCHED'),
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        color: const Color(0xFF004D40),
+                      ),
+                    ),
+                  )
+                : null,
             onTap: () {
               showDialog(
                 context: context,
@@ -304,32 +332,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required String subtitle,
     required VoidCallback onTap,
     Color? textColor,
+    Widget? trailing,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
+      child: Material(
         color: isDark ? const Color(0xFF0D2823) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFF1F5F9)),
-      ),
-      child: ListTile(
-        onTap: onTap,
-        leading: Icon(icon, color: textColor ?? (isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40))),
-        title: Text(
-          title,
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: textColor ?? (isDark ? Colors.white : const Color(0xFF0F172A)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFF1F5F9)),
+        ),
+        child: ListTile(
+          onTap: onTap,
+          leading: Icon(icon, color: textColor ?? (isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40))),
+          title: Text(
+            title,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: textColor ?? (isDark ? Colors.white : const Color(0xFF0F172A)),
+            ),
           ),
+          subtitle: Text(
+            subtitle,
+            style: GoogleFonts.plusJakartaSans(fontSize: 11, color: isDark ? Colors.white60 : Colors.grey[600]),
+          ),
+          trailing: trailing ?? const Icon(Icons.chevron_right_rounded, color: Colors.grey, size: 20),
         ),
-        subtitle: Text(
-          subtitle,
-          style: GoogleFonts.plusJakartaSans(fontSize: 11, color: isDark ? Colors.white60 : Colors.grey[600]),
-        ),
-        trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey, size: 20),
       ),
     );
   }
@@ -346,28 +377,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
+      child: Material(
         color: isDark ? const Color(0xFF0D2823) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFF1F5F9)),
-      ),
-      child: SwitchListTile(
-        value: value,
-        onChanged: onChanged,
-        activeColor: const Color(0xFFFFD54F),
-        activeTrackColor: const Color(0xFF004D40),
-        secondary: Icon(icon, color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40)),
-        title: Text(
-          title,
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: isDark ? Colors.white : const Color(0xFF0F172A),
-          ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFF1F5F9)),
         ),
-        subtitle: Text(
-          subtitle,
-          style: GoogleFonts.plusJakartaSans(fontSize: 11, color: isDark ? Colors.white60 : Colors.grey[600]),
+        child: SwitchListTile(
+          value: value,
+          onChanged: onChanged,
+          activeColor: const Color(0xFFFFD54F),
+          activeTrackColor: const Color(0xFF004D40),
+          secondary: Icon(icon, color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40)),
+          title: Text(
+            title,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : const Color(0xFF0F172A),
+            ),
+          ),
+          subtitle: Text(
+            subtitle,
+            style: GoogleFonts.plusJakartaSans(fontSize: 11, color: isDark ? Colors.white60 : Colors.grey[600]),
+          ),
         ),
       ),
     );
