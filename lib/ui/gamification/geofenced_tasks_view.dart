@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:warisan_kita/ui/gamification/qr_scanner_view.dart';
 import 'package:warisan_kita/viewmodels/gamification_viewmodel.dart';
 import 'package:warisan_kita/domain/models/badge.dart';
 
@@ -215,7 +214,13 @@ class GeofencedTasksScreen extends StatelessWidget {
           ),
           if (!task.isCompleted && task.title.contains('QR'))
             GestureDetector(
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QRScannerScreen())),
+              onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Open this activity from Cultural Quest to scan its workshop QR.',
+                  ),
+                ),
+              ),
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(

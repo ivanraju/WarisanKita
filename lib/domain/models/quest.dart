@@ -7,6 +7,7 @@ class Quest {
   final int geofenceRadiusMeters;
   final String stampTitle;
   final String stampImageUrl;
+  final String? qrCodeSecret;
   final String status;
   final DateTime? createdAt;
 
@@ -19,6 +20,7 @@ class Quest {
     required this.geofenceRadiusMeters,
     required this.stampTitle,
     required this.stampImageUrl,
+    this.qrCodeSecret,
     required this.status,
     required this.createdAt,
   });
@@ -33,6 +35,7 @@ class Quest {
       geofenceRadiusMeters: _requiredInt(map, 'geofence_radius_meters'),
       stampTitle: _requiredString(map, 'stamp_title'),
       stampImageUrl: _requiredString(map, 'stamp_image_url'),
+      qrCodeSecret: _optionalString(map['qr_code_secret']),
       status: _requiredString(map, 'status'),
       createdAt: _optionalDateTime(map['created_at']),
     );
@@ -64,5 +67,11 @@ class Quest {
     }
 
     return DateTime.tryParse(value.toString());
+  }
+
+  static String? _optionalString(dynamic value) {
+    if (value == null) return null;
+    final text = value.toString().trim();
+    return text.isEmpty ? null : text;
   }
 }

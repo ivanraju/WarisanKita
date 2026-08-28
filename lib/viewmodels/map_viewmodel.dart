@@ -157,6 +157,21 @@ class MapViewModel extends ChangeNotifier {
     }
   }
 
+  Future<bool> refreshCurrentLocation() async {
+    try {
+      _userLocation = await _locationRepository.getCurrentLocation();
+      _locationError = null;
+      _updateArtisanDistances();
+      notifyListeners();
+      return true;
+    } catch (error) {
+      _locationError = error.toString();
+      debugPrint('Location refresh error: $error');
+      notifyListeners();
+      return false;
+    }
+  }
+
   // ============================================================
   // DISTANCE CALCULATION & WORKSHOP CLASSIFICATION
   // ============================================================

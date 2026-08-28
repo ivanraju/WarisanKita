@@ -1,143 +1,233 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
+
+import 'package:warisan_kita/domain/models/heritage_task.dart';
+import 'package:warisan_kita/domain/models/quest.dart';
 import 'package:warisan_kita/viewmodels/gamification_viewmodel.dart';
 
 class QRScannerScreen extends StatefulWidget {
-  const QRScannerScreen({super.key});
+  final Quest quest;
+  final HeritageTask task;
+
+  const QRScannerScreen({
+    super.key,
+    required this.quest,
+    required this.task,
+  });
 
   @override
   State<QRScannerScreen> createState() => _QRScannerScreenState();
 }
 
 class _QRScannerScreenState extends State<QRScannerScreen> {
+  final MobileScannerController _scannerController = MobileScannerController(
+    detectionSpeed: DetectionSpeed.noDuplicates,
+    formats: const [BarcodeFormat.qrCode],
+  );
   bool _isProcessing = false;
 
   @override
+  void dispose() {
+    _scannerController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleDetection(BarcodeCapture capture) async {
+    if (_isProcessing || capture.barcodes.isEmpty) return;
+    final payload = capture.barcodes.first.rawValue?.trim();
+    if (payload == null || payload.isEmpty) return;
+
+    setState(() => _isProcessing = true);
+    await _scannerController.stop();
+    if (!mounted) return;
+
+    final viewModel = context.read<GamificationViewModel>();
+    final completed = await viewModel.verifyArtisanQrForTask(
+      task: widget.task,
+      qrPayload: payload,
+    );
+    if (!mounted) return;
+
+    if (completed) {
+      await _showSuccessDialog();
+      if (!mounted) return;
+
+      // The dialog and scanner are two separate overlay routes. Popping both
+      // during the same pointer event can leave the dialog's constrained render
+      // box between layout passes while Flutter processes the pointer-up event.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) Navigator.of(context).pop(true);
+      });
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          viewModel.startQuestError ??
+              'The workshop QR could not verify this task.',
+        ),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: const Color(0xFFB42318),
+      ),
+    );
+    setState(() => _isProcessing = false);
+    await _scannerController.start();
+  }
+
+  Future<void> _showSuccessDialog() {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.verified_rounded,
+              size: 72,
+              color: Color(0xFF087F5B),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              'Task Verified!',
+              style: GoogleFonts.dmSerifDisplay(
+                fontSize: 25,
+                color: const Color(0xFF004D40),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '${widget.task.title} is complete. '
+              'You earned ${widget.task.xpReward} XP.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.plusJakartaSans(height: 1.45),
+            ),
+          ],
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF005B4F),
+            ),
+            child: const Text('Continue'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final scanArea = MediaQuery.sizeOf(context).width * 0.72;
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
+        fit: StackFit.expand,
         children: [
-          // Mock Camera View with Heritage Image
-          Positioned.fill(
-            child: Opacity(
-              opacity: _isProcessing ? 0.3 : 0.6,
-              child: Image.network(
-                'https://images.unsplash.com/photo-1590739225287-bd31519780c3?w=800',
-                fit: BoxFit.cover,
+          MobileScanner(
+            controller: _scannerController,
+            onDetect: _handleDetection,
+            errorBuilder: (context, error) => Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Text(
+                  'Camera unavailable: '
+                  '${error.errorDetails?.message ?? error.errorCode.name}',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white),
+                ),
               ),
             ),
           ),
-          
-          _buildScannerOverlay(context),
-
-          if (_isProcessing)
-            const Center(
-              child: CircularProgressIndicator(color: Color(0xFFFFD54F)),
+          ColoredBox(color: Colors.black.withValues(alpha: 0.18)),
+          Center(
+            child: Container(
+              width: scanArea,
+              height: scanArea,
+              decoration: BoxDecoration(
+                border: Border.all(color: const Color(0xFFFFD54F), width: 3),
+                borderRadius: BorderRadius.circular(28),
+              ),
             ),
-
-          // Header
+          ),
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Row(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CircleAvatar(
-                    backgroundColor: Colors.white12,
-                    child: IconButton(
-                      icon: const Icon(Icons.close_rounded, color: Colors.white),
-                      onPressed: () => Navigator.pop(context),
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: Colors.black54,
+                        child: IconButton(
+                          onPressed: () => Navigator.of(context).pop(false),
+                          icon: const Icon(Icons.close_rounded),
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Text(
+                          'Workshop Verification',
+                          style: GoogleFonts.dmSerifDisplay(
+                            color: Colors.white,
+                            fontSize: 23,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: const Color(0xE6004D40),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          widget.task.title,
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.plusJakartaSans(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Scan ${widget.quest.title}’s workshop QR. '
+                          'The same artisan QR verifies every task.',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.plusJakartaSans(
+                            color: Colors.white70,
+                            fontSize: 12,
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  Text(
-                    'Verification Scanner',
-                    style: GoogleFonts.dmSerifDisplay(color: Colors.white, fontSize: 24),
-                  ),
+                  const SizedBox(height: 18),
                 ],
               ),
             ),
           ),
-
-          // Bottom Button (Simulating a successful scan)
-          Positioned(
-            bottom: 60,
-            left: 40,
-            right: 40,
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(24),
-                gradient: const LinearGradient(colors: [Color(0xFF004D40), Color(0xFF00796B)]),
-                boxShadow: [BoxShadow(color: Colors.black45, blurRadius: 20)],
-              ),
-              child: ElevatedButton(
-                onPressed: _isProcessing ? null : _simulateSuccessfulScan,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  shadowColor: Colors.transparent,
-                  minimumSize: const Size(double.infinity, 64),
-                ),
-                child: const Text('TAP TO SIMULATE SCAN', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+          if (_isProcessing)
+            const ColoredBox(
+              color: Colors.black54,
+              child: Center(
+                child: CircularProgressIndicator(color: Color(0xFFFFD54F)),
               ),
             ),
-          ),
         ],
-      ),
-    );
-  }
-
-  Future<void> _simulateSuccessfulScan() async {
-    setState(() => _isProcessing = true);
-    
-    // Call the logic layer (State) to update user progress
-    await context.read<GamificationViewModel>().verifyQRCode('MOCK_CODE_123');
-    
-    if (mounted) {
-      _showSuccessDialog();
-    }
-  }
-
-  void _showSuccessDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.stars_rounded, size: 80, color: Color(0xFFFFD54F)),
-            const SizedBox(height: 24),
-            Text('Stamp Unlocked!', style: GoogleFonts.dmSerifDisplay(fontSize: 24, color: const Color(0xFF004D40))),
-            const SizedBox(height: 8),
-            const Text('You have earned the "Heritage Guardian" stamp and 150 XP.', textAlign: TextAlign.center),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context); // Close dialog
-              Navigator.pop(context); // Return to tasks
-            },
-            child: const Text('AWESOME!', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFFF7043))),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildScannerOverlay(BuildContext context) {
-    double scanArea = MediaQuery.of(context).size.width * 0.7;
-    return Center(
-      child: Container(
-        height: scanArea,
-        width: scanArea,
-        decoration: BoxDecoration(
-          border: Border.all(color: const Color(0xFFFFD54F), width: 2),
-          borderRadius: BorderRadius.circular(32),
-        ),
       ),
     );
   }

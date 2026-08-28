@@ -6,7 +6,8 @@ import 'package:warisan_kita/domain/models/user.dart';
 class UserRepository {
   final SupabaseService _service;
 
-  UserRepository({SupabaseService? service}) : _service = service ?? SupabaseService();
+  UserRepository({SupabaseService? service})
+    : _service = service ?? SupabaseService();
 
   Future<bool> isUsernameAvailable(String username, {String? excludeEmail}) {
     return _service.isUsernameAvailable(username, excludeEmail: excludeEmail);
@@ -67,6 +68,7 @@ class UserRepository {
       newPassword: newPassword,
     );
   }
+
   Future<UserModel> linkArtisanRoleToTourist({
     required String email,
     required String studioName,
@@ -75,6 +77,9 @@ class UserRepository {
     String? bio,
     String? phone,
     String? state,
+    String? address,
+    double? latitude,
+    double? longitude,
     PlatformFile? ssmFile,
     PlatformFile? certFile,
     List<PlatformFile>? photos,
@@ -87,6 +92,9 @@ class UserRepository {
       bio: bio,
       phone: phone,
       state: state,
+      address: address,
+      latitude: latitude,
+      longitude: longitude,
       ssmFile: ssmFile,
       certFile: certFile,
       photos: photos,
