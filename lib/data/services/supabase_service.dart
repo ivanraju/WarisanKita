@@ -2071,67 +2071,21 @@ class SupabaseService {
   // --- Directory Services ---
 
   Future<List<ArtisanModel>> fetchArtisans() async {
-    // Simulate network delay for "expensive" feel
-    await Future.delayed(const Duration(milliseconds: 800));
+    final client = _client;
+    if (client == null) throw StateError('Supabase is not initialized.');
 
-    return [
-      ArtisanModel(
-        id: '1',
-        name: 'Master Zaid',
-        craftType: 'Woodwork',
-        state: 'Terengganu',
-        description:
-            'A 5th generation master of the Cengal wood carving tradition. His intricate patterns represent the spiritual connection between nature and heritage.',
-        imageUrl:
-            'https://images.unsplash.com/photo-1605721911519-3dfeb3be25e7?w=800',
-        rating: 4.9,
-        experience: '35 Years',
-        workshopCount: 12,
-        tags: ['Heritage', 'Royal Craft'],
-      ),
-      ArtisanModel(
-        id: '2',
-        name: 'Tok Wan',
-        craftType: 'Songket',
-        state: 'Kelantan',
-        description:
-            'Custodian of traditional "Bunga Dalam" weaving motifs. Each piece takes 3 months to complete using hand-spun silk and gold threads.',
-        imageUrl:
-            'https://images.unsplash.com/photo-1590739225287-bd31519780c3?w=800',
-        rating: 4.8,
-        experience: '45 Years',
-        workshopCount: 8,
-        tags: ['Master', 'Weaving'],
-      ),
-      ArtisanModel(
-        id: '3',
-        name: 'Siti Rahmah',
-        craftType: 'Batik',
-        state: 'Terengganu',
-        description:
-            'Specialist in hand-drawn chanting batik using natural dyes extracted from rainforest barks and local fruits.',
-        imageUrl:
-            'https://images.unsplash.com/photo-1544967082-d9d25d867d66?w=800',
-        rating: 4.7,
-        experience: '22 Years',
-        workshopCount: 15,
-        tags: ['Natural Dyes', 'Batik Tulis'],
-      ),
-      ArtisanModel(
-        id: '4',
-        name: 'Ahmad Fauzi',
-        craftType: 'Keris',
-        state: 'Melaka',
-        description:
-            'Master blacksmith forging the soul of the Malay archipelago. His keris blades are renowned for their strength and symbolic beauty.',
-        imageUrl:
-            'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?w=800',
-        rating: 4.9,
-        experience: '30 Years',
-        workshopCount: 4,
-        tags: ['Blacksmith', 'Metalwork'],
-      ),
-    ];
+    try {
+      final response = await client
+          .from('artisan_profiles')
+          .select('*, users(full_name, avatar_url), artisan_documents(file_url, doc_type)')
+          .eq('status', 'APPROVED');
+
+      final list = List<Map<String, dynamic>>.from(response);
+      return list.map((map) => ArtisanModel.fromMap(map)).toList();
+    } catch (e) {
+      debugPrint('Error fetching artisans from Supabase: $e');
+      return [];
+    }
   }
 
   // --- Forum Services ---

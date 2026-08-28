@@ -23,5 +23,30 @@ class ArtisanModel {
     this.tags = const [],
   });
 
-  // TODO: Add fromMap and toMap for Supabase integration
+  factory ArtisanModel.fromMap(Map<String, dynamic> map) {
+    // Extract a nice image from the artisan_documents or users if available
+    String extractedImageUrl = 'https://placehold.co/800x600/004D40/FFFFFF.png?text=Artisan+Studio';
+    if (map['artisan_documents'] != null) {
+      final docs = List<Map<String, dynamic>>.from(map['artisan_documents']);
+      final photos = docs.where((d) => d['doc_type'] == 'STUDIO_PHOTO' || d['doc_type'] == 'PORTFOLIO_IMAGE').toList();
+      if (photos.isNotEmpty) {
+        extractedImageUrl = photos.first['file_url'] ?? extractedImageUrl;
+      }
+    } else if (map['users'] != null && map['users']['avatar_url'] != null) {
+      extractedImageUrl = map['users']['avatar_url'];
+    }
+
+    return ArtisanModel(
+      id: map['id'] ?? '',
+      name: map['studio_name'] ?? 'Unknown Studio',
+      craftType: map['craft_category'] ?? 'Craft',
+      state: map['state'] ?? 'Unknown State',
+      description: map['bio'] ?? '',
+      imageUrl: extractedImageUrl,
+      rating: 4.8, // Default rating for now
+      experience: '${map['years_experience'] ?? 1} Years',
+      workshopCount: 0,
+      tags: [map['craft_category'] ?? 'Heritage'],
+    );
+  }
 }
