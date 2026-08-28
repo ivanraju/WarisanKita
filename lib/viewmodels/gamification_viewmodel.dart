@@ -77,6 +77,10 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
   QuestChangeRequest? get pendingArtisanQuestChange =>
       _pendingArtisanQuestChange;
 
+  QuestChangeRequest? _rejectedArtisanQuestChange;
+  QuestChangeRequest? get rejectedArtisanQuestChange =>
+      _rejectedArtisanQuestChange;
+
   List<quest_domain.HeritageTask> _artisanTasks = [];
   List<quest_domain.HeritageTask> get artisanTasks =>
       _artisanTasks.where((task) => !task.isArchived).toList(growable: false);
@@ -689,6 +693,7 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
     _artisanQuest = null;
     _artisanTasks = [];
     _pendingArtisanQuestChange = null;
+    _rejectedArtisanQuestChange = null;
     _artisanTaskChangeRequests = [];
     _artisanTaskError = null;
     _isLoadingArtisanQuest = true;
@@ -831,6 +836,7 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
         proposedDescription: cleanDescription,
         proposedCategory: cleanCategory,
       );
+      _rejectedArtisanQuestChange = null;
       return true;
     } catch (error, stackTrace) {
       debugPrint('GamificationViewModel update artisan quest error: $error');
@@ -848,19 +854,118 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> _loadArtisanQuestChangeRequest(String questId) async {
     final requests = await _repository.getQuestChangeRequests(questId);
-    _pendingArtisanQuestChange = requests
-        .where((request) => request.isPending)
-        .firstOrNull;
+    final latestRequest = requests.firstOrNull;
+    _pendingArtisanQuestChange = latestRequest?.isPending == true
+        ? latestRequest
+        : null;
+    _rejectedArtisanQuestChange =
+        latestRequest?.status.toUpperCase() == 'REJECTED'
+        ? latestRequest
+        : null;
+  }
+
+  Future<bool> resubmitRejectedQuestUpdate({
+    required QuestChangeRequest request,
+    required String title,
+    required String description,
+    required String category,
+  }) async {
+    if (_isUpdatingArtisanQuest || request.status.toUpperCase() != 'REJECTED') {
+      return false;
+    }
+
+    final quest = _artisanQuest;
+    if (quest == null || request.questId != quest.id) return false;
+
+    final cleanTitle = title.trim();
+    final cleanDescription = description.trim();
+    final cleanCategory = category.trim();
+    if (cleanTitle.isEmpty ||
+        cleanDescription.isEmpty ||
+        cleanCategory.isEmpty) {
+      _artisanTaskError =
+          'Quest title, description, and category are required.';
+      notifyListeners();
+      return false;
+    }
+
+    _isUpdatingArtisanQuest = true;
+    _artisanTaskError = null;
+    notifyListeners();
+    try {
+      _pendingArtisanQuestChange = await _repository
+          .resubmitRejectedQuestUpdate(
+            requestId: request.id,
+            questId: quest.id,
+            proposedTitle: cleanTitle,
+            proposedDescription: cleanDescription,
+            proposedCategory: cleanCategory,
+          );
+      _rejectedArtisanQuestChange = null;
+      return true;
+    } catch (error, stackTrace) {
+      debugPrint('GamificationViewModel resubmit rejected quest: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      _artisanTaskError = _friendlyArtisanTaskError(
+        error,
+        fallback: 'The rejected quest update could not be resubmitted.',
+      );
+      return false;
+    } finally {
+      _isUpdatingArtisanQuest = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> dismissRejectedQuestUpdate(QuestChangeRequest request) async {
+    if (_isUpdatingArtisanQuest || request.status.toUpperCase() != 'REJECTED') {
+      return false;
+    }
+
+    final quest = _artisanQuest;
+    if (quest == null || request.questId != quest.id) return false;
+
+    _isUpdatingArtisanQuest = true;
+    _artisanTaskError = null;
+    notifyListeners();
+    try {
+      await _repository.deleteRejectedQuestUpdate(
+        requestId: request.id,
+        questId: quest.id,
+      );
+      _rejectedArtisanQuestChange = null;
+      return true;
+    } catch (error, stackTrace) {
+      debugPrint('GamificationViewModel dismiss rejected quest: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      _artisanTaskError = _friendlyArtisanTaskError(
+        error,
+        fallback: 'The rejected quest update could not be dismissed.',
+      );
+      return false;
+    } finally {
+      _isUpdatingArtisanQuest = false;
+      notifyListeners();
+    }
   }
 
   HeritageTaskChangeRequest? pendingChangeForTask(String taskId) {
-    for (final request in _artisanTaskChangeRequests) {
-      if (request.taskId == taskId &&
-          request.status.toUpperCase() == 'PENDING_APPROVAL') {
-        return request;
-      }
-    }
-    return null;
+    final latestRequest = _artisanTaskChangeRequests
+        .where((request) => request.taskId == taskId)
+        .firstOrNull;
+    return latestRequest?.status.toUpperCase() == 'PENDING_APPROVAL'
+        ? latestRequest
+        : null;
+  }
+
+  HeritageTaskChangeRequest? rejectedEditForTask(String taskId) {
+    final latestRequest = _artisanTaskChangeRequests
+        .where((request) => request.taskId == taskId)
+        .firstOrNull;
+    return latestRequest?.requestType.toUpperCase() == 'EDIT' &&
+            latestRequest?.status.toUpperCase() == 'REJECTED'
+        ? latestRequest
+        : null;
   }
 
   quest_domain.HeritageTask? artisanTaskById(String taskId) {
@@ -916,7 +1021,7 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<bool> cancelNewTaskSubmission(quest_domain.HeritageTask task) async {
-    if (_isUpdatingNewTask || !_isUnapprovedCustomTask(task)) return false;
+    if (_isUpdatingNewTask || !_isRejectedCustomTask(task)) return false;
 
     _isUpdatingNewTask = true;
     _artisanTaskError = null;
@@ -940,6 +1045,38 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
       return false;
     } finally {
       _isUpdatingNewTask = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> dismissRejectedTaskEdit(
+    HeritageTaskChangeRequest request,
+  ) async {
+    if (_isSubmittingTaskChange ||
+        request.requestType.toUpperCase() != 'EDIT' ||
+        request.status.toUpperCase() != 'REJECTED') {
+      return false;
+    }
+
+    _isSubmittingTaskChange = true;
+    _artisanTaskError = null;
+    notifyListeners();
+    try {
+      await _repository.deleteRejectedHeritageTaskEditRequest(request.id);
+      _artisanTaskChangeRequests = _artisanTaskChangeRequests
+          .where((item) => item.id != request.id)
+          .toList(growable: false);
+      return true;
+    } catch (error, stackTrace) {
+      debugPrint('GamificationViewModel dismiss rejected task edit: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      _artisanTaskError = _friendlyArtisanTaskError(
+        error,
+        fallback: 'The rejected task update could not be dismissed.',
+      );
+      return false;
+    } finally {
+      _isSubmittingTaskChange = false;
       notifyListeners();
     }
   }
@@ -1040,6 +1177,65 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
     final status = task.status.toUpperCase();
     return !task.isSystemTask &&
         (status == 'PENDING_APPROVAL' || status == 'REJECTED');
+  }
+
+  Future<bool> resubmitRejectedTaskEdit({
+    required quest_domain.HeritageTask task,
+    required HeritageTaskChangeRequest request,
+    required String title,
+    required bool isRequired,
+    required int xpReward,
+  }) async {
+    if (_isSubmittingTaskChange ||
+        task.isSystemTask ||
+        task.status.toUpperCase() != 'APPROVED' ||
+        task.isArchived ||
+        request.taskId != task.id ||
+        request.requestType.toUpperCase() != 'EDIT' ||
+        request.status.toUpperCase() != 'REJECTED') {
+      return false;
+    }
+
+    final cleanTitle = title.trim();
+    if (cleanTitle.isEmpty || xpReward < 0) {
+      _artisanTaskError = cleanTitle.isEmpty
+          ? 'Task title must not be empty.'
+          : 'XP reward must be 0 or more.';
+      notifyListeners();
+      return false;
+    }
+
+    _isSubmittingTaskChange = true;
+    _artisanTaskError = null;
+    notifyListeners();
+    try {
+      final updatedRequest = await _repository.resubmitRejectedHeritageTaskEdit(
+        requestId: request.id,
+        taskId: task.id,
+        proposedTitle: cleanTitle,
+        proposedIsRequired: isRequired,
+        proposedXpReward: xpReward,
+      );
+      _artisanTaskChangeRequests = _artisanTaskChangeRequests
+          .map((item) => item.id == updatedRequest.id ? updatedRequest : item)
+          .toList(growable: false);
+      return true;
+    } catch (error, stackTrace) {
+      debugPrint('GamificationViewModel resubmit rejected task edit: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      _artisanTaskError = _friendlyArtisanTaskError(
+        error,
+        fallback: 'The rejected task update could not be resubmitted.',
+      );
+      return false;
+    } finally {
+      _isSubmittingTaskChange = false;
+      notifyListeners();
+    }
+  }
+
+  bool _isRejectedCustomTask(quest_domain.HeritageTask task) {
+    return !task.isSystemTask && task.status.toUpperCase() == 'REJECTED';
   }
 
   Future<void> _loadArtisanTaskChangeRequests() async {

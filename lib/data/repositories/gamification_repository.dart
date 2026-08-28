@@ -180,6 +180,33 @@ class GamificationRepository {
     return QuestChangeRequest.fromMap(row);
   }
 
+  Future<QuestChangeRequest> resubmitRejectedQuestUpdate({
+    required String requestId,
+    required String questId,
+    required String proposedTitle,
+    required String proposedDescription,
+    required String proposedCategory,
+  }) async {
+    final row = await _service.resubmitRejectedQuestChangeRequest(
+      requestId: requestId,
+      questId: questId,
+      proposedTitle: proposedTitle,
+      proposedDescription: proposedDescription,
+      proposedCategory: proposedCategory,
+    );
+    return QuestChangeRequest.fromMap(row);
+  }
+
+  Future<void> deleteRejectedQuestUpdate({
+    required String requestId,
+    required String questId,
+  }) {
+    return _service.deleteRejectedQuestChangeRequest(
+      requestId: requestId,
+      questId: questId,
+    );
+  }
+
   Future<Quest> updateCurrentArtisanQuest({
     required String questId,
     required String title,
@@ -245,6 +272,23 @@ class GamificationRepository {
     return HeritageTaskChangeRequest.fromMap(row);
   }
 
+  Future<HeritageTaskChangeRequest> resubmitRejectedHeritageTaskEdit({
+    required String requestId,
+    required String taskId,
+    required String proposedTitle,
+    required bool proposedIsRequired,
+    required int proposedXpReward,
+  }) async {
+    final row = await _service.resubmitRejectedHeritageTaskEditRequest(
+      requestId: requestId,
+      taskId: taskId,
+      proposedTitle: proposedTitle,
+      proposedIsRequired: proposedIsRequired,
+      proposedXpReward: proposedXpReward,
+    );
+    return HeritageTaskChangeRequest.fromMap(row);
+  }
+
   Future<HeritageTask> updateUnapprovedHeritageTask({
     required String taskId,
     required String title,
@@ -262,6 +306,10 @@ class GamificationRepository {
 
   Future<void> deleteUnapprovedHeritageTask(String taskId) {
     return _service.deleteUnapprovedHeritageTask(taskId);
+  }
+
+  Future<void> deleteRejectedHeritageTaskEditRequest(String requestId) {
+    return _service.deleteRejectedHeritageTaskEditRequest(requestId);
   }
 
   Future<List<GamificationModerationRequest>>
