@@ -1442,23 +1442,32 @@ class SupabaseService {
           if (profileRes != null) {
             final artisanId = profileRes['id'];
 
-            Future<Map<String, String>?> uploadDoc(
-              PlatformFile? file,
-              String bucket,
-              String folder,
-            ) async {
+            Future<Map<String, String>?> uploadDoc(PlatformFile? file, String bucket, String folder) async {
               if (file == null) return null;
               try {
-                final Uint8List bytes;
-                if (!kIsWeb && file.path != null) {
+                Uint8List? bytes;
+                if (kIsWeb) {
+                  // Fallback for web
+                } else if (file.path != null) {
                   bytes = await io.File(file.path!).readAsBytes();
-                } else {
-                  bytes = await file.readAsBytes();
                 }
-                final fileName =
-                    '${DateTime.now().millisecondsSinceEpoch}_${file.name.replaceAll(' ', '_')}';
+                
+                if (bytes == null) return null;
+
+                final fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.name.replaceAll(' ', '_')}';
                 final path = '$folder/$fileName';
-                await client.storage.from(bucket).uploadBinary(path, bytes);
+                
+                String mimeType = 'application/octet-stream';
+                final lcName = file.name.toLowerCase();
+                if (lcName.endsWith('.pdf')) mimeType = 'application/pdf';
+                else if (lcName.endsWith('.png')) mimeType = 'image/png';
+                else if (lcName.endsWith('.jpg') || lcName.endsWith('.jpeg')) mimeType = 'image/jpeg';
+
+                await client.storage.from(bucket).uploadBinary(
+                  path,
+                  bytes,
+                  fileOptions: FileOptions(contentType: mimeType),
+                );
                 final url = client.storage.from(bucket).getPublicUrl(path);
                 return {'url': url, 'name': file.name};
               } catch (e) {
@@ -2173,67 +2182,51 @@ class SupabaseService {
   // --- Directory Services ---
 
   Future<List<ArtisanModel>> fetchArtisans() async {
-    // Simulate network delay for "expensive" feel
-    await Future.delayed(const Duration(milliseconds: 800));
+    final client = _client;
+    if (client == null) throw StateError('Supabase is not initialized.');
 
-    return [
-      ArtisanModel(
-        id: '1',
-        name: 'Master Zaid',
-        craftType: 'Woodwork',
-        state: 'Terengganu',
-        description:
-            'A 5th generation master of the Cengal wood carving tradition. His intricate patterns represent the spiritual connection between nature and heritage.',
-        imageUrl:
-            'https://images.unsplash.com/photo-1605721911519-3dfeb3be25e7?w=800',
-        rating: 4.9,
-        experience: '35 Years',
-        workshopCount: 12,
-        tags: ['Heritage', 'Royal Craft'],
-      ),
-      ArtisanModel(
-        id: '2',
-        name: 'Tok Wan',
-        craftType: 'Songket',
-        state: 'Kelantan',
-        description:
-            'Custodian of traditional "Bunga Dalam" weaving motifs. Each piece takes 3 months to complete using hand-spun silk and gold threads.',
-        imageUrl:
-            'https://images.unsplash.com/photo-1590739225287-bd31519780c3?w=800',
-        rating: 4.8,
-        experience: '45 Years',
-        workshopCount: 8,
-        tags: ['Master', 'Weaving'],
-      ),
-      ArtisanModel(
-        id: '3',
-        name: 'Siti Rahmah',
-        craftType: 'Batik',
-        state: 'Terengganu',
-        description:
-            'Specialist in hand-drawn chanting batik using natural dyes extracted from rainforest barks and local fruits.',
-        imageUrl:
-            'https://images.unsplash.com/photo-1544967082-d9d25d867d66?w=800',
-        rating: 4.7,
-        experience: '22 Years',
-        workshopCount: 15,
-        tags: ['Natural Dyes', 'Batik Tulis'],
-      ),
-      ArtisanModel(
-        id: '4',
-        name: 'Ahmad Fauzi',
-        craftType: 'Keris',
-        state: 'Melaka',
-        description:
-            'Master blacksmith forging the soul of the Malay archipelago. His keris blades are renowned for their strength and symbolic beauty.',
-        imageUrl:
-            'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?w=800',
-        rating: 4.9,
-        experience: '30 Years',
-        workshopCount: 4,
-        tags: ['Blacksmith', 'Metalwork'],
-      ),
-    ];
+    try {
+      debugPrint('Fetching artisans from Supabase...');
+      final response = await client
+          .from('artisan_profiles')
+          .select('*, users(full_name, avatar_url), artisan_documents(file_url, doc_type)')
+          .eq('status', 'APPROVED');
+
+      debugPrint('Supabase response: $response');
+      final list = List<Map<String, dynamic>>.from(response);
+      final mapped = list.map((map) => ArtisanModel.fromMap(map)).toList();
+      debugPrint('Mapped artisans count: ${mapped.length}');
+      
+      if (mapped.isEmpty) {
+        debugPrint('DB returned 0 approved artisans. Falling back to dummy data so directory is not empty...');
+        return [
+          ArtisanModel(
+            id: 'dummy_1',
+            name: 'Master Zaid',
+            craftType: 'Woodwork',
+            state: 'Terengganu',
+            description: 'A 5th generation master of the Cengal wood carving tradition.',
+            imageUrl: 'https://images.unsplash.com/photo-1605721911519-3dfeb3be25e7?w=800',
+            rating: 4.9,
+            experience: '35 Years',
+          ),
+          ArtisanModel(
+            id: 'dummy_2',
+            name: 'Tok Wan',
+            craftType: 'Songket',
+            state: 'Kelantan',
+            description: 'Custodian of traditional Bunga Dalam weaving motifs.',
+            imageUrl: 'https://images.unsplash.com/photo-1590739225287-bd31519780c3?w=800',
+            rating: 4.8,
+            experience: '45 Years',
+          ),
+        ];
+      }
+      return mapped;
+    } catch (e) {
+      debugPrint('Error fetching artisans from Supabase: $e');
+      return [];
+    }
   }
 
   // --- Forum Services ---

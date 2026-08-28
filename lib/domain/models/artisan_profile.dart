@@ -9,6 +9,7 @@ class ArtisanModel {
   final String experience;
   final int workshopCount;
   final List<String> tags;
+  final List<String> images;
 
   ArtisanModel({
     required this.id,
@@ -21,7 +22,50 @@ class ArtisanModel {
     this.experience = '10+ Years',
     this.workshopCount = 0,
     this.tags = const [],
+    this.images = const [],
   });
 
-  // TODO: Add fromMap and toMap for Supabase integration
+  factory ArtisanModel.fromMap(Map<String, dynamic> map) {
+    // Extract a nice image from the artisan_documents or users if available
+    String extractedImageUrl = 'https://placehold.co/800x600/004D40/FFFFFF.png?text=Artisan+Studio';
+    List<String> allImages = [];
+    
+    if (map['artisan_documents'] != null) {
+      final docs = List<Map<String, dynamic>>.from(map['artisan_documents']);
+      final photos = docs.where((d) => d['doc_type'] == 'STUDIO_PHOTO' || d['doc_type'] == 'PORTFOLIO_IMAGE').toList();
+      
+      for (var photo in photos) {
+        if (photo['file_url'] != null) {
+          allImages.add(photo['file_url']);
+        }
+      }
+      
+      if (allImages.isNotEmpty) {
+        extractedImageUrl = allImages.first;
+      }
+    } 
+    
+    if (allImages.isEmpty && map['users'] != null && map['users']['avatar_url'] != null) {
+      extractedImageUrl = map['users']['avatar_url'];
+      allImages.add(extractedImageUrl);
+    }
+    
+    if (allImages.isEmpty) {
+      allImages.add(extractedImageUrl);
+    }
+
+    return ArtisanModel(
+      id: map['id'] ?? '',
+      name: map['studio_name'] ?? 'Unknown Studio',
+      craftType: map['craft_category'] ?? 'Craft',
+      state: map['state'] ?? 'Unknown State',
+      description: map['bio'] ?? '',
+      imageUrl: extractedImageUrl,
+      rating: 4.8, // Default rating for now
+      experience: '${map['years_experience'] ?? 1} Years',
+      workshopCount: 0,
+      tags: [map['craft_category'] ?? 'Heritage'],
+      images: allImages,
+    );
+  }
 }

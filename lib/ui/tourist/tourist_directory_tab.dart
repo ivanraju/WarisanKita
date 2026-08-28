@@ -6,6 +6,7 @@ import 'package:warisan_kita/ui/tourist/quest_completion_screen.dart';
 import 'package:warisan_kita/ui/core/widgets/translation_language_dialog.dart';
 import 'package:warisan_kita/ui/tourist/widgets/rotating_artisan_image_carousel.dart';
 import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
+import 'package:warisan_kita/viewmodels/directory_viewmodel.dart';
 
 class TouristDirectoryTab extends StatefulWidget {
   const TouristDirectoryTab({super.key});
@@ -329,20 +330,39 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
   Widget build(BuildContext context) {
     final langVM = context.watch<LanguageViewModel>();
     final query = _searchController.text.toLowerCase().trim();
-    final artisans = _getArtisans(langVM);
+    
+    // Wire up to DirectoryViewModel to get REAL artisans from Supabase
+    final dirVM = context.watch<DirectoryViewModel>();
+    final realArtisans = dirVM.artisans.map((a) => {
+      'id': a.id,
+      'name': a.name,
+      'category': a.craftType,
+      'craft': a.craftType,
+      'state': a.state,
+      'rating': a.rating,
+      'image': a.imageUrl,
+      'images': a.images,
+      'bio': a.description,
+      'exp': '+150 EXP',
+      'experienceYears': a.experience,
+      'artisanModel': a, // pass the model for the detail screen
+    }).toList();
+
+    // Fallback to dummy data if directory is entirely empty
+    final artisans = realArtisans.isNotEmpty ? realArtisans : _getArtisans(langVM);
 
     final filtered = artisans.where((artisan) {
       final matchesQuery = query.isEmpty ||
-          artisan['name'].toLowerCase().contains(query) ||
-          artisan['category'].toLowerCase().contains(query) ||
-          artisan['state'].toLowerCase().contains(query);
+          artisan['name'].toString().toLowerCase().contains(query) ||
+          artisan['category'].toString().toLowerCase().contains(query) ||
+          artisan['state'].toString().toLowerCase().contains(query);
 
       final matchesCategory = _selectedCategory == 'All Crafts' ||
           artisan['category'] == _selectedCategory ||
           _selectedCategory == langVM.translate('All Crafts');
 
       final matchesState = _selectedState == 'All States' ||
-          artisan['state'].toLowerCase() == _selectedState.toLowerCase();
+          artisan['state'].toString().toLowerCase() == _selectedState.toLowerCase();
 
       return matchesQuery && matchesCategory && matchesState;
     }).toList();

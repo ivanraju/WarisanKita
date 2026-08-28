@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:warisan_kita/ui/artisan/artisan_application_pending_screen.dart';
+import 'package:warisan_kita/ui/artisan/artisan_application_approved_screen.dart';
 import 'package:warisan_kita/ui/artisan/artisan_dashboard_tab.dart';
 import 'package:warisan_kita/ui/artisan/artisan_settings_screen.dart';
 import 'package:warisan_kita/ui/artisan/profile_builder_tab.dart';
@@ -16,6 +18,8 @@ class ArtisanMainScaffold extends StatefulWidget {
 
 class _ArtisanMainScaffoldState extends State<ArtisanMainScaffold> {
   int _currentIndex = 0;
+  bool _hasSeenApprovalScreen = false;
+  bool _isLoading = true;
 
   final List<Widget> _tabs = const [
     ArtisanDashboardTab(),
@@ -23,14 +27,58 @@ class _ArtisanMainScaffoldState extends State<ArtisanMainScaffold> {
     LiveForumTab(),
     ArtisanSettingsScreen(),
   ];
+  
+  @override
+  void initState() {
+    super.initState();
+    _checkApprovalStatus();
+  }
+  
+  Future<void> _checkApprovalStatus() async {
+    final authVM = context.read<AuthViewModel>();
+    final user = authVM.currentUser;
+    if (user != null) {
+      final prefs = await SharedPreferences.getInstance();
+      final key = 'hasSeenApproval_${user.id}';
+      setState(() {
+        _hasSeenApprovalScreen = prefs.getBool(key) ?? false;
+        _isLoading = false;
+      });
+    } else {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _dismissApprovalScreen() async {
+    final authVM = context.read<AuthViewModel>();
+    final user = authVM.currentUser;
+    if (user != null) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('hasSeenApproval_${user.id}', true);
+    }
+    setState(() {
+      _hasSeenApprovalScreen = true;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     final authVM = context.watch<AuthViewModel>();
     final user = authVM.currentUser;
 
     if (user != null && !user.isApprovedArtisan && (user.isPendingArtisan || user.status == 'PENDING_APPROVAL' || user.status == 'PENDING')) {
       return const ArtisanApplicationPendingScreen();
+    }
+    
+    // Show one-time celebratory screen
+    if (user != null && user.isApprovedArtisan && !_hasSeenApprovalScreen) {
+      return ArtisanApplicationApprovedScreen(
+        onContinue: _dismissApprovalScreen,
+      );
     }
 
     return Scaffold(
