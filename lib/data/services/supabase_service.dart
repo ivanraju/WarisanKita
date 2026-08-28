@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:async';
+import 'dart:io' as io;
 import 'dart:math';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
@@ -1346,7 +1347,12 @@ class SupabaseService {
             ) async {
               if (file == null) return null;
               try {
-                final bytes = await file.readAsBytes();
+                final Uint8List bytes;
+                if (!kIsWeb && file.path != null) {
+                  bytes = await io.File(file.path!).readAsBytes();
+                } else {
+                  bytes = await file.readAsBytes();
+                }
                 final fileName =
                     '${DateTime.now().millisecondsSinceEpoch}_${file.name.replaceAll(' ', '_')}';
                 final path = '$folder/$fileName';
