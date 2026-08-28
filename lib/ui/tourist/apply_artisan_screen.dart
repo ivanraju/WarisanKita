@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:file_picker_platform_interface/file_picker_platform_interface.dart';
 import 'package:warisan_kita/domain/models/pending_artisan_profile.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/moderation_viewmodel.dart';
@@ -71,7 +72,6 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
       final result = await FilePickerPlatform.instance.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf', 'png', 'jpg', 'jpeg'],
-        withData: true,
       );
 
       if (result != null && result.files.isNotEmpty) {
@@ -96,7 +96,6 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
       final result = await FilePickerPlatform.instance.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf', 'png', 'jpg', 'jpeg'],
-        withData: true,
       );
 
       if (result != null && result.files.isNotEmpty) {
@@ -121,7 +120,6 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
       final result = await FilePickerPlatform.instance.pickFiles(
         type: FileType.image,
         allowMultiple: true,
-        withData: true,
       );
 
       if (result != null && result.files.isNotEmpty) {
@@ -420,8 +418,8 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                   _buildUploadTile(
                     icon: Icons.description_outlined,
                     title: 'SSM Business Registration PDF',
-                    subtitle: _ssmFileName != null ? 'Attached: $_ssmFileName ($_ssmFileSize)' : 'Upload PDF / PNG proof of registration',
-                    isAttached: _ssmFileName != null,
+                    subtitle: _ssmFile != null ? 'Attached: ${_ssmFile!.name}' : 'Upload PDF / PNG proof of registration',
+                    isAttached: _ssmFile != null,
                     onTap: _pickSsmDocument,
                   ),
 
@@ -430,8 +428,8 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                   _buildUploadTile(
                     icon: Icons.workspace_premium_outlined,
                     title: 'Kraftangan Master Certificate',
-                    subtitle: _kraftanganFileName != null ? 'Attached: $_kraftanganFileName ($_kraftanganFileSize)' : 'Upload accreditation certificate (Optional)',
-                    isAttached: _kraftanganFileName != null,
+                    subtitle: _kraftanganFile != null ? 'Attached: ${_kraftanganFile!.name}' : 'Upload accreditation certificate (Optional)',
+                    isAttached: _kraftanganFile != null,
                     onTap: _pickKraftanganCertificate,
                   ),
 
