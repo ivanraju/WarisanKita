@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:warisan_kita/domain/models/user.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 import 'package:warisan_kita/ui/artisan/artisan_application_pending_screen.dart';
+import 'package:warisan_kita/ui/auth/email_verification_screen.dart';
 import 'package:warisan_kita/ui/auth/forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -247,6 +248,53 @@ class _LoginScreenState extends State<LoginScreen> {
                 style: FilledButton.styleFrom(backgroundColor: const Color(0xFF004D40)),
                 onPressed: () => Navigator.pop(dialogCtx),
                 child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+
+      if (result.requiresEmailVerification) {
+        showDialog(
+          context: context,
+          builder: (dialogCtx) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            title: Row(
+              children: [
+                const Icon(Icons.mark_email_unread_rounded, color: Color(0xFF0284C7), size: 28),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Email Verification Required',
+                    style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
+                  ),
+                ),
+              ],
+            ),
+            content: Text(
+              'Your email address has not been verified yet. Please enter the 6-digit verification code sent to your inbox to activate your account.',
+              style: GoogleFonts.plusJakartaSans(fontSize: 13, height: 1.5, color: Colors.black87),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogCtx),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                style: FilledButton.styleFrom(backgroundColor: const Color(0xFF004D40)),
+                onPressed: () {
+                  Navigator.pop(dialogCtx);
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => EmailVerificationScreen(
+                        email: result.unverifiedEmail ?? _emailController.text.trim(),
+                        targetRoute: '/tourist',
+                      ),
+                    ),
+                  );
+                },
+                child: const Text('Verify Email Now'),
               ),
             ],
           ),
