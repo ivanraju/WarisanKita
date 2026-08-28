@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
+import 'package:warisan_kita/viewmodels/gamification_moderation_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/moderation_viewmodel.dart';
 
 class AdminSidebar extends StatelessWidget {
@@ -18,8 +19,12 @@ class AdminSidebar extends StatelessWidget {
   Widget build(BuildContext context) {
     final authVM = context.watch<AuthViewModel>();
     ModerationViewModel? modVM;
+    GamificationModerationViewModel? gamificationModVM;
     try {
       modVM = context.watch<ModerationViewModel>();
+    } catch (_) {}
+    try {
+      gamificationModVM = context.watch<GamificationModerationViewModel>();
     } catch (_) {}
 
     final user = authVM.currentUser;
@@ -30,7 +35,9 @@ class AdminSidebar extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      color: const Color(0xFF0F172A), // Dark slate theme for professional admin navigation
+      color: const Color(
+        0xFF0F172A,
+      ), // Dark slate theme for professional admin navigation
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -44,7 +51,11 @@ class AdminSidebar extends StatelessWidget {
                   color: const Color(0xFF10B981).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.security_rounded, color: Color(0xFF10B981), size: 24),
+                child: const Icon(
+                  Icons.security_rounded,
+                  color: Color(0xFF10B981),
+                  size: 24,
+                ),
               ),
               const SizedBox(width: 12),
               Column(
@@ -90,7 +101,9 @@ class AdminSidebar extends StatelessWidget {
                     icon: Icons.verified_user_rounded,
                     tabId: 'Pending Approvals',
                     label: 'Artisan Verification',
-                    badgeText: pendingCount > 0 ? '$pendingCount PENDING' : 'CLEAR',
+                    badgeText: pendingCount > 0
+                        ? '$pendingCount PENDING'
+                        : 'CLEAR',
                   ),
                   const SizedBox(height: 4),
                   _buildNavItem(
@@ -112,7 +125,9 @@ class AdminSidebar extends StatelessWidget {
                     icon: Icons.stars_rounded,
                     tabId: 'Quest Approvals',
                     label: 'Quest Moderation',
-                    badgeText: '2 NEW',
+                    badgeText: (gamificationModVM?.totalCount ?? 0) > 0
+                        ? '${gamificationModVM!.totalCount} PENDING'
+                        : 'CLEAR',
                   ),
                   const SizedBox(height: 4),
                   _buildNavItem(
@@ -148,7 +163,9 @@ class AdminSidebar extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 18,
-                  backgroundColor: const Color(0xFF10B981).withValues(alpha: 0.2),
+                  backgroundColor: const Color(
+                    0xFF10B981,
+                  ).withValues(alpha: 0.2),
                   child: Text(
                     initials,
                     style: const TextStyle(
@@ -187,7 +204,11 @@ class AdminSidebar extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.logout_rounded, color: Color(0xFFEF4444), size: 18),
+                  icon: const Icon(
+                    Icons.logout_rounded,
+                    color: Color(0xFFEF4444),
+                    size: 18,
+                  ),
                   tooltip: 'Admin Logout',
                   onPressed: () async {
                     await authVM.logout();
@@ -196,13 +217,18 @@ class AdminSidebar extends StatelessWidget {
                       SnackBar(
                         content: Text(
                           'Admin session ended successfully.',
-                          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold),
+                          style: GoogleFonts.plusJakartaSans(
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         backgroundColor: const Color(0xFFEF4444),
                         behavior: SnackBarBehavior.floating,
                       ),
                     );
-                    Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil('/login', (route) => false);
+                    Navigator.of(
+                      context,
+                      rootNavigator: true,
+                    ).pushNamedAndRemoveUntil('/login', (route) => false);
                   },
                 ),
               ],
@@ -255,16 +281,25 @@ class AdminSidebar extends StatelessWidget {
                     label,
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 13,
-                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                      color: isSelected ? Colors.white : const Color(0xFFCBD5E1),
+                      fontWeight: isSelected
+                          ? FontWeight.w700
+                          : FontWeight.w500,
+                      color: isSelected
+                          ? Colors.white
+                          : const Color(0xFFCBD5E1),
                     ),
                   ),
                 ),
                 if (badgeText != null)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
-                      color: isSelected ? Colors.white : const Color(0xFF334155),
+                      color: isSelected
+                          ? Colors.white
+                          : const Color(0xFF334155),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
@@ -272,7 +307,9 @@ class AdminSidebar extends StatelessWidget {
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 10.5,
                         fontWeight: FontWeight.bold,
-                        color: isSelected ? const Color(0xFF0F172A) : const Color(0xFF38BDF8),
+                        color: isSelected
+                            ? const Color(0xFF0F172A)
+                            : const Color(0xFF38BDF8),
                       ),
                     ),
                   ),
