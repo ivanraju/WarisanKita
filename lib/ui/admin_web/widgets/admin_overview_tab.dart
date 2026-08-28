@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:warisan_kita/viewmodels/forum_viewmodel.dart';
+import 'package:warisan_kita/viewmodels/gamification_moderation_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/gamification_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/moderation_viewmodel.dart';
 
@@ -21,12 +22,17 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final modVM = context.read<ModerationViewModel>();
       final forumVM = context.read<ForumViewModel>();
-      await Future.wait([
+      final List<Future> futures = [
         modVM.refreshAllData(),
         forumVM.fetchThreads(),
         forumVM.fetchForumReportQueue(),
         forumVM.fetchForumModerationHistory(),
-      ]);
+      ];
+      try {
+        final gameModVM = context.read<GamificationModerationViewModel>();
+        futures.add(gameModVM.loadRequests());
+      } catch (_) {}
+      await Future.wait(futures);
     });
   }
 
@@ -41,6 +47,10 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
     GamificationViewModel? gameVM;
     try {
       gameVM = context.watch<GamificationViewModel>();
+    } catch (_) {}
+    GamificationModerationViewModel? gameModVM;
+    try {
+      gameModVM = context.watch<GamificationModerationViewModel>();
     } catch (_) {}
 
     // Live Metrics Calculations
@@ -57,8 +67,10 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
 
     final availableQuests = gameVM?.availableQuests ?? [];
     final totalQuestsCount = availableQuests.isNotEmpty ? availableQuests.length : 3;
-    final int pendingFromVM = gameVM?.myRequests.where((r) => r.status.toUpperCase() == 'PENDING').length ?? 0;
-    final int pendingQuestRequests = pendingFromVM > 0 ? pendingFromVM : 3;
+    final int pendingFromVM = gameModVM != null
+        ? gameModVM.totalCount
+        : (gameVM?.myRequests.where((r) => r.status.toUpperCase() == 'PENDING').length ?? 0);
+    final int pendingQuestRequests = pendingFromVM > 0 ? pendingFromVM : (gameModVM != null ? 0 : 3);
 
     final totalThreadsCount = forumVM.threads.length;
     final int pendingForumReportsCount = forumVM.reportQueue.where((item) {
