@@ -715,19 +715,19 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
 
             _buildDocumentUploadTile(
               title: 'Business Registration (SSM) Certificate',
-              subtitle: _documents['SSM_CERT'] != null ? 'Uploaded Document' : 'Required',
+              subtitle: _documents['SSM_BUSINESS_CERT'] != null ? 'Uploaded Document' : 'Required',
               icon: Icons.article_rounded,
-              isUploaded: _documents['SSM_CERT'] != null,
-              onTap: () => _uploadDocument('SSM_CERT'),
-              onView: _documents['SSM_CERT'] != null ? () => _viewDocument(_documents['SSM_CERT']!) : null,
+              isUploaded: _documents['SSM_BUSINESS_CERT'] != null,
+              onTap: () => _uploadDocument('SSM_BUSINESS_CERT'),
+              onView: _documents['SSM_BUSINESS_CERT'] != null ? () => _viewDocument(_documents['SSM_BUSINESS_CERT']!) : null,
             ),
             _buildDocumentUploadTile(
               title: 'Kraftangan Malaysia Master Certification',
-              subtitle: _documents['MASTER_CERT'] != null ? 'Uploaded Document' : 'Optional',
+              subtitle: _documents['KRAFTANGAN_MASTER_CERT'] != null ? 'Uploaded Document' : 'Optional',
               icon: Icons.workspace_premium_rounded,
-              isUploaded: _documents['MASTER_CERT'] != null,
-              onTap: () => _uploadDocument('MASTER_CERT'),
-              onView: _documents['MASTER_CERT'] != null ? () => _viewDocument(_documents['MASTER_CERT']!) : null,
+              isUploaded: _documents['KRAFTANGAN_MASTER_CERT'] != null,
+              onTap: () => _uploadDocument('KRAFTANGAN_MASTER_CERT'),
+              onView: _documents['KRAFTANGAN_MASTER_CERT'] != null ? () => _viewDocument(_documents['KRAFTANGAN_MASTER_CERT']!) : null,
             ),
 
             const SizedBox(height: 36),

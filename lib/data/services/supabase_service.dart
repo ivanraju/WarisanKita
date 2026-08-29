@@ -2325,7 +2325,6 @@ class SupabaseService {
         'artisan_id': artisanId,
         'doc_type': docType,
         'file_url': url,
-        'status': 'VERIFIED',
       });
       
       return {'url': url, 'name': finalFileName};
