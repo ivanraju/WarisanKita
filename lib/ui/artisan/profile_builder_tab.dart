@@ -199,10 +199,13 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
       final file = result.first;
       final authVM = context.read<AuthViewModel>();
       final user = authVM.currentUser;
-      if (user == null) return;
+      if (user == null || user.artisanProfileId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not find artisan profile ID.')));
+        return;
+      }
       
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Uploading document...')));
-      final uploadRes = await context.read<SupabaseService>().uploadArtisanDocument(user.id, file, docType);
+      final uploadRes = await context.read<SupabaseService>().uploadArtisanDocument(user.artisanProfileId!, file, docType);
       
       if (uploadRes != null) {
         setState(() {

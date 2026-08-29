@@ -18,6 +18,7 @@ class UserModel {
   final String? address;
   final String? state;
   final String? phone;
+  final String? artisanProfileId;
   final List<Map<String, dynamic>> artisanDocuments;
 
   const UserModel({
@@ -38,6 +39,7 @@ class UserModel {
     this.address,
     this.state,
     this.phone,
+    this.artisanProfileId,
     this.artisanDocuments = const [],
   });
 
@@ -139,6 +141,8 @@ class UserModel {
     String? address,
     String? state,
     String? phone,
+    String? artisanProfileId,
+    List<Map<String, dynamic>>? artisanDocuments,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -158,6 +162,8 @@ class UserModel {
       address: address ?? this.address,
       state: state ?? this.state,
       phone: phone ?? this.phone,
+      artisanProfileId: artisanProfileId ?? this.artisanProfileId,
+      artisanDocuments: artisanDocuments ?? this.artisanDocuments,
     );
   }
 
@@ -180,6 +186,7 @@ class UserModel {
       'address': address,
       'state': state,
       'phone': phone,
+      'artisanProfileId': artisanProfileId,
     };
   }
 
@@ -218,6 +225,7 @@ class UserModel {
       address: map['address'] ?? artisanMap?['address'],
       state: map['state'] ?? artisanMap?['state'],
       phone: map['phone'] ?? map['phone_number'],
+      artisanProfileId: artisanMap?['id'],
       artisanDocuments: docs,
     );
   }
