@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../tourist/widgets/workshop_map_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart' as fp;
 import 'package:url_launcher/url_launcher.dart';
@@ -25,6 +27,32 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
   late final TextEditingController _experienceController;
   late final TextEditingController _phoneController;
   late final TextEditingController _bioController;
+
+  GoogleMapController? _workshopMapController;
+  LatLng? _selectedWorkshopPin;
+  String? _workshopAddress;
+
+  static const Map<String, LatLng> _stateCenters = {
+    'Johor': LatLng(2.0301, 103.3185),
+    'Kedah': LatLng(6.1184, 100.3685),
+    'Kelantan': LatLng(5.3117, 102.2381),
+    'Melaka': LatLng(2.1896, 102.2501),
+    'Negeri Sembilan': LatLng(2.7258, 101.9424),
+    'Pahang': LatLng(3.8126, 103.3256),
+    'Penang': LatLng(5.4141, 100.3288),
+    'Perak': LatLng(4.5921, 101.0901),
+    'Perlis': LatLng(6.4449, 100.2048),
+    'Sabah': LatLng(5.9788, 116.0753),
+    'Sarawak': LatLng(1.5533, 110.3592),
+    'Selangor': LatLng(3.0738, 101.5183),
+    'Terengganu': LatLng(5.3117, 103.1324),
+    'Kuala Lumpur': LatLng(3.1390, 101.6869),
+  };
+
+  LatLng get _selectedStateCenter {
+    final state = _stateController.text.trim();
+    return _stateCenters[state] ?? const LatLng(4.2105, 101.9758); // Default Malaysia center
+  }
 
   bool _isOpenForDemos = true;
 
@@ -52,6 +80,10 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
       text: user?.craftCategory ?? 'Pottery & Ceramics',
     );
     _stateController = TextEditingController(text: user?.state ?? 'Melaka');
+    _workshopAddress = user?.address;
+    if (user != null && user.latitude != null && user.longitude != null) {
+      _selectedWorkshopPin = LatLng(user.latitude!, user.longitude!);
+    }
     _experienceController = TextEditingController(text: '25+ Years Experience');
     _phoneController = TextEditingController(text: user?.phone ?? '+60 12-345 6789');
     _bioController = TextEditingController(
@@ -93,7 +125,36 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     _experienceController.dispose();
     _phoneController.dispose();
     _bioController.dispose();
+    _workshopMapController?.dispose();
     super.dispose();
+  }
+
+  Future<void> _openWorkshopMapPicker() async {
+    final result = await Navigator.of(context).push<WorkshopPlaceResult>(
+      MaterialPageRoute(
+        builder: (_) => WorkshopMapPickerPage(
+          initialState: _stateController.text.trim().isEmpty
+              ? 'Melaka'
+              : _stateController.text.trim(),
+          initialLocation: _selectedWorkshopPin,
+          initialAddress: _workshopAddress,
+          stateCenters: _stateCenters,
+        ),
+      ),
+    );
+
+    if (result != null && mounted) {
+      setState(() {
+        _selectedWorkshopPin = result.position;
+        _workshopAddress = result.displayName;
+        if (result.malaysiaState != null) {
+          _stateController.text = result.malaysiaState!;
+        }
+      });
+      await _workshopMapController?.animateCamera(
+        CameraUpdate.newLatLngZoom(result.position, 17),
+      );
+    }
   }
 
   Future<void> _handleSave() async {
@@ -124,6 +185,9 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
         craftCategory: craft,
         bio: bio,
         state: state,
+        address: _workshopAddress,
+        latitude: _selectedWorkshopPin?.latitude,
+        longitude: _selectedWorkshopPin?.longitude,
         phone: phone,
         toolsAndMaterials: _toolsAndMaterials,
       );
@@ -468,14 +532,14 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                   ),
                 ),
                 const SizedBox(width: 12),
-
-                // State / Region Location Input
+                
+                // Phone Number Input
                 Expanded(
                   child: TextField(
-                    controller: _stateController,
+                    controller: _phoneController,
                     decoration: InputDecoration(
-                      labelText: 'State / Location',
-                      prefixIcon: const Icon(Icons.location_on_outlined),
+                      labelText: 'Phone / WhatsApp',
+                      prefixIcon: const Icon(Icons.phone_outlined),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                     ),
                   ),
@@ -483,19 +547,137 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
               ],
             ),
 
-            const SizedBox(height: 14),
+            const SizedBox(height: 24),
 
-            // Phone Number Input
-            TextField(
-              controller: _phoneController,
-              decoration: InputDecoration(
-                labelText: 'Phone / WhatsApp',
-                prefixIcon: const Icon(Icons.phone_outlined),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+            // 🗺️ Workshop Map Location
+            Text(
+              'Workshop Location',
+              style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Pin your exact workshop or studio location on the map.',
+              style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              height: 200,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE8EFEC),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: _selectedWorkshopPin == null
+                      ? const Color(0xFFD7E0DC)
+                      : const Color(0xFF10B981),
+                  width: _selectedWorkshopPin == null ? 1 : 2,
+                ),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: GoogleMap(
+                        initialCameraPosition: CameraPosition(
+                          target: _selectedStateCenter,
+                          zoom: 12,
+                        ),
+                        onMapCreated: (controller) {
+                          _workshopMapController = controller;
+                        },
+                        markers: _selectedWorkshopPin == null
+                            ? const <Marker>{}
+                            : {
+                                Marker(
+                                  markerId: const MarkerId('workshop-location'),
+                                  position: _selectedWorkshopPin!,
+                                  icon: BitmapDescriptor.defaultMarkerWithHue(
+                                    BitmapDescriptor.hueOrange,
+                                  ),
+                                ),
+                              },
+                        myLocationButtonEnabled: false,
+                        myLocationEnabled: false,
+                        mapToolbarEnabled: false,
+                        zoomControlsEnabled: false,
+                        compassEnabled: false,
+                      ),
+                    ),
+                  ),
+                  Positioned.fill(
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(onTap: _openWorkshopMapPicker),
+                    ),
+                  ),
+                  Positioned(
+                    top: 10,
+                    right: 10,
+                    child: IgnorePointer(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF004D40),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: const [
+                            BoxShadow(color: Colors.black26, blurRadius: 8),
+                          ],
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.open_in_full_rounded, color: Colors.white, size: 15),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Open Large Map',
+                                style: GoogleFonts.plusJakartaSans(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-
-            const SizedBox(height: 14),
+            const SizedBox(height: 8),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  _selectedWorkshopPin == null
+                      ? Icons.touch_app_rounded
+                      : Icons.check_circle_rounded,
+                  size: 16,
+                  color: _selectedWorkshopPin == null
+                      ? const Color(0xFF64748B)
+                      : const Color(0xFF047857),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    _selectedWorkshopPin == null
+                        ? 'Tap the map to place your exact workshop pin.'
+                        : _workshopAddress ?? 'Resolving the selected address…',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 10.5,
+                      height: 1.35,
+                      color: _selectedWorkshopPin == null
+                          ? const Color(0xFF64748B)
+                          : const Color(0xFF047857),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            
+            const SizedBox(height: 24),
 
             // Experience Input
             TextField(

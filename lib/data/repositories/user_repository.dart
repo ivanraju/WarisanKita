@@ -122,6 +122,9 @@ class UserRepository {
     String? bio,
     String? phone,
     String? state,
+    String? address,
+    double? latitude,
+    double? longitude,
     String? craftCategory,
     List<String>? toolsAndMaterials,
   }) {
@@ -133,6 +136,9 @@ class UserRepository {
       bio: bio,
       phone: phone,
       state: state,
+      address: address,
+      latitude: latitude,
+      longitude: longitude,
       craftCategory: craftCategory,
       toolsAndMaterials: toolsAndMaterials,
     );

@@ -17,6 +17,8 @@ class UserModel {
   final String? bio;
   final String? address;
   final String? state;
+  final double? latitude;
+  final double? longitude;
   final String? phone;
   final String? artisanProfileId;
   final List<Map<String, dynamic>> artisanDocuments;
@@ -39,6 +41,8 @@ class UserModel {
     this.bio,
     this.address,
     this.state,
+    this.latitude,
+    this.longitude,
     this.phone,
     this.artisanProfileId,
     this.artisanDocuments = const [],
@@ -142,6 +146,8 @@ class UserModel {
     String? bio,
     String? address,
     String? state,
+    double? latitude,
+    double? longitude,
     String? phone,
     String? artisanProfileId,
     List<Map<String, dynamic>>? artisanDocuments,
@@ -164,6 +170,8 @@ class UserModel {
       bio: bio ?? this.bio,
       address: address ?? this.address,
       state: state ?? this.state,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
       phone: phone ?? this.phone,
       artisanProfileId: artisanProfileId ?? this.artisanProfileId,
       artisanDocuments: artisanDocuments ?? this.artisanDocuments,
@@ -191,6 +199,8 @@ class UserModel {
       'state': state,
       'phone': phone,
       'artisanProfileId': artisanProfileId,
+      'latitude': latitude,
+      'longitude': longitude,
     };
   }
 
@@ -211,6 +221,13 @@ class UserModel {
       docs = List<Map<String, dynamic>>.from(artisanMap['artisan_documents']);
     }
 
+    // Parse lat/lon
+    final latRaw = artisanMap?['latitude'] ?? map['latitude'];
+    final double? lat = latRaw is num ? latRaw.toDouble() : (latRaw != null ? double.tryParse(latRaw.toString()) : null);
+    
+    final lonRaw = artisanMap?['longitude'] ?? map['longitude'];
+    final double? lon = lonRaw is num ? lonRaw.toDouble() : (lonRaw != null ? double.tryParse(lonRaw.toString()) : null);
+
     return UserModel(
       id: map['id'] ?? '',
       email: map['email'] ?? '',
@@ -228,7 +245,9 @@ class UserModel {
       bio: map['bio'] ?? artisanMap?['bio'],
       address: map['address'] ?? artisanMap?['address'],
       state: map['state'] ?? artisanMap?['state'],
-      phone: map['phone'] ?? map['phone_number'],
+      latitude: lat,
+      longitude: lon,
+      phone: map['phone'] ?? map['phone_number'] ?? artisanMap?['phone'],
       artisanProfileId: artisanMap?['id'],
       artisanDocuments: docs,
       tags: artisanMap?['tags'] != null ? List<String>.from(artisanMap!['tags']) : const [],

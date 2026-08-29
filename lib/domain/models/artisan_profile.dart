@@ -64,7 +64,7 @@ class ArtisanModel {
       rating: 4.8, // Default rating for now
       experience: '${map['years_experience'] ?? 1} Years',
       workshopCount: 0,
-      tags: [map['craft_category'] ?? 'Heritage'],
+      tags: map['tags'] != null ? List<String>.from(map['tags']) : [map['craft_category'] ?? 'Heritage'],
       images: allImages,
     );
   }

@@ -66,6 +66,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
           'https://images.unsplash.com/photo-1590736969955-71cc94801759?w=600&auto=format&fit=crop&q=80',
           'https://images.unsplash.com/photo-1610701596007-11502861dcfa?w=600&auto=format&fit=crop&q=80',
         ],
+        'tags': ['Kampung Morten River Clay', 'Paddy Husk Kiln Ash', 'Organic Indigo Dyes', 'Hand-spun Wooden Wheel'],
         'bio': langVM.translate('Master Pak Mat has been hand-crafting traditional clay labu sayong and ceramic vessels for over 25 years in Kampung Morten.'),
         'exp': '+150 EXP',
         'experienceYears': '25 Yrs',
@@ -84,6 +85,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
           'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=600&auto=format&fit=crop&q=80',
           'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=600&auto=format&fit=crop&q=80',
         ],
+        'tags': ['Gold Thread', 'Silk Yarns', 'Traditional Wooden Loom', 'Natural Dyes'],
         'bio': langVM.translate('Royal songket weaving utilizing metallic gold and silver threads on handloom wooden apparatus in Kota Bharu.'),
         'exp': '+200 EXP',
         'experienceYears': '32 Yrs',
@@ -102,6 +104,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
           'https://images.unsplash.com/photo-1582562124811-c09040d0a901?w=600&auto=format&fit=crop&q=80',
           'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=600&auto=format&fit=crop&q=80',
         ],
+        'tags': ['Brass Canting', 'Beeswax', 'Cotton Canvas', 'Indigo Dyes'],
         'bio': langVM.translate('Hand-drawn canting batik studio utilizing organic natural dyes and silk fabrics in coastal Terengganu.'),
         'exp': '+180 EXP',
         'experienceYears': '18 Yrs',
@@ -120,6 +123,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
           'https://images.unsplash.com/photo-1513694203232-719a280e022f?w=600&auto=format&fit=crop&q=80',
           'https://images.unsplash.com/photo-1586864387967-d02ef85d93e8?w=600&auto=format&fit=crop&q=80',
         ],
+        'tags': ['Cengal Wood', 'Traditional Chisel', 'Floral Motif', 'Varnish Finish'],
         'bio': langVM.translate('Ornate timber carving specializing in traditional Malay architectural wood panels and keris handles in Perak.'),
         'exp': '+160 EXP',
         'experienceYears': '29 Yrs',
@@ -345,6 +349,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
       'bio': a.description,
       'exp': '+150 EXP',
       'experienceYears': a.experience,
+      'tags': a.tags,
       'artisanModel': a, // pass the model for the detail screen
     }).toList();
 

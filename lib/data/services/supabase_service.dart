@@ -1615,6 +1615,9 @@ class SupabaseService {
     String? bio,
     String? phone,
     String? state,
+    String? address,
+    double? latitude,
+    double? longitude,
     String? craftCategory,
     List<String>? toolsAndMaterials,
   }) async {
@@ -1682,6 +1685,9 @@ class SupabaseService {
     }
     if (bio != null) userRecord['bio'] = bio;
     if (state != null) userRecord['state'] = state;
+    if (address != null) userRecord['address'] = address;
+    if (latitude != null) userRecord['latitude'] = latitude;
+    if (longitude != null) userRecord['longitude'] = longitude;
     if (craftCategory != null) userRecord['craftCategory'] = craftCategory;
     if (phone != null) userRecord['phone'] = phone;
 
@@ -1708,6 +1714,9 @@ class SupabaseService {
         }
         if (bio != null) updateMap['bio'] = bio;
         if (state != null) updateMap['state'] = state;
+        if (address != null) updateMap['address'] = address;
+        if (latitude != null) updateMap['latitude'] = latitude;
+        if (longitude != null) updateMap['longitude'] = longitude;
         if (craftCategory != null) updateMap['craft_category'] = craftCategory;
         if (phone != null) updateMap['phone_number'] = phone;
         updateMap['updated_at'] = DateTime.now().toIso8601String();
@@ -1751,6 +1760,9 @@ class SupabaseService {
                     'studio_name': studioName.trim(),
                   if (bio != null) 'bio': bio,
                   if (state != null) 'state': state,
+                  if (address != null) 'address': address,
+                  if (latitude != null) 'latitude': latitude,
+                  if (longitude != null) 'longitude': longitude,
                   if (craftCategory != null) 'craft_category': craftCategory,
                   if (toolsAndMaterials != null) 'tags': toolsAndMaterials,
                   'updated_at': DateTime.now().toIso8601String(),
