@@ -2264,14 +2264,12 @@ class SupabaseService {
       final client = _client;
       if (client == null) return null;
 
-      Uint8List? bytes;
-      if (kIsWeb) {
-        bytes = file.bytes;
-      } else if (file.path != null) {
+      Uint8List bytes;
+      if (file.path != null) {
         bytes = await io.File(file.path!).readAsBytes();
+      } else {
+        bytes = await file.readAsBytes();
       }
-
-      if (bytes == null) return null;
 
       final bucket = docType == 'STUDIO_PHOTO' || docType == 'PORTFOLIO_IMAGE'
           ? 'artisan_public_media'
