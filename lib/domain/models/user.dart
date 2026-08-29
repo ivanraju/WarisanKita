@@ -18,6 +18,7 @@ class UserModel {
   final String? address;
   final String? state;
   final String? phone;
+  final List<Map<String, dynamic>> artisanDocuments;
 
   const UserModel({
     required this.id,
@@ -37,6 +38,7 @@ class UserModel {
     this.address,
     this.state,
     this.phone,
+    this.artisanDocuments = const [],
   });
 
   bool get isDualRole =>
@@ -187,10 +189,15 @@ class UserModel {
         : (map['role'] != null ? [map['role'] as String] : ['Tourist']);
 
     Map<String, dynamic>? artisanMap;
+    List<Map<String, dynamic>> docs = [];
     if (map['artisan_profiles'] is Map) {
       artisanMap = Map<String, dynamic>.from(map['artisan_profiles']);
     } else if (map['artisan_profiles'] is List && (map['artisan_profiles'] as List).isNotEmpty) {
       artisanMap = Map<String, dynamic>.from((map['artisan_profiles'] as List).first);
+    }
+    
+    if (artisanMap != null && artisanMap['artisan_documents'] != null) {
+      docs = List<Map<String, dynamic>>.from(artisanMap['artisan_documents']);
     }
 
     return UserModel(
@@ -211,6 +218,7 @@ class UserModel {
       address: map['address'] ?? artisanMap?['address'],
       state: map['state'] ?? artisanMap?['state'],
       phone: map['phone'] ?? map['phone_number'],
+      artisanDocuments: docs,
     );
   }
 }

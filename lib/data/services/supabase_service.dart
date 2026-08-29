@@ -531,7 +531,7 @@ class SupabaseService {
             try {
               profileData = await client
                   .from('users')
-                  .select('*, artisan_profiles(*)')
+                  .select('*, artisan_profiles(*, artisan_documents(*))')
                   .eq('id', authRes.user!.id)
                   .maybeSingle();
             } catch (_) {
@@ -632,7 +632,7 @@ class SupabaseService {
         try {
           final profileData = await client
               .from('users')
-              .select('*, artisan_profiles(*)')
+              .select('*, artisan_profiles(*, artisan_documents(*))')
               .eq('id', authUser.id)
               .maybeSingle();
           if (profileData != null) {
@@ -2258,7 +2258,86 @@ class SupabaseService {
     }
   }
 
-  // --- Forum Services ---
+  Future<Map<String, String>?> uploadArtisanDocument(
+      String artisanId, PlatformFile file, String docType) async {
+    try {
+      final client = _client;
+      if (client == null) return null;
+
+      Uint8List? bytes;
+      if (kIsWeb) {
+        bytes = file.bytes;
+      } else if (file.path != null) {
+        bytes = await io.File(file.path!).readAsBytes();
+      }
+
+      if (bytes == null) return null;
+
+      final bucket = docType == 'STUDIO_PHOTO' || docType == 'PORTFOLIO_IMAGE'
+          ? 'artisan_public_media'
+          : 'artisan_private_docs';
+      final folder = '$artisanId/$docType';
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.name.replaceAll(' ', '_')}';
+      String finalFileName = fileName;
+      String mimeType = 'application/octet-stream';
+
+      final lcName = file.name.toLowerCase();
+      if (lcName.endsWith('.pdf')) {
+        mimeType = 'application/pdf';
+      } else if (lcName.endsWith('.png') || lcName.endsWith('.jpg') || lcName.endsWith('.jpeg')) {
+        try {
+          final compressed = await FlutterImageCompress.compressWithList(
+            bytes,
+            format: CompressFormat.webp,
+            quality: 85,
+          );
+
+          if (compressed.isNotEmpty) {
+            bytes = compressed;
+            mimeType = 'image/webp';
+            final lastDot = finalFileName.lastIndexOf('.');
+            if (lastDot != -1) {
+              finalFileName = finalFileName.substring(0, lastDot) + '.webp';
+            } else {
+              finalFileName += '.webp';
+            }
+          } else {
+            if (lcName.endsWith('.png')) mimeType = 'image/png';
+            else mimeType = 'image/jpeg';
+          }
+        } catch (e) {
+          debugPrint('WebP conversion failed: $e');
+          if (lcName.endsWith('.png')) mimeType = 'image/png';
+          else mimeType = 'image/jpeg';
+        }
+      }
+
+      final path = '$folder/$finalFileName';
+
+      await client.storage.from(bucket).uploadBinary(
+        path,
+        bytes,
+        fileOptions: FileOptions(contentType: mimeType),
+      );
+      
+      final url = client.storage.from(bucket).getPublicUrl(path);
+      
+      // Update DB
+      await client.from('artisan_documents').insert({
+        'artisan_id': artisanId,
+        'doc_type': docType,
+        'file_url': url,
+        'status': 'VERIFIED',
+      });
+      
+      return {'url': url, 'name': finalFileName};
+    } catch (e) {
+      debugPrint('Error uploading doc: $e');
+      return null;
+    }
+  }
+
+  // --- Tourist Functions ---
 
   static final List<ForumThread> _forumStore = [];
   static final Map<String, int> _sessionThreadVotes = {};

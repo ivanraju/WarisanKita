@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:file_picker/file_picker.dart' as fp;
+import 'package:url_launcher/url_launcher.dart';
+import 'package:warisan_kita/data/services/supabase_service.dart';
 import 'package:warisan_kita/ui/tourist/artisan_detail_screen.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/moderation_viewmodel.dart';
@@ -30,11 +33,8 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     'Hand-spun Wooden Wheel',
   ];
 
-  final List<String> _portfolioImages = [
-    'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=600&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80',
-  ];
+  List<String> _portfolioImages = [];
+  Map<String, String> _documents = {};
 
   @override
   void initState() {
@@ -55,6 +55,28 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     _bioController = TextEditingController(
       text: user?.bio ?? 'Master Pak Mat has been hand-crafting traditional clay labu sayong and ceramic vessels for over 25 years in Kampung Morten. Each piece is hand-spun and natural clay kilned.',
     );
+    
+    if (user != null) {
+      for (var doc in user.artisanDocuments) {
+        final type = doc['doc_type'] as String?;
+        final url = doc['file_url'] as String?;
+        if (type != null && url != null) {
+          if (type == 'PORTFOLIO_IMAGE' || type == 'STUDIO_PHOTO') {
+            _portfolioImages.add(url);
+          } else {
+            _documents[type] = url;
+          }
+        }
+      }
+    }
+    
+    if (_portfolioImages.isEmpty) {
+      _portfolioImages = [
+        'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&auto=format&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=600&auto=format&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80',
+      ];
+    }
   }
 
   @override
@@ -168,6 +190,46 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     );
   }
 
+  Future<void> _uploadDocument(String docType) async {
+    final result = await fp.FilePicker.pickFiles(
+      type: fp.FileType.custom,
+      allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+    );
+    if (result.isNotEmpty) {
+      final file = result.first;
+      final authVM = context.read<AuthViewModel>();
+      final user = authVM.currentUser;
+      if (user == null) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Uploading document...')));
+      final uploadRes = await context.read<SupabaseService>().uploadArtisanDocument(user.id, file, docType);
+      
+      if (uploadRes != null) {
+        setState(() {
+          if (docType == 'PORTFOLIO_IMAGE' || docType == 'STUDIO_PHOTO') {
+            _portfolioImages.add(uploadRes['url']!);
+          } else {
+            _documents[docType] = uploadRes['url']!;
+          }
+        });
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Document uploaded successfully!')));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Upload failed.')));
+      }
+    }
+  }
+
+  void _viewDocument(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open file.')));
+      }
+    }
+  }
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -585,20 +647,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
 
                 // Add Image Tile
                 return GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _portfolioImages.add(
-                        'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=600&auto=format&fit=crop&q=80',
-                      );
-                    });
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('📸 Photo ${_portfolioImages.length} added to gallery!'),
-                        backgroundColor: const Color(0xFF004D40),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                  },
+                  onTap: () => _uploadDocument('PORTFOLIO_IMAGE'),
                   child: Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -666,21 +715,19 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
 
             _buildDocumentUploadTile(
               title: 'Business Registration (SSM) Certificate',
-              subtitle: 'SSM_Registration_License_2026.pdf (1.2 MB)',
+              subtitle: _documents['SSM_CERT'] != null ? 'Uploaded Document' : 'Required',
               icon: Icons.article_rounded,
-              isUploaded: true,
+              isUploaded: _documents['SSM_CERT'] != null,
+              onTap: () => _uploadDocument('SSM_CERT'),
+              onView: _documents['SSM_CERT'] != null ? () => _viewDocument(_documents['SSM_CERT']!) : null,
             ),
             _buildDocumentUploadTile(
               title: 'Kraftangan Malaysia Master Certification',
-              subtitle: 'National_Heritage_Craftsman_Cert.pdf (2.4 MB)',
+              subtitle: _documents['MASTER_CERT'] != null ? 'Uploaded Document' : 'Optional',
               icon: Icons.workspace_premium_rounded,
-              isUploaded: true,
-            ),
-            _buildDocumentUploadTile(
-              title: 'MyKad / Official Identity Document',
-              subtitle: 'MyKad_Front_Back_Scan.jpg (950 KB)',
-              icon: Icons.badge_rounded,
-              isUploaded: true,
+              isUploaded: _documents['MASTER_CERT'] != null,
+              onTap: () => _uploadDocument('MASTER_CERT'),
+              onView: _documents['MASTER_CERT'] != null ? () => _viewDocument(_documents['MASTER_CERT']!) : null,
             ),
 
             const SizedBox(height: 36),
@@ -740,6 +787,8 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     required String subtitle,
     required IconData icon,
     required bool isUploaded,
+    VoidCallback? onTap,
+    VoidCallback? onView,
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -776,15 +825,21 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                   subtitle,
                   style: GoogleFonts.plusJakartaSans(fontSize: 10, color: Colors.grey[600]),
                 ),
+                if (isUploaded && onView != null) ...[
+                  const SizedBox(height: 4),
+                  InkWell(
+                    onTap: onView,
+                    child: Text(
+                      'View File',
+                      style: GoogleFonts.plusJakartaSans(fontSize: 10, color: const Color(0xFFD97706), fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
           OutlinedButton.icon(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Re-uploaded document for $title.')),
-              );
-            },
+            onPressed: onTap,
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
