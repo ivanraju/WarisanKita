@@ -26,6 +26,10 @@ class LocationRepository {
     );
   }
 
+  Stream<double> watchHeading() {
+    return _service.getHeadingStream();
+  }
+
   Future<UserLocation> getCurrentLocation() async {
     final position =
     await _service.getCurrentPosition();

@@ -4,6 +4,10 @@
 <dict>
 	<key>NSCameraUsageDescription</key>
 	<string>Scan an artisan workshop QR code to verify heritage task completion.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Use your location and compass heading to orient your tourist marker on the map.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Use your location and compass heading to orient your tourist marker on the map.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>

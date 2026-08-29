@@ -69,9 +69,12 @@ class _ArtisanHeritageTaskManagementViewState
     _showAddTaskSheet();
   }
 
-  Future<void> _showEditTaskSheet(HeritageTask task) async {
+  Future<void> _showEditTaskSheet(
+    HeritageTask task, {
+    HeritageTaskChangeRequest? rejectedChange,
+  }) async {
     final viewModel = context.read<GamificationViewModel>();
-    final isResubmission = task.status.toUpperCase() == 'REJECTED';
+    final isNewTaskResubmission = task.status.toUpperCase() == 'REJECTED';
     viewModel.clearArtisanTaskError();
     final submitted = await showModalBottomSheet<bool>(
       context: context,
@@ -79,15 +82,20 @@ class _ArtisanHeritageTaskManagementViewState
       backgroundColor: Colors.transparent,
       builder: (_) => ChangeNotifierProvider.value(
         value: viewModel,
-        child: _EditHeritageTaskSheet(task: task),
+        child: _EditHeritageTaskSheet(
+          task: task,
+          rejectedChange: rejectedChange,
+        ),
       ),
     );
     if (submitted == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            isResubmission
+            isNewTaskResubmission
                 ? 'Task updated and resubmitted for admin approval.'
+                : rejectedChange != null
+                ? 'Task update revised and resubmitted for admin approval.'
                 : 'Task edit request submitted for admin approval.',
           ),
           backgroundColor: _green,
@@ -96,7 +104,10 @@ class _ArtisanHeritageTaskManagementViewState
     }
   }
 
-  Future<void> _showEditQuestSheet(Quest quest) async {
+  Future<void> _showEditQuestSheet(
+    Quest quest, {
+    QuestChangeRequest? rejectedChange,
+  }) async {
     final viewModel = context.read<GamificationViewModel>();
     viewModel.clearArtisanTaskError();
     final submitted = await showModalBottomSheet<bool>(
@@ -105,13 +116,17 @@ class _ArtisanHeritageTaskManagementViewState
       backgroundColor: Colors.transparent,
       builder: (_) => ChangeNotifierProvider.value(
         value: viewModel,
-        child: _EditQuestSheet(quest: quest),
+        child: _EditQuestSheet(quest: quest, rejectedChange: rejectedChange),
       ),
     );
     if (submitted == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Quest update submitted for admin approval.'),
+        SnackBar(
+          content: Text(
+            rejectedChange == null
+                ? 'Quest update submitted for admin approval.'
+                : 'Quest update revised and resubmitted for admin approval.',
+          ),
           backgroundColor: _green,
         ),
       );
@@ -132,6 +147,45 @@ class _ArtisanHeritageTaskManagementViewState
         ('Description', change.proposedDescription),
       ],
     );
+  }
+
+  Future<void> _dismissRejectedQuestUpdate(
+    Quest quest,
+    QuestChangeRequest request,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Keep original quest?'),
+        content: Text(
+          'The rejected update for “${quest.title}” will be dismissed. The approved quest remains unchanged.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: FilledButton.styleFrom(backgroundColor: _green),
+            child: const Text('Keep Original'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final success = await context
+        .read<GamificationViewModel>()
+        .dismissRejectedQuestUpdate(request);
+    if (success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Rejected update dismissed. Original quest retained.'),
+          backgroundColor: _green,
+        ),
+      );
+    }
   }
 
   void _showTaskChanges(HeritageTask task, HeritageTaskChangeRequest change) {
@@ -390,6 +444,45 @@ class _ArtisanHeritageTaskManagementViewState
     }
   }
 
+  Future<void> _dismissRejectedTaskEdit(
+    HeritageTask task,
+    HeritageTaskChangeRequest request,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Keep original task?'),
+        content: Text(
+          'The rejected update for “${task.title}” will be dismissed. The approved task remains unchanged.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: FilledButton.styleFrom(backgroundColor: _green),
+            child: const Text('Keep Original'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final success = await context
+        .read<GamificationViewModel>()
+        .dismissRejectedTaskEdit(request);
+    if (success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Rejected update dismissed. Original task retained.'),
+          backgroundColor: _green,
+        ),
+      );
+    }
+  }
+
   void _showWorkshopQr(Quest quest) {
     final secret = quest.qrCodeSecret;
     if (secret == null) {
@@ -611,6 +704,7 @@ class _ArtisanHeritageTaskManagementViewState
 
   Widget _questSummary(Quest quest, GamificationViewModel viewModel) {
     final pendingChange = viewModel.pendingArtisanQuestChange;
+    final rejectedChange = viewModel.rejectedArtisanQuestChange;
     final statusColor = switch (quest.status.toUpperCase()) {
       'APPROVED' => const Color(0xFF087F5B),
       'REJECTED' => const Color(0xFFB42318),
@@ -638,11 +732,14 @@ class _ArtisanHeritageTaskManagementViewState
                 ),
               ),
               IconButton.filled(
-                tooltip: pendingChange == null
-                    ? 'Edit quest information'
-                    : 'Update awaiting approval',
+                tooltip: pendingChange != null
+                    ? 'Update awaiting approval'
+                    : rejectedChange != null
+                    ? 'Resolve rejected update below'
+                    : 'Edit quest information',
                 onPressed:
                     pendingChange == null &&
+                        rejectedChange == null &&
                         quest.status.toUpperCase() == 'APPROVED' &&
                         !viewModel.isUpdatingArtisanQuest
                     ? () => _showEditQuestSheet(quest)
@@ -831,6 +928,72 @@ class _ArtisanHeritageTaskManagementViewState
                 ),
               ),
             ),
+          ] else if (rejectedChange != null) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFE8E8).withValues(alpha: 0.16),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: const Color(0xFFFFB4B4).withValues(alpha: 0.55),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Quest update rejected',
+                    style: TextStyle(
+                      color: Color(0xFFFFB4B4),
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  if (rejectedChange.rejectionReason != null) ...[
+                    const SizedBox(height: 5),
+                    Text(
+                      'Reason: ${rejectedChange.rejectionReason}',
+                      style: const TextStyle(color: Colors.white, fontSize: 11),
+                    ),
+                  ],
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      OutlinedButton(
+                        onPressed: viewModel.isUpdatingArtisanQuest
+                            ? null
+                            : () => _dismissRejectedQuestUpdate(
+                                quest,
+                                rejectedChange,
+                              ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          side: const BorderSide(color: Colors.white70),
+                        ),
+                        child: const Text('Keep Original'),
+                      ),
+                      FilledButton.icon(
+                        onPressed: viewModel.isUpdatingArtisanQuest
+                            ? null
+                            : () => _showEditQuestSheet(
+                                quest,
+                                rejectedChange: rejectedChange,
+                              ),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFFFFD166),
+                          foregroundColor: _green,
+                        ),
+                        icon: const Icon(Icons.edit_outlined, size: 16),
+                        label: const Text('Edit & Resubmit'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ],
         ],
       ),
@@ -855,6 +1018,7 @@ class _ArtisanHeritageTaskManagementViewState
   Widget _taskCard(int index, HeritageTask task) {
     final viewModel = context.read<GamificationViewModel>();
     final pendingChange = viewModel.pendingChangeForTask(task.id);
+    final rejectedEdit = viewModel.rejectedEditForTask(task.id);
     final isPendingSubmission = task.status.toUpperCase() == 'PENDING_APPROVAL';
     final isRejectedSubmission = task.status.toUpperCase() == 'REJECTED';
     final isTaskActionBusy = isRejectedSubmission
@@ -1027,6 +1191,64 @@ class _ArtisanHeritageTaskManagementViewState
                 ),
               ),
             )
+          else if (rejectedEdit != null)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF2F2),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFFECACA)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Task update rejected',
+                    style: TextStyle(
+                      color: Color(0xFFB42318),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  if (rejectedEdit.rejectionReason != null) ...[
+                    const SizedBox(height: 5),
+                    Text(
+                      'Reason: ${rejectedEdit.rejectionReason}',
+                      style: const TextStyle(
+                        color: Color(0xFF991B1B),
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      OutlinedButton(
+                        onPressed: isTaskActionBusy
+                            ? null
+                            : () =>
+                                  _dismissRejectedTaskEdit(task, rejectedEdit),
+                        child: const Text('Keep Original'),
+                      ),
+                      FilledButton.icon(
+                        onPressed: isTaskActionBusy
+                            ? null
+                            : () => _showEditTaskSheet(
+                                task,
+                                rejectedChange: rejectedEdit,
+                              ),
+                        style: FilledButton.styleFrom(backgroundColor: _green),
+                        icon: const Icon(Icons.edit_outlined, size: 16),
+                        label: const Text('Edit & Resubmit'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            )
           else
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
@@ -1124,8 +1346,9 @@ class _ArtisanHeritageTaskManagementViewState
 
 class _EditQuestSheet extends StatefulWidget {
   final Quest quest;
+  final QuestChangeRequest? rejectedChange;
 
-  const _EditQuestSheet({required this.quest});
+  const _EditQuestSheet({required this.quest, this.rejectedChange});
 
   @override
   State<_EditQuestSheet> createState() => _EditQuestSheetState();
@@ -1144,13 +1367,22 @@ class _EditQuestSheetState extends State<_EditQuestSheet> {
   late final TextEditingController _description;
   late String _selectedCategory;
 
+  bool get _isResubmission => widget.rejectedChange != null;
+
   @override
   void initState() {
     super.initState();
-    _title = TextEditingController(text: widget.quest.title);
-    _description = TextEditingController(text: widget.quest.description);
-    _selectedCategory = _questCategories.contains(widget.quest.category)
-        ? widget.quest.category
+    final rejectedChange = widget.rejectedChange;
+    _title = TextEditingController(
+      text: rejectedChange?.proposedTitle ?? widget.quest.title,
+    );
+    _description = TextEditingController(
+      text: rejectedChange?.proposedDescription ?? widget.quest.description,
+    );
+    final initialCategory =
+        rejectedChange?.proposedCategory ?? widget.quest.category;
+    _selectedCategory = _questCategories.contains(initialCategory)
+        ? initialCategory
         : _questCategories.first;
   }
 
@@ -1163,13 +1395,19 @@ class _EditQuestSheetState extends State<_EditQuestSheet> {
 
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
-    final success = await context
-        .read<GamificationViewModel>()
-        .updateArtisanQuest(
-          title: _title.text,
-          category: _selectedCategory,
-          description: _description.text,
-        );
+    final viewModel = context.read<GamificationViewModel>();
+    final success = _isResubmission
+        ? await viewModel.resubmitRejectedQuestUpdate(
+            request: widget.rejectedChange!,
+            title: _title.text,
+            category: _selectedCategory,
+            description: _description.text,
+          )
+        : await viewModel.updateArtisanQuest(
+            title: _title.text,
+            category: _selectedCategory,
+            description: _description.text,
+          );
     if (mounted && success) Navigator.pop(context, true);
   }
 
@@ -1278,16 +1516,23 @@ class _EditQuestSheetState extends State<_EditQuestSheet> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Edit Cultural Quest',
+                  _isResubmission
+                      ? 'Edit & Resubmit Quest'
+                      : 'Edit Cultural Quest',
                   style: GoogleFonts.dmSerifDisplay(
                     color: _green,
                     fontSize: 25,
                   ),
                 ),
                 const SizedBox(height: 6),
-                const Text(
-                  'Only the title, category, and description can be changed. The approved version remains visible during admin review.',
-                  style: TextStyle(color: Color(0xFF64748B), fontSize: 12),
+                Text(
+                  _isResubmission
+                      ? 'Revise the rejected update and submit it again. The approved quest remains visible until admin approval.'
+                      : 'Only the title, category, and description can be changed. The approved version remains visible during admin review.',
+                  style: const TextStyle(
+                    color: Color(0xFF64748B),
+                    fontSize: 12,
+                  ),
                 ),
                 const SizedBox(height: 18),
                 TextFormField(
@@ -1379,7 +1624,11 @@ class _EditQuestSheetState extends State<_EditQuestSheet> {
                                   color: Colors.white,
                                 ),
                               )
-                            : const Text('Submit Update'),
+                            : Text(
+                                _isResubmission
+                                    ? 'Resubmit Update'
+                                    : 'Submit Update',
+                              ),
                       ),
                     ),
                   ],
@@ -1565,8 +1814,9 @@ class _AddHeritageTaskSheetState extends State<_AddHeritageTaskSheet> {
 
 class _EditHeritageTaskSheet extends StatefulWidget {
   final HeritageTask task;
+  final HeritageTaskChangeRequest? rejectedChange;
 
-  const _EditHeritageTaskSheet({required this.task});
+  const _EditHeritageTaskSheet({required this.task, this.rejectedChange});
 
   @override
   State<_EditHeritageTaskSheet> createState() => _EditHeritageTaskSheetState();
@@ -1579,14 +1829,24 @@ class _EditHeritageTaskSheetState extends State<_EditHeritageTaskSheet> {
   late final TextEditingController _xp;
   late bool _required;
 
-  bool get _isResubmission => widget.task.status.toUpperCase() == 'REJECTED';
+  bool get _isNewTaskResubmission =>
+      widget.task.status.toUpperCase() == 'REJECTED';
+  bool get _isRejectedEditResubmission => widget.rejectedChange != null;
+  bool get _isResubmission =>
+      _isNewTaskResubmission || _isRejectedEditResubmission;
 
   @override
   void initState() {
     super.initState();
-    _title = TextEditingController(text: widget.task.title);
-    _xp = TextEditingController(text: widget.task.xpReward.toString());
-    _required = widget.task.isRequired;
+    final rejectedChange = widget.rejectedChange;
+    _title = TextEditingController(
+      text: rejectedChange?.proposedTitle ?? widget.task.title,
+    );
+    _xp = TextEditingController(
+      text: (rejectedChange?.proposedXpReward ?? widget.task.xpReward)
+          .toString(),
+    );
+    _required = rejectedChange?.proposedIsRequired ?? widget.task.isRequired;
   }
 
   @override
@@ -1599,18 +1859,27 @@ class _EditHeritageTaskSheetState extends State<_EditHeritageTaskSheet> {
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     final viewModel = context.read<GamificationViewModel>();
-    final success = _isResubmission
+    final xpReward = int.parse(_xp.text.trim());
+    final success = _isNewTaskResubmission
         ? await viewModel.updateNewTaskSubmission(
             task: widget.task,
             title: _title.text,
             isRequired: _required,
-            xpReward: int.parse(_xp.text.trim()),
+            xpReward: xpReward,
+          )
+        : _isRejectedEditResubmission
+        ? await viewModel.resubmitRejectedTaskEdit(
+            task: widget.task,
+            request: widget.rejectedChange!,
+            title: _title.text,
+            isRequired: _required,
+            xpReward: xpReward,
           )
         : await viewModel.requestHeritageTaskEdit(
             task: widget.task,
             title: _title.text,
             isRequired: _required,
-            xpReward: int.parse(_xp.text.trim()),
+            xpReward: xpReward,
           );
     if (mounted && success) {
       Navigator.of(context).pop(true);
@@ -1620,7 +1889,7 @@ class _EditHeritageTaskSheetState extends State<_EditHeritageTaskSheet> {
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<GamificationViewModel>();
-    final isBusy = _isResubmission
+    final isBusy = _isNewTaskResubmission
         ? viewModel.isUpdatingNewTask
         : viewModel.isSubmittingTaskChange;
     return Container(
@@ -1655,7 +1924,9 @@ class _EditHeritageTaskSheetState extends State<_EditHeritageTaskSheet> {
                 const SizedBox(height: 6),
                 Text(
                   _isResubmission
-                      ? 'Update the rejected task and submit it for admin review again.'
+                      ? _isNewTaskResubmission
+                            ? 'Update the rejected new task and submit it for admin review again.'
+                            : 'Revise the rejected update and submit it for admin review again. The approved task stays unchanged.'
                       : 'The existing task remains unchanged until an admin approves this request.',
                   style: const TextStyle(
                     color: Color(0xFF64748B),

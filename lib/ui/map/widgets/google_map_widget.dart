@@ -39,19 +39,25 @@ class GoogleMapWidget extends StatefulWidget {
   });
 
   @override
-  State<GoogleMapWidget> createState() =>
-      _GoogleMapWidgetState();
+  State<GoogleMapWidget> createState() => _GoogleMapWidgetState();
 }
 
-class _GoogleMapWidgetState extends State<GoogleMapWidget> {
+class _GoogleMapWidgetState extends State<GoogleMapWidget>
+    with SingleTickerProviderStateMixin {
   GoogleMapController? _mapController;
+
+  late final AnimationController _headingController;
+  Animation<double>? _headingAnimation;
+  double _displayedHeading = 0.0;
 
   bool _hasAutoCentered = false;
 
-  BitmapDescriptor _touristMarkerIcon =
-      BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueCyan);
-  BitmapDescriptor _workshopMarkerIcon =
-      BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange);
+  BitmapDescriptor _touristMarkerIcon = BitmapDescriptor.defaultMarkerWithHue(
+    BitmapDescriptor.hueCyan,
+  );
+  BitmapDescriptor _workshopMarkerIcon = BitmapDescriptor.defaultMarkerWithHue(
+    BitmapDescriptor.hueOrange,
+  );
   BitmapDescriptor _selectedWorkshopMarkerIcon =
       BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
 
@@ -60,20 +66,34 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
   static const double _locationZoom = 18.0;
 
   // Default Malaysia view.
-  static const LatLng _initialPosition = LatLng(
-    3.1390,
-    101.6869,
-  );
+  static const LatLng _initialPosition = LatLng(3.1390, 101.6869);
 
   @override
   void initState() {
     super.initState();
+    _displayedHeading = _normalizedHeading(widget.userLocation?.heading ?? 0);
+    _headingController =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 360),
+        )..addListener(() {
+          final animation = _headingAnimation;
+          if (mounted && animation != null) {
+            setState(() {
+              _displayedHeading = _normalizedHeading(animation.value);
+            });
+          }
+        });
     _loadGameMarkerIcons();
   }
 
   @override
   void didUpdateWidget(covariant GoogleMapWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
+
+    if (widget.userLocation?.heading != oldWidget.userLocation?.heading) {
+      _animateTouristHeading(widget.userLocation?.heading);
+    }
 
     if (widget.isActive && !oldWidget.isActive) {
       _hasAutoCentered = false;
@@ -86,6 +106,50 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
         widget.userLocation != oldWidget.userLocation) {
       _tryAutoCenterOnUser();
     }
+  }
+
+  double _normalizedHeading(double heading) =>
+      heading.isFinite ? (heading % 360 + 360) % 360 : 0.0;
+
+  void _animateTouristHeading(double? rawHeading) {
+    if (rawHeading == null ||
+        !rawHeading.isFinite ||
+        rawHeading < 0 ||
+        rawHeading >= 360) {
+      return;
+    }
+
+    final target = _normalizedHeading(rawHeading);
+    // Rotate through the shortest direction across the 0/360 boundary.
+    final delta = (target - _displayedHeading + 540) % 360 - 180;
+    if (delta.abs() < 0.5) return;
+
+    if (!widget.isActive) {
+      _headingController.stop();
+      _displayedHeading = target;
+      return;
+    }
+
+    // Short compass animations overlap live sensor updates without creating
+    // visible steps. Larger turns receive slightly more travel time.
+    final animationMilliseconds = (85 + delta.abs() * 0.65)
+        .clamp(85, 190)
+        .round();
+    _headingController.duration = Duration(
+      milliseconds: animationMilliseconds,
+    );
+
+    _headingAnimation =
+        Tween<double>(
+          begin: _displayedHeading,
+          end: _displayedHeading + delta,
+        ).animate(
+          CurvedAnimation(
+            parent: _headingController,
+            curve: Curves.easeOut,
+          ),
+        );
+    _headingController.forward(from: 0);
   }
 
   bool _hasValidUserLocation() {
@@ -152,11 +216,7 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
           ..color = const Color(0x55000000)
           ..maskFilter = const ui.MaskFilter.blur(ui.BlurStyle.normal, 5),
       );
-      canvas.drawCircle(
-        center,
-        44,
-        ui.Paint()..color = backgroundColor,
-      );
+      canvas.drawCircle(center, 44, ui.Paint()..color = backgroundColor);
       canvas.drawCircle(
         center,
         44,
@@ -239,11 +299,7 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
     final accentPaint = ui.Paint()..color = const Color(0xFF00695C);
 
     canvas.drawRect(
-      ui.Rect.fromCenter(
-        center: center.translate(0, 9),
-        width: 39,
-        height: 28,
-      ),
+      ui.Rect.fromCenter(center: center.translate(0, 9), width: 39, height: 28),
       whitePaint,
     );
     canvas.drawRRect(
@@ -274,40 +330,26 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
   // ============================================================
 
   Set<Marker> _buildMarkers() {
-    final markers = widget.workshops.map(
-          (workshop) {
-        final bool isSelected =
-            widget.selectedWorkshop?.id ==
-                workshop.id;
+    final markers = widget.workshops.map((workshop) {
+      final bool isSelected = widget.selectedWorkshop?.id == workshop.id;
 
-        return Marker(
-          markerId: MarkerId(
-            workshop.id,
-          ),
+      return Marker(
+        markerId: MarkerId(workshop.id),
 
-          position: LatLng(
-            workshop.latitude,
-            workshop.longitude,
-          ),
+        position: LatLng(workshop.latitude, workshop.longitude),
 
-          icon: isSelected
-              ? _selectedWorkshopMarkerIcon
-              : _workshopMarkerIcon,
+        icon: isSelected ? _selectedWorkshopMarkerIcon : _workshopMarkerIcon,
 
-          infoWindow: InfoWindow(
-            title: workshop.name,
-            snippet:
-            workshop.craftCategory,
-          ),
+        infoWindow: InfoWindow(
+          title: workshop.name,
+          snippet: workshop.craftCategory,
+        ),
 
-          onTap: () {
-            widget.onWorkshopSelected(
-              workshop,
-            );
-          },
-        );
-      },
-    ).toSet();
+        onTap: () {
+          widget.onWorkshopSelected(workshop);
+        },
+      );
+    }).toSet();
 
     final location = widget.userLocation;
 
@@ -319,7 +361,7 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
           icon: _touristMarkerIcon,
           anchor: const Offset(0.5, 0.5),
           flat: true,
-          rotation: location.heading.isFinite ? location.heading : 0.0,
+          rotation: _displayedHeading,
           infoWindow: const InfoWindow(
             title: 'You are here',
             snippet: 'Tourist quest position',
@@ -397,18 +439,13 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
       return;
     }
 
-    if (!widget.myLocationEnabled ||
-        location == null) {
+    if (!widget.myLocationEnabled || location == null) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'Current location is not available yet.',
-          ),
-          behavior:
-          SnackBarBehavior.floating,
+          content: Text('Current location is not available yet.'),
+          behavior: SnackBarBehavior.floating,
         ),
       );
 
@@ -418,15 +455,11 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
     await controller.animateCamera(
       CameraUpdate.newCameraPosition(
         CameraPosition(
-          target: LatLng(
-            location.latitude,
-            location.longitude,
-          ),
+          target: LatLng(location.latitude, location.longitude),
           zoom: _locationZoom,
         ),
       ),
     );
-
   }
 
   // ============================================================
@@ -440,23 +473,13 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
       return;
     }
 
-    final currentZoom =
-    await controller.getZoomLevel();
+    final currentZoom = await controller.getZoomLevel();
 
-    final newZoom =
-    (currentZoom + 1)
-        .clamp(
-      _minimumZoom,
-      _maximumZoom,
-    )
+    final newZoom = (currentZoom + 1)
+        .clamp(_minimumZoom, _maximumZoom)
         .toDouble();
 
-    await controller.animateCamera(
-      CameraUpdate.zoomTo(
-        newZoom,
-      ),
-    );
-
+    await controller.animateCamera(CameraUpdate.zoomTo(newZoom));
   }
 
   // ============================================================
@@ -470,23 +493,13 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
       return;
     }
 
-    final currentZoom =
-    await controller.getZoomLevel();
+    final currentZoom = await controller.getZoomLevel();
 
-    final newZoom =
-    (currentZoom - 1)
-        .clamp(
-      _minimumZoom,
-      _maximumZoom,
-    )
+    final newZoom = (currentZoom - 1)
+        .clamp(_minimumZoom, _maximumZoom)
         .toDouble();
 
-    await controller.animateCamera(
-      CameraUpdate.zoomTo(
-        newZoom,
-      ),
-    );
-
+    await controller.animateCamera(CameraUpdate.zoomTo(newZoom));
   }
 
   // ============================================================
@@ -501,24 +514,16 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
     return Material(
       color: Colors.white,
       elevation: 4,
-      borderRadius:
-      BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(14),
       child: InkWell(
         onTap: onPressed,
-        borderRadius:
-        BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(14),
         child: Tooltip(
           message: tooltip ?? '',
           child: SizedBox(
             width: 46,
             height: 46,
-            child: Icon(
-              icon,
-              size: 24,
-              color: const Color(
-                0xFF004D40,
-              ),
-            ),
+            child: Icon(icon, size: 24, color: const Color(0xFF004D40)),
           ),
         ),
       ),
@@ -533,34 +538,27 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
   Widget build(BuildContext context) {
     final location = widget.userLocation;
     final hasInitialUserLocation =
-        widget.isActive &&
-        widget.myLocationEnabled &&
-        _hasValidUserLocation();
+        widget.isActive && widget.myLocationEnabled && _hasValidUserLocation();
 
     return Stack(
       children: [
         // ======================================================
         // GOOGLE MAP
         // ======================================================
-
         Positioned.fill(
           child: GoogleMap(
-            initialCameraPosition:
-            CameraPosition(
+            initialCameraPosition: CameraPosition(
               target: hasInitialUserLocation && location != null
                   ? LatLng(location.latitude, location.longitude)
                   : _initialPosition,
               zoom: hasInitialUserLocation ? _locationZoom : 6.0,
             ),
 
-            markers:
-            _buildMarkers(),
+            markers: _buildMarkers(),
 
-            circles:
-            _buildInteractionCircles(),
+            circles: _buildInteractionCircles(),
 
-            mapType:
-            MapType.normal,
+            mapType: MapType.normal,
 
             // ==================================================
             // CUSTOM LIVE TOURIST MARKER
@@ -568,58 +566,43 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
 
             // Google's native blue dot cannot be styled. The live tourist
             // marker is included in _buildMarkers() instead.
-            myLocationEnabled:
-            false,
+            myLocationEnabled: false,
 
             // Disabled because we are using
             // our own recenter button.
-            myLocationButtonEnabled:
-            false,
+            myLocationButtonEnabled: false,
 
             // Disabled because we are using
             // custom + and - buttons.
-            zoomControlsEnabled:
-            false,
+            zoomControlsEnabled: false,
 
-            compassEnabled:
-            true,
+            compassEnabled: true,
 
-            rotateGesturesEnabled:
-            true,
+            rotateGesturesEnabled: true,
 
-            scrollGesturesEnabled:
-            true,
+            scrollGesturesEnabled: true,
 
-            zoomGesturesEnabled:
-            true,
+            zoomGesturesEnabled: true,
 
-            tiltGesturesEnabled:
-            true,
+            tiltGesturesEnabled: true,
 
-            buildingsEnabled:
-            true,
+            buildingsEnabled: true,
 
-            trafficEnabled:
-            false,
+            trafficEnabled: false,
 
             // ==================================================
             // MAP CONTROLLER
             // ==================================================
-
-            onMapCreated:
-                (controller) {
-              _mapController =
-                  controller;
+            onMapCreated: (controller) {
+              _mapController = controller;
               _tryAutoCenterOnUser();
             },
-
           ),
         ),
 
         // ======================================================
         // MAP CONTROLS
         // ======================================================
-
         Positioned(
           right: 16,
 
@@ -629,54 +612,40 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
 
           child: SafeArea(
             child: Column(
-              mainAxisSize:
-              MainAxisSize.min,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 // ==============================================
                 // RECENTER
                 // ==============================================
-
                 _buildMapButton(
-                  icon:
-                  Icons.my_location_rounded,
-                  tooltip:
-                  'My location',
+                  icon: Icons.my_location_rounded,
+                  tooltip: 'My location',
                   onPressed: () {
                     _recenterToUser();
                   },
                 ),
 
-                const SizedBox(
-                  height: 12,
-                ),
+                const SizedBox(height: 12),
 
                 // ==============================================
                 // ZOOM IN
                 // ==============================================
-
                 _buildMapButton(
-                  icon:
-                  Icons.add_rounded,
-                  tooltip:
-                  'Zoom in',
+                  icon: Icons.add_rounded,
+                  tooltip: 'Zoom in',
                   onPressed: () {
                     _zoomIn();
                   },
                 ),
 
-                const SizedBox(
-                  height: 6,
-                ),
+                const SizedBox(height: 6),
 
                 // ==============================================
                 // ZOOM OUT
                 // ==============================================
-
                 _buildMapButton(
-                  icon:
-                  Icons.remove_rounded,
-                  tooltip:
-                  'Zoom out',
+                  icon: Icons.remove_rounded,
+                  tooltip: 'Zoom out',
                   onPressed: () {
                     _zoomOut();
                   },
@@ -689,14 +658,10 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
         // ======================================================
         // LOADING
         // ======================================================
-
         if (widget.isLoading)
           const Positioned.fill(
             child: IgnorePointer(
-              child: Center(
-                child:
-                CircularProgressIndicator(),
-              ),
+              child: Center(child: CircularProgressIndicator()),
             ),
           ),
       ],
@@ -705,9 +670,9 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
 
   @override
   void dispose() {
+    _headingController.dispose();
     _mapController?.dispose();
 
     super.dispose();
   }
 }
-

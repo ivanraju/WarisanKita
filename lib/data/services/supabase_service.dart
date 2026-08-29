@@ -4765,12 +4765,38 @@ class SupabaseService {
         .delete()
         .eq('id', taskId)
         .eq('is_system_task', false)
-        .inFilter('status', ['PENDING_APPROVAL', 'REJECTED'])
+        .eq('status', 'REJECTED')
         .select('id')
         .maybeSingle();
     if (deletedTask == null) {
       throw StateError(
-        'This task is no longer pending/rejected or cannot be deleted.',
+        'Only a rejected new task can be deleted immediately.',
+      );
+    }
+  }
+
+  Future<void> deleteRejectedHeritageTaskEditRequest(
+    String requestId,
+  ) async {
+    final client = _client;
+    if (client == null) {
+      throw StateError('Supabase is not initialized.');
+    }
+    if (client.auth.currentUser == null) {
+      throw StateError('You must be signed in to dismiss a rejected update.');
+    }
+
+    final deletedRequest = await client
+        .from('heritage_task_change_requests')
+        .delete()
+        .eq('id', requestId)
+        .eq('request_type', 'EDIT')
+        .eq('status', 'REJECTED')
+        .select('id')
+        .maybeSingle();
+    if (deletedRequest == null) {
+      throw StateError(
+        'This rejected task update no longer exists or cannot be dismissed.',
       );
     }
   }
@@ -4828,6 +4854,122 @@ class SupabaseService {
           'reviewed_at, reviewed_by',
         )
         .single();
+  }
+
+  Future<Map<String, dynamic>> resubmitRejectedQuestChangeRequest({
+    required String requestId,
+    required String questId,
+    required String proposedTitle,
+    required String proposedDescription,
+    required String proposedCategory,
+  }) async {
+    final client = _client;
+    if (client == null) {
+      throw StateError('Supabase is not initialized.');
+    }
+    if (client.auth.currentUser == null) {
+      throw StateError('You must be signed in to resubmit a quest update.');
+    }
+
+    final updatedRequest = await client
+        .from('quest_change_requests')
+        .update({
+          'proposed_title': proposedTitle.trim(),
+          'proposed_description': proposedDescription.trim(),
+          'proposed_category': proposedCategory.trim(),
+          'status': 'PENDING_APPROVAL',
+          'rejection_reason': null,
+          'reviewed_at': null,
+          'reviewed_by': null,
+          'submitted_at': DateTime.now().toUtc().toIso8601String(),
+        })
+        .eq('id', requestId)
+        .eq('quest_id', questId)
+        .eq('status', 'REJECTED')
+        .select(
+          'id, quest_id, proposed_title, proposed_description, '
+          'proposed_category, status, rejection_reason, submitted_at, '
+          'reviewed_at, reviewed_by',
+        )
+        .maybeSingle();
+    if (updatedRequest == null) {
+      throw StateError(
+        'This rejected quest update no longer exists or cannot be resubmitted.',
+      );
+    }
+    return updatedRequest;
+  }
+
+  Future<void> deleteRejectedQuestChangeRequest({
+    required String requestId,
+    required String questId,
+  }) async {
+    final client = _client;
+    if (client == null) {
+      throw StateError('Supabase is not initialized.');
+    }
+    if (client.auth.currentUser == null) {
+      throw StateError('You must be signed in to dismiss a quest update.');
+    }
+
+    final deletedRequest = await client
+        .from('quest_change_requests')
+        .delete()
+        .eq('id', requestId)
+        .eq('quest_id', questId)
+        .eq('status', 'REJECTED')
+        .select('id')
+        .maybeSingle();
+    if (deletedRequest == null) {
+      throw StateError(
+        'This rejected quest update no longer exists or cannot be dismissed.',
+      );
+    }
+  }
+
+  Future<Map<String, dynamic>> resubmitRejectedHeritageTaskEditRequest({
+    required String requestId,
+    required String taskId,
+    required String proposedTitle,
+    required bool proposedIsRequired,
+    required int proposedXpReward,
+  }) async {
+    final client = _client;
+    if (client == null) {
+      throw StateError('Supabase is not initialized.');
+    }
+    if (client.auth.currentUser == null) {
+      throw StateError('You must be signed in to resubmit a task update.');
+    }
+
+    final updatedRequest = await client
+        .from('heritage_task_change_requests')
+        .update({
+          'proposed_title': proposedTitle.trim(),
+          'proposed_is_required': proposedIsRequired,
+          'proposed_xp_reward': proposedXpReward,
+          'status': 'PENDING_APPROVAL',
+          'rejection_reason': null,
+          'reviewed_at': null,
+          'reviewed_by': null,
+          'submitted_at': DateTime.now().toUtc().toIso8601String(),
+        })
+        .eq('id', requestId)
+        .eq('task_id', taskId)
+        .eq('request_type', 'EDIT')
+        .eq('status', 'REJECTED')
+        .select(
+          'id, task_id, request_type, proposed_title, proposed_is_required, '
+          'proposed_xp_reward, status, rejection_reason, submitted_at, '
+          'reviewed_at, reviewed_by',
+        )
+        .maybeSingle();
+    if (updatedRequest == null) {
+      throw StateError(
+        'This rejected task update no longer exists or cannot be resubmitted.',
+      );
+    }
+    return updatedRequest;
   }
 
   Future<List<Map<String, dynamic>>>
