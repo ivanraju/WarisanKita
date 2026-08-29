@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:async';
 import 'dart:io' as io;
 import 'dart:math';
-import 'package:image/image.dart' as img;
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -1464,9 +1464,14 @@ class SupabaseService {
                   mimeType = 'application/pdf';
                 } else if (lcName.endsWith('.png') || lcName.endsWith('.jpg') || lcName.endsWith('.jpeg')) {
                   try {
-                    final imgImage = img.decodeImage(bytes!);
-                    if (imgImage != null) {
-                      bytes = img.encodeWebp(imgImage);
+                    final compressed = await FlutterImageCompress.compressWithList(
+                      bytes!,
+                      format: CompressFormat.webp,
+                      quality: 85,
+                    );
+                    
+                    if (compressed.isNotEmpty) {
+                      bytes = compressed;
                       mimeType = 'image/webp';
                       final lastDot = finalFileName.lastIndexOf('.');
                       if (lastDot != -1) {
