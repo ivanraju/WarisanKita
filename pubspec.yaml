@@ -26,6 +26,7 @@ dependencies:
   flutter_compass: ^0.8.1
   mobile_scanner: ^7.4.0
   qr_flutter: ^4.1.0
+  image: ^4.9.2
 
 dev_dependencies:
   flutter_test:

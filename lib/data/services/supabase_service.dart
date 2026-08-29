@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:async';
 import 'dart:io' as io;
 import 'dart:math';
+import 'package:image/image.dart' as img;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -1455,21 +1456,44 @@ class SupabaseService {
                 if (bytes == null) return null;
 
                 final fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.name.replaceAll(' ', '_')}';
-                final path = '$folder/$fileName';
-                
+                String finalFileName = fileName;
                 String mimeType = 'application/octet-stream';
+                
                 final lcName = file.name.toLowerCase();
-                if (lcName.endsWith('.pdf')) mimeType = 'application/pdf';
-                else if (lcName.endsWith('.png')) mimeType = 'image/png';
-                else if (lcName.endsWith('.jpg') || lcName.endsWith('.jpeg')) mimeType = 'image/jpeg';
+                if (lcName.endsWith('.pdf')) {
+                  mimeType = 'application/pdf';
+                } else if (lcName.endsWith('.png') || lcName.endsWith('.jpg') || lcName.endsWith('.jpeg')) {
+                  try {
+                    final imgImage = img.decodeImage(bytes!);
+                    if (imgImage != null) {
+                      bytes = img.encodeWebp(imgImage);
+                      mimeType = 'image/webp';
+                      final lastDot = finalFileName.lastIndexOf('.');
+                      if (lastDot != -1) {
+                        finalFileName = finalFileName.substring(0, lastDot) + '.webp';
+                      } else {
+                        finalFileName += '.webp';
+                      }
+                    } else {
+                      if (lcName.endsWith('.png')) mimeType = 'image/png';
+                      else mimeType = 'image/jpeg';
+                    }
+                  } catch (e) {
+                    debugPrint('WebP conversion failed: $e');
+                    if (lcName.endsWith('.png')) mimeType = 'image/png';
+                    else mimeType = 'image/jpeg';
+                  }
+                }
+
+                final path = '$folder/$finalFileName';
 
                 await client.storage.from(bucket).uploadBinary(
                   path,
-                  bytes,
+                  bytes!,
                   fileOptions: FileOptions(contentType: mimeType),
                 );
                 final url = client.storage.from(bucket).getPublicUrl(path);
-                return {'url': url, 'name': file.name};
+                return {'url': url, 'name': finalFileName};
               } catch (e) {
                 debugPrint('Upload error: $e');
                 return null;
