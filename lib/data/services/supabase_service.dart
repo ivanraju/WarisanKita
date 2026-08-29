@@ -2341,6 +2341,9 @@ class SupabaseService {
 
   Future<bool> deleteArtisanDocumentByUrl(String fileUrl) async {
     try {
+      final client = _client;
+      if (client == null) return false;
+
       // Find the document record
       final response = await client
           .from('artisan_documents')
