@@ -632,7 +632,7 @@ class SupabaseService {
         try {
           final profileData = await client
               .from('users')
-              .select()
+              .select('*, artisan_profiles(*)')
               .eq('id', authUser.id)
               .maybeSingle();
           if (profileData != null) {
