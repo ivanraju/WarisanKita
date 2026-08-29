@@ -2339,6 +2339,40 @@ class SupabaseService {
     }
   }
 
+  Future<bool> deleteArtisanDocumentByUrl(String fileUrl) async {
+    try {
+      // Find the document record
+      final response = await client
+          .from('artisan_documents')
+          .select('id, file_name')
+          .eq('file_url', fileUrl)
+          .maybeSingle();
+
+      if (response != null) {
+        // Delete from storage if it exists in Supabase storage
+        if (fileUrl.contains('supabase.co/storage')) {
+          final bucket = 'artisan_private_docs'; // or try to parse from url
+          // Try to extract the path from the URL
+          final uri = Uri.parse(fileUrl);
+          final pathSegments = uri.pathSegments;
+          final publicIndex = pathSegments.indexOf('public');
+          if (publicIndex != -1 && publicIndex + 2 < pathSegments.length) {
+             final extractedBucket = pathSegments[publicIndex + 1];
+             final filePath = pathSegments.sublist(publicIndex + 2).join('/');
+             await client.storage.from(extractedBucket).remove([filePath]);
+          }
+        }
+        
+        // Delete the database row
+        await client.from('artisan_documents').delete().eq('id', response['id']);
+      }
+      return true;
+    } catch (e) {
+      debugPrint('Error deleting doc: $e');
+      return false;
+    }
+  }
+
   // --- Tourist Functions ---
 
   static final List<ForumThread> _forumStore = [];

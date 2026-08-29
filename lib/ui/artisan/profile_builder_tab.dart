@@ -6,7 +6,9 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:warisan_kita/data/services/supabase_service.dart';
 import 'package:warisan_kita/ui/tourist/artisan_detail_screen.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
+import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/moderation_viewmodel.dart';
+import 'package:warisan_kita/viewmodels/directory_viewmodel.dart';
 
 class ProfileBuilderTab extends StatefulWidget {
   const ProfileBuilderTab({super.key});
@@ -120,6 +122,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
         bio: bio,
         state: state,
         phone: phone,
+        toolsAndMaterials: _toolsAndMaterials,
       );
 
       if (mounted) {
@@ -138,13 +141,8 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
         if (email != null) {
           moderationVM.updateUserProfileInState(
             email: email,
-            username: username.isNotEmpty ? username : studio,
-            displayName: studio.isNotEmpty ? studio : username,
-            studioName: studio.isNotEmpty ? studio : username,
-            craftCategory: craft,
-            state: state,
-            phone: phone,
-            bio: bio,
+            username: username,
+            studioName: studio,
           );
         }
       } catch (_) {}
@@ -159,8 +157,10 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
       );
       return;
     }
-
     if (!mounted) return;
+
+    // Refresh the directory so changes appear immediately for tourists
+    context.read<DirectoryViewModel>().fetchArtisans();
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -634,7 +634,11 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                         top: 4,
                         right: 4,
                         child: GestureDetector(
-                          onTap: () => setState(() => _portfolioImages.removeAt(index)),
+                          onTap: () async {
+                            final deletedImage = _portfolioImages[index];
+                            setState(() => _portfolioImages.removeAt(index));
+                            await context.read<SupabaseService>().deleteArtisanDocumentByUrl(deletedImage);
+                          },
                           child: Container(
                             padding: const EdgeInsets.all(4),
                             decoration: const BoxDecoration(
