@@ -464,6 +464,7 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
                               ],
                             );
                           }).toList(),
+                          ),
                         ),
                       ),
                     ],
