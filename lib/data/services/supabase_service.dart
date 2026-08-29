@@ -1286,6 +1286,7 @@ class SupabaseService {
     String? address,
     double? latitude,
     double? longitude,
+    List<String> toolsAndMaterials = const [],
     PlatformFile? ssmFile,
     PlatformFile? certFile,
     List<PlatformFile>? photos,
@@ -1422,6 +1423,7 @@ class SupabaseService {
             if (latitude != null) 'latitude': latitude,
             if (longitude != null) 'longitude': longitude,
             'status': 'PENDING_APPROVAL',
+            'tags': toolsAndMaterials,
             'updated_at': DateTime.now().toIso8601String(),
           };
 
@@ -1614,6 +1616,7 @@ class SupabaseService {
     String? phone,
     String? state,
     String? craftCategory,
+    List<String>? toolsAndMaterials,
   }) async {
     final cleanEmail = email.trim().toLowerCase();
     await Future.delayed(const Duration(milliseconds: 300));
@@ -1749,6 +1752,7 @@ class SupabaseService {
                   if (bio != null) 'bio': bio,
                   if (state != null) 'state': state,
                   if (craftCategory != null) 'craft_category': craftCategory,
+                  if (toolsAndMaterials != null) 'tags': toolsAndMaterials,
                   'updated_at': DateTime.now().toIso8601String(),
                 };
                 if (artisanUpdates.length > 1) {
@@ -2324,8 +2328,8 @@ class SupabaseService {
       await client.from('artisan_documents').insert({
         'artisan_id': artisanId,
         'doc_type': docType,
-        'file_url': url,
         'file_name': finalFileName,
+        'file_url': url,
       });
       
       return {'url': url, 'name': finalFileName};

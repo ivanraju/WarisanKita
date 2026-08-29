@@ -91,6 +91,7 @@ class UserRepository {
     String? address,
     double? latitude,
     double? longitude,
+    List<String> toolsAndMaterials = const [],
     PlatformFile? ssmFile,
     PlatformFile? certFile,
     List<PlatformFile>? photos,
@@ -106,6 +107,7 @@ class UserRepository {
       address: address,
       latitude: latitude,
       longitude: longitude,
+      toolsAndMaterials: toolsAndMaterials,
       ssmFile: ssmFile,
       certFile: certFile,
       photos: photos,
@@ -121,6 +123,7 @@ class UserRepository {
     String? phone,
     String? state,
     String? craftCategory,
+    List<String>? toolsAndMaterials,
   }) {
     return _service.updateUserProfile(
       email: email,
@@ -131,6 +134,7 @@ class UserRepository {
       phone: phone,
       state: state,
       craftCategory: craftCategory,
+      toolsAndMaterials: toolsAndMaterials,
     );
   }
 

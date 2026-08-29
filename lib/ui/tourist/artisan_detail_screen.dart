@@ -388,12 +388,16 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: const [
-                      Chip(avatar: Icon(Icons.landscape_rounded, size: 16), label: Text('Kampung Morten River Clay')),
-                      Chip(avatar: Icon(Icons.local_fire_department_rounded, size: 16), label: Text('Paddy Husk Kiln Ash')),
-                      Chip(avatar: Icon(Icons.palette_rounded, size: 16), label: Text('Organic Indigo Dyes')),
-                      Chip(avatar: Icon(Icons.handyman_rounded, size: 16), label: Text('Hand-spun Wooden Wheel')),
-                    ],
+                    children: widget.artisan.tags.isNotEmpty 
+                      ? widget.artisan.tags.map((tag) => Chip(
+                          label: Text(tag, style: GoogleFonts.plusJakartaSans(fontSize: 12)),
+                        )).toList()
+                      : const [
+                          Chip(avatar: Icon(Icons.landscape_rounded, size: 16), label: Text('Kampung Morten River Clay')),
+                          Chip(avatar: Icon(Icons.local_fire_department_rounded, size: 16), label: Text('Paddy Husk Kiln Ash')),
+                          Chip(avatar: Icon(Icons.palette_rounded, size: 16), label: Text('Organic Indigo Dyes')),
+                          Chip(avatar: Icon(Icons.handyman_rounded, size: 16), label: Text('Hand-spun Wooden Wheel')),
+                        ],
                   ),
 
                   const SizedBox(height: 28),

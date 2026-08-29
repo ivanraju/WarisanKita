@@ -31,6 +31,13 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
   String _selectedCraftCategory = 'Woodwork';
   String _selectedState = 'Melaka';
   bool _isSubmitting = false;
+  
+  final List<String> _toolsAndMaterials = [
+    'Kampung Morten River Clay',
+    'Paddy Husk Kiln Ash',
+    'Organic Indigo Dyes',
+    'Hand-spun Wooden Wheel',
+  ];
 
   PlatformFile? _ssmFile;
   PlatformFile? _kraftanganFile;
@@ -365,6 +372,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
       address: _workshopAddress,
       latitude: _workshopLocation!.latitude,
       longitude: _workshopLocation!.longitude,
+      toolsAndMaterials: _toolsAndMaterials,
       ssmFile: _ssmFile,
       certFile: _kraftanganFile,
       photos: _uploadedPhotos,
@@ -709,6 +717,61 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                         borderSide: BorderSide.none,
                       ),
                     ),
+                  ),
+
+                  const SizedBox(height: 24),
+                  
+                  Text(
+                    'Traditional Materials & Tools Used',
+                    style: GoogleFonts.dmSerifDisplay(
+                      fontSize: 16,
+                      color: const Color(0xFF004D40),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      ..._toolsAndMaterials.map((tool) => Chip(
+                            label: Text(tool, style: GoogleFonts.plusJakartaSans(fontSize: 11)),
+                            deleteIcon: const Icon(Icons.close, size: 14),
+                            onDeleted: () {
+                              setState(() => _toolsAndMaterials.remove(tool));
+                            },
+                          )),
+                      ActionChip(
+                        avatar: const Icon(Icons.add, size: 14, color: Color(0xFFD97706)),
+                        label: Text('Add Tool/Material', style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFFD97706))),
+                        backgroundColor: const Color(0xFFFEF3C7),
+                        side: BorderSide.none,
+                        onPressed: () {
+                          final textController = TextEditingController();
+                          showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('Add Traditional Tool or Material'),
+                              content: TextField(
+                                controller: textController,
+                                decoration: const InputDecoration(hintText: 'e.g. Natural Indigo Dye'),
+                              ),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    if (textController.text.trim().isNotEmpty) {
+                                      setState(() => _toolsAndMaterials.add(textController.text.trim()));
+                                    }
+                                    Navigator.pop(context);
+                                  },
+                                  child: const Text('Add'),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ],
                   ),
 
                   const SizedBox(height: 24),
