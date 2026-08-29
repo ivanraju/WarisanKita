@@ -927,6 +927,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                     imageUrls: images,
                     bio: artisan['bio'],
                     rating: artisan['rating'],
+                    tags: List<String>.from(artisan['tags'] ?? []),
                   ),
                 ),
               );
@@ -1129,6 +1130,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                                 imageUrls: images,
                                 bio: artisan['bio'],
                                 rating: artisan['rating'],
+                                tags: List<String>.from(artisan['tags'] ?? []),
                               ),
                             ),
                           );

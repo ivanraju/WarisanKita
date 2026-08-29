@@ -185,6 +185,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
           bio: _bioController.text.trim().isEmpty ? 'Master Pak Mat has been hand-crafting traditional clay labu sayong...' : _bioController.text.trim(),
           experience: _experienceController.text.trim().isEmpty ? '25+ Years Experience' : _experienceController.text.trim(),
           imageUrl: _portfolioImages.firstWhere((img) => img.isNotEmpty, orElse: () => 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&auto=format&fit=crop&q=80'),
+          tags: _toolsAndMaterials,
         ),
       ),
     );
