@@ -19,7 +19,6 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
   late final TextEditingController _stateController;
   late final TextEditingController _experienceController;
   late final TextEditingController _phoneController;
-  late final TextEditingController _operatingHoursController;
   late final TextEditingController _bioController;
 
   bool _isOpenForDemos = true;
@@ -53,7 +52,6 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     _stateController = TextEditingController(text: user?.state ?? 'Melaka');
     _experienceController = TextEditingController(text: '25+ Years Experience');
     _phoneController = TextEditingController(text: user?.phone ?? '+60 12-345 6789');
-    _operatingHoursController = TextEditingController(text: 'Mon - Sat: 9:00 AM - 6:00 PM');
     _bioController = TextEditingController(
       text: user?.bio ?? 'Master Pak Mat has been hand-crafting traditional clay labu sayong and ceramic vessels for over 25 years in Kampung Morten. Each piece is hand-spun and natural clay kilned.',
     );
@@ -67,7 +65,6 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     _stateController.dispose();
     _experienceController.dispose();
     _phoneController.dispose();
-    _operatingHoursController.dispose();
     _bioController.dispose();
     super.dispose();
   }
@@ -419,33 +416,14 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
 
             const SizedBox(height: 14),
 
-            Row(
-              children: [
-                // Phone Number Input
-                Expanded(
-                  child: TextField(
-                    controller: _phoneController,
-                    decoration: InputDecoration(
-                      labelText: 'Phone / WhatsApp',
-                      prefixIcon: const Icon(Icons.phone_outlined),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-
-                // Operating Hours Input
-                Expanded(
-                  child: TextField(
-                    controller: _operatingHoursController,
-                    decoration: InputDecoration(
-                      labelText: 'Operating Hours',
-                      prefixIcon: const Icon(Icons.access_time_outlined),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-                    ),
-                  ),
-                ),
-              ],
+            // Phone Number Input
+            TextField(
+              controller: _phoneController,
+              decoration: InputDecoration(
+                labelText: 'Phone / WhatsApp',
+                prefixIcon: const Icon(Icons.phone_outlined),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+              ),
             ),
 
             const SizedBox(height: 14),
