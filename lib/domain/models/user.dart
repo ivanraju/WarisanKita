@@ -20,6 +20,7 @@ class UserModel {
   final String? phone;
   final String? artisanProfileId;
   final List<Map<String, dynamic>> artisanDocuments;
+  final List<String> tags;
 
   const UserModel({
     required this.id,
@@ -41,6 +42,7 @@ class UserModel {
     this.phone,
     this.artisanProfileId,
     this.artisanDocuments = const [],
+    this.tags = const [],
   });
 
   bool get isDualRole =>
@@ -143,6 +145,7 @@ class UserModel {
     String? phone,
     String? artisanProfileId,
     List<Map<String, dynamic>>? artisanDocuments,
+    List<String>? tags,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -164,6 +167,7 @@ class UserModel {
       phone: phone ?? this.phone,
       artisanProfileId: artisanProfileId ?? this.artisanProfileId,
       artisanDocuments: artisanDocuments ?? this.artisanDocuments,
+      tags: tags ?? this.tags,
     );
   }
 
@@ -227,6 +231,7 @@ class UserModel {
       phone: map['phone'] ?? map['phone_number'],
       artisanProfileId: artisanMap?['id'],
       artisanDocuments: docs,
+      tags: artisanMap?['tags'] != null ? List<String>.from(artisanMap!['tags']) : const [],
     );
   }
 }

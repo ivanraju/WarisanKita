@@ -28,7 +28,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
 
   bool _isOpenForDemos = true;
 
-  final List<String> _toolsAndMaterials = [
+  List<String> _toolsAndMaterials = [
     'Kampung Morten River Clay',
     'Paddy Husk Kiln Ash',
     'Organic Indigo Dyes',
@@ -69,6 +69,9 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
             _documents[type] = url;
           }
         }
+      }
+      if (user.tags.isNotEmpty) {
+        _toolsAndMaterials = List<String>.from(user.tags);
       }
     }
     
