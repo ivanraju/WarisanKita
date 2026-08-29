@@ -417,12 +417,14 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
                       // Weekly Cultural Visitor Visualizer Chart
                       SizedBox(
                         height: 120,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: _weeklyPreservationData.map((data) {
-                            final double heightRatio = data['heightRatio'];
-                            final bool isPeak = heightRatio == 1.0;
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: _weeklyPreservationData.map((data) {
+                              final double heightRatio = data['heightRatio'];
+                              final bool isPeak = heightRatio == 1.0;
 
                             return Column(
                               mainAxisAlignment: MainAxisAlignment.end,
