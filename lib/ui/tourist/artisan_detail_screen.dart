@@ -12,6 +12,7 @@ class ArtisanDetailScreen extends StatefulWidget {
   final String bio;
   final double rating;
   final String experience;
+  final List<String> tags;
 
   const ArtisanDetailScreen({
     super.key,
@@ -23,6 +24,7 @@ class ArtisanDetailScreen extends StatefulWidget {
     this.bio = 'Master Pak Mat has been hand-crafting traditional clay labu sayong and ceramic vessels for over 25 years in Kampung Morten. Each piece is hand-spun and natural clay kilned.',
     this.rating = 4.9,
     this.experience = '25+ Years Experience',
+    this.tags = const [],
   });
 
   @override
@@ -388,12 +390,16 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: const [
-                      Chip(avatar: Icon(Icons.landscape_rounded, size: 16), label: Text('Kampung Morten River Clay')),
-                      Chip(avatar: Icon(Icons.local_fire_department_rounded, size: 16), label: Text('Paddy Husk Kiln Ash')),
-                      Chip(avatar: Icon(Icons.palette_rounded, size: 16), label: Text('Organic Indigo Dyes')),
-                      Chip(avatar: Icon(Icons.handyman_rounded, size: 16), label: Text('Hand-spun Wooden Wheel')),
-                    ],
+                    children: widget.tags.isNotEmpty 
+                      ? widget.tags.map((tag) => Chip(
+                          label: Text(tag, style: GoogleFonts.plusJakartaSans(fontSize: 12)),
+                        )).toList()
+                      : const [
+                          Chip(avatar: Icon(Icons.landscape_rounded, size: 16), label: Text('Kampung Morten River Clay')),
+                          Chip(avatar: Icon(Icons.local_fire_department_rounded, size: 16), label: Text('Paddy Husk Kiln Ash')),
+                          Chip(avatar: Icon(Icons.palette_rounded, size: 16), label: Text('Organic Indigo Dyes')),
+                          Chip(avatar: Icon(Icons.handyman_rounded, size: 16), label: Text('Hand-spun Wooden Wheel')),
+                        ],
                   ),
 
                   const SizedBox(height: 28),

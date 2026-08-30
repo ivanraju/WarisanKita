@@ -114,7 +114,11 @@ class AuthViewModel extends ChangeNotifier {
     String? bio,
     String? phone,
     String? state,
+    String? address,
+    double? latitude,
+    double? longitude,
     String? craftCategory,
+    List<String>? toolsAndMaterials,
   }) async {
     final email = _currentUser?.email ?? 'tourist@warisankita.my';
     final cleanUsername = username?.trim().replaceAll('@', '');
@@ -138,7 +142,11 @@ class AuthViewModel extends ChangeNotifier {
         bio: bio,
         phone: phone,
         state: state,
+        address: address,
+        latitude: latitude,
+        longitude: longitude,
         craftCategory: craftCategory,
+        toolsAndMaterials: toolsAndMaterials,
       );
       _currentUser = updated;
     } catch (e) {
@@ -574,6 +582,7 @@ class AuthViewModel extends ChangeNotifier {
     String? address,
     double? latitude,
     double? longitude,
+    List<String> toolsAndMaterials = const [],
     String? ssmFileName,
     String? certFileName,
     PlatformFile? ssmFile,
@@ -596,6 +605,7 @@ class AuthViewModel extends ChangeNotifier {
         address: address,
         latitude: latitude,
         longitude: longitude,
+        toolsAndMaterials: toolsAndMaterials,
         ssmFile: ssmFile,
         certFile: certFile,
         photos: photos,

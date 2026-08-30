@@ -17,7 +17,12 @@ class UserModel {
   final String? bio;
   final String? address;
   final String? state;
+  final double? latitude;
+  final double? longitude;
   final String? phone;
+  final String? artisanProfileId;
+  final List<Map<String, dynamic>> artisanDocuments;
+  final List<String> tags;
 
   const UserModel({
     required this.id,
@@ -36,7 +41,12 @@ class UserModel {
     this.bio,
     this.address,
     this.state,
+    this.latitude,
+    this.longitude,
     this.phone,
+    this.artisanProfileId,
+    this.artisanDocuments = const [],
+    this.tags = const [],
   });
 
   bool get isDualRole =>
@@ -136,7 +146,12 @@ class UserModel {
     String? bio,
     String? address,
     String? state,
+    double? latitude,
+    double? longitude,
     String? phone,
+    String? artisanProfileId,
+    List<Map<String, dynamic>>? artisanDocuments,
+    List<String>? tags,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -155,7 +170,12 @@ class UserModel {
       bio: bio ?? this.bio,
       address: address ?? this.address,
       state: state ?? this.state,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
       phone: phone ?? this.phone,
+      artisanProfileId: artisanProfileId ?? this.artisanProfileId,
+      artisanDocuments: artisanDocuments ?? this.artisanDocuments,
+      tags: tags ?? this.tags,
     );
   }
 
@@ -178,6 +198,9 @@ class UserModel {
       'address': address,
       'state': state,
       'phone': phone,
+      'artisanProfileId': artisanProfileId,
+      'latitude': latitude,
+      'longitude': longitude,
     };
   }
 
@@ -187,11 +210,23 @@ class UserModel {
         : (map['role'] != null ? [map['role'] as String] : ['Tourist']);
 
     Map<String, dynamic>? artisanMap;
+    List<Map<String, dynamic>> docs = [];
     if (map['artisan_profiles'] is Map) {
       artisanMap = Map<String, dynamic>.from(map['artisan_profiles']);
     } else if (map['artisan_profiles'] is List && (map['artisan_profiles'] as List).isNotEmpty) {
       artisanMap = Map<String, dynamic>.from((map['artisan_profiles'] as List).first);
     }
+    
+    if (artisanMap != null && artisanMap['artisan_documents'] != null) {
+      docs = List<Map<String, dynamic>>.from(artisanMap['artisan_documents']);
+    }
+
+    // Parse lat/lon
+    final latRaw = artisanMap?['latitude'] ?? map['latitude'];
+    final double? lat = latRaw is num ? latRaw.toDouble() : (latRaw != null ? double.tryParse(latRaw.toString()) : null);
+    
+    final lonRaw = artisanMap?['longitude'] ?? map['longitude'];
+    final double? lon = lonRaw is num ? lonRaw.toDouble() : (lonRaw != null ? double.tryParse(lonRaw.toString()) : null);
 
     return UserModel(
       id: map['id'] ?? '',
@@ -210,7 +245,12 @@ class UserModel {
       bio: map['bio'] ?? artisanMap?['bio'],
       address: map['address'] ?? artisanMap?['address'],
       state: map['state'] ?? artisanMap?['state'],
-      phone: map['phone'] ?? map['phone_number'],
+      latitude: lat,
+      longitude: lon,
+      phone: map['phone'] ?? map['phone_number'] ?? artisanMap?['phone'],
+      artisanProfileId: artisanMap?['id'],
+      artisanDocuments: docs,
+      tags: artisanMap?['tags'] != null ? List<String>.from(artisanMap!['tags']) : const [],
     );
   }
 }

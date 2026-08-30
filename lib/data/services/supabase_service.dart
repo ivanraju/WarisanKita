@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:async';
 import 'dart:io' as io;
 import 'dart:math';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -530,7 +531,7 @@ class SupabaseService {
             try {
               profileData = await client
                   .from('users')
-                  .select('*, artisan_profiles(*)')
+                  .select('*, artisan_profiles(*, artisan_documents(*))')
                   .eq('id', authRes.user!.id)
                   .maybeSingle();
             } catch (_) {
@@ -631,7 +632,7 @@ class SupabaseService {
         try {
           final profileData = await client
               .from('users')
-              .select()
+              .select('*, artisan_profiles(*, artisan_documents(*))')
               .eq('id', authUser.id)
               .maybeSingle();
           if (profileData != null) {
@@ -1285,6 +1286,7 @@ class SupabaseService {
     String? address,
     double? latitude,
     double? longitude,
+    List<String> toolsAndMaterials = const [],
     PlatformFile? ssmFile,
     PlatformFile? certFile,
     List<PlatformFile>? photos,
@@ -1421,6 +1423,7 @@ class SupabaseService {
             if (latitude != null) 'latitude': latitude,
             if (longitude != null) 'longitude': longitude,
             'status': 'PENDING_APPROVAL',
+            'tags': toolsAndMaterials,
             'updated_at': DateTime.now().toIso8601String(),
           };
 
@@ -1455,21 +1458,49 @@ class SupabaseService {
                 if (bytes == null) return null;
 
                 final fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.name.replaceAll(' ', '_')}';
-                final path = '$folder/$fileName';
-                
+                String finalFileName = fileName;
                 String mimeType = 'application/octet-stream';
+                
                 final lcName = file.name.toLowerCase();
-                if (lcName.endsWith('.pdf')) mimeType = 'application/pdf';
-                else if (lcName.endsWith('.png')) mimeType = 'image/png';
-                else if (lcName.endsWith('.jpg') || lcName.endsWith('.jpeg')) mimeType = 'image/jpeg';
+                if (lcName.endsWith('.pdf')) {
+                  mimeType = 'application/pdf';
+                } else if (lcName.endsWith('.png') || lcName.endsWith('.jpg') || lcName.endsWith('.jpeg')) {
+                  try {
+                    final compressed = await FlutterImageCompress.compressWithList(
+                      bytes!,
+                      format: CompressFormat.webp,
+                      quality: 85,
+                    );
+                    
+                    if (compressed.isNotEmpty) {
+                      bytes = compressed;
+                      mimeType = 'image/webp';
+                      final lastDot = finalFileName.lastIndexOf('.');
+                      if (lastDot != -1) {
+                        finalFileName = finalFileName.substring(0, lastDot) + '.webp';
+                      } else {
+                        finalFileName += '.webp';
+                      }
+                    } else {
+                      if (lcName.endsWith('.png')) mimeType = 'image/png';
+                      else mimeType = 'image/jpeg';
+                    }
+                  } catch (e) {
+                    debugPrint('WebP conversion failed: $e');
+                    if (lcName.endsWith('.png')) mimeType = 'image/png';
+                    else mimeType = 'image/jpeg';
+                  }
+                }
+
+                final path = '$folder/$finalFileName';
 
                 await client.storage.from(bucket).uploadBinary(
                   path,
-                  bytes,
+                  bytes!,
                   fileOptions: FileOptions(contentType: mimeType),
                 );
                 final url = client.storage.from(bucket).getPublicUrl(path);
-                return {'url': url, 'name': file.name};
+                return {'url': url, 'name': finalFileName};
               } catch (e) {
                 debugPrint('Upload error: $e');
                 return null;
@@ -1584,7 +1615,11 @@ class SupabaseService {
     String? bio,
     String? phone,
     String? state,
+    String? address,
+    double? latitude,
+    double? longitude,
     String? craftCategory,
+    List<String>? toolsAndMaterials,
   }) async {
     final cleanEmail = email.trim().toLowerCase();
     await Future.delayed(const Duration(milliseconds: 300));
@@ -1650,6 +1685,9 @@ class SupabaseService {
     }
     if (bio != null) userRecord['bio'] = bio;
     if (state != null) userRecord['state'] = state;
+    if (address != null) userRecord['address'] = address;
+    if (latitude != null) userRecord['latitude'] = latitude;
+    if (longitude != null) userRecord['longitude'] = longitude;
     if (craftCategory != null) userRecord['craftCategory'] = craftCategory;
     if (phone != null) userRecord['phone'] = phone;
 
@@ -1676,6 +1714,9 @@ class SupabaseService {
         }
         if (bio != null) updateMap['bio'] = bio;
         if (state != null) updateMap['state'] = state;
+        if (address != null) updateMap['address'] = address;
+        if (latitude != null) updateMap['latitude'] = latitude;
+        if (longitude != null) updateMap['longitude'] = longitude;
         if (craftCategory != null) updateMap['craft_category'] = craftCategory;
         if (phone != null) updateMap['phone_number'] = phone;
         updateMap['updated_at'] = DateTime.now().toIso8601String();
@@ -1719,7 +1760,11 @@ class SupabaseService {
                     'studio_name': studioName.trim(),
                   if (bio != null) 'bio': bio,
                   if (state != null) 'state': state,
+                  if (address != null) 'address': address,
+                  if (latitude != null) 'latitude': latitude,
+                  if (longitude != null) 'longitude': longitude,
                   if (craftCategory != null) 'craft_category': craftCategory,
+                  if (toolsAndMaterials != null) 'tags': toolsAndMaterials,
                   'updated_at': DateTime.now().toIso8601String(),
                 };
                 if (artisanUpdates.length > 1) {
@@ -2229,7 +2274,121 @@ class SupabaseService {
     }
   }
 
-  // --- Forum Services ---
+  Future<Map<String, String>?> uploadArtisanDocument(
+      String artisanId, PlatformFile file, String docType) async {
+    try {
+      final client = _client;
+      if (client == null) return null;
+
+      Uint8List bytes;
+      if (file.path != null) {
+        bytes = await io.File(file.path!).readAsBytes();
+      } else {
+        bytes = await file.readAsBytes();
+      }
+
+      final bucket = docType == 'STUDIO_PHOTO' || docType == 'PORTFOLIO_IMAGE'
+          ? 'artisan_public_media'
+          : 'artisan_private_docs';
+      final folder = '$artisanId/$docType';
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.name.replaceAll(' ', '_')}';
+      String finalFileName = fileName;
+      String mimeType = 'application/octet-stream';
+
+      final lcName = file.name.toLowerCase();
+      if (lcName.endsWith('.pdf')) {
+        mimeType = 'application/pdf';
+      } else if (lcName.endsWith('.png') || lcName.endsWith('.jpg') || lcName.endsWith('.jpeg')) {
+        try {
+          final compressed = await FlutterImageCompress.compressWithList(
+            bytes,
+            format: CompressFormat.webp,
+            quality: 85,
+          );
+
+          if (compressed.isNotEmpty) {
+            bytes = compressed;
+            mimeType = 'image/webp';
+            final lastDot = finalFileName.lastIndexOf('.');
+            if (lastDot != -1) {
+              finalFileName = finalFileName.substring(0, lastDot) + '.webp';
+            } else {
+              finalFileName += '.webp';
+            }
+          } else {
+            if (lcName.endsWith('.png')) mimeType = 'image/png';
+            else mimeType = 'image/jpeg';
+          }
+        } catch (e) {
+          debugPrint('WebP conversion failed: $e');
+          if (lcName.endsWith('.png')) mimeType = 'image/png';
+          else mimeType = 'image/jpeg';
+        }
+      }
+
+      final path = '$folder/$finalFileName';
+
+      await client.storage.from(bucket).uploadBinary(
+        path,
+        bytes,
+        fileOptions: FileOptions(contentType: mimeType),
+      );
+      
+      final url = client.storage.from(bucket).getPublicUrl(path);
+      
+      // Update DB
+      await client.from('artisan_documents').insert({
+        'artisan_id': artisanId,
+        'doc_type': docType,
+        'file_name': finalFileName,
+        'file_url': url,
+      });
+      
+      return {'url': url, 'name': finalFileName};
+    } catch (e) {
+      debugPrint('Error uploading doc: $e');
+      return null;
+    }
+  }
+
+  Future<bool> deleteArtisanDocumentByUrl(String fileUrl) async {
+    try {
+      final client = _client;
+      if (client == null) return false;
+
+      // Find the document record
+      final response = await client
+          .from('artisan_documents')
+          .select('id, file_name')
+          .eq('file_url', fileUrl)
+          .maybeSingle();
+
+      if (response != null) {
+        // Delete from storage if it exists in Supabase storage
+        if (fileUrl.contains('supabase.co/storage')) {
+          final bucket = 'artisan_private_docs'; // or try to parse from url
+          // Try to extract the path from the URL
+          final uri = Uri.parse(fileUrl);
+          final pathSegments = uri.pathSegments;
+          final publicIndex = pathSegments.indexOf('public');
+          if (publicIndex != -1 && publicIndex + 2 < pathSegments.length) {
+             final extractedBucket = pathSegments[publicIndex + 1];
+             final filePath = pathSegments.sublist(publicIndex + 2).join('/');
+             await client.storage.from(extractedBucket).remove([filePath]);
+          }
+        }
+        
+        // Delete the database row
+        await client.from('artisan_documents').delete().eq('id', response['id']);
+      }
+      return true;
+    } catch (e) {
+      debugPrint('Error deleting doc: $e');
+      return false;
+    }
+  }
+
+  // --- Tourist Functions ---
 
   static final List<ForumThread> _forumStore = [];
   static final Map<String, int> _sessionThreadVotes = {};

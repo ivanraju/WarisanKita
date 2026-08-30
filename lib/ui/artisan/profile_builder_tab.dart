@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../tourist/widgets/workshop_map_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:file_picker/file_picker.dart' as fp;
+import 'package:url_launcher/url_launcher.dart';
+import 'package:warisan_kita/data/services/supabase_service.dart';
 import 'package:warisan_kita/ui/tourist/artisan_detail_screen.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
+import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/moderation_viewmodel.dart';
+import 'package:warisan_kita/viewmodels/directory_viewmodel.dart';
 
 class ProfileBuilderTab extends StatefulWidget {
   const ProfileBuilderTab({super.key});
@@ -19,23 +26,45 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
   late final TextEditingController _stateController;
   late final TextEditingController _experienceController;
   late final TextEditingController _phoneController;
-  late final TextEditingController _operatingHoursController;
   late final TextEditingController _bioController;
+
+  GoogleMapController? _workshopMapController;
+  LatLng? _selectedWorkshopPin;
+  String? _workshopAddress;
+
+  static const Map<String, LatLng> _stateCenters = {
+    'Johor': LatLng(2.0301, 103.3185),
+    'Kedah': LatLng(6.1184, 100.3685),
+    'Kelantan': LatLng(5.3117, 102.2381),
+    'Melaka': LatLng(2.1896, 102.2501),
+    'Negeri Sembilan': LatLng(2.7258, 101.9424),
+    'Pahang': LatLng(3.8126, 103.3256),
+    'Penang': LatLng(5.4141, 100.3288),
+    'Perak': LatLng(4.5921, 101.0901),
+    'Perlis': LatLng(6.4449, 100.2048),
+    'Sabah': LatLng(5.9788, 116.0753),
+    'Sarawak': LatLng(1.5533, 110.3592),
+    'Selangor': LatLng(3.0738, 101.5183),
+    'Terengganu': LatLng(5.3117, 103.1324),
+    'Kuala Lumpur': LatLng(3.1390, 101.6869),
+  };
+
+  LatLng get _selectedStateCenter {
+    final state = _stateController.text.trim();
+    return _stateCenters[state] ?? const LatLng(4.2105, 101.9758); // Default Malaysia center
+  }
 
   bool _isOpenForDemos = true;
 
-  final List<String> _toolsAndMaterials = [
+  List<String> _toolsAndMaterials = [
     'Kampung Morten River Clay',
     'Paddy Husk Kiln Ash',
     'Organic Indigo Dyes',
     'Hand-spun Wooden Wheel',
   ];
 
-  final List<String> _portfolioImages = [
-    'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=600&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80',
-  ];
+  List<String> _portfolioImages = [];
+  Map<String, String> _documents = {};
 
   @override
   void initState() {
@@ -51,12 +80,40 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
       text: user?.craftCategory ?? 'Pottery & Ceramics',
     );
     _stateController = TextEditingController(text: user?.state ?? 'Melaka');
+    _workshopAddress = user?.address;
+    if (user != null && user.latitude != null && user.longitude != null) {
+      _selectedWorkshopPin = LatLng(user.latitude!, user.longitude!);
+    }
     _experienceController = TextEditingController(text: '25+ Years Experience');
     _phoneController = TextEditingController(text: user?.phone ?? '+60 12-345 6789');
-    _operatingHoursController = TextEditingController(text: 'Mon - Sat: 9:00 AM - 6:00 PM');
     _bioController = TextEditingController(
       text: user?.bio ?? 'Master Pak Mat has been hand-crafting traditional clay labu sayong and ceramic vessels for over 25 years in Kampung Morten. Each piece is hand-spun and natural clay kilned.',
     );
+    
+    if (user != null) {
+      for (var doc in user.artisanDocuments) {
+        final type = doc['doc_type'] as String?;
+        final url = doc['file_url'] as String?;
+        if (type != null && url != null) {
+          if (type == 'PORTFOLIO_IMAGE' || type == 'STUDIO_PHOTO') {
+            _portfolioImages.add(url);
+          } else {
+            _documents[type] = url;
+          }
+        }
+      }
+      if (user.tags.isNotEmpty) {
+        _toolsAndMaterials = List<String>.from(user.tags);
+      }
+    }
+    
+    if (_portfolioImages.isEmpty) {
+      _portfolioImages = [
+        'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&auto=format&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=600&auto=format&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80',
+      ];
+    }
   }
 
   @override
@@ -67,9 +124,37 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     _stateController.dispose();
     _experienceController.dispose();
     _phoneController.dispose();
-    _operatingHoursController.dispose();
     _bioController.dispose();
+    _workshopMapController?.dispose();
     super.dispose();
+  }
+
+  Future<void> _openWorkshopMapPicker() async {
+    final result = await Navigator.of(context).push<WorkshopPlaceResult>(
+      MaterialPageRoute(
+        builder: (_) => WorkshopMapPickerPage(
+          initialState: _stateController.text.trim().isEmpty
+              ? 'Melaka'
+              : _stateController.text.trim(),
+          initialLocation: _selectedWorkshopPin,
+          initialAddress: _workshopAddress,
+          stateCenters: _stateCenters,
+        ),
+      ),
+    );
+
+    if (result != null && mounted) {
+      setState(() {
+        _selectedWorkshopPin = result.position;
+        _workshopAddress = result.displayName;
+        if (result.malaysiaState != null) {
+          _stateController.text = result.malaysiaState!;
+        }
+      });
+      await _workshopMapController?.animateCamera(
+        CameraUpdate.newLatLngZoom(result.position, 17),
+      );
+    }
   }
 
   Future<void> _handleSave() async {
@@ -100,7 +185,11 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
         craftCategory: craft,
         bio: bio,
         state: state,
+        address: _workshopAddress,
+        latitude: _selectedWorkshopPin?.latitude,
+        longitude: _selectedWorkshopPin?.longitude,
         phone: phone,
+        toolsAndMaterials: _toolsAndMaterials,
       );
 
       if (mounted) {
@@ -119,13 +208,8 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
         if (email != null) {
           moderationVM.updateUserProfileInState(
             email: email,
-            username: username.isNotEmpty ? username : studio,
-            displayName: studio.isNotEmpty ? studio : username,
-            studioName: studio.isNotEmpty ? studio : username,
-            craftCategory: craft,
-            state: state,
-            phone: phone,
-            bio: bio,
+            username: username,
+            studioName: studio,
           );
         }
       } catch (_) {}
@@ -140,8 +224,10 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
       );
       return;
     }
-
     if (!mounted) return;
+
+    // Refresh the directory so changes appear immediately for tourists
+    context.read<DirectoryViewModel>().fetchArtisans();
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -166,11 +252,55 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
           bio: _bioController.text.trim().isEmpty ? 'Master Pak Mat has been hand-crafting traditional clay labu sayong...' : _bioController.text.trim(),
           experience: _experienceController.text.trim().isEmpty ? '25+ Years Experience' : _experienceController.text.trim(),
           imageUrl: _portfolioImages.firstWhere((img) => img.isNotEmpty, orElse: () => 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&auto=format&fit=crop&q=80'),
+          tags: _toolsAndMaterials,
         ),
       ),
     );
   }
 
+  Future<void> _uploadDocument(String docType) async {
+    final result = await fp.FilePicker.pickFiles(
+      type: fp.FileType.custom,
+      allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+    );
+    if (result.isNotEmpty) {
+      final file = result.first;
+      final authVM = context.read<AuthViewModel>();
+      final user = authVM.currentUser;
+      if (user == null || user.artisanProfileId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not find artisan profile ID.')));
+        return;
+      }
+      
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Uploading document...')));
+      final uploadRes = await context.read<SupabaseService>().uploadArtisanDocument(user.artisanProfileId!, file, docType);
+      
+      if (uploadRes != null) {
+        setState(() {
+          if (docType == 'PORTFOLIO_IMAGE' || docType == 'STUDIO_PHOTO') {
+            _portfolioImages.add(uploadRes['url']!);
+          } else {
+            _documents[docType] = uploadRes['url']!;
+          }
+        });
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Document uploaded successfully!')));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Upload failed.')));
+      }
+    }
+  }
+
+  void _viewDocument(String url) async {
+    final uri = Uri.parse(url);
+    try {
+      await launchUrl(uri, mode: LaunchMode.platformDefault);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open file.')));
+      }
+    }
+  }
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -402,25 +532,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                   ),
                 ),
                 const SizedBox(width: 12),
-
-                // State / Region Location Input
-                Expanded(
-                  child: TextField(
-                    controller: _stateController,
-                    decoration: InputDecoration(
-                      labelText: 'State / Location',
-                      prefixIcon: const Icon(Icons.location_on_outlined),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 14),
-
-            Row(
-              children: [
+                
                 // Phone Number Input
                 Expanded(
                   child: TextField(
@@ -432,23 +544,140 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+              ],
+            ),
 
-                // Operating Hours Input
+            const SizedBox(height: 24),
+
+            // 🗺️ Workshop Map Location
+            Text(
+              'Workshop Location',
+              style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Pin your exact workshop or studio location on the map.',
+              style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              height: 200,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE8EFEC),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: _selectedWorkshopPin == null
+                      ? const Color(0xFFD7E0DC)
+                      : const Color(0xFF10B981),
+                  width: _selectedWorkshopPin == null ? 1 : 2,
+                ),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: GoogleMap(
+                        initialCameraPosition: CameraPosition(
+                          target: _selectedStateCenter,
+                          zoom: 12,
+                        ),
+                        onMapCreated: (controller) {
+                          _workshopMapController = controller;
+                        },
+                        markers: _selectedWorkshopPin == null
+                            ? const <Marker>{}
+                            : {
+                                Marker(
+                                  markerId: const MarkerId('workshop-location'),
+                                  position: _selectedWorkshopPin!,
+                                  icon: BitmapDescriptor.defaultMarkerWithHue(
+                                    BitmapDescriptor.hueOrange,
+                                  ),
+                                ),
+                              },
+                        myLocationButtonEnabled: false,
+                        myLocationEnabled: false,
+                        mapToolbarEnabled: false,
+                        zoomControlsEnabled: false,
+                        compassEnabled: false,
+                      ),
+                    ),
+                  ),
+                  Positioned.fill(
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(onTap: _openWorkshopMapPicker),
+                    ),
+                  ),
+                  Positioned(
+                    top: 10,
+                    right: 10,
+                    child: IgnorePointer(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF004D40),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: const [
+                            BoxShadow(color: Colors.black26, blurRadius: 8),
+                          ],
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.open_in_full_rounded, color: Colors.white, size: 15),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Open Large Map',
+                                style: GoogleFonts.plusJakartaSans(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  _selectedWorkshopPin == null
+                      ? Icons.touch_app_rounded
+                      : Icons.check_circle_rounded,
+                  size: 16,
+                  color: _selectedWorkshopPin == null
+                      ? const Color(0xFF64748B)
+                      : const Color(0xFF047857),
+                ),
+                const SizedBox(width: 6),
                 Expanded(
-                  child: TextField(
-                    controller: _operatingHoursController,
-                    decoration: InputDecoration(
-                      labelText: 'Operating Hours',
-                      prefixIcon: const Icon(Icons.access_time_outlined),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                  child: Text(
+                    _selectedWorkshopPin == null
+                        ? 'Tap the map to place your exact workshop pin.'
+                        : _workshopAddress ?? 'Resolving the selected address…',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 10.5,
+                      height: 1.35,
+                      color: _selectedWorkshopPin == null
+                          ? const Color(0xFF64748B)
+                          : const Color(0xFF047857),
                     ),
                   ),
                 ),
               ],
             ),
-
-            const SizedBox(height: 14),
+            
+            const SizedBox(height: 24),
 
             // Experience Input
             TextField(
@@ -590,7 +819,11 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                         top: 4,
                         right: 4,
                         child: GestureDetector(
-                          onTap: () => setState(() => _portfolioImages.removeAt(index)),
+                          onTap: () async {
+                            final deletedImage = _portfolioImages[index];
+                            setState(() => _portfolioImages.removeAt(index));
+                            await context.read<SupabaseService>().deleteArtisanDocumentByUrl(deletedImage);
+                          },
                           child: Container(
                             padding: const EdgeInsets.all(4),
                             decoration: const BoxDecoration(
@@ -607,20 +840,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
 
                 // Add Image Tile
                 return GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _portfolioImages.add(
-                        'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=600&auto=format&fit=crop&q=80',
-                      );
-                    });
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('📸 Photo ${_portfolioImages.length} added to gallery!'),
-                        backgroundColor: const Color(0xFF004D40),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                  },
+                  onTap: () => _uploadDocument('PORTFOLIO_IMAGE'),
                   child: Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -688,21 +908,19 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
 
             _buildDocumentUploadTile(
               title: 'Business Registration (SSM) Certificate',
-              subtitle: 'SSM_Registration_License_2026.pdf (1.2 MB)',
+              subtitle: _documents['SSM_BUSINESS_CERT'] != null ? 'Uploaded Document' : 'Required',
               icon: Icons.article_rounded,
-              isUploaded: true,
+              isUploaded: _documents['SSM_BUSINESS_CERT'] != null,
+              onTap: () => _uploadDocument('SSM_BUSINESS_CERT'),
+              onView: _documents['SSM_BUSINESS_CERT'] != null ? () => _viewDocument(_documents['SSM_BUSINESS_CERT']!) : null,
             ),
             _buildDocumentUploadTile(
               title: 'Kraftangan Malaysia Master Certification',
-              subtitle: 'National_Heritage_Craftsman_Cert.pdf (2.4 MB)',
+              subtitle: _documents['KRAFTANGAN_MASTER_CERT'] != null ? 'Uploaded Document' : 'Optional',
               icon: Icons.workspace_premium_rounded,
-              isUploaded: true,
-            ),
-            _buildDocumentUploadTile(
-              title: 'MyKad / Official Identity Document',
-              subtitle: 'MyKad_Front_Back_Scan.jpg (950 KB)',
-              icon: Icons.badge_rounded,
-              isUploaded: true,
+              isUploaded: _documents['KRAFTANGAN_MASTER_CERT'] != null,
+              onTap: () => _uploadDocument('KRAFTANGAN_MASTER_CERT'),
+              onView: _documents['KRAFTANGAN_MASTER_CERT'] != null ? () => _viewDocument(_documents['KRAFTANGAN_MASTER_CERT']!) : null,
             ),
 
             const SizedBox(height: 36),
@@ -762,6 +980,8 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     required String subtitle,
     required IconData icon,
     required bool isUploaded,
+    VoidCallback? onTap,
+    VoidCallback? onView,
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -798,15 +1018,21 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                   subtitle,
                   style: GoogleFonts.plusJakartaSans(fontSize: 10, color: Colors.grey[600]),
                 ),
+                if (isUploaded && onView != null) ...[
+                  const SizedBox(height: 4),
+                  InkWell(
+                    onTap: onView,
+                    child: Text(
+                      'View File',
+                      style: GoogleFonts.plusJakartaSans(fontSize: 10, color: const Color(0xFFD97706), fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
           OutlinedButton.icon(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Re-uploaded document for $title.')),
-              );
-            },
+            onPressed: onTap,
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
