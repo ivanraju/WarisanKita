@@ -127,6 +127,7 @@ class UserRepository {
     double? longitude,
     String? craftCategory,
     List<String>? toolsAndMaterials,
+    String? avatarUrl,
   }) {
     return _service.updateUserProfile(
       email: email,
@@ -141,7 +142,12 @@ class UserRepository {
       longitude: longitude,
       craftCategory: craftCategory,
       toolsAndMaterials: toolsAndMaterials,
+      avatarUrl: avatarUrl,
     );
+  }
+
+  Future<String?> uploadUserAvatar(String userIdOrEmail, PlatformFile file) {
+    return _service.uploadUserAvatar(userIdOrEmail, file);
   }
 
   Future<List<Map<String, dynamic>>> getPendingArtisans() {

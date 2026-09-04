@@ -281,8 +281,9 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
   Widget build(BuildContext context) {
     final langVM = context.watch<LanguageViewModel>();
     final authVM = context.watch<AuthViewModel>();
-    final username = authVM.currentUser?.effectiveUsername ?? 'Aiman Haziq';
-    final initials = authVM.currentUser?.initials ?? 'AH';
+    final user = authVM.currentUser;
+    final username = user?.effectiveUsername ?? 'Aiman Haziq';
+    final initials = user?.initials ?? 'AH';
 
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
@@ -424,14 +425,17 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                 CircleAvatar(
                                   radius: 34,
                                   backgroundColor: const Color(0xFFFFD54F),
-                                  child: Text(
-                                    initials,
-                                    style: GoogleFonts.dmSerifDisplay(
-                                      color: const Color(0xFF004D40),
-                                      fontSize: 26,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
+                                  backgroundImage: user?.avatarImageProvider,
+                                  child: user?.avatarImageProvider != null
+                                      ? null
+                                      : Text(
+                                          initials,
+                                          style: GoogleFonts.dmSerifDisplay(
+                                            color: const Color(0xFF004D40),
+                                            fontSize: 26,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
                                 ),
                               ],
                             ),

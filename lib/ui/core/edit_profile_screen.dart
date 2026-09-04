@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -19,6 +20,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late final TextEditingController _studioNameController;
   String _selectedCraftCategory = 'Pottery & Ceramics';
   String _selectedState = 'Melaka';
+  bool _isUploadingAvatar = false;
 
   final List<String> _craftCategories = const [
     'Pottery & Ceramics',
@@ -73,6 +75,50 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _bioController.dispose();
     _studioNameController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickAndUploadAvatar() async {
+    try {
+      final files = await FilePicker.pickFiles(
+        type: FileType.image,
+      );
+      if (files.isNotEmpty) {
+        final file = files.first;
+        setState(() => _isUploadingAvatar = true);
+        final authVM = context.read<AuthViewModel>();
+        final url = await authVM.uploadAvatar(file);
+        if (!mounted) return;
+        setState(() => _isUploadingAvatar = false);
+
+        if (url != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Profile avatar updated successfully!'),
+              backgroundColor: Color(0xFF004D40),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to upload profile avatar.'),
+              backgroundColor: Color(0xFFEF4444),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isUploadingAvatar = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Avatar selection failed: $e'),
+          backgroundColor: const Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   Future<void> _handleSave() async {
@@ -178,15 +224,27 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       ),
       bottomNavigationBar: SafeArea(
         child: Container(
-          padding: const EdgeInsets.all(20),
-          color: Colors.white,
-          child: FilledButton(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, -4),
+              )
+            ],
+          ),
+          child: ElevatedButton(
             onPressed: _handleSave,
-            style: FilledButton.styleFrom(
+            style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF004D40),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              elevation: 0,
             ),
             child: Text(
               'SAVE & SYNC PROFILE',
@@ -206,33 +264,55 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           children: [
             const SizedBox(height: 12),
 
-            // Avatar Placeholder Image Picker
+            // Avatar Image Picker
             Center(
               child: Stack(
                 children: [
-                  CircleAvatar(
-                    radius: 54,
-                    backgroundColor: const Color(0xFF004D40).withValues(alpha: 0.1),
-                    child: Text(
-                      initials,
-                      style: GoogleFonts.dmSerifDisplay(
-                        fontSize: 32,
-                        color: const Color(0xFF004D40),
-                        fontWeight: FontWeight.bold,
-                      ),
+                  GestureDetector(
+                    onTap: _isUploadingAvatar ? null : _pickAndUploadAvatar,
+                    child: CircleAvatar(
+                      radius: 54,
+                      backgroundColor: const Color(0xFF004D40).withValues(alpha: 0.1),
+                      backgroundImage: user?.avatarImageProvider,
+                      child: _isUploadingAvatar
+                          ? const CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF004D40)),
+                            )
+                          : (user?.avatarImageProvider != null
+                              ? null
+                              : Text(
+                                  initials,
+                                  style: GoogleFonts.dmSerifDisplay(
+                                    fontSize: 32,
+                                    color: const Color(0xFF004D40),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                )),
                     ),
                   ),
                   Positioned(
                     bottom: 0,
                     right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF004D40),
-                        shape: BoxShape.circle,
-                        boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                    child: GestureDetector(
+                      onTap: _isUploadingAvatar ? null : _pickAndUploadAvatar,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF004D40),
+                          shape: BoxShape.circle,
+                          boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                        ),
+                        child: _isUploadingAvatar
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              )
+                            : const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 18),
                       ),
-                      child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 18),
                     ),
                   ),
                 ],
