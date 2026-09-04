@@ -119,6 +119,7 @@ class AuthViewModel extends ChangeNotifier {
     double? longitude,
     String? craftCategory,
     List<String>? toolsAndMaterials,
+    String? avatarUrl,
   }) async {
     final email = _currentUser?.email ?? 'tourist@warisankita.my';
     final cleanUsername = username?.trim().replaceAll('@', '');
@@ -132,6 +133,7 @@ class AuthViewModel extends ChangeNotifier {
     final newStudioName = (studioName != null && studioName.trim().isNotEmpty)
         ? studioName.trim()
         : _currentUser?.studioName;
+    final newAvatarUrl = avatarUrl ?? _currentUser?.avatarUrl;
 
     try {
       final updated = await _repository.updateUserProfile(
@@ -147,6 +149,7 @@ class AuthViewModel extends ChangeNotifier {
         longitude: longitude,
         craftCategory: craftCategory,
         toolsAndMaterials: toolsAndMaterials,
+        avatarUrl: newAvatarUrl,
       );
       _currentUser = updated;
     } catch (e) {
@@ -162,9 +165,39 @@ class AuthViewModel extends ChangeNotifier {
           phone: phone ?? _currentUser!.phone,
           state: state ?? _currentUser!.state,
           craftCategory: craftCategory ?? _currentUser!.craftCategory,
+          avatarUrl: newAvatarUrl,
         );
       }
     } finally {
+      notifyListeners();
+    }
+  }
+
+  Future<String?> uploadAvatar(PlatformFile file) async {
+    final email = _currentUser?.email ?? 'tourist@warisankita.my';
+    final userId = _currentUser?.id ?? email;
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final url = await _repository.uploadUserAvatar(userId, file);
+      if (url != null && _currentUser != null) {
+        _currentUser = _currentUser!.copyWith(avatarUrl: url);
+        try {
+          await _repository.updateUserProfile(
+            email: email,
+            avatarUrl: url,
+          );
+        } catch (e) {
+          debugPrint('updateUserProfile avatarUrl sync note: $e');
+        }
+      }
+      return url;
+    } catch (e) {
+      debugPrint('uploadAvatar error: $e');
+      return null;
+    } finally {
+      _isLoading = false;
       notifyListeners();
     }
   }

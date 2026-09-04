@@ -7,6 +7,7 @@ import 'package:warisan_kita/ui/core/widgets/translation_language_dialog.dart';
 import 'package:warisan_kita/ui/tourist/widgets/rotating_artisan_image_carousel.dart';
 import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/directory_viewmodel.dart';
+import 'package:warisan_kita/viewmodels/matchmaker_viewmodel.dart';
 
 class TouristDirectoryTab extends StatefulWidget {
   const TouristDirectoryTab({super.key});
@@ -371,6 +372,23 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
 
       return matchesQuery && matchesCategory && matchesState;
     }).toList();
+
+    // Matchmaker recommendations
+    final matchmakerVM = context.watch<MatchmakerViewModel>();
+    List<Map<String, dynamic>> recommendedArtisans = [];
+
+    if (matchmakerVM.isQuizCompleted && matchmakerVM.matchingCrafts.isNotEmpty) {
+      recommendedArtisans = artisans.where((a) {
+        final craft = a['craft']?.toString().toLowerCase() ?? '';
+        final cat = a['category']?.toString().toLowerCase() ?? '';
+        return matchmakerVM.matchingCrafts.any((mc) =>
+            craft.contains(mc.toLowerCase()) || cat.contains(mc.toLowerCase()));
+      }).toList();
+    }
+
+    if (recommendedArtisans.isEmpty) {
+      recommendedArtisans = artisans.take(4).toList();
+    }
 
     final categories = [
       {'name': langVM.translate('All Crafts'), 'icon': Icons.grid_view_rounded},
@@ -761,7 +779,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
-                                'Recommended for You (Based on Preferences)',
+                                langVM.translate('Recommended for You (Based on Preferences)'),
                                 softWrap: true,
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 12,
@@ -772,16 +790,19 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 12),
                         SizedBox(
-                          height: 72,
-                          child: ListView(
+                          height: 86,
+                          child: ListView.builder(
                             scrollDirection: Axis.horizontal,
-                            children: [
-                              _buildRecommendationCard(langVM.translate('Pak Mat Pottery Studio'), langVM.translate('Clay Pottery & Ceramics')),
-                              _buildRecommendationCard(langVM.translate('Siti Batik Craft Workshop'), langVM.translate('Batik Wax Painting')),
-                              _buildRecommendationCard(langVM.translate('Wan Songket Heritage Weavers'), langVM.translate('Songket Gold Weaving')),
-                            ],
+                            itemCount: recommendedArtisans.length,
+                            itemBuilder: (context, index) {
+                              return _buildRecommendationCard(
+                                context: context,
+                                artisan: recommendedArtisans[index],
+                                langVM: langVM,
+                              );
+                            },
                           ),
                         ),
                       ],
@@ -1195,50 +1216,165 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
     );
   }
 
-  Widget _buildRecommendationCard(String title, String category) {
+  Widget _buildRecommendationCard({
+    required BuildContext context,
+    required Map<String, dynamic> artisan,
+    required LanguageViewModel langVM,
+  }) {
+    final name = artisan['name']?.toString() ?? '';
+    final category = artisan['category']?.toString() ?? '';
+    final state = artisan['state']?.toString() ?? '';
+    final imageUrl = artisan['image']?.toString() ??
+        (artisan['images'] != null && (artisan['images'] as List).isNotEmpty
+            ? (artisan['images'] as List).first.toString()
+            : 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&auto=format&fit=crop&q=80');
+    final rawImages = artisan['images'] as List?;
+    final images = rawImages != null && rawImages.isNotEmpty
+        ? rawImages.map((e) => e.toString()).toList()
+        : [imageUrl];
+    final bio = artisan['bio']?.toString() ?? '';
+    final rating = (artisan['rating'] is num) ? (artisan['rating'] as num).toDouble() : 4.8;
+    final tags = artisan['tags'] != null ? List<String>.from(artisan['tags']) : <String>[];
+    final experience = artisan['experienceYears']?.toString() ?? (artisan['experience']?.toString() ?? '20+ Years');
+
     return Container(
-      width: 230,
-      margin: const EdgeInsets.only(right: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      width: 250,
+      margin: const EdgeInsets.only(right: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF86EFAC)),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF15803D).withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: const Color(0xFF15803D).withValues(alpha: 0.15),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           )
         ],
       ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: const Color(0xFF15803D).withValues(alpha: 0.1),
-            child: const Icon(Icons.auto_awesome_rounded, color: Color(0xFF15803D), size: 18),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  title,
-                  style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
-                  maxLines: 1,
-                  softWrap: true,
+      child: Material(
+        color: const Color(0xFF064E3B),
+        borderRadius: BorderRadius.circular(16),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => ArtisanDetailScreen(
+                  artisanName: name,
+                  craftCategory: category,
+                  state: state,
+                  imageUrl: imageUrl,
+                  imageUrls: images,
+                  bio: bio,
+                  rating: rating,
+                  experience: experience,
+                  tags: tags,
                 ),
-                Text(
-                  category,
-                  style: GoogleFonts.plusJakartaSans(fontSize: 10, color: const Color(0xFF15803D)),
+              ),
+            );
+          },
+          child: Stack(
+            children: [
+              // Cover image as background
+              Positioned.fill(
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    color: const Color(0xFF004D40),
+                  ),
                 ),
-              ],
-            ),
+              ),
+              // Dark gradient overlay for text readability
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withValues(alpha: 0.35),
+                        Colors.black.withValues(alpha: 0.88),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              // Card highlight border
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFF86EFAC).withValues(alpha: 0.8), width: 1.2),
+                  ),
+                ),
+              ),
+              // Card interactive content
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 18,
+                      backgroundColor: const Color(0xFF15803D).withValues(alpha: 0.85),
+                      child: const Icon(Icons.auto_awesome_rounded, color: Color(0xFFFFD54F), size: 18),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            name,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            softWrap: false,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            category,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF86EFAC),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            softWrap: false,
+                          ),
+                          if (state.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Row(
+                              children: [
+                                const Icon(Icons.location_on_rounded, size: 10, color: Color(0xFFFFD54F)),
+                                const SizedBox(width: 2),
+                                Text(
+                                  state,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.white70,
+                                  ),
+                                ),
+                                const Spacer(),
+                                const Icon(Icons.arrow_forward_ios_rounded, size: 10, color: Colors.white70),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

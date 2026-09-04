@@ -1,15 +1,9 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:warisan_kita/domain/models/pending_artisan_profile.dart';
-import '../../domain/models/user.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import 'widgets/workshop_map_picker.dart';
 import 'package:warisan_kita/viewmodels/moderation_viewmodel.dart';

@@ -8,7 +8,6 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:warisan_kita/data/services/supabase_service.dart';
 import 'package:warisan_kita/ui/tourist/artisan_detail_screen.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
-import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/moderation_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/directory_viewmodel.dart';
 

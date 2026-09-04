@@ -1467,7 +1467,7 @@ class SupabaseService {
                 } else if (lcName.endsWith('.png') || lcName.endsWith('.jpg') || lcName.endsWith('.jpeg')) {
                   try {
                     final compressed = await FlutterImageCompress.compressWithList(
-                      bytes!,
+                      bytes,
                       format: CompressFormat.webp,
                       quality: 85,
                     );
@@ -1620,6 +1620,7 @@ class SupabaseService {
     double? longitude,
     String? craftCategory,
     List<String>? toolsAndMaterials,
+    String? avatarUrl,
   }) async {
     final cleanEmail = email.trim().toLowerCase();
     await Future.delayed(const Duration(milliseconds: 300));
@@ -1632,6 +1633,11 @@ class SupabaseService {
             'roles': ['Tourist'],
             'status': 'ACTIVE',
           };
+
+    if (avatarUrl != null) {
+      userRecord['avatarUrl'] = avatarUrl;
+      userRecord['avatar_url'] = avatarUrl;
+    }
 
     final roleStr = (userRecord['role'] ?? '').toString();
     final rolesList = userRecord['roles'] is List
@@ -1732,6 +1738,7 @@ class SupabaseService {
               if (displayName != null || username != null)
                 'full_name': displayName ?? username,
               if (phone != null) 'phone_number': phone,
+              if (avatarUrl != null) 'avatar_url': avatarUrl,
               'updated_at': DateTime.now().toIso8601String(),
             };
             if (userUpdates.length > 1) {
@@ -2351,6 +2358,74 @@ class SupabaseService {
     }
   }
 
+  Future<String?> uploadUserAvatar(String userIdOrEmail, PlatformFile file) async {
+    try {
+      final client = _client;
+      Uint8List bytes;
+      if (file.path != null) {
+        bytes = await io.File(file.path!).readAsBytes();
+      } else {
+        bytes = await file.readAsBytes();
+      }
+
+      final lcName = file.name.toLowerCase();
+      String mimeType = 'image/jpeg';
+      if (lcName.endsWith('.png')) {
+        mimeType = 'image/png';
+      } else if (lcName.endsWith('.webp')) {
+        mimeType = 'image/webp';
+      }
+
+      try {
+        final compressed = await FlutterImageCompress.compressWithList(
+          bytes,
+          format: CompressFormat.webp,
+          quality: 85,
+        );
+        if (compressed.isNotEmpty) {
+          bytes = compressed;
+          mimeType = 'image/webp';
+        }
+      } catch (e) {
+        debugPrint('Avatar WebP conversion note: $e');
+      }
+
+      if (client == null) {
+        final base64Str = base64Encode(bytes);
+        final localDataUrl = 'data:$mimeType;base64,$base64Str';
+        return localDataUrl;
+      }
+
+      const bucket = 'artisan_public_media';
+      final cleanId = userIdOrEmail.replaceAll('@', '_').replaceAll('.', '_');
+      final fileName = 'avatar_${DateTime.now().millisecondsSinceEpoch}.webp';
+      final path = 'avatars/$cleanId/$fileName';
+
+      await client.storage.from(bucket).uploadBinary(
+        path,
+        bytes,
+        fileOptions: FileOptions(contentType: mimeType, upsert: true),
+      );
+
+      final url = client.storage.from(bucket).getPublicUrl(path);
+      return url;
+    } catch (e) {
+      debugPrint('Error uploading user avatar: $e');
+      try {
+        Uint8List bytes;
+        if (file.path != null) {
+          bytes = await io.File(file.path!).readAsBytes();
+        } else {
+          bytes = await file.readAsBytes();
+        }
+        final base64Str = base64Encode(bytes);
+        final mime = file.name.endsWith('.png') ? 'image/png' : 'image/jpeg';
+        return 'data:$mime;base64,$base64Str';
+      } catch (_) {}
+      return null;
+    }
+  }
+
   Future<bool> deleteArtisanDocumentByUrl(String fileUrl) async {
     try {
       final client = _client;
@@ -2366,7 +2441,6 @@ class SupabaseService {
       if (response != null) {
         // Delete from storage if it exists in Supabase storage
         if (fileUrl.contains('supabase.co/storage')) {
-          final bucket = 'artisan_private_docs'; // or try to parse from url
           // Try to extract the path from the URL
           final uri = Uri.parse(fileUrl);
           final pathSegments = uri.pathSegments;

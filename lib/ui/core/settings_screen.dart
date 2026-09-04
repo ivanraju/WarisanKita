@@ -124,10 +124,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 CircleAvatar(
                   radius: 28,
                   backgroundColor: const Color(0xFF004D40),
-                  child: Text(
-                    initials,
-                    style: GoogleFonts.dmSerifDisplay(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
+                  backgroundImage: user?.avatarImageProvider,
+                  child: user?.avatarImageProvider != null
+                      ? null
+                      : Text(
+                          initials,
+                          style: GoogleFonts.dmSerifDisplay(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
                 ),
                 const SizedBox(width: 14),
                 Expanded(

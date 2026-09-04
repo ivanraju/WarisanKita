@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'package:flutter/widgets.dart';
+
 class UserModel {
   final String id;
   final String email;
@@ -127,6 +130,27 @@ class UserModel {
       return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
     }
     return name.substring(0, name.length >= 2 ? 2 : 1).toUpperCase();
+  }
+
+  ImageProvider? get avatarImageProvider {
+    if (avatarUrl == null || avatarUrl!.trim().isEmpty) return null;
+    final url = avatarUrl!.trim();
+    if (url.startsWith('data:image')) {
+      try {
+        final commaIdx = url.indexOf(',');
+        if (commaIdx != -1) {
+          final base64Data = url.substring(commaIdx + 1);
+          final bytes = base64Decode(base64Data);
+          return MemoryImage(bytes);
+        }
+      } catch (_) {
+        return null;
+      }
+    }
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return NetworkImage(url);
+    }
+    return null;
   }
 
   UserModel copyWith({
