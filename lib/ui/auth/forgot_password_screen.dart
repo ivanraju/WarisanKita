@@ -20,8 +20,8 @@ class ForgotPasswordScreen extends StatefulWidget {
 }
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
-  final _emailController = TextEditingController(text: 'tourist@warisankita.my');
-  final _tokenController = TextEditingController(text: 'TOKEN-SAMPLE');
+  final _emailController = TextEditingController();
+  final _tokenController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 

@@ -25,12 +25,8 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    _emailController = TextEditingController(
-      text: kIsWeb ? 'admin' : 'tourist@warisankita.my',
-    );
-    _passwordController = TextEditingController(
-      text: kIsWeb ? 'admin123' : 'password123',
-    );
+    _emailController = TextEditingController();
+    _passwordController = TextEditingController();
 
     if (kIsWeb) {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -48,14 +44,6 @@ class _LoginScreenState extends State<LoginScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
-  }
-
-  void _autofillAccount(String email, String password) {
-    setState(() {
-      _emailController.text = email;
-      _passwordController.text = password;
-    });
-    context.read<AuthViewModel>().clearError();
   }
 
   // UC001 - A5: Multi-Role Selection Modal Dialog [M7] [FR001_4]
@@ -471,46 +459,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 20),
 
-                // Quick Persona Autofill Selector
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        kIsWeb ? '⚡ ADMIN LOGIN SHORTCUT:' : '⚡ QUICK TEST PERSONAS:',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFF64748B),
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: kIsWeb
-                            ? [
-                                _buildAutofillChip('👑 Super Admin (admin / admin123)', 'admin', 'admin123'),
-                              ]
-                            : [
-                                _buildAutofillChip('🧳 Tourist', 'tourist@warisankita.my', 'password123'),
-                                _buildAutofillChip('🎨 Master Artisan', 'artisan@warisankita.my', 'password123'),
-                                _buildAutofillChip('⏳ Pending Artisan', 'pending.artisan@warisankita.my', 'password123'),
-                                _buildAutofillChip('🚫 Suspended', 'suspended@warisankita.my', 'password123'),
-                              ],
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
                 // Error Banner
                 if (authVM.errorMessage != null) ...[
                   Container(
@@ -714,29 +662,5 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildAutofillChip(String label, String email, String password) {
-    final isSelected = _emailController.text == email;
-    return GestureDetector(
-      onTap: () => _autofillAccount(email, password),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF004D40) : Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: isSelected ? const Color(0xFF004D40) : const Color(0xFFCBD5E1),
-          ),
-        ),
-        child: Text(
-          label,
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 10,
-            fontWeight: FontWeight.bold,
-            color: isSelected ? Colors.white : const Color(0xFF334155),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
