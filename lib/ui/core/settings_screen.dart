@@ -24,14 +24,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _handleLogout(LanguageViewModel langVM) {
     final nav = Navigator.of(context, rootNavigator: true);
     final authVM = context.read<AuthViewModel>();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,
       builder: (dialogCtx) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF0D2825) : Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(langVM.translate('Log Out'), style: GoogleFonts.dmSerifDisplay(color: Theme.of(context).colorScheme.primary)),
-        content: Text(langVM.translate('Are you sure you want to log out of WarisanKita?'), style: GoogleFonts.plusJakartaSans(fontSize: 13)),
+        title: Text(langVM.translate('Log Out'), style: GoogleFonts.dmSerifDisplay(color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40))),
+        content: Text(langVM.translate('Are you sure you want to log out of WarisanKita?'), style: GoogleFonts.plusJakartaSans(fontSize: 13, color: isDark ? Colors.white70 : const Color(0xFF334155))),
         actions: [
-          TextButton(onPressed: () => Navigator.of(dialogCtx).pop(), child: Text(langVM.translate('Cancel'))),
+          TextButton(onPressed: () => Navigator.of(dialogCtx).pop(), child: Text(langVM.translate('Cancel'), style: TextStyle(color: isDark ? Colors.white60 : null))),
           FilledButton(
             onPressed: () async {
               Navigator.of(dialogCtx).pop();
@@ -47,17 +49,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _handleDeleteAccount(LanguageViewModel langVM) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF0D2825) : Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(langVM.translate('Delete Account'), style: GoogleFonts.dmSerifDisplay(color: const Color(0xFFEF4444))),
         content: Text(
           langVM.translate('This action is permanent and will remove all your data, unlocked heritage badges, and craft profile records.'),
-          style: GoogleFonts.plusJakartaSans(fontSize: 13),
+          style: GoogleFonts.plusJakartaSans(fontSize: 13, color: isDark ? Colors.white70 : const Color(0xFF334155)),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(langVM.translate('Cancel'))),
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(langVM.translate('Cancel'), style: TextStyle(color: isDark ? Colors.white60 : null))),
           FilledButton(
             onPressed: () {
               Navigator.of(context).pop();
@@ -87,13 +91,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final role = user?.role ?? 'Tourist';
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
       appBar: AppBar(
         title: Text(
           langVM.translate('Settings & Account'),
           style: GoogleFonts.dmSerifDisplay(color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40), fontSize: 22),
         ),
-        backgroundColor: theme.scaffoldBackgroundColor,
+        backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
         elevation: 0,
         leading: Navigator.canPop(context)
             ? IconButton(
@@ -109,11 +113,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              color: isDark ? const Color(0xFF0D2825) : Colors.white,
               borderRadius: BorderRadius.circular(20),
+              border: isDark ? Border.all(color: const Color(0xFF1E3A34)) : null,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
+                  color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 )
@@ -147,7 +152,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const SizedBox(height: 2),
                       Text(
                         email,
-                        style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.grey[600]),
+                        style: GoogleFonts.plusJakartaSans(fontSize: 12, color: isDark ? Colors.white70 : Colors.grey[600]),
                       ),
                     ],
                   ),
@@ -155,7 +160,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF004D40).withValues(alpha: 0.1),
+                    color: isDark ? const Color(0xFF34D399).withValues(alpha: 0.15) : const Color(0xFF004D40).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -163,7 +168,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
-                      color: const Color(0xFF004D40),
+                      color: isDark ? const Color(0xFF34D399) : const Color(0xFF004D40),
                     ),
                   ),
                 ),
@@ -174,10 +179,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 24),
 
           // Section 1: Account
-          _buildSectionHeader(langVM.translate('ACCOUNT')),
+          _buildSectionHeader(langVM.translate('ACCOUNT'), isDark: isDark),
           const SizedBox(height: 10),
           _buildSettingsTile(
             context,
+            isDark: isDark,
             icon: Icons.person_outline_rounded,
             title: langVM.translate('Edit Profile'),
             subtitle: langVM.translate('Update avatar, name, and phone number'),
@@ -189,6 +195,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           _buildSettingsTile(
             context,
+            isDark: isDark,
             icon: Icons.auto_awesome_outlined,
             title: langVM.translate(
               isQuizCompleted
@@ -202,16 +209,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ? Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF004D40).withOpacity(0.1),
+                      color: isDark
+                          ? const Color(0xFF34D399).withValues(alpha: 0.15)
+                          : const Color(0xFF004D40).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFF004D40).withOpacity(0.2)),
+                      border: Border.all(
+                        color: isDark
+                            ? const Color(0xFF34D399).withValues(alpha: 0.3)
+                            : const Color(0xFF004D40).withValues(alpha: 0.2),
+                      ),
                     ),
                     child: Text(
                       langVM.translate('MATCHED'),
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 10,
                         fontWeight: FontWeight.w900,
-                        color: const Color(0xFF004D40),
+                        color: isDark ? const Color(0xFF34D399) : const Color(0xFF004D40),
                       ),
                     ),
                   )
@@ -229,6 +242,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           _buildSettingsTile(
             context,
+            isDark: isDark,
             icon: Icons.lock_reset_rounded,
             title: langVM.translate('Change Password'),
             subtitle: langVM.translate('Reset account password via email instructions'),
@@ -242,10 +256,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 28),
 
           // Section 2: Preferences
-          _buildSectionHeader(langVM.translate('PREFERENCES')),
+          _buildSectionHeader(langVM.translate('PREFERENCES'), isDark: isDark),
           const SizedBox(height: 10),
           _buildSwitchTile(
             context,
+            isDark: isDark,
             icon: Icons.notifications_none_rounded,
             title: langVM.translate('Push Notifications'),
             subtitle: langVM.translate('Workshop reminders and thread updates'),
@@ -254,6 +269,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           _buildSwitchTile(
             context,
+            isDark: isDark,
             icon: Icons.near_me_outlined,
             title: langVM.translate('Geofence Radar Alerts'),
             subtitle: langVM.translate('Alert when passing nearby master artisan studios'),
@@ -263,6 +279,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           _buildSwitchTile(
             context,
+            isDark: isDark,
             icon: Icons.dark_mode_outlined,
             title: langVM.translate('Dark Theme Mode'),
             subtitle: langVM.translate('Adjust app interface contrast for night browsing'),
@@ -271,6 +288,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           _buildSettingsTile(
             context,
+            isDark: isDark,
             icon: Icons.language_rounded,
             title: langVM.translate('App Language & Translation'),
             subtitle: langVM.currentLanguageName,
@@ -290,10 +308,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 28),
 
           // Section 3: Danger Zone
-          _buildSectionHeader(langVM.translate('ACCOUNT MANAGEMENT')),
+          _buildSectionHeader(langVM.translate('ACCOUNT MANAGEMENT'), isDark: isDark),
           const SizedBox(height: 10),
           _buildSettingsTile(
             context,
+            isDark: isDark,
             icon: Icons.logout_rounded,
             title: langVM.translate('Log Out'),
             subtitle: langVM.translate('Safely exit current session'),
@@ -302,6 +321,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           _buildSettingsTile(
             context,
+            isDark: isDark,
             icon: Icons.delete_forever_outlined,
             title: langVM.translate('Delete Account'),
             subtitle: langVM.translate('Permanently delete account and all saved data'),
@@ -313,7 +333,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildSectionHeader(String title) {
+  Widget _buildSectionHeader(String title, {required bool isDark}) {
     return Padding(
       padding: const EdgeInsets.only(left: 4.0, bottom: 4.0),
       child: Text(
@@ -321,7 +341,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         style: GoogleFonts.plusJakartaSans(
           fontSize: 11,
           fontWeight: FontWeight.w900,
-          color: Colors.grey[500],
+          color: isDark ? const Color(0xFFFFD54F) : Colors.grey[500],
           letterSpacing: 1.2,
         ),
       ),
@@ -330,6 +350,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildSettingsTile(
     BuildContext context, {
+    required bool isDark,
     required IconData icon,
     required String title,
     required String subtitle,
@@ -337,12 +358,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     Color? textColor,
     Widget? trailing,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       child: Material(
-        color: isDark ? const Color(0xFF0D2823) : Colors.white,
+        color: isDark ? const Color(0xFF0D2825) : Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFF1F5F9)),
@@ -362,7 +381,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             subtitle,
             style: GoogleFonts.plusJakartaSans(fontSize: 11, color: isDark ? Colors.white60 : Colors.grey[600]),
           ),
-          trailing: trailing ?? const Icon(Icons.chevron_right_rounded, color: Colors.grey, size: 20),
+          trailing: trailing ?? Icon(Icons.chevron_right_rounded, color: isDark ? Colors.white38 : Colors.grey, size: 20),
         ),
       ),
     );
@@ -370,18 +389,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildSwitchTile(
     BuildContext context, {
+    required bool isDark,
     required IconData icon,
     required String title,
     required String subtitle,
     required bool value,
     required ValueChanged<bool> onChanged,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       child: Material(
-        color: isDark ? const Color(0xFF0D2823) : Colors.white,
+        color: isDark ? const Color(0xFF0D2825) : Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFF1F5F9)),
@@ -390,7 +408,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           value: value,
           onChanged: onChanged,
           activeColor: const Color(0xFFFFD54F),
-          activeTrackColor: const Color(0xFF004D40),
+          activeTrackColor: isDark ? const Color(0xFF1E3A34) : const Color(0xFF004D40),
           secondary: Icon(icon, color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40)),
           title: Text(
             title,

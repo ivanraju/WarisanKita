@@ -231,6 +231,7 @@ class _WarisanKitaAppState extends State<WarisanKitaApp> {
       debugShowCheckedModeBanner: false,
       themeMode: themeVM.themeMode,
       theme: ThemeViewModel.lightTheme,
+      darkTheme: ThemeViewModel.darkTheme,
       initialRoute: kIsWeb ? '/admin' : '/',
       onGenerateInitialRoutes: (initialRoute) {
         if (kIsWeb) {

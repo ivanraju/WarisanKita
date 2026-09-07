@@ -81,17 +81,26 @@ class _ArtisanMainScaffoldState extends State<ArtisanMainScaffold> {
       );
     }
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
       body: IndexedStack(
         index: _currentIndex,
         children: _tabs,
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isDark ? const Color(0xFF0D2825) : Colors.white,
+          border: Border(
+            top: BorderSide(
+              color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFE2E8F0),
+              width: 1,
+            ),
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
+              color: Colors.black.withOpacity(isDark ? 0.3 : 0.06),
               blurRadius: 20,
               offset: const Offset(0, -4),
             )
@@ -101,9 +110,9 @@ class _ArtisanMainScaffoldState extends State<ArtisanMainScaffold> {
           currentIndex: _currentIndex,
           onTap: (index) => setState(() => _currentIndex = index),
           type: BottomNavigationBarType.fixed,
-          backgroundColor: Colors.white,
-          selectedItemColor: const Color(0xFFD97706),
-          unselectedItemColor: Colors.black38,
+          backgroundColor: isDark ? const Color(0xFF0D2825) : Colors.white,
+          selectedItemColor: isDark ? const Color(0xFFFFD54F) : const Color(0xFFD97706),
+          unselectedItemColor: isDark ? Colors.white38 : Colors.black38,
           selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
           unselectedLabelStyle: const TextStyle(fontSize: 11),
           elevation: 0,

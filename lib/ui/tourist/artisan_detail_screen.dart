@@ -65,8 +65,10 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
@@ -74,7 +76,7 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
           SliverAppBar(
             expandedHeight: 320,
             pinned: true,
-            backgroundColor: const Color(0xFF004D40),
+            backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFF004D40),
             leading: CircleAvatar(
               backgroundColor: Colors.black.withValues(alpha: 0.4),
               child: IconButton(
@@ -104,7 +106,7 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                       return Image.network(
                         _carouselImages[index],
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(color: const Color(0xFF004D40)),
+                        errorBuilder: (_, __, ___) => Container(color: isDark ? const Color(0xFF0D2825) : const Color(0xFF004D40)),
                       );
                     },
                   ),
@@ -190,25 +192,34 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                   // Location & Experience Row
                   Row(
                     children: [
-                      const Icon(Icons.location_on_rounded, color: Color(0xFF004D40), size: 18),
+                      Icon(Icons.location_on_rounded, color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40), size: 18),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
                           '${widget.state}, Malaysia',
                           softWrap: true,
-                          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 13, color: const Color(0xFF004D40)),
+                          style: GoogleFonts.plusJakartaSans(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFEF3C7),
+                          color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFFEF3C7),
                           borderRadius: BorderRadius.circular(10),
+                          border: isDark ? Border.all(color: const Color(0xFF34D399).withValues(alpha: 0.3)) : null,
                         ),
                         child: Text(
                           widget.experience,
-                          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 11, color: const Color(0xFFB45309)),
+                          style: GoogleFonts.plusJakartaSans(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFB45309),
+                          ),
                         ),
                       ),
                     ],
@@ -220,8 +231,11 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: isDark ? const Color(0xFF0D2825) : Colors.white,
                       borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isDark ? const Color(0xFF1E3A34) : Colors.black.withValues(alpha: 0.05),
+                      ),
                       boxShadow: [
                         BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4))
                       ],
@@ -231,18 +245,22 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.verified_rounded, color: Color(0xFF004D40), size: 22),
+                            Icon(Icons.verified_rounded, color: isDark ? const Color(0xFF34D399) : const Color(0xFF004D40), size: 22),
                             const SizedBox(width: 6),
                             Text(
                               'Verified Artisan Studio',
-                              style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF004D40)),
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? const Color(0xFF34D399) : const Color(0xFF004D40),
+                              ),
                             ),
                           ],
                         ),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFDCFCE7),
+                            color: isDark ? const Color(0xFF064E3B) : const Color(0xFFDCFCE7),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Row(
@@ -253,7 +271,14 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                                 decoration: const BoxDecoration(color: Color(0xFF16A34A), shape: BoxShape.circle),
                               ),
                               const SizedBox(width: 6),
-                              Text('OPEN DEMOS', style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF15803D))),
+                              Text(
+                                'OPEN DEMOS',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? const Color(0xFF34D399) : const Color(0xFF15803D),
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -269,10 +294,13 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(18),
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF004D40), Color(0xFF00251A)],
+                        gradient: LinearGradient(
+                          colors: isDark
+                              ? [const Color(0xFF0D2825), const Color(0xFF061A18)]
+                              : [const Color(0xFF004D40), const Color(0xFF00251A)],
                         ),
                         borderRadius: BorderRadius.circular(20),
+                        border: isDark ? Border.all(color: const Color(0xFF1E3A34)) : null,
                         boxShadow: [
                           BoxShadow(
                             color: const Color(0xFF004D40).withValues(alpha: 0.3),
@@ -312,11 +340,21 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                   const SizedBox(height: 24),
 
                   // Master Bio Card
-                  Text('Artisan Biography', style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40))),
+                  Text(
+                    'Artisan Biography',
+                    style: GoogleFonts.dmSerifDisplay(
+                      fontSize: 20,
+                      color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   Text(
                     widget.bio,
-                    style: GoogleFonts.plusJakartaSans(fontSize: 13, color: const Color(0xFF475569), height: 1.6),
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 13,
+                      color: isDark ? Colors.white70 : const Color(0xFF475569),
+                      height: 1.6,
+                    ),
                   ),
 
                   const SizedBox(height: 24),
@@ -325,22 +363,27 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFFBEB),
+                      color: isDark ? const Color(0xFF0D2825) : const Color(0xFFFFFBEB),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0xFFF59E0B)),
+                      border: Border.all(
+                        color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFF59E0B),
+                      ),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.history_edu_rounded, color: Color(0xFFD97706), size: 22),
+                            Icon(Icons.history_edu_rounded, color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFD97706), size: 22),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
                                 'Historical Origin & Cultural Lore',
                                 softWrap: true,
-                                style: GoogleFonts.dmSerifDisplay(fontSize: 16, color: const Color(0xFF78350F)),
+                                style: GoogleFonts.dmSerifDisplay(
+                                  fontSize: 16,
+                                  color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF78350F),
+                                ),
                               ),
                             ),
                           ],
@@ -348,7 +391,11 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                         const SizedBox(height: 10),
                         Text(
                           'Labu Sayong origin dates back to 19th Century Sayong, Kuala Kangsar, Perak. Hand-shaped using iron-rich riverbank clay and kilned under paddy husk ash to achieve its iconic matte black porous finish for natural water cooling thermal insulation.',
-                          style: GoogleFonts.plusJakartaSans(fontSize: 12, color: const Color(0xFFB45309), height: 1.5),
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12,
+                            color: isDark ? Colors.white70 : const Color(0xFFB45309),
+                            height: 1.5,
+                          ),
                         ),
                       ],
                     ),
@@ -359,7 +406,10 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                   // 🏆 AUTHENTICITY & CERTIFICATION CREDENTIALS
                   Text(
                     'Master Authenticity & Credentials',
-                    style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
+                    style: GoogleFonts.dmSerifDisplay(
+                      fontSize: 20,
+                      color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                    ),
                   ),
                   const SizedBox(height: 12),
 
@@ -367,16 +417,19 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                     icon: Icons.verified_rounded,
                     title: 'Kraftangan Malaysia Certified Master',
                     subtitle: 'License #KFG-2024-889 • Verified Authentic Master Craftsman',
+                    isDark: isDark,
                   ),
                   _buildCredentialTile(
                     icon: Icons.business_rounded,
                     title: 'SSM Business Registration',
                     subtitle: 'Registration #002941-X • Official Registered Heritage Studio',
+                    isDark: isDark,
                   ),
                   _buildCredentialTile(
                     icon: Icons.military_tech_rounded,
                     title: 'UNESCO Living Heritage Nominee',
                     subtitle: 'Recognized for 25+ years preserving Malaccan clay pottery',
+                    isDark: isDark,
                   ),
 
                   const SizedBox(height: 24),
@@ -384,7 +437,10 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                   // 🛠️ TRADITIONAL MATERIALS & TOOLS USED
                   Text(
                     'Materials & Traditional Tools Used',
-                    style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
+                    style: GoogleFonts.dmSerifDisplay(
+                      fontSize: 20,
+                      color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Wrap(
@@ -392,13 +448,41 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                     runSpacing: 8,
                     children: widget.tags.isNotEmpty 
                       ? widget.tags.map((tag) => Chip(
-                          label: Text(tag, style: GoogleFonts.plusJakartaSans(fontSize: 12)),
+                          backgroundColor: isDark ? const Color(0xFF0D2825) : null,
+                          side: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : null,
+                          label: Text(
+                            tag,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              color: isDark ? Colors.white70 : null,
+                            ),
+                          ),
                         )).toList()
-                      : const [
-                          Chip(avatar: Icon(Icons.landscape_rounded, size: 16), label: Text('Kampung Morten River Clay')),
-                          Chip(avatar: Icon(Icons.local_fire_department_rounded, size: 16), label: Text('Paddy Husk Kiln Ash')),
-                          Chip(avatar: Icon(Icons.palette_rounded, size: 16), label: Text('Organic Indigo Dyes')),
-                          Chip(avatar: Icon(Icons.handyman_rounded, size: 16), label: Text('Hand-spun Wooden Wheel')),
+                      : [
+                          Chip(
+                            backgroundColor: isDark ? const Color(0xFF0D2825) : null,
+                            side: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : null,
+                            avatar: Icon(Icons.landscape_rounded, size: 16, color: isDark ? const Color(0xFF34D399) : null),
+                            label: Text('Kampung Morten River Clay', style: GoogleFonts.plusJakartaSans(color: isDark ? Colors.white70 : null)),
+                          ),
+                          Chip(
+                            backgroundColor: isDark ? const Color(0xFF0D2825) : null,
+                            side: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : null,
+                            avatar: Icon(Icons.local_fire_department_rounded, size: 16, color: isDark ? const Color(0xFF34D399) : null),
+                            label: Text('Paddy Husk Kiln Ash', style: GoogleFonts.plusJakartaSans(color: isDark ? Colors.white70 : null)),
+                          ),
+                          Chip(
+                            backgroundColor: isDark ? const Color(0xFF0D2825) : null,
+                            side: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : null,
+                            avatar: Icon(Icons.palette_rounded, size: 16, color: isDark ? const Color(0xFF34D399) : null),
+                            label: Text('Organic Indigo Dyes', style: GoogleFonts.plusJakartaSans(color: isDark ? Colors.white70 : null)),
+                          ),
+                          Chip(
+                            backgroundColor: isDark ? const Color(0xFF0D2825) : null,
+                            side: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : null,
+                            avatar: Icon(Icons.handyman_rounded, size: 16, color: isDark ? const Color(0xFF34D399) : null),
+                            label: Text('Hand-spun Wooden Wheel', style: GoogleFonts.plusJakartaSans(color: isDark ? Colors.white70 : null)),
+                          ),
                         ],
                   ),
 
@@ -412,6 +496,7 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                           icon: Icons.workspace_premium_rounded,
                           title: 'Craft Experience',
                           value: widget.experience,
+                          isDark: isDark,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -420,6 +505,7 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                           icon: Icons.storefront_rounded,
                           title: 'Workshops Hosted',
                           value: '14 Completed',
+                          isDark: isDark,
                         ),
                       ),
                     ],
@@ -430,16 +516,19 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                   // Studio Location Map Card
                   Text(
                     'Studio Location & Workshop Map',
-                    style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
+                    style: GoogleFonts.dmSerifDisplay(
+                      fontSize: 20,
+                      color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Container(
                     height: 140,
                     width: double.infinity,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE2E8F0),
+                      color: isDark ? const Color(0xFF0D2825) : const Color(0xFFE2E8F0),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.black.withValues(alpha: 0.06)),
+                      border: Border.all(color: isDark ? const Color(0xFF1E3A34) : Colors.black.withValues(alpha: 0.06)),
                     ),
                     child: Stack(
                       alignment: Alignment.center,
@@ -447,12 +536,12 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                         ClipRRect(
                           borderRadius: BorderRadius.circular(20),
                           child: Container(
-                            color: const Color(0xFFE0E7FF),
+                            color: isDark ? const Color(0xFF041412) : const Color(0xFFE0E7FF),
                             child: Center(
                               child: Icon(
                                 Icons.map_outlined,
                                 size: 80,
-                                color: Colors.indigo.withValues(alpha: 0.2),
+                                color: isDark ? const Color(0xFF1E3A34) : Colors.indigo.withValues(alpha: 0.2),
                               ),
                             ),
                           ),
@@ -475,8 +564,9 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: isDark ? const Color(0xFF0D2825) : Colors.white,
                                 borderRadius: BorderRadius.circular(12),
+                                border: isDark ? Border.all(color: const Color(0xFF1E3A34)) : null,
                                 boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
                               ),
                               child: Text(
@@ -484,7 +574,7 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold,
-                                  color: const Color(0xFF1E293B),
+                                  color: isDark ? Colors.white : const Color(0xFF1E293B),
                                 ),
                               ),
                             ),
@@ -505,7 +595,7 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: isDark ? const Color(0xFF0D2825) : Colors.white,
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.08),
@@ -513,7 +603,7 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                 offset: const Offset(0, -6),
               )
             ],
-            border: const Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+            border: Border(top: BorderSide(color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFE2E8F0))),
           ),
           child: Row(
             children: [
@@ -531,14 +621,14 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                     );
                   },
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Color(0xFF004D40), width: 1.5),
+                    side: BorderSide(color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40), width: 1.5),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
-                  icon: const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF004D40), size: 18),
+                  icon: Icon(Icons.chat_bubble_outline_rounded, color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40), size: 18),
                   label: Text(
                     'Chat Master',
-                    style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, color: const Color(0xFF004D40)),
+                    style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40)),
                   ),
                 ),
               ),
@@ -578,25 +668,26 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
     required IconData icon,
     required String title,
     required String subtitle,
+    required bool isDark,
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF0D2825) : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.black.withValues(alpha: 0.06)),
+        border: Border.all(color: isDark ? const Color(0xFF1E3A34) : Colors.black.withValues(alpha: 0.06)),
       ),
       child: Row(
         children: [
-          Icon(icon, color: const Color(0xFF004D40), size: 22),
+          Icon(icon, color: isDark ? const Color(0xFF34D399) : const Color(0xFF004D40), size: 22),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF1E293B))),
-                Text(subtitle, style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[600])),
+                Text(title, style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF1E293B))),
+                Text(subtitle, style: GoogleFonts.plusJakartaSans(fontSize: 11, color: isDark ? Colors.white60 : Colors.grey[600])),
               ],
             ),
           ),
@@ -609,22 +700,23 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
     required IconData icon,
     required String title,
     required String value,
+    required bool isDark,
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF0D2825) : Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.black.withValues(alpha: 0.06)),
+        border: Border.all(color: isDark ? const Color(0xFF1E3A34) : Colors.black.withValues(alpha: 0.06)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: const Color(0xFF004D40), size: 22),
+          Icon(icon, color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40), size: 22),
           const SizedBox(height: 8),
-          Text(title, style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[600])),
+          Text(title, style: GoogleFonts.plusJakartaSans(fontSize: 11, color: isDark ? Colors.white60 : Colors.grey[600])),
           const SizedBox(height: 2),
-          Text(value, style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.bold)),
+          Text(value, style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black)),
         ],
       ),
     );

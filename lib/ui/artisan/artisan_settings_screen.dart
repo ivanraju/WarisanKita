@@ -20,15 +20,17 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
     final nav = Navigator.of(context, rootNavigator: true);
     final authVM = context.read<AuthViewModel>();
     final studio = authVM.currentUser?.studioName ?? 'Pak Mat Pottery Studio';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     showDialog(
       context: context,
       builder: (dialogCtx) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF0D2825) : Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Log Out Studio Account', style: GoogleFonts.dmSerifDisplay(color: const Color(0xFF004D40))),
-        content: Text('Are you sure you want to log out of $studio?', style: GoogleFonts.plusJakartaSans(fontSize: 13)),
+        title: Text('Log Out Studio Account', style: GoogleFonts.dmSerifDisplay(color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40))),
+        content: Text('Are you sure you want to log out of $studio?', style: GoogleFonts.plusJakartaSans(fontSize: 13, color: isDark ? Colors.white70 : const Color(0xFF334155))),
         actions: [
-          TextButton(onPressed: () => Navigator.of(dialogCtx).pop(), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.of(dialogCtx).pop(), child: Text('Cancel', style: TextStyle(color: isDark ? Colors.white60 : null))),
           FilledButton(
             onPressed: () async {
               Navigator.of(dialogCtx).pop();
@@ -45,7 +47,6 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final isDark = context.watch<ThemeViewModel>().isDarkMode;
     final authVM = context.watch<AuthViewModel>();
     final user = authVM.currentUser;
@@ -55,13 +56,13 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
     final craft = user?.craftCategory ?? 'Pottery & Ceramics';
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
       appBar: AppBar(
         title: Text(
           'Artisan Studio Settings',
           style: GoogleFonts.dmSerifDisplay(color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40), fontSize: 22),
         ),
-        backgroundColor: theme.scaffoldBackgroundColor,
+        backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
         elevation: 0,
         leading: Navigator.canPop(context)
             ? IconButton(
@@ -77,11 +78,12 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              color: isDark ? const Color(0xFF0D2825) : Colors.white,
               borderRadius: BorderRadius.circular(20),
+              border: isDark ? Border.all(color: const Color(0xFF1E3A34)) : null,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
+                  color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 )
@@ -115,7 +117,7 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
                       const SizedBox(height: 2),
                       Text(
                         '@$handle • $craft',
-                        style: GoogleFonts.plusJakartaSans(fontSize: 12, color: const Color(0xFFD97706), fontWeight: FontWeight.bold),
+                        style: GoogleFonts.plusJakartaSans(fontSize: 12, color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFD97706), fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
@@ -256,15 +258,14 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
     required String subtitle,
     required VoidCallback onTap,
   }) {
-    final theme = Theme.of(context);
     final isDark = context.read<ThemeViewModel>().isDarkMode;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: theme.cardColor,
+        color: isDark ? const Color(0xFF0D2825) : Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.04)),
+        border: Border.all(color: isDark ? const Color(0xFF1E3A34) : Colors.black.withValues(alpha: 0.04)),
       ),
       child: ListTile(
         onTap: onTap,
@@ -290,15 +291,14 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
     required bool value,
     required ValueChanged<bool> onChanged,
   }) {
-    final theme = Theme.of(context);
     final isDark = context.read<ThemeViewModel>().isDarkMode;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: theme.cardColor,
+        color: isDark ? const Color(0xFF0D2825) : Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.04)),
+        border: Border.all(color: isDark ? const Color(0xFF1E3A34) : Colors.black.withValues(alpha: 0.04)),
       ),
       child: SwitchListTile(
         value: value,

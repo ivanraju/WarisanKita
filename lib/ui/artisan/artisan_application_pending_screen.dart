@@ -18,6 +18,7 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width > 800;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final authVM = context.watch<AuthViewModel>();
     final user = authVM.currentUser;
     final String effectiveStudio = (user?.studioName != null && user!.studioName!.isNotEmpty)
@@ -33,19 +34,25 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
     final bool isRejected = user?.status.toUpperCase() == 'REJECTED';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: isDark ? const Color(0xFF041412) : Colors.white,
         elevation: 0,
         leading: Navigator.of(context).canPop()
             ? IconButton(
-                icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF004D40)),
+                icon: Icon(
+                  Icons.arrow_back_rounded,
+                  color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                ),
                 onPressed: () => Navigator.of(context).pop(),
               )
             : null,
         title: Text(
           'Application Status',
-          style: GoogleFonts.dmSerifDisplay(color: const Color(0xFF004D40), fontSize: 22),
+          style: GoogleFonts.dmSerifDisplay(
+            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+            fontSize: 22,
+          ),
         ),
         centerTitle: true,
         actions: [
@@ -68,8 +75,9 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
             width: isDesktop ? 550 : double.infinity,
             padding: const EdgeInsets.all(32.0),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: isDark ? const Color(0xFF0D2825) : Colors.white,
               borderRadius: BorderRadius.circular(28),
+              border: isDark ? Border.all(color: const Color(0xFF1E3A34)) : null,
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.06),
@@ -85,9 +93,16 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: isRejected ? const Color(0xFFFEF2F2) : const Color(0xFFFEF3C7),
+                    color: isRejected
+                        ? (isDark ? const Color(0xFF2A1215) : const Color(0xFFFEF2F2))
+                        : (isDark ? const Color(0xFF2E2305) : const Color(0xFFFEF3C7)),
                     shape: BoxShape.circle,
-                    border: Border.all(color: isRejected ? const Color(0xFFFCA5A5) : const Color(0xFFFDE68A), width: 3),
+                    border: Border.all(
+                      color: isRejected
+                          ? (isDark ? const Color(0xFF5C1D24) : const Color(0xFFFCA5A5))
+                          : (isDark ? const Color(0xFF78590D) : const Color(0xFFFDE68A)),
+                      width: 3,
+                    ),
                   ),
                   child: Icon(
                     isRejected ? Icons.cancel_outlined : Icons.hourglass_top_rounded,
@@ -102,16 +117,24 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                   decoration: BoxDecoration(
-                    color: isRejected ? const Color(0xFFFEF2F2) : const Color(0xFFFEF3C7),
+                    color: isRejected
+                        ? (isDark ? const Color(0xFF2A1215) : const Color(0xFFFEF2F2))
+                        : (isDark ? const Color(0xFF2E2305) : const Color(0xFFFEF3C7)),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: isRejected ? const Color(0xFFEF4444) : const Color(0xFFF59E0B)),
+                    border: Border.all(
+                      color: isRejected
+                          ? const Color(0xFFEF4444)
+                          : (isDark ? const Color(0xFFD97706) : const Color(0xFFF59E0B)),
+                    ),
                   ),
                   child: Text(
                     isRejected ? '❌ APPLICATION NOT APPROVED' : '⏳ APPLICATION UNDER ADMIN REVIEW',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 11,
                       fontWeight: FontWeight.w900,
-                      color: isRejected ? const Color(0xFF991B1B) : const Color(0xFF78350F),
+                      color: isRejected
+                          ? const Color(0xFFEF4444)
+                          : (isDark ? const Color(0xFFFFD54F) : const Color(0xFF78350F)),
                       letterSpacing: 0.8,
                     ),
                   ),
@@ -124,7 +147,7 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: GoogleFonts.dmSerifDisplay(
                     fontSize: 24,
-                    color: const Color(0xFF004D40),
+                    color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -138,7 +161,7 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 13,
-                    color: Colors.grey[700],
+                    color: isDark ? Colors.white70 : Colors.grey[700],
                     height: 1.5,
                   ),
                 ),
@@ -150,29 +173,34 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF8F9FA),
+                      color: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.black.withValues(alpha: 0.04)),
+                      border: Border.all(
+                        color: isDark ? const Color(0xFF1E3A34) : Colors.black.withValues(alpha: 0.04),
+                      ),
                     ),
                     child: Column(
                       children: [
                         _buildTimelineItem(
+                          isDark: isDark,
                           step: '1',
                           title: 'Application & Credentials Submitted',
                           subtitle: 'SSM & Kraftangan documents attached',
                           isCompleted: true,
                           isCurrent: false,
                         ),
-                        const Divider(height: 20),
+                        Divider(height: 20, color: isDark ? const Color(0xFF1E3A34) : null),
                         _buildTimelineItem(
+                          isDark: isDark,
                           step: '2',
                           title: 'Kraftangan Admin Review',
                           subtitle: 'In progress • Estimated 1 - 2 business days',
                           isCompleted: false,
                           isCurrent: true,
                         ),
-                        const Divider(height: 20),
+                        Divider(height: 20, color: isDark ? const Color(0xFF1E3A34) : null),
                         _buildTimelineItem(
+                          isDark: isDark,
                           step: '3',
                           title: 'Marketplace Directory Activation',
                           subtitle: 'Public tourist search & quest completion active',
@@ -189,19 +217,21 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEFF6FF),
+                    color: isDark ? const Color(0xFF041412) : const Color(0xFFEFF6FF),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFBFDBFE)),
+                    border: Border.all(
+                      color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFBFDBFE),
+                    ),
                   ),
                   child: Column(
                     children: [
-                      _buildSummaryRow('Studio Name:', effectiveStudio),
+                      _buildSummaryRow(isDark, 'Studio Name:', effectiveStudio),
                       const SizedBox(height: 8),
-                      _buildSummaryRow('Craft Category:', effectiveCraft),
+                      _buildSummaryRow(isDark, 'Craft Category:', effectiveCraft),
                       const SizedBox(height: 8),
-                      _buildSummaryRow('SSM Reg. Number:', effectiveSsm),
+                      _buildSummaryRow(isDark, 'SSM Reg. Number:', effectiveSsm),
                       const SizedBox(height: 8),
-                      _buildSummaryRow('Uploaded Proof:', 'SSM_Cert.pdf, Kraftangan_Cert.pdf'),
+                      _buildSummaryRow(isDark, 'Uploaded Proof:', 'SSM_Cert.pdf, Kraftangan_Cert.pdf'),
                     ],
                   ),
                 ),
@@ -213,9 +243,11 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFEF2F2),
+                      color: isDark ? const Color(0xFF2A1215) : const Color(0xFFFEF2F2),
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xFFFCA5A5)),
+                      border: Border.all(
+                        color: isDark ? const Color(0xFF5C1D24) : const Color(0xFFFCA5A5),
+                      ),
                     ),
                     child: Row(
                       children: [
@@ -227,7 +259,7 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
-                              color: const Color(0xFFB91C1C),
+                              color: const Color(0xFFEF4444),
                             ),
                           ),
                         ),
@@ -239,9 +271,11 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFEF2F2),
+                      color: isDark ? const Color(0xFF2A1215) : const Color(0xFFFEF2F2),
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xFFFCA5A5)),
+                      border: Border.all(
+                        color: isDark ? const Color(0xFF5C1D24) : const Color(0xFFFCA5A5),
+                      ),
                     ),
                     child: Row(
                       children: [
@@ -250,7 +284,11 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
                         Expanded(
                           child: Text(
                             '🔒 Studio Profile Customization is locked until Kraftangan Admin Officers verify & approve your license.',
-                            style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFFB91C1C)),
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFFEF4444),
+                            ),
                           ),
                         ),
                       ],
@@ -296,8 +334,8 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
                       }
                     },
                     style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF004D40),
-                      foregroundColor: Colors.white,
+                      backgroundColor: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                      foregroundColor: isDark ? const Color(0xFF041412) : Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       elevation: 0,
                     ),
@@ -321,21 +359,31 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
                   child: OutlinedButton.icon(
                     onPressed: () {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('📞 Kraftangan Help Desk Hotline: +60 3-2161 3700'),
-                          backgroundColor: Color(0xFF004D40),
+                        SnackBar(
+                          content: const Text('📞 Kraftangan Help Desk Hotline: +60 3-2161 3700'),
+                          backgroundColor: isDark ? const Color(0xFF0D2825) : const Color(0xFF004D40),
                           behavior: SnackBarBehavior.floating,
                         ),
                       );
                     },
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Color(0xFF004D40)),
+                      side: BorderSide(
+                        color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                      ),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     ),
-                    icon: const Icon(Icons.headset_mic_rounded, size: 18, color: Color(0xFF004D40)),
+                    icon: Icon(
+                      Icons.headset_mic_rounded,
+                      size: 18,
+                      color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                    ),
                     label: Text(
                       'Contact Verification Support',
-                      style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF004D40)),
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                      ),
                     ),
                   ),
                 ),
@@ -351,8 +399,11 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
                         Navigator.pushReplacementNamed(context, '/tourist');
                       },
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF004D40),
-                        side: const BorderSide(color: Color(0xFF004D40), width: 1.5),
+                        foregroundColor: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                        side: BorderSide(
+                          color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                          width: 1.5,
+                        ),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                       icon: const Icon(Icons.explore_outlined, size: 20),
@@ -370,7 +421,9 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
                     onPressed: () {
                       Navigator.pushReplacementNamed(context, '/tourist');
                     },
-                    style: TextButton.styleFrom(foregroundColor: const Color(0xFF004D40)),
+                    style: TextButton.styleFrom(
+                      foregroundColor: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                    ),
                     child: Text(
                       'Explore Map as Tourist while waiting',
                       style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, fontSize: 13),
@@ -385,6 +438,7 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
   }
 
   Widget _buildTimelineItem({
+    required bool isDark,
     required String step,
     required String title,
     required String subtitle,
@@ -397,7 +451,9 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
           radius: 14,
           backgroundColor: isCompleted
               ? const Color(0xFF10B981)
-              : (isCurrent ? const Color(0xFFD97706) : Colors.grey[300]),
+              : (isCurrent
+                  ? const Color(0xFFD97706)
+                  : (isDark ? const Color(0xFF1E3A34) : Colors.grey[300])),
           child: isCompleted
               ? const Icon(Icons.check_rounded, size: 16, color: Colors.white)
               : Text(
@@ -405,7 +461,9 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: isCurrent ? Colors.white : Colors.grey[600],
+                    color: isCurrent
+                        ? Colors.white
+                        : (isDark ? Colors.white70 : Colors.grey[600]),
                   ),
                 ),
         ),
@@ -419,14 +477,18 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
-                  color: isCurrent ? const Color(0xFF78350F) : const Color(0xFF0F172A),
+                  color: isCurrent
+                      ? (isDark ? const Color(0xFFFFD54F) : const Color(0xFF78350F))
+                      : (isDark ? Colors.white : const Color(0xFF0F172A)),
                 ),
               ),
               Text(
                 subtitle,
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 11,
-                  color: isCurrent ? const Color(0xFFB45309) : Colors.grey[600],
+                  color: isCurrent
+                      ? (isDark ? const Color(0xFFFFCA28) : const Color(0xFFB45309))
+                      : (isDark ? Colors.white60 : Colors.grey[600]),
                 ),
               ),
             ],
@@ -436,7 +498,7 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSummaryRow(String label, String value) {
+  Widget _buildSummaryRow(bool isDark, String label, String value) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -444,7 +506,11 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
           child: Text(
             label,
             softWrap: true,
-            style: GoogleFonts.plusJakartaSans(fontSize: 11, color: const Color(0xFF1E3A8A), fontWeight: FontWeight.bold),
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 11,
+              color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF1E3A8A),
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
         const SizedBox(width: 8),
@@ -453,7 +519,11 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
             value,
             textAlign: TextAlign.right,
             softWrap: true,
-            style: GoogleFonts.plusJakartaSans(fontSize: 11, color: const Color(0xFF1D4ED8), fontWeight: FontWeight.w600),
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 11,
+              color: isDark ? Colors.white70 : const Color(0xFF1D4ED8),
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ],

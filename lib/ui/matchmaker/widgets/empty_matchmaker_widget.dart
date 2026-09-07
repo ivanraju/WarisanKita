@@ -8,6 +8,7 @@ class EmptyMatchmakerWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.all(32),
       child: Center(
@@ -16,14 +17,15 @@ class EmptyMatchmakerWidget extends StatelessWidget {
           children: [
             Container(
               padding: const EdgeInsets.all(24),
-              decoration: const BoxDecoration(
-                color: Color(0xFFF1F5F9),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF0D2825) : const Color(0xFFF1F5F9),
                 shape: BoxShape.circle,
+                border: isDark ? Border.all(color: const Color(0xFF1E3A34)) : null,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.search_off_rounded,
                 size: 56,
-                color: Color(0xFF64748B),
+                color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF64748B),
               ),
             ),
             const SizedBox(height: 20),
@@ -32,7 +34,7 @@ class EmptyMatchmakerWidget extends StatelessWidget {
               style: GoogleFonts.dmSerifDisplay(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
-                color: const Color(0xFF0F3D3E),
+                color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF0F3D3E),
               ),
             ),
             const SizedBox(height: 6),
@@ -41,7 +43,7 @@ class EmptyMatchmakerWidget extends StatelessWidget {
               textAlign: TextAlign.center,
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 13,
-                color: Colors.grey[600],
+                color: isDark ? Colors.white70 : Colors.grey[600],
                 height: 1.4,
               ),
             ),

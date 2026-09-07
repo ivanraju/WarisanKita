@@ -72,9 +72,11 @@ class _TranslationLanguageDialogState extends State<TranslationLanguageDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? const Color(0xFF0D2825) : Colors.white,
       child: Container(
         padding: const EdgeInsets.all(24),
         constraints: const BoxConstraints(maxWidth: 480),
@@ -91,25 +93,32 @@ class _TranslationLanguageDialogState extends State<TranslationLanguageDialog> {
                       children: [
                         Container(
                           padding: const EdgeInsets.all(8),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFE0F2FE),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFE0F2FE),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.g_translate_rounded, color: Color(0xFF0284C7), size: 22),
+                          child: Icon(
+                            Icons.g_translate_rounded,
+                            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF0284C7),
+                            size: 22,
+                          ),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
                             'Live Page Translation',
                             softWrap: true,
-                            style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
+                            style: GoogleFonts.dmSerifDisplay(
+                              fontSize: 20,
+                              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close, color: Colors.grey),
+                    icon: Icon(Icons.close, color: isDark ? Colors.white70 : Colors.grey),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
@@ -117,7 +126,10 @@ class _TranslationLanguageDialogState extends State<TranslationLanguageDialog> {
               const SizedBox(height: 6),
               Text(
                 'Select language to translate all craft bios, quest instructions, and heritage lore in real-time.',
-                style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.grey[700]),
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12,
+                  color: isDark ? Colors.white70 : Colors.grey[700],
+                ),
               ),
               const SizedBox(height: 20),
 
@@ -127,10 +139,14 @@ class _TranslationLanguageDialogState extends State<TranslationLanguageDialog> {
                 return Container(
                   margin: const EdgeInsets.only(bottom: 10),
                   decoration: BoxDecoration(
-                    color: isSelected ? const Color(0xFF004D40).withOpacity(0.08) : Colors.white,
+                    color: isSelected
+                        ? (isDark ? const Color(0xFF1E3A34) : const Color(0xFF004D40).withValues(alpha: 0.08))
+                        : (isDark ? const Color(0xFF041412) : Colors.white),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: isSelected ? const Color(0xFF004D40) : Colors.black.withOpacity(0.08),
+                      color: isSelected
+                          ? (isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40))
+                          : (isDark ? const Color(0xFF1E3A34) : Colors.black.withValues(alpha: 0.08)),
                       width: isSelected ? 1.8 : 1.0,
                     ),
                   ),
@@ -142,16 +158,27 @@ class _TranslationLanguageDialogState extends State<TranslationLanguageDialog> {
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
-                        color: isSelected ? const Color(0xFF004D40) : const Color(0xFF1E293B),
+                        color: isSelected
+                            ? (isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40))
+                            : (isDark ? Colors.white : const Color(0xFF1E293B)),
                       ),
                     ),
                     subtitle: Text(
                       lang['subtitle']!,
-                      style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[600]),
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        color: isDark ? Colors.white70 : Colors.grey[600],
+                      ),
                     ),
                     trailing: isSelected
-                        ? const Icon(Icons.check_circle_rounded, color: Color(0xFF004D40))
-                        : const Icon(Icons.radio_button_unchecked_rounded, color: Colors.grey),
+                        ? Icon(
+                            Icons.check_circle_rounded,
+                            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                          )
+                        : Icon(
+                            Icons.radio_button_unchecked_rounded,
+                            color: isDark ? Colors.white38 : Colors.grey,
+                          ),
                   ),
                 );
               }),
@@ -163,7 +190,8 @@ class _TranslationLanguageDialogState extends State<TranslationLanguageDialog> {
                 child: FilledButton.icon(
                   onPressed: _applyTranslation,
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF004D40),
+                    backgroundColor: isDark ? const Color(0xFF1E3A34) : const Color(0xFF004D40),
+                    foregroundColor: isDark ? const Color(0xFFFFD54F) : Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),

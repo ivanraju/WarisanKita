@@ -207,18 +207,25 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final user = authVM.currentUser;
     final initials = user?.initials ?? 'AH';
     final isDual = user?.isDualRole ?? false || user?.role == 'Artisan';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
       appBar: AppBar(
         title: Text(
           'Edit Profile',
-          style: GoogleFonts.dmSerifDisplay(color: const Color(0xFF004D40), fontSize: 22),
+          style: GoogleFonts.dmSerifDisplay(
+            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+            fontSize: 22,
+          ),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: isDark ? const Color(0xFF0D2825) : Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF004D40)),
+          icon: Icon(
+            Icons.arrow_back_rounded,
+            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
@@ -226,7 +233,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: isDark ? const Color(0xFF0D2825) : Colors.white,
+            border: isDark ? const Border(top: BorderSide(color: Color(0xFF1E3A34))) : null,
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.05),
@@ -238,8 +246,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           child: ElevatedButton(
             onPressed: _handleSave,
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF004D40),
-              foregroundColor: Colors.white,
+              backgroundColor: isDark ? const Color(0xFF1E3A34) : const Color(0xFF004D40),
+              foregroundColor: isDark ? const Color(0xFFFFD54F) : Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
@@ -272,11 +280,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     onTap: _isUploadingAvatar ? null : _pickAndUploadAvatar,
                     child: CircleAvatar(
                       radius: 54,
-                      backgroundColor: const Color(0xFF004D40).withValues(alpha: 0.1),
+                      backgroundColor: isDark
+                          ? const Color(0xFF1E3A34)
+                          : const Color(0xFF004D40).withValues(alpha: 0.1),
                       backgroundImage: user?.avatarImageProvider,
                       child: _isUploadingAvatar
-                          ? const CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF004D40)),
+                          ? CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                              ),
                             )
                           : (user?.avatarImageProvider != null
                               ? null
@@ -284,7 +296,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                   initials,
                                   style: GoogleFonts.dmSerifDisplay(
                                     fontSize: 32,
-                                    color: const Color(0xFF004D40),
+                                    color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
                                     fontWeight: FontWeight.bold,
                                   ),
                                 )),
@@ -297,10 +309,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       onTap: _isUploadingAvatar ? null : _pickAndUploadAvatar,
                       child: Container(
                         padding: const EdgeInsets.all(8),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF004D40),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF1E3A34) : const Color(0xFF004D40),
                           shape: BoxShape.circle,
-                          boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                          boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
                         ),
                         child: _isUploadingAvatar
                             ? const SizedBox(
@@ -311,7 +323,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                   valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                 ),
                               )
-                            : const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 18),
+                            : Icon(
+                                Icons.camera_alt_rounded,
+                                color: isDark ? const Color(0xFFFFD54F) : Colors.white,
+                                size: 18,
+                              ),
                       ),
                     ),
                   ),
@@ -326,7 +342,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 11,
                 fontWeight: FontWeight.w800,
-                color: const Color(0xFF64748B),
+                color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF64748B),
                 letterSpacing: 1.0,
               ),
             ),
@@ -339,7 +355,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               decoration: InputDecoration(
                 labelText: 'Full Name',
                 hintText: 'e.g. Siti Nurhaliza',
-                prefixIcon: const Icon(Icons.badge_outlined, color: Color(0xFF004D40)),
+                prefixIcon: Icon(
+                  Icons.badge_outlined,
+                  color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                ),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
               ),
             ),
@@ -353,7 +372,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 labelText: 'Unique Username Handle',
                 hintText: 'e.g. siticrafts',
                 prefixText: '@',
-                prefixIcon: const Icon(Icons.alternate_email_rounded, color: Color(0xFF004D40)),
+                prefixIcon: Icon(
+                  Icons.alternate_email_rounded,
+                  color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                ),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
               ),
             ),
@@ -366,7 +388,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               keyboardType: TextInputType.phone,
               decoration: InputDecoration(
                 labelText: 'Phone Number',
-                prefixIcon: const Icon(Icons.phone_outlined),
+                prefixIcon: Icon(
+                  Icons.phone_outlined,
+                  color: isDark ? const Color(0xFFFFD54F) : null,
+                ),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
               ),
             ),
@@ -379,7 +404,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               maxLines: 3,
               decoration: InputDecoration(
                 labelText: 'Heritage Bio / Explorer Note',
-                prefixIcon: const Icon(Icons.description_outlined),
+                prefixIcon: Icon(
+                  Icons.description_outlined,
+                  color: isDark ? const Color(0xFFFFD54F) : null,
+                ),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
               ),
             ),
@@ -389,23 +417,29 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFEF3C7),
+                  color: isDark ? const Color(0xFF78350F).withValues(alpha: 0.35) : const Color(0xFFFEF3C7),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFFF59E0B)),
+                  border: Border.all(
+                    color: const Color(0xFFF59E0B).withValues(alpha: isDark ? 0.6 : 1.0),
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.swap_horiz_rounded, color: Color(0xFFB45309), size: 22),
+                        Icon(
+                          Icons.swap_horiz_rounded,
+                          color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFB45309),
+                          size: 22,
+                        ),
                         const SizedBox(width: 8),
                         Text(
                           'DUAL ROLE SYNC: ARTISAN STUDIO',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 12,
                             fontWeight: FontWeight.w800,
-                            color: const Color(0xFFB45309),
+                            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFB45309),
                             letterSpacing: 0.8,
                           ),
                         ),
@@ -416,7 +450,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       'Changes here update your public Artisan Studio profile across the platform.',
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 11,
-                        color: const Color(0xFF92400E),
+                        color: isDark ? Colors.white70 : const Color(0xFF92400E),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -426,9 +460,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       controller: _studioNameController,
                       decoration: InputDecoration(
                         labelText: 'Artisan Studio Name',
-                        prefixIcon: const Icon(Icons.storefront_outlined, color: Color(0xFFB45309)),
+                        prefixIcon: Icon(
+                          Icons.storefront_outlined,
+                          color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFB45309),
+                        ),
                         filled: true,
-                        fillColor: Colors.white,
+                        fillColor: isDark ? const Color(0xFF0D2825) : Colors.white,
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                       ),
                     ),
@@ -438,11 +475,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     // Craft Category Dropdown
                     DropdownButtonFormField<String>(
                       value: _selectedCraftCategory,
+                      dropdownColor: isDark ? const Color(0xFF0D2825) : Colors.white,
                       decoration: InputDecoration(
                         labelText: 'Craft Specialization',
-                        prefixIcon: const Icon(Icons.category_outlined, color: Color(0xFFB45309)),
+                        prefixIcon: Icon(
+                          Icons.category_outlined,
+                          color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFB45309),
+                        ),
                         filled: true,
-                        fillColor: Colors.white,
+                        fillColor: isDark ? const Color(0xFF0D2825) : Colors.white,
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                       ),
                       items: _craftCategories.map((craft) {
@@ -461,11 +502,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     // State / Region Dropdown
                     DropdownButtonFormField<String>(
                       value: _selectedState,
+                      dropdownColor: isDark ? const Color(0xFF0D2825) : Colors.white,
                       decoration: InputDecoration(
                         labelText: 'Studio State / Location',
-                        prefixIcon: const Icon(Icons.location_on_outlined, color: Color(0xFFB45309)),
+                        prefixIcon: Icon(
+                          Icons.location_on_outlined,
+                          color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFB45309),
+                        ),
                         filled: true,
-                        fillColor: Colors.white,
+                        fillColor: isDark ? const Color(0xFF0D2825) : Colors.white,
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                       ),
                       items: _malaysianStates.map((st) {

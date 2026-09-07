@@ -287,11 +287,13 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
     );
   }
 
-  Widget _buildStudioSectionHeader({
+  Widget _buildStudioSectionHeader(
+    BuildContext context, {
     required String title,
     required String subtitle,
     required int count,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
       child: Column(
@@ -304,20 +306,22 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
                   title,
                   style: GoogleFonts.dmSerifDisplay(
                     fontSize: 19,
-                    color: const Color(0xFF004D40),
+                    color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
                   ),
                 ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF004D40).withValues(alpha: 0.08),
+                  color: isDark
+                      ? const Color(0xFF1E3A34)
+                      : const Color(0xFF004D40).withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   '$count',
                   style: GoogleFonts.plusJakartaSans(
-                    color: const Color(0xFF004D40),
+                    color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
                   ),
@@ -330,7 +334,7 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
             subtitle,
             style: GoogleFonts.plusJakartaSans(
               fontSize: 11,
-              color: Colors.grey[600],
+              color: isDark ? Colors.white70 : Colors.grey[600],
             ),
           ),
         ],
@@ -338,19 +342,21 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
     );
   }
 
-  Widget _buildInlineStudioMessage(String message) {
+  Widget _buildInlineStudioMessage(BuildContext context, String message) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 0, 20, 18),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9),
+        color: isDark ? const Color(0xFF041412) : const Color(0xFFF1F5F9),
         borderRadius: BorderRadius.circular(16),
+        border: isDark ? Border.all(color: const Color(0xFF1E3A34)) : null,
       ),
       child: Row(
         children: [
-          const Icon(
+          Icon(
             Icons.info_outline_rounded,
-            color: Color(0xFF64748B),
+            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF64748B),
             size: 19,
           ),
           const SizedBox(width: 10),
@@ -359,7 +365,7 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
               message,
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 12,
-                color: const Color(0xFF475569),
+                color: isDark ? Colors.white70 : const Color(0xFF475569),
               ),
             ),
           ),
@@ -463,6 +469,7 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
     final langVM = context.watch<LanguageViewModel>();
     final mapVM = context.watch<MapViewModel>();
     final gamificationVM = context.watch<GamificationViewModel>();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     _reportActiveQuestProximity(mapVM, gamificationVM);
     NearbyArtisan? nearestQuestArtisan;
     for (final artisan in mapVM.nearbyArtisans) {
@@ -477,6 +484,7 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
     final double bottomSafeArea = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
       body: Stack(
         children: [
           // ======================================================
@@ -514,8 +522,9 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
                     vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF004D40),
+                    color: isDark ? const Color(0xFF0D2825) : const Color(0xFF004D40),
                     borderRadius: BorderRadius.circular(20),
+                    border: isDark ? Border.all(color: const Color(0xFF1E3A34)) : null,
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.15),
@@ -562,10 +571,10 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
                       ),
                     );
                   },
-                  backgroundColor: Colors.white,
-                  child: const Icon(
+                  backgroundColor: isDark ? const Color(0xFF0D2825) : Colors.white,
+                  child: Icon(
                     Icons.g_translate_rounded,
-                    color: Color(0xFF004D40),
+                    color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
                     size: 18,
                   ),
                 ),
@@ -578,10 +587,10 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
                   onPressed: () {
                     _triggerMoodCheckin(context);
                   },
-                  backgroundColor: Colors.white,
-                  child: const Icon(
+                  backgroundColor: isDark ? const Color(0xFF0D2825) : Colors.white,
+                  child: Icon(
                     Icons.tune_rounded,
-                    color: Color(0xFF004D40),
+                    color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
                     size: 18,
                   ),
                 ),
@@ -605,10 +614,13 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
                     vertical: 12,
                   ),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF004D40), Color(0xFF065F46)],
+                    gradient: LinearGradient(
+                      colors: isDark
+                          ? const [Color(0xFF0D2825), Color(0xFF041412)]
+                          : const [Color(0xFF004D40), Color(0xFF065F46)],
                     ),
                     borderRadius: BorderRadius.circular(20),
+                    border: isDark ? Border.all(color: const Color(0xFFFFD54F).withValues(alpha: 0.3)) : null,
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.15),
@@ -718,11 +730,12 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
 
               return Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: isDark ? const Color(0xFF0D2825) : Colors.white,
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(28),
                     topRight: Radius.circular(28),
                   ),
+                  border: isDark ? const Border(top: BorderSide(color: Color(0xFF1E3A34))) : null,
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.15),
@@ -749,7 +762,7 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
                                 width: 44,
                                 height: 5,
                                 decoration: BoxDecoration(
-                                  color: Colors.grey[300],
+                                  color: isDark ? const Color(0xFF1E3A34) : Colors.grey[300],
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                               ),
@@ -776,7 +789,7 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
                                             softWrap: true,
                                             style: GoogleFonts.dmSerifDisplay(
                                               fontSize: 20,
-                                              color: const Color(0xFF004D40),
+                                              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
                                             ),
                                           ),
                                           const SizedBox(height: 2),
@@ -787,7 +800,7 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
                                             softWrap: true,
                                             style: GoogleFonts.plusJakartaSans(
                                               fontSize: 11,
-                                              color: Colors.grey[600],
+                                              color: isDark ? Colors.white70 : Colors.grey[600],
                                             ),
                                           ),
                                         ],
@@ -800,7 +813,7 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
                                         vertical: 6,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFF004D40),
+                                        color: isDark ? const Color(0xFF1E3A34) : const Color(0xFF004D40),
                                         borderRadius: BorderRadius.circular(16),
                                       ),
                                       child: Row(
@@ -817,7 +830,7 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
                                             style: GoogleFonts.plusJakartaSans(
                                               fontSize: 11,
                                               fontWeight: FontWeight.bold,
-                                              color: Colors.white,
+                                              color: isDark ? const Color(0xFFFFD54F) : Colors.white,
                                             ),
                                           ),
                                         ],
@@ -828,10 +841,10 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
                               ),
                             ),
                             const SizedBox(height: 12),
-                            const Divider(
+                            Divider(
                               height: 1,
                               thickness: 1,
-                              color: Color(0xFFF1F5F9),
+                              color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFF1F5F9),
                             ),
                             const SizedBox(height: 14),
                           ],
@@ -866,6 +879,7 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
                     if (!mapVM.isLoading && mapVM.workshops.isNotEmpty)
                       SliverToBoxAdapter(
                         child: _buildStudioSectionHeader(
+                          context,
                           title: langVM.translate('Nearby Master Studios'),
                           subtitle: langVM.translate(
                             'Within 5 km of your current location',
@@ -879,6 +893,7 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
                         mapVM.nearbyArtisans.isEmpty)
                       SliverToBoxAdapter(
                         child: _buildInlineStudioMessage(
+                          context,
                           mapVM.userLocation == null
                               ? langVM.translate(
                                   'Waiting for your location to calculate studio distances.',
@@ -913,14 +928,15 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
                       SliverToBoxAdapter(
                         child: Column(
                           children: [
-                            const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 20),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 20),
                               child: Divider(
                                 height: 24,
-                                color: Color(0xFFE2E8F0),
+                                color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFE2E8F0),
                               ),
                             ),
                             _buildStudioSectionHeader(
+                              context,
                               title: langVM.translate('Other Master Studios'),
                               subtitle: langVM.translate(
                                 'Explore artisan studios across Malaysia',
@@ -936,6 +952,7 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
                         mapVM.otherArtisans.isEmpty)
                       SliverToBoxAdapter(
                         child: _buildInlineStudioMessage(
+                          context,
                           mapVM.userLocation == null
                               ? langVM.translate(
                                   'Waiting for your location to classify other studios.',
@@ -1001,8 +1018,9 @@ class _PinnedSheetHeaderDelegate extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Material(
-      color: Colors.white,
+      color: isDark ? const Color(0xFF0D2825) : Colors.white,
       elevation: overlapsContent ? 2 : 0,
       shadowColor: Colors.black.withValues(alpha: 0.12),
       child: child,

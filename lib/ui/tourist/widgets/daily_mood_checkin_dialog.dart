@@ -93,9 +93,11 @@ class _DailyMoodCheckinDialogState extends State<DailyMoodCheckinDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? const Color(0xFF0D2825) : Colors.white,
       child: Container(
         padding: const EdgeInsets.all(24),
         constraints: const BoxConstraints(maxWidth: 480),
@@ -113,25 +115,28 @@ class _DailyMoodCheckinDialogState extends State<DailyMoodCheckinDialog> {
                       children: [
                         Container(
                           padding: const EdgeInsets.all(8),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFFEF3C7),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF78350F).withValues(alpha: 0.4) : const Color(0xFFFEF3C7),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.wb_sunny_rounded, color: Color(0xFFD97706), size: 20),
+                          child: Icon(Icons.wb_sunny_rounded, color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFD97706), size: 20),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
                             'Daily Heritage Check-in',
                             softWrap: true,
-                            style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
+                            style: GoogleFonts.dmSerifDisplay(
+                              fontSize: 20,
+                              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close, color: Colors.grey),
+                    icon: Icon(Icons.close, color: isDark ? Colors.white70 : Colors.grey),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
@@ -140,7 +145,10 @@ class _DailyMoodCheckinDialogState extends State<DailyMoodCheckinDialog> {
               const SizedBox(height: 6),
               Text(
                 'What craft heritage would you like to explore today?',
-                style: GoogleFonts.plusJakartaSans(fontSize: 13, color: Colors.grey[700]),
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 13,
+                  color: isDark ? Colors.white70 : Colors.grey[700],
+                ),
               ),
 
               const SizedBox(height: 16),
@@ -152,10 +160,14 @@ class _DailyMoodCheckinDialogState extends State<DailyMoodCheckinDialog> {
                 return Container(
                   margin: const EdgeInsets.only(bottom: 10),
                   decoration: BoxDecoration(
-                    color: isSelected ? const Color(0xFF004D40).withValues(alpha: 0.08) : Colors.white,
+                    color: isSelected
+                        ? (isDark ? const Color(0xFF1E3A34) : const Color(0xFF004D40).withValues(alpha: 0.08))
+                        : (isDark ? const Color(0xFF041412) : Colors.white),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: isSelected ? const Color(0xFF004D40) : Colors.black.withValues(alpha: 0.08),
+                      color: isSelected
+                          ? (isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40))
+                          : (isDark ? const Color(0xFF1E3A34) : Colors.black.withValues(alpha: 0.08)),
                       width: isSelected ? 1.8 : 1.0,
                     ),
                   ),
@@ -166,16 +178,27 @@ class _DailyMoodCheckinDialogState extends State<DailyMoodCheckinDialog> {
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
-                        color: isSelected ? const Color(0xFF004D40) : const Color(0xFF1E293B),
+                        color: isSelected
+                            ? (isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40))
+                            : (isDark ? Colors.white : const Color(0xFF1E293B)),
                       ),
                     ),
                     subtitle: Text(
                       opt['subtitle'],
-                      style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[600]),
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        color: isDark ? Colors.white70 : Colors.grey[600],
+                      ),
                     ),
                     trailing: isSelected
-                        ? const Icon(Icons.check_circle_rounded, color: Color(0xFF004D40))
-                        : const Icon(Icons.radio_button_unchecked_rounded, color: Colors.grey),
+                        ? Icon(
+                            Icons.check_circle_rounded,
+                            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                          )
+                        : Icon(
+                            Icons.radio_button_unchecked_rounded,
+                            color: isDark ? Colors.white38 : Colors.grey,
+                          ),
                   ),
                 );
               }),
@@ -184,13 +207,17 @@ class _DailyMoodCheckinDialogState extends State<DailyMoodCheckinDialog> {
                 children: [
                   Checkbox(
                     value: _dontShowToday,
-                    activeColor: const Color(0xFF004D40),
+                    activeColor: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                    checkColor: isDark ? const Color(0xFF041412) : Colors.white,
                     onChanged: (val) => setState(() => _dontShowToday = val ?? false),
                   ),
                   Expanded(
                     child: Text(
                       'Hide & don\'t prompt again today',
-                      style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[700]),
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        color: isDark ? Colors.white70 : Colors.grey[700],
+                      ),
                     ),
                   ),
                 ],
@@ -204,14 +231,18 @@ class _DailyMoodCheckinDialogState extends State<DailyMoodCheckinDialog> {
                   child: OutlinedButton.icon(
                     onPressed: _handleHide,
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: Colors.grey[300]!),
+                      side: BorderSide(color: isDark ? const Color(0xFF1E3A34) : Colors.grey[300]!),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
-                    icon: const Icon(Icons.visibility_off_outlined, color: Colors.grey, size: 16),
+                    icon: Icon(Icons.visibility_off_outlined, color: isDark ? Colors.white70 : Colors.grey, size: 16),
                     label: Text(
                       'Hide Card',
-                      style: GoogleFonts.plusJakartaSans(color: Colors.grey[700], fontSize: 12, fontWeight: FontWeight.bold),
+                      style: GoogleFonts.plusJakartaSans(
+                        color: isDark ? Colors.white70 : Colors.grey[700],
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
@@ -221,14 +252,15 @@ class _DailyMoodCheckinDialogState extends State<DailyMoodCheckinDialog> {
                   child: FilledButton.icon(
                     onPressed: _submitCheckin,
                     style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF004D40),
+                      backgroundColor: isDark ? const Color(0xFF1E3A34) : const Color(0xFF004D40),
+                      foregroundColor: isDark ? const Color(0xFFFFD54F) : Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
                     icon: const Icon(Icons.local_fire_department_rounded, color: Color(0xFFFFD54F), size: 18),
-                    label: Text(
+                    label: const Text(
                       'CLAIM +50 XP',
-                      style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold),
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),

@@ -45,6 +45,7 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final authVM = context.watch<AuthViewModel>();
     final user = authVM.currentUser;
     final studioName = user?.studioName ?? user?.displayName ?? 'Pak Mat Pottery Studio';
@@ -57,18 +58,18 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
       slivers: [
         // Top App Bar
         SliverAppBar(
-          backgroundColor: const Color(0xFFF8F9FA),
+          backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
           elevation: 0,
           title: Text(
             'Master Artisan Command Center',
             style: GoogleFonts.dmSerifDisplay(
-              color: const Color(0xFF004D40),
+              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
               fontSize: 24,
             ),
           ),
           actions: [
             IconButton(
-              icon: const Icon(Icons.settings_outlined, color: Color(0xFF004D40)),
+              icon: Icon(Icons.settings_outlined, color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40)),
               onPressed: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const ArtisanSettingsScreen()),
@@ -88,15 +89,15 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
+                    gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [
-                        Color(0xFF0A192F), // Dark Slate
-                        Color(0xFF004D40), // Royal Emerald
-                      ],
+                      colors: isDark
+                          ? [const Color(0xFF0D2825), const Color(0xFF061A18)]
+                          : [const Color(0xFF0A192F), const Color(0xFF004D40)],
                     ),
                     borderRadius: BorderRadius.circular(28),
+                    border: isDark ? Border.all(color: const Color(0xFF1E3A34)) : null,
                     boxShadow: [
                       BoxShadow(
                         color: const Color(0xFF004D40).withValues(alpha: 0.3),
@@ -231,7 +232,7 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
                   'Studio Management Portal',
                   style: GoogleFonts.dmSerifDisplay(
                     fontSize: 20,
-                    color: const Color(0xFF004D40),
+                    color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -244,6 +245,7 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
                         icon: Icons.stars_rounded,
                         label: 'Manage Quests',
                         color: const Color(0xFFD97706),
+                        isDark: isDark,
                         onTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(builder: (_) => const ArtisanTaskManagementScreen()),
@@ -257,7 +259,8 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
                         context,
                         icon: Icons.history_edu_rounded,
                         label: 'Craft Portfolio',
-                        color: const Color(0xFF004D40),
+                        color: isDark ? const Color(0xFF34D399) : const Color(0xFF004D40),
+                        isDark: isDark,
                         onTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(builder: (_) => const ProfileBuilderTab()),
@@ -272,6 +275,7 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
                         icon: Icons.forum_rounded,
                         label: 'Live Forum',
                         color: const Color(0xFF0284C7),
+                        isDark: isDark,
                         onTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(builder: (_) => const LiveForumTab()),
@@ -298,24 +302,32 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
                           'Heritage Preservation Metrics',
                           style: GoogleFonts.dmSerifDisplay(
                             fontSize: 22,
-                            color: const Color(0xFF004D40),
+                            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
                           ),
                         ),
                         Text(
                           'Knowledge transfer, apprentice outreach & lore archival',
-                          style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[600]),
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11,
+                            color: isDark ? Colors.white60 : Colors.grey[600],
+                          ),
                         ),
                       ],
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFEF3C7),
+                        color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFFEF3C7),
                         borderRadius: BorderRadius.circular(8),
+                        border: isDark ? Border.all(color: const Color(0xFF34D399).withValues(alpha: 0.3)) : null,
                       ),
                       child: Text(
                         'August 2026',
-                        style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFFB45309)),
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFB45309),
+                        ),
                       ),
                     ),
                   ],
@@ -327,15 +339,15 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
                 Container(
                   padding: const EdgeInsets.all(22),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
+                    gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      colors: [
-                        Color(0xFF0A192F),
-                        Color(0xFF0F172A),
-                      ],
+                      colors: isDark
+                          ? [const Color(0xFF0D2825), const Color(0xFF061A18)]
+                          : [const Color(0xFF0A192F), const Color(0xFF0F172A)],
                     ),
                     borderRadius: BorderRadius.circular(28),
+                    border: isDark ? Border.all(color: const Color(0xFF1E3A34)) : null,
                     boxShadow: [
                       BoxShadow(
                         color: const Color(0xFF004D40).withValues(alpha: 0.25),
@@ -477,13 +489,13 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
                 Container(
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF0FDF4),
+                    color: isDark ? const Color(0xFF0D2825) : const Color(0xFFF0FDF4),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFF86EFAC)),
+                    border: Border.all(color: isDark ? const Color(0xFF1E3A34) : const Color(0xFF86EFAC)),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.verified_user_rounded, color: Color(0xFF166534), size: 26),
+                      Icon(Icons.verified_user_rounded, color: isDark ? const Color(0xFF34D399) : const Color(0xFF166534), size: 26),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
@@ -491,12 +503,20 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
                           children: [
                             Text(
                               'National Heritage Accreditation Verified:',
-                              style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w900, color: const Color(0xFF14532D)),
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w900,
+                                color: isDark ? const Color(0xFF34D399) : const Color(0xFF14532D),
+                              ),
                             ),
                             const SizedBox(height: 2),
                             Text(
                               'Your studio is recognized as an official Cultural Preservation Site by Kraftangan Malaysia. All completed quests contribute directly to national craft heritage documentation.',
-                              style: GoogleFonts.plusJakartaSans(fontSize: 11, color: const Color(0xFF166534), height: 1.3),
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11,
+                                color: isDark ? Colors.white70 : const Color(0xFF166534),
+                                height: 1.3,
+                              ),
                             ),
                           ],
                         ),
@@ -528,6 +548,7 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
                 subtitle: '↗ +18% outreach',
                 icon: Icons.groups_rounded,
                 color: const Color(0xFF0284C7),
+                isDark: isDark,
               ),
               _buildRichAnalyticsCard(
                 title: 'Published Quests',
@@ -535,6 +556,7 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
                 subtitle: 'All admin verified',
                 icon: Icons.stars_rounded,
                 color: const Color(0xFF10B981),
+                isDark: isDark,
               ),
               _buildRichAnalyticsCard(
                 title: 'Digital Plaques',
@@ -542,6 +564,7 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
                 subtitle: 'Handshake verified',
                 icon: Icons.verified_rounded,
                 color: const Color(0xFFF59E0B),
+                isDark: isDark,
               ),
               _buildRichAnalyticsCard(
                 title: 'Craft Lore Hours',
@@ -549,6 +572,7 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
                 subtitle: 'Preserved in 2026',
                 icon: Icons.history_edu_rounded,
                 color: const Color(0xFF8B5CF6),
+                isDark: isDark,
               ),
             ]),
           ),
@@ -576,15 +600,16 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
     required String label,
     required Color color,
     required VoidCallback onTap,
+    required bool isDark,
   }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 10),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isDark ? const Color(0xFF0D2825) : Colors.white,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
+          border: Border.all(color: isDark ? const Color(0xFF1E3A34) : color.withValues(alpha: 0.3)),
           boxShadow: [
             BoxShadow(
               color: color.withValues(alpha: 0.06),
@@ -610,7 +635,7 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
-                color: const Color(0xFF0F172A),
+                color: isDark ? Colors.white : const Color(0xFF0F172A),
               ),
             ),
           ],
@@ -625,13 +650,14 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
     required String subtitle,
     required IconData icon,
     required Color color,
+    required bool isDark,
   }) {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF0D2825) : Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.black.withValues(alpha: 0.06)),
+        border: Border.all(color: isDark ? const Color(0xFF1E3A34) : Colors.black.withValues(alpha: 0.06)),
         boxShadow: [
           BoxShadow(
             color: color.withValues(alpha: 0.06),
@@ -664,7 +690,7 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
             style: GoogleFonts.dmSerifDisplay(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: const Color(0xFF0F172A),
+              color: isDark ? Colors.white : const Color(0xFF0F172A),
             ),
           ),
           const SizedBox(height: 2),
@@ -674,7 +700,7 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
             style: GoogleFonts.plusJakartaSans(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: Colors.grey[600],
+              color: isDark ? Colors.white60 : Colors.grey[600],
             ),
           ),
           Text(

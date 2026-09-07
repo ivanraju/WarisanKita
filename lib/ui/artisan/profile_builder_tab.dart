@@ -300,27 +300,88 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     }
   }
   
+  InputDecoration _inputDecoration(
+    bool isDark, {
+    required String labelText,
+    IconData? prefixIcon,
+    String? helperText,
+  }) {
+    return InputDecoration(
+      labelText: labelText,
+      labelStyle: TextStyle(
+        color: isDark ? Colors.white70 : const Color(0xFF475569),
+      ),
+      helperText: helperText,
+      helperStyle: TextStyle(
+        color: isDark ? Colors.white54 : Colors.grey[600],
+        fontSize: 11,
+      ),
+      prefixIcon: prefixIcon != null
+          ? Icon(
+              prefixIcon,
+              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+            )
+          : null,
+      filled: true,
+      fillColor: isDark ? const Color(0xFF0D2825) : Colors.white,
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(
+          color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFCBD5E1),
+        ),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(
+          color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+          width: 1.8,
+        ),
+      ),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(
+          color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFCBD5E1),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
       appBar: AppBar(
         title: Text(
           'Artisan Profile Builder',
-          style: GoogleFonts.dmSerifDisplay(color: const Color(0xFF004D40), fontSize: 22),
+          style: GoogleFonts.dmSerifDisplay(
+            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+            fontSize: 22,
+          ),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: isDark ? const Color(0xFF041412) : Colors.white,
         elevation: 0,
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: TextButton.icon(
               onPressed: _previewTouristView,
-              style: TextButton.styleFrom(foregroundColor: const Color(0xFF004D40)),
-              icon: const Icon(Icons.visibility_rounded, size: 18),
+              style: TextButton.styleFrom(
+                foregroundColor: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+              ),
+              icon: Icon(
+                Icons.visibility_rounded,
+                size: 18,
+                color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+              ),
               label: Text(
                 'Preview Tourist View',
-                style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold),
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                ),
               ),
             ),
           ),
@@ -335,9 +396,11 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFFECFDF5),
+                color: isDark ? const Color(0xFF0D2825) : const Color(0xFFECFDF5),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFF10B981)),
+                border: Border.all(
+                  color: isDark ? const Color(0xFF1E3A34) : const Color(0xFF10B981),
+                ),
               ),
               child: Row(
                 children: [
@@ -359,14 +422,14 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
-                            color: const Color(0xFF065F46),
+                            color: isDark ? const Color(0xFF34D399) : const Color(0xFF065F46),
                           ),
                         ),
                         Text(
                           'Your studio license is active & verified by Kraftangan Malaysia Officers. Profile edits sync live to tourists.',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 11,
-                            color: const Color(0xFF047857),
+                            color: isDark ? Colors.white70 : const Color(0xFF047857),
                           ),
                         ),
                       ],
@@ -381,19 +444,21 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE0F2FE),
+                  color: isDark ? const Color(0xFF0D2825) : const Color(0xFFE0F2FE),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFF38BDF8)),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF1E3A34) : const Color(0xFF38BDF8),
+                  ),
                 ),
                 child: Row(
                   children: [
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0284C7).withOpacity(0.15),
+                        color: const Color(0xFF0284C7).withOpacity(isDark ? 0.25 : 0.15),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.explore_rounded, color: Color(0xFF0284C7), size: 24),
+                      child: const Icon(Icons.explore_rounded, color: Color(0xFF38BDF8), size: 24),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
@@ -405,14 +470,14 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                             style: GoogleFonts.plusJakartaSans(
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
-                              color: const Color(0xFF0369A1),
+                              color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0369A1),
                             ),
                           ),
                           Text(
                             'Switch to explore craft heritage, visit artisan workshops, and earn passport stamps.',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 11,
-                              color: const Color(0xFF0284C7),
+                              color: isDark ? Colors.white70 : const Color(0xFF0284C7),
                             ),
                           ),
                         ],
@@ -445,7 +510,10 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                   child: Text(
                     'Studio Information',
                     softWrap: true,
-                    style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
+                    style: GoogleFonts.dmSerifDisplay(
+                      fontSize: 20,
+                      color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -453,10 +521,23 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                   onPressed: _previewTouristView,
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    side: const BorderSide(color: Color(0xFF004D40)),
+                    side: BorderSide(
+                      color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                    ),
                   ),
-                  icon: const Icon(Icons.remove_red_eye_rounded, size: 14, color: Color(0xFF004D40)),
-                  label: Text('Preview Tourist Page', style: GoogleFonts.plusJakartaSans(fontSize: 11, color: const Color(0xFF004D40), fontWeight: FontWeight.bold)),
+                  icon: Icon(
+                    Icons.remove_red_eye_rounded,
+                    size: 14,
+                    color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                  ),
+                  label: Text(
+                    'Preview Tourist Page',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -466,9 +547,15 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
-                color: _isOpenForDemos ? const Color(0xFFECFDF5) : const Color(0xFFFEF2F2),
+                color: _isOpenForDemos
+                    ? (isDark ? const Color(0xFF0D2825) : const Color(0xFFECFDF5))
+                    : (isDark ? const Color(0xFF2A1215) : const Color(0xFFFEF2F2)),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: _isOpenForDemos ? const Color(0xFF10B981) : const Color(0xFFEF4444)),
+                border: Border.all(
+                  color: _isOpenForDemos
+                      ? (isDark ? const Color(0xFF1E3A34) : const Color(0xFF10B981))
+                      : (isDark ? const Color(0xFF5C1D24) : const Color(0xFFEF4444)),
+                ),
               ),
               child: SwitchListTile(
                 value: _isOpenForDemos,
@@ -479,12 +566,17 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: _isOpenForDemos ? const Color(0xFF047857) : const Color(0xFFB91C1C),
+                    color: _isOpenForDemos
+                        ? (isDark ? const Color(0xFF34D399) : const Color(0xFF047857))
+                        : (isDark ? const Color(0xFFF87171) : const Color(0xFFB91C1C)),
                   ),
                 ),
                 subtitle: Text(
                   'Toggling this updates your live availability banner on the Tourist Studio detail page.',
-                  style: GoogleFonts.plusJakartaSans(fontSize: 10, color: Colors.grey[700]),
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 10,
+                    color: isDark ? Colors.white60 : Colors.grey[700],
+                  ),
                 ),
               ),
             ),
@@ -494,11 +586,12 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
             // Account Username / Handle Input
             TextField(
               controller: _usernameController,
-              decoration: InputDecoration(
+              style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
+              decoration: _inputDecoration(
+                isDark,
                 labelText: 'Account Username / Handle (@username)',
-                prefixIcon: const Icon(Icons.person_outline_rounded),
+                prefixIcon: Icons.person_outline_rounded,
                 helperText: 'Unified account handle synced across Tourist & Master Artisan roles',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
               ),
             ),
 
@@ -507,11 +600,12 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
             // Studio Name Input
             TextField(
               controller: _studioNameController,
-              decoration: InputDecoration(
+              style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
+              decoration: _inputDecoration(
+                isDark,
                 labelText: 'Artisan Studio Name',
-                prefixIcon: const Icon(Icons.storefront_outlined),
+                prefixIcon: Icons.storefront_outlined,
                 helperText: 'Public workshop or studio brand name displayed on the directory',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
               ),
             ),
 
@@ -523,10 +617,11 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                 Expanded(
                   child: TextField(
                     controller: _craftCategoryController,
-                    decoration: InputDecoration(
+                    style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
+                    decoration: _inputDecoration(
+                      isDark,
                       labelText: 'Craft Category',
-                      prefixIcon: const Icon(Icons.palette_outlined),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                      prefixIcon: Icons.palette_outlined,
                     ),
                   ),
                 ),
@@ -536,10 +631,11 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                 Expanded(
                   child: TextField(
                     controller: _phoneController,
-                    decoration: InputDecoration(
+                    style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
+                    decoration: _inputDecoration(
+                      isDark,
                       labelText: 'Phone / WhatsApp',
-                      prefixIcon: const Icon(Icons.phone_outlined),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                      prefixIcon: Icons.phone_outlined,
                     ),
                   ),
                 ),
@@ -551,22 +647,28 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
             // 🗺️ Workshop Map Location
             Text(
               'Workshop Location',
-              style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
+              style: GoogleFonts.dmSerifDisplay(
+                fontSize: 20,
+                color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+              ),
             ),
             const SizedBox(height: 6),
             Text(
               'Pin your exact workshop or studio location on the map.',
-              style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.grey[600]),
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                color: isDark ? Colors.white70 : Colors.grey[600],
+              ),
             ),
             const SizedBox(height: 12),
             Container(
               height: 200,
               decoration: BoxDecoration(
-                color: const Color(0xFFE8EFEC),
+                color: isDark ? const Color(0xFF0D2825) : const Color(0xFFE8EFEC),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: _selectedWorkshopPin == null
-                      ? const Color(0xFFD7E0DC)
+                      ? (isDark ? const Color(0xFF1E3A34) : const Color(0xFFD7E0DC))
                       : const Color(0xFF10B981),
                   width: _selectedWorkshopPin == null ? 1 : 2,
                 ),
@@ -615,8 +717,9 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                     child: IgnorePointer(
                       child: DecoratedBox(
                         decoration: BoxDecoration(
-                          color: const Color(0xFF004D40),
+                          color: isDark ? const Color(0xFF0D2825) : const Color(0xFF004D40),
                           borderRadius: BorderRadius.circular(20),
+                          border: isDark ? Border.all(color: const Color(0xFFFFD54F)) : null,
                           boxShadow: const [
                             BoxShadow(color: Colors.black26, blurRadius: 8),
                           ],
@@ -626,12 +729,16 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.open_in_full_rounded, color: Colors.white, size: 15),
+                              Icon(
+                                Icons.open_in_full_rounded,
+                                color: isDark ? const Color(0xFFFFD54F) : Colors.white,
+                                size: 15,
+                              ),
                               const SizedBox(width: 6),
                               Text(
                                 'Open Large Map',
                                 style: GoogleFonts.plusJakartaSans(
-                                  color: Colors.white,
+                                  color: isDark ? const Color(0xFFFFD54F) : Colors.white,
                                   fontSize: 10,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -655,8 +762,8 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                       : Icons.check_circle_rounded,
                   size: 16,
                   color: _selectedWorkshopPin == null
-                      ? const Color(0xFF64748B)
-                      : const Color(0xFF047857),
+                      ? (isDark ? Colors.white54 : const Color(0xFF64748B))
+                      : (isDark ? const Color(0xFF34D399) : const Color(0xFF047857)),
                 ),
                 const SizedBox(width: 6),
                 Expanded(
@@ -668,8 +775,8 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                       fontSize: 10.5,
                       height: 1.35,
                       color: _selectedWorkshopPin == null
-                          ? const Color(0xFF64748B)
-                          : const Color(0xFF047857),
+                          ? (isDark ? Colors.white54 : const Color(0xFF64748B))
+                          : (isDark ? const Color(0xFF34D399) : const Color(0xFF047857)),
                     ),
                   ),
                 ),
@@ -681,10 +788,11 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
             // Experience Input
             TextField(
               controller: _experienceController,
-              decoration: InputDecoration(
+              style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
+              decoration: _inputDecoration(
+                isDark,
                 labelText: 'Years of Experience & Rank Title',
-                prefixIcon: const Icon(Icons.workspace_premium_outlined),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                prefixIcon: Icons.workspace_premium_outlined,
               ),
             ),
 
@@ -694,10 +802,34 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
             TextField(
               controller: _bioController,
               maxLines: 4,
+              style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
               decoration: InputDecoration(
                 labelText: 'Biography & Heritage Craft Story',
+                labelStyle: TextStyle(
+                  color: isDark ? Colors.white70 : const Color(0xFF475569),
+                ),
                 alignLabelWithHint: true,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                filled: true,
+                fillColor: isDark ? const Color(0xFF0D2825) : Colors.white,
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(
+                    color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFCBD5E1),
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(
+                    color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                    width: 1.8,
+                  ),
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(
+                    color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFCBD5E1),
+                  ),
+                ),
               ),
             ),
 
@@ -706,12 +838,18 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
             // 🛠️ TRADITIONAL MATERIALS & TOOLS BUILDER SECTION
             Text(
               'Traditional Materials & Tools Used',
-              style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
+              style: GoogleFonts.dmSerifDisplay(
+                fontSize: 20,
+                color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+              ),
             ),
             const SizedBox(height: 6),
             Text(
               'Displayed on your tourist profile page to highlight authentic crafting methods.',
-              style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.grey[600]),
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                color: isDark ? Colors.white70 : Colors.grey[600],
+              ),
             ),
             const SizedBox(height: 12),
             Wrap(
@@ -719,13 +857,30 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
               runSpacing: 8,
               children: [
                 ..._toolsAndMaterials.map((tool) => Chip(
-                      avatar: const Icon(Icons.build_circle_rounded, size: 16, color: Color(0xFF004D40)),
-                      label: Text(tool, style: GoogleFonts.plusJakartaSans(fontSize: 11)),
+                      backgroundColor: isDark ? const Color(0xFF0D2825) : null,
+                      side: BorderSide(
+                        color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFCBD5E1),
+                      ),
+                      avatar: Icon(
+                        Icons.build_circle_rounded,
+                        size: 16,
+                        color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                      ),
+                      label: Text(
+                        tool,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          color: isDark ? Colors.white : null,
+                        ),
+                      ),
+                      deleteIconColor: isDark ? Colors.white70 : null,
                       onDeleted: () {
                         setState(() => _toolsAndMaterials.remove(tool));
                       },
                     )),
                 ActionChip(
+                  backgroundColor: isDark ? const Color(0xFF0D2825) : Colors.white,
+                  side: const BorderSide(color: Color(0xFFD97706)),
                   avatar: const Icon(Icons.add, size: 16, color: Color(0xFFD97706)),
                   label: Text('Add Tool/Material', style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFFD97706))),
                   onPressed: () {
@@ -733,14 +888,36 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                     showDialog(
                       context: context,
                       builder: (context) => AlertDialog(
-                        title: const Text('Add Traditional Tool or Material'),
+                        backgroundColor: isDark ? const Color(0xFF0D2825) : Colors.white,
+                        title: Text(
+                          'Add Traditional Tool or Material',
+                          style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                        ),
                         content: TextField(
                           controller: textController,
-                          decoration: const InputDecoration(hintText: 'e.g., Paddy Husk Kiln Ash'),
+                          style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                          decoration: InputDecoration(
+                            hintText: 'e.g., Paddy Husk Kiln Ash',
+                            hintStyle: TextStyle(
+                              color: isDark ? Colors.white38 : Colors.grey[500],
+                            ),
+                          ),
                         ),
                         actions: [
-                          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: Text(
+                              'Cancel',
+                              style: TextStyle(
+                                color: isDark ? Colors.white70 : null,
+                              ),
+                            ),
+                          ),
                           FilledButton(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                              foregroundColor: isDark ? const Color(0xFF041412) : Colors.white,
+                            ),
                             onPressed: () {
                               if (textController.text.trim().isNotEmpty) {
                                 setState(() => _toolsAndMaterials.add(textController.text.trim()));
@@ -767,7 +944,10 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                   child: Text(
                     'Portfolio Gallery Manager',
                     softWrap: true,
-                    style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
+                    style: GoogleFonts.dmSerifDisplay(
+                      fontSize: 20,
+                      color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -784,7 +964,10 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
             const SizedBox(height: 6),
             Text(
               'Images uploaded here populate the top gallery slider on the Tourist Profile page.',
-              style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.grey[600]),
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                color: isDark ? Colors.white70 : Colors.grey[600],
+              ),
             ),
 
             const SizedBox(height: 16),
@@ -842,9 +1025,12 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                   onTap: () => _uploadDocument('PORTFOLIO_IMAGE'),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: isDark ? const Color(0xFF0D2825) : Colors.white,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.grey[300]!, style: BorderStyle.solid),
+                      border: Border.all(
+                        color: isDark ? const Color(0xFF1E3A34) : Colors.grey[300]!,
+                        style: BorderStyle.solid,
+                      ),
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -876,22 +1062,26 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                   child: Text(
                     'Proof of Authenticity & Credentials',
                     softWrap: true,
-                    style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
+                    style: GoogleFonts.dmSerifDisplay(
+                      fontSize: 20,
+                      color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFECFDF5),
+                    color: isDark ? const Color(0xFF0D2825) : const Color(0xFFECFDF5),
                     borderRadius: BorderRadius.circular(8),
+                    border: isDark ? Border.all(color: const Color(0xFF1E3A34)) : null,
                   ),
                   child: Text(
                     '3 / 3 Uploaded',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
-                      color: const Color(0xFF047857),
+                      color: isDark ? const Color(0xFF34D399) : const Color(0xFF047857),
                     ),
                   ),
                 ),
@@ -900,12 +1090,16 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
             const SizedBox(height: 6),
             Text(
               'Upload official certificates to populate master credentials on the Tourist Profile view.',
-              style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.grey[600]),
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                color: isDark ? Colors.white70 : Colors.grey[600],
+              ),
             ),
 
             const SizedBox(height: 16),
 
             _buildDocumentUploadTile(
+              isDark: isDark,
               title: 'Business Registration (SSM) Certificate',
               subtitle: _documents['SSM_BUSINESS_CERT'] != null ? 'Uploaded Document' : 'Required',
               icon: Icons.article_rounded,
@@ -914,6 +1108,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
               onView: _documents['SSM_BUSINESS_CERT'] != null ? () => _viewDocument(_documents['SSM_BUSINESS_CERT']!) : null,
             ),
             _buildDocumentUploadTile(
+              isDark: isDark,
               title: 'Kraftangan Malaysia Master Certification',
               subtitle: _documents['KRAFTANGAN_MASTER_CERT'] != null ? 'Uploaded Document' : 'Optional',
               icon: Icons.workspace_premium_rounded,
@@ -931,17 +1126,23 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                   child: OutlinedButton.icon(
                     onPressed: _previewTouristView,
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Color(0xFF004D40), width: 1.5),
+                      side: BorderSide(
+                        color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                        width: 1.5,
+                      ),
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     ),
-                    icon: const Icon(Icons.visibility_rounded, color: Color(0xFF004D40)),
+                    icon: Icon(
+                      Icons.visibility_rounded,
+                      color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                    ),
                     label: Text(
                       'PREVIEW TOURIST VIEW',
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: const Color(0xFF004D40),
+                        color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
                       ),
                     ),
                   ),
@@ -951,8 +1152,8 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                   child: FilledButton(
                     onPressed: _handleSave,
                     style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF004D40),
-                      foregroundColor: Colors.white,
+                      backgroundColor: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                      foregroundColor: isDark ? const Color(0xFF041412) : Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     ),
@@ -975,6 +1176,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
   }
 
   Widget _buildDocumentUploadTile({
+    required bool isDark,
     required String title,
     required String subtitle,
     required IconData icon,
@@ -986,19 +1188,33 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: isUploaded ? const Color(0xFFF8FAFC) : Colors.white,
+        color: isDark
+            ? const Color(0xFF0D2825)
+            : (isUploaded ? const Color(0xFFF8FAFC) : Colors.white),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isUploaded ? const Color(0xFFCBD5E1) : Colors.black.withValues(alpha: 0.06)),
+        border: Border.all(
+          color: isDark
+              ? const Color(0xFF1E3A34)
+              : (isUploaded ? const Color(0xFFCBD5E1) : Colors.black.withValues(alpha: 0.06)),
+        ),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: isUploaded ? const Color(0xFF004D40).withValues(alpha: 0.1) : Colors.grey[100],
+              color: isDark
+                  ? const Color(0xFF041412)
+                  : (isUploaded ? const Color(0xFF004D40).withValues(alpha: 0.1) : Colors.grey[100]),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: isUploaded ? const Color(0xFF004D40) : Colors.grey[500], size: 22),
+            child: Icon(
+              icon,
+              color: isUploaded
+                  ? (isDark ? const Color(0xFF34D399) : const Color(0xFF004D40))
+                  : (isDark ? Colors.white54 : Colors.grey[500]),
+              size: 22,
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -1010,12 +1226,15 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: const Color(0xFF1E293B),
+                    color: isDark ? Colors.white : const Color(0xFF1E293B),
                   ),
                 ),
                 Text(
                   subtitle,
-                  style: GoogleFonts.plusJakartaSans(fontSize: 10, color: Colors.grey[600]),
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 10,
+                    color: isDark ? Colors.white60 : Colors.grey[600],
+                  ),
                 ),
                 if (isUploaded && onView != null) ...[
                   const SizedBox(height: 4),
@@ -1023,7 +1242,11 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                     onTap: onView,
                     child: Text(
                       'View File',
-                      style: GoogleFonts.plusJakartaSans(fontSize: 10, color: const Color(0xFFD97706), fontWeight: FontWeight.w600),
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 10,
+                        color: const Color(0xFFD97706),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],
@@ -1033,11 +1256,30 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
           OutlinedButton.icon(
             onPressed: onTap,
             style: OutlinedButton.styleFrom(
+              side: BorderSide(
+                color: isDark
+                    ? (isUploaded ? const Color(0xFF34D399) : const Color(0xFF1E3A34))
+                    : (isUploaded ? const Color(0xFF10B981) : Colors.grey),
+              ),
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            icon: Icon(isUploaded ? Icons.check_circle_rounded : Icons.upload_file_rounded, size: 14, color: isUploaded ? const Color(0xFF10B981) : Colors.grey),
-            label: Text(isUploaded ? 'UPLOADED' : 'UPLOAD', style: TextStyle(fontSize: 10, color: isUploaded ? const Color(0xFF10B981) : Colors.grey)),
+            icon: Icon(
+              isUploaded ? Icons.check_circle_rounded : Icons.upload_file_rounded,
+              size: 14,
+              color: isUploaded
+                  ? (isDark ? const Color(0xFF34D399) : const Color(0xFF10B981))
+                  : (isDark ? Colors.white60 : Colors.grey),
+            ),
+            label: Text(
+              isUploaded ? 'UPLOADED' : 'UPLOAD',
+              style: TextStyle(
+                fontSize: 10,
+                color: isUploaded
+                    ? (isDark ? const Color(0xFF34D399) : const Color(0xFF10B981))
+                    : (isDark ? Colors.white60 : Colors.grey),
+              ),
+            ),
           ),
         ],
       ),

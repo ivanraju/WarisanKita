@@ -8,8 +8,10 @@ class ArtisanApplicationApprovedScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
@@ -21,12 +23,13 @@ class ArtisanApplicationApprovedScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF004D40).withOpacity(0.1),
+                  color: isDark ? const Color(0xFF0D2825) : const Color(0xFF004D40).withOpacity(0.1),
                   shape: BoxShape.circle,
+                  border: isDark ? Border.all(color: const Color(0xFF1E3A34)) : null,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.verified_rounded,
-                  color: Color(0xFF004D40),
+                  color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
                   size: 80,
                 ),
               ),
@@ -35,7 +38,7 @@ class ArtisanApplicationApprovedScreen extends StatelessWidget {
                 'Congratulations!',
                 style: GoogleFonts.dmSerifDisplay(
                   fontSize: 36,
-                  color: const Color(0xFF004D40),
+                  color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
                 ),
               ),
               const SizedBox(height: 16),
@@ -45,7 +48,7 @@ class ArtisanApplicationApprovedScreen extends StatelessWidget {
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 16,
                   height: 1.5,
-                  color: Colors.black87,
+                  color: isDark ? Colors.white70 : Colors.black87,
                 ),
               ),
               const SizedBox(height: 48),
@@ -55,7 +58,8 @@ class ArtisanApplicationApprovedScreen extends StatelessWidget {
                 child: FilledButton(
                   onPressed: onContinue,
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF004D40),
+                    backgroundColor: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                    foregroundColor: isDark ? const Color(0xFF041412) : Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -66,7 +70,7 @@ class ArtisanApplicationApprovedScreen extends StatelessWidget {
                     style: GoogleFonts.plusJakartaSans(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
-                      color: Colors.white,
+                      color: isDark ? const Color(0xFF041412) : Colors.white,
                     ),
                   ),
                 ),

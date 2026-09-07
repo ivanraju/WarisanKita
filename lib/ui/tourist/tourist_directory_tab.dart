@@ -161,6 +161,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
   }
 
   void _showFilterBottomSheet(LanguageViewModel langVM) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final categories = [
       langVM.translate('All Crafts'),
       langVM.translate('Clay Pottery & Ceramics'),
@@ -172,7 +173,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? const Color(0xFF0D2825) : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -192,11 +193,11 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                         child: Text(
                           langVM.translate('Filter Heritage Directory'),
                           softWrap: true,
-                          style: GoogleFonts.dmSerifDisplay(fontSize: 22, color: const Color(0xFF004D40)),
+                          style: GoogleFonts.dmSerifDisplay(fontSize: 22, color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40)),
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.close),
+                        icon: Icon(Icons.close, color: isDark ? Colors.white70 : Colors.black87),
                         onPressed: () => Navigator.of(context).pop(),
                       ),
                     ],
@@ -205,11 +206,11 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
 
                   Row(
                     children: [
-                      const Icon(Icons.map_rounded, color: Color(0xFFD97706), size: 18),
+                      Icon(Icons.map_rounded, color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFD97706), size: 18),
                       const SizedBox(width: 8),
                       Text(
                         'Select Region / State:',
-                        style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 13),
+                        style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 13, color: isDark ? Colors.white : Colors.black87),
                       ),
                     ],
                   ),
@@ -230,9 +231,10 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                           }
                         },
                         selectedColor: const Color(0xFF004D40),
-                        backgroundColor: const Color(0xFFF1F5F9),
+                        backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF1F5F9),
+                        side: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : null,
                         labelStyle: TextStyle(
-                          color: isSelected ? Colors.white : const Color(0xFF334155),
+                          color: isSelected ? Colors.white : (isDark ? Colors.white70 : const Color(0xFF334155)),
                           fontWeight: FontWeight.bold,
                           fontSize: 11,
                         ),
@@ -244,11 +246,11 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
 
                   Row(
                     children: [
-                      const Icon(Icons.category_rounded, color: Color(0xFF004D40), size: 18),
+                      Icon(Icons.category_rounded, color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40), size: 18),
                       const SizedBox(width: 8),
                       Text(
                         'Select Craft Specialization:',
-                        style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 13),
+                        style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 13, color: isDark ? Colors.white : Colors.black87),
                       ),
                     ],
                   ),
@@ -269,9 +271,10 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                           }
                         },
                         selectedColor: const Color(0xFFD97706),
-                        backgroundColor: const Color(0xFFF1F5F9),
+                        backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF1F5F9),
+                        side: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : null,
                         labelStyle: TextStyle(
-                          color: isSelected ? Colors.white : const Color(0xFF334155),
+                          color: isSelected ? Colors.white : (isDark ? Colors.white70 : const Color(0xFF334155)),
                           fontWeight: FontWeight.bold,
                           fontSize: 11,
                         ),
@@ -398,6 +401,8 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
       {'name': langVM.translate('Traditional Woodcarving'), 'icon': Icons.handyman_rounded},
     ];
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [
@@ -405,7 +410,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
         SliverAppBar(
           floating: true,
           pinned: true,
-          backgroundColor: const Color(0xFFF8F9FA),
+          backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
           elevation: 0,
           expandedHeight: 120.0,
           flexibleSpace: FlexibleSpaceBar(
@@ -523,7 +528,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                         decoration: BoxDecoration(
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.05),
+                              color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
                               blurRadius: 16,
                               offset: const Offset(0, 4),
                             )
@@ -531,11 +536,12 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                         ),
                         child: TextField(
                           controller: _searchController,
+                          style: TextStyle(color: isDark ? Colors.white : Colors.black87),
                           onChanged: (_) => setState(() {}),
                           decoration: InputDecoration(
                             hintText: langVM.translate('Search master artisans, state, or craft...'),
-                            hintStyle: GoogleFonts.plusJakartaSans(fontSize: 13, color: Colors.grey[400]),
-                            prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF004D40)),
+                            hintStyle: GoogleFonts.plusJakartaSans(fontSize: 13, color: isDark ? Colors.white38 : Colors.grey[400]),
+                            prefixIcon: Icon(Icons.search_rounded, color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40)),
                             suffixIcon: _searchController.text.isNotEmpty
                                 ? IconButton(
                                     icon: const Icon(Icons.close_rounded, size: 18, color: Color(0xFF64748B)),
@@ -546,9 +552,16 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                                   )
                                 : null,
                             filled: true,
-                            fillColor: Colors.white,
+                            fillColor: isDark ? const Color(0xFF0D2825) : Colors.white,
                             contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(20),
+                              borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(20),
+                              borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+                            ),
                           ),
                         ),
                       ),
@@ -586,21 +599,21 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFEF3C7),
+                          color: isDark ? const Color(0xFF78350F).withValues(alpha: 0.4) : const Color(0xFFFEF3C7),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFFDE68A)),
+                          border: Border.all(color: isDark ? const Color(0xFFD97706).withValues(alpha: 0.5) : const Color(0xFFFDE68A)),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.filter_list_rounded, size: 14, color: Color(0xFF92400E)),
+                            Icon(Icons.filter_list_rounded, size: 14, color: isDark ? const Color(0xFFFDE68A) : const Color(0xFF92400E)),
                             const SizedBox(width: 4),
                             Text(
                               '${filtered.length} matching result${filtered.length == 1 ? '' : 's'}',
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
-                                color: const Color(0xFF92400E),
+                                color: isDark ? const Color(0xFFFDE68A) : const Color(0xFF92400E),
                               ),
                             ),
                           ],
@@ -647,10 +660,10 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                           margin: const EdgeInsets.only(right: 10),
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                           decoration: BoxDecoration(
-                            color: isSelected ? const Color(0xFF004D40) : Colors.white,
+                            color: isSelected ? const Color(0xFF004D40) : (isDark ? const Color(0xFF0D2825) : Colors.white),
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
-                              color: isSelected ? const Color(0xFF004D40) : const Color(0xFFE2E8F0),
+                              color: isSelected ? const Color(0xFF004D40) : (isDark ? const Color(0xFF1E3A34) : const Color(0xFFE2E8F0)),
                               width: 1.5,
                             ),
                             boxShadow: isSelected
@@ -668,7 +681,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                               Icon(
                                 icon,
                                 size: 16,
-                                color: isSelected ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                                color: isSelected ? const Color(0xFFFFD54F) : (isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40)),
                               ),
                               const SizedBox(width: 6),
                               Text(
@@ -676,7 +689,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
-                                  color: isSelected ? Colors.white : const Color(0xFF334155),
+                                  color: isSelected ? Colors.white : (isDark ? Colors.white70 : const Color(0xFF334155)),
                                 ),
                               ),
                             ],
@@ -692,13 +705,13 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                 // Region / State Filter Chips Row
                 Row(
                   children: [
-                    const Icon(Icons.map_rounded, color: Color(0xFFD97706), size: 14),
+                    Icon(Icons.map_rounded, color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFD97706), size: 14),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         langVM.translate('Filter by Region / State:'),
                         softWrap: true,
-                        style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFFD97706)),
+                        style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFD97706)),
                       ),
                     ),
                   ],
@@ -722,9 +735,10 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                             if (selected) setState(() => _selectedState = st);
                           },
                           selectedColor: const Color(0xFFD97706),
-                          backgroundColor: Colors.white,
+                          backgroundColor: isDark ? const Color(0xFF0D2825) : Colors.white,
+                          side: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : null,
                           labelStyle: GoogleFonts.plusJakartaSans(
-                            color: isSelected ? Colors.white : const Color(0xFF475569),
+                            color: isSelected ? Colors.white : (isDark ? Colors.white70 : const Color(0xFF475569)),
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
                           ),
@@ -745,15 +759,17 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                   children: [
                     Text(
                       'Preferences Matching:',
-                      style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[600]),
+                      style: GoogleFonts.plusJakartaSans(fontSize: 11, color: isDark ? Colors.white60 : Colors.grey[600]),
                     ),
                     FilterChip(
                       label: Text(_hasPreferences ? '⚡ Personalized (Active)' : 'Off (Show All)'),
                       selected: _hasPreferences,
                       onSelected: (val) => setState(() => _hasPreferences = val),
-                      selectedColor: const Color(0xFFE0F2FE),
+                      selectedColor: isDark ? const Color(0xFF0369A1).withValues(alpha: 0.3) : const Color(0xFFE0F2FE),
+                      backgroundColor: isDark ? const Color(0xFF0D2825) : null,
+                      side: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : null,
                       labelStyle: TextStyle(
-                        color: _hasPreferences ? const Color(0xFF0369A1) : Colors.grey[700],
+                        color: _hasPreferences ? (isDark ? const Color(0xFF7DD3FC) : const Color(0xFF0369A1)) : (isDark ? Colors.white60 : Colors.grey[700]),
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                       ),
@@ -766,16 +782,16 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF0FDF4),
+                      color: isDark ? const Color(0xFF0D2825) : const Color(0xFFF0FDF4),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0xFF86EFAC)),
+                      border: Border.all(color: isDark ? const Color(0xFF1E3A34) : const Color(0xFF86EFAC)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.auto_awesome_rounded, color: Color(0xFF15803D), size: 16),
+                            Icon(Icons.auto_awesome_rounded, color: isDark ? const Color(0xFF34D399) : const Color(0xFF15803D), size: 16),
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
@@ -784,7 +800,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
-                                  color: const Color(0xFF15803D),
+                                  color: isDark ? const Color(0xFF34D399) : const Color(0xFF15803D),
                                 ),
                               ),
                             ),
@@ -917,6 +933,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
   }
 
   Widget _buildArtisanCard(BuildContext context, Map<String, dynamic> artisan, LanguageViewModel langVM) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final List<String> images = artisan['images'] != null
         ? List<String>.from(artisan['images'])
         : [artisan['image'] as String];
@@ -924,16 +941,16 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
     return Container(
       margin: const EdgeInsets.only(bottom: 24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF0D2825) : Colors.white,
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF004D40).withValues(alpha: 0.08),
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
             blurRadius: 20,
             offset: const Offset(0, 8),
           )
         ],
-        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
+        border: Border.all(color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFF1F5F9), width: 1.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1072,7 +1089,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                             softWrap: true,
                             style: GoogleFonts.dmSerifDisplay(
                               fontSize: 20,
-                              color: const Color(0xFF004D40),
+                              color: isDark ? Colors.white : const Color(0xFF004D40),
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -1081,7 +1098,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
-                              color: const Color(0xFFD97706),
+                              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFD97706),
                             ),
                           ),
                         ],
@@ -1091,21 +1108,21 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFEF3C7),
+                        color: isDark ? const Color(0xFF78350F).withValues(alpha: 0.4) : const Color(0xFFFEF3C7),
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.4)),
+                        border: Border.all(color: isDark ? const Color(0xFFD97706).withValues(alpha: 0.5) : const Color(0xFFF59E0B).withValues(alpha: 0.4)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.location_on_rounded, size: 12, color: Color(0xFFD97706)),
+                          Icon(Icons.location_on_rounded, size: 12, color: isDark ? const Color(0xFFFDE68A) : const Color(0xFFD97706)),
                           const SizedBox(width: 4),
                           Text(
                             artisan['state'],
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
-                              color: const Color(0xFFD97706),
+                              color: isDark ? const Color(0xFFFDE68A) : const Color(0xFFD97706),
                             ),
                           ),
                         ],
@@ -1120,7 +1137,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                   softWrap: true,
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 12,
-                    color: const Color(0xFF64748B),
+                    color: isDark ? Colors.white70 : const Color(0xFF64748B),
                     height: 1.5,
                   ),
                 ),
@@ -1134,7 +1151,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                       child: Container(
                         height: 1.5,
                         margin: const EdgeInsets.symmetric(horizontal: 2),
-                        color: const Color(0xFFCBD5E1),
+                        color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFCBD5E1),
                       ),
                     ),
                   ),
@@ -1162,14 +1179,14 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                           );
                         },
                         style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Color(0xFF004D40), width: 1.5),
+                          side: BorderSide(color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40), width: 1.5),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
                         child: Text(
                           langVM.translate('View Profile'),
                           style: GoogleFonts.plusJakartaSans(
-                            color: const Color(0xFF004D40),
+                            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
@@ -1190,7 +1207,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                           );
                         },
                         style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFF004D40),
+                          backgroundColor: isDark ? const Color(0xFF00695C) : const Color(0xFF004D40),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           elevation: 2,
