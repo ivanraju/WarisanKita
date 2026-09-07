@@ -39,13 +39,13 @@ class ArtisanMatchCard extends StatelessWidget {
               ? (isDark
               ? const Color(0xFF78350F).withValues(alpha: 0.32)
               : const Color(0xFFFFF8E1))
-              : (isDark ? const Color(0xFF1E293B) : Colors.white),
+              : (isDark ? const Color(0xFF0D2825) : Colors.white),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
             color: isSelected
                 ? const Color(0xFFF59E0B)
                 : (isDark
-                ? Colors.white10
+                ? const Color(0xFF1E3A34)
                 : Colors.black.withValues(alpha: 0.06)),
             width: isSelected ? 2.5 : 1,
           ),
@@ -180,8 +180,9 @@ class ArtisanMatchCard extends StatelessWidget {
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF0F3D3E)
-                                    .withValues(alpha: 0.08),
+                                color: isDark
+                                    ? const Color(0xFF1E3A34)
+                                    : const Color(0xFF0F3D3E).withValues(alpha: 0.08),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Text(
@@ -189,7 +190,9 @@ class ArtisanMatchCard extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: GoogleFonts.plusJakartaSans(
-                                  color: const Color(0xFF0F3D3E),
+                                  color: isDark
+                                      ? const Color(0xFF34D399)
+                                      : const Color(0xFF0F3D3E),
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -203,20 +206,22 @@ class ArtisanMatchCard extends StatelessWidget {
                               vertical: 3,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFFEF3C7),
+                              color: isDark
+                                  ? const Color(0xFF78350F).withValues(alpha: 0.4)
+                                  : const Color(0xFFFEF3C7),
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
                                 color: const Color(0xFFF59E0B)
-                                    .withValues(alpha: 0.5),
+                                    .withValues(alpha: isDark ? 0.6 : 0.5),
                               ),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(
+                                Icon(
                                   Icons.stars_rounded,
                                   size: 12,
-                                  color: Color(0xFFB45309),
+                                  color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFB45309),
                                 ),
                                 const SizedBox(width: 3),
                                 Text(
@@ -224,7 +229,7 @@ class ArtisanMatchCard extends StatelessWidget {
                                   style: GoogleFonts.plusJakartaSans(
                                     fontSize: 9,
                                     fontWeight: FontWeight.w900,
-                                    color: const Color(0xFFB45309),
+                                    color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFB45309),
                                   ),
                                 ),
                               ],
@@ -255,10 +260,10 @@ class ArtisanMatchCard extends StatelessWidget {
                       // Location & Calculated GPS Distance Row
                       Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.location_on_rounded,
                             size: 14,
-                            color: Color(0xFFD97706),
+                            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFD97706),
                           ),
                           const SizedBox(width: 4),
                           Expanded(
@@ -270,7 +275,7 @@ class ArtisanMatchCard extends StatelessWidget {
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 12,
                                 color: isDark
-                                    ? Colors.grey[400]
+                                    ? Colors.white70
                                     : Colors.grey[600],
                               ),
                             ),
@@ -283,17 +288,18 @@ class ArtisanMatchCard extends StatelessWidget {
                                 vertical: 2,
                               ),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF004D40)
-                                    .withValues(alpha: 0.08),
+                                color: isDark
+                                    ? const Color(0xFF1E3A34)
+                                    : const Color(0xFF004D40).withValues(alpha: 0.08),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Icon(
+                                  Icon(
                                     Icons.directions_walk_rounded,
                                     size: 11,
-                                    color: Color(0xFF004D40),
+                                    color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
                                   ),
                                   const SizedBox(width: 2),
                                   Text(
@@ -301,7 +307,7 @@ class ArtisanMatchCard extends StatelessWidget {
                                     style: GoogleFonts.plusJakartaSans(
                                       fontSize: 10,
                                       fontWeight: FontWeight.bold,
-                                      color: const Color(0xFF004D40),
+                                      color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
                                     ),
                                   ),
                                 ],
@@ -321,8 +327,8 @@ class ArtisanMatchCard extends StatelessWidget {
                             child: OutlinedButton(
                               onPressed: onViewProfile,
                               style: OutlinedButton.styleFrom(
-                                side: const BorderSide(
-                                  color: Color(0xFF004D40),
+                                side: BorderSide(
+                                  color: isDark ? const Color(0xFF1E3A34) : const Color(0xFF004D40),
                                 ),
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 6,
@@ -338,7 +344,7 @@ class ArtisanMatchCard extends StatelessWidget {
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
-                                  color: const Color(0xFF004D40),
+                                  color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
                                 ),
                               ),
                             ),
@@ -350,7 +356,7 @@ class ArtisanMatchCard extends StatelessWidget {
                             child: FilledButton.icon(
                               onPressed: onViewQuest,
                               style: FilledButton.styleFrom(
-                                backgroundColor: const Color(0xFF004D40),
+                                backgroundColor: isDark ? const Color(0xFF1E3A34) : const Color(0xFF004D40),
                                 foregroundColor: Colors.white,
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 6,

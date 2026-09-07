@@ -265,15 +265,16 @@ class _ArtisanHeritageTaskManagementViewState
     required List<(String, String)> current,
     required List<(String, String)> requested,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) => Container(
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
-        decoration: const BoxDecoration(
-          color: Color(0xFFF7F5EF),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF0D2825) : const Color(0xFFF7F5EF),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
         ),
         child: SafeArea(
           top: false,
@@ -285,25 +286,31 @@ class _ArtisanHeritageTaskManagementViewState
                 Text(
                   title,
                   style: GoogleFonts.dmSerifDisplay(
-                    color: _green,
+                    color: isDark ? const Color(0xFFFFD54F) : _green,
                     fontSize: 25,
                   ),
                 ),
                 const SizedBox(height: 6),
-                const Text(
+                Text(
                   'The approved information remains active until an admin approves this request.',
-                  style: TextStyle(color: Color(0xFF64748B), fontSize: 12),
+                  style: TextStyle(
+                    color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                    fontSize: 12,
+                  ),
                 ),
                 const SizedBox(height: 18),
-                _changeVersion('CURRENT / APPROVED', current),
+                _changeVersion('CURRENT / APPROVED', current, isDark: isDark),
                 const SizedBox(height: 14),
-                _changeVersion('REQUESTED CHANGES', requested, pending: true),
+                _changeVersion('REQUESTED CHANGES', requested, pending: true, isDark: isDark),
                 const SizedBox(height: 20),
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
                     onPressed: () => Navigator.pop(sheetContext),
-                    style: FilledButton.styleFrom(backgroundColor: _green),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: isDark ? const Color(0xFFFFD54F) : _green,
+                      foregroundColor: isDark ? const Color(0xFF041412) : Colors.white,
+                    ),
                     child: const Text('Done'),
                   ),
                 ),
@@ -319,15 +326,20 @@ class _ArtisanHeritageTaskManagementViewState
     String heading,
     List<(String, String)> values, {
     bool pending = false,
+    bool isDark = false,
   }) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: pending ? const Color(0xFFFFF8E6) : Colors.white,
+        color: pending
+            ? (isDark ? const Color(0xFF1E3A34) : const Color(0xFFFFF8E6))
+            : (isDark ? const Color(0xFF041412) : Colors.white),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: pending ? const Color(0xFFE4B64D) : const Color(0xFFE1E5E2),
+          color: pending
+              ? (isDark ? const Color(0xFFFFD54F) : const Color(0xFFE4B64D))
+              : (isDark ? const Color(0xFF1E3A34) : const Color(0xFFE1E5E2)),
         ),
       ),
       child: Column(
@@ -335,8 +347,10 @@ class _ArtisanHeritageTaskManagementViewState
         children: [
           Text(
             heading,
-            style: const TextStyle(
-              color: Color(0xFF64748B),
+            style: TextStyle(
+              color: pending
+                  ? (isDark ? const Color(0xFFFFD54F) : const Color(0xFFB87800))
+                  : (isDark ? const Color(0xFF34D399) : const Color(0xFF64748B)),
               fontSize: 10,
               fontWeight: FontWeight.w800,
               letterSpacing: 0.7,
@@ -346,8 +360,8 @@ class _ArtisanHeritageTaskManagementViewState
           for (var index = 0; index < values.length; index++) ...[
             Text(
               values[index].$1,
-              style: const TextStyle(
-                color: Color(0xFF64748B),
+              style: TextStyle(
+                color: isDark ? Colors.white60 : const Color(0xFF64748B),
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
               ),
@@ -355,8 +369,8 @@ class _ArtisanHeritageTaskManagementViewState
             const SizedBox(height: 3),
             Text(
               values[index].$2,
-              style: const TextStyle(
-                color: Color(0xFF183B34),
+              style: TextStyle(
+                color: isDark ? Colors.white : const Color(0xFF183B34),
                 fontWeight: FontWeight.w700,
                 height: 1.35,
               ),
@@ -496,13 +510,17 @@ class _ArtisanHeritageTaskManagementViewState
     }
 
     final payload = 'WK_ARTISAN:${quest.artisanId}:$secret';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showDialog<void>(
       context: context,
       builder: (dialogContext) => Dialog(
         insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-        backgroundColor: Colors.white,
+        backgroundColor: isDark ? const Color(0xFF0D2825) : Colors.white,
         clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(26),
+          side: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+        ),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 360),
           child: SingleChildScrollView(
@@ -513,7 +531,7 @@ class _ArtisanHeritageTaskManagementViewState
                 Text(
                   'Workshop QR',
                   style: GoogleFonts.dmSerifDisplay(
-                    color: _green,
+                    color: isDark ? const Color(0xFFFFD54F) : _green,
                     fontSize: 24,
                   ),
                 ),
@@ -523,7 +541,7 @@ class _ArtisanHeritageTaskManagementViewState
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: _green, width: 2),
+                    border: Border.all(color: isDark ? const Color(0xFFFFD54F) : _green, width: 2),
                   ),
                   child: SizedBox.square(
                     dimension: 200,
@@ -547,7 +565,7 @@ class _ArtisanHeritageTaskManagementViewState
                   'same code to verify each completed task.',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.plusJakartaSans(
-                    color: const Color(0xFF64748B),
+                    color: isDark ? Colors.white70 : const Color(0xFF64748B),
                     fontSize: 12,
                     height: 1.45,
                   ),
@@ -557,7 +575,10 @@ class _ArtisanHeritageTaskManagementViewState
                   width: double.infinity,
                   child: FilledButton(
                     onPressed: () => Navigator.of(dialogContext).pop(),
-                    style: FilledButton.styleFrom(backgroundColor: _green),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: isDark ? const Color(0xFFFFD54F) : _green,
+                      foregroundColor: isDark ? const Color(0xFF041412) : Colors.white,
+                    ),
                     child: const Text('Done'),
                   ),
                 ),
@@ -571,16 +592,17 @@ class _ArtisanHeritageTaskManagementViewState
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final viewModel = context.watch<GamificationViewModel>();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F5EF),
+      backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF7F5EF),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: viewModel.isLoadingArtisanQuest || viewModel.isAddingTask
             ? null
             : _handleAddTaskTap,
-        backgroundColor: _green,
-        foregroundColor: Colors.white,
+        backgroundColor: isDark ? const Color(0xFFFFD54F) : _green,
+        foregroundColor: isDark ? const Color(0xFF041412) : Colors.white,
         disabledElevation: 0,
         icon: const Icon(Icons.add_rounded),
         label: const Text(
@@ -589,35 +611,43 @@ class _ArtisanHeritageTaskManagementViewState
         ),
       ),
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        foregroundColor: _green,
+        backgroundColor: isDark ? const Color(0xFF041412) : Colors.white,
+        foregroundColor: isDark ? const Color(0xFFFFD54F) : _green,
         elevation: 0,
         title: Text(
           'Task Management',
-          style: GoogleFonts.dmSerifDisplay(color: _green, fontSize: 22),
+          style: GoogleFonts.dmSerifDisplay(
+            color: isDark ? const Color(0xFFFFD54F) : _green,
+            fontSize: 22,
+          ),
         ),
       ),
       body: RefreshIndicator(
-        color: _green,
+        color: isDark ? const Color(0xFFFFD54F) : _green,
         onRefresh: viewModel.loadArtisanQuestAndTasks,
-        child: _body(viewModel),
+        child: _body(viewModel, isDark),
       ),
     );
   }
 
-  Widget _body(GamificationViewModel viewModel) {
+  Widget _body(GamificationViewModel viewModel, bool isDark) {
     if (viewModel.isLoadingArtisanQuest) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        children: const [
-          SizedBox(height: 240),
-          Center(child: CircularProgressIndicator(color: _green)),
+        children: [
+          const SizedBox(height: 240),
+          Center(
+            child: CircularProgressIndicator(
+              color: isDark ? const Color(0xFFFFD54F) : _green,
+            ),
+          ),
         ],
       );
     }
 
     if (viewModel.artisanTaskError != null && viewModel.artisanQuest == null) {
       return _stateView(
+        isDark: isDark,
         icon: Icons.error_outline_rounded,
         title: 'Unable to Load Task Management',
         message: viewModel.artisanTaskError!,
@@ -629,6 +659,7 @@ class _ArtisanHeritageTaskManagementViewState
     final quest = viewModel.artisanQuest;
     if (quest == null) {
       return _stateView(
+        isDark: isDark,
         icon: Icons.map_outlined,
         title: 'Cultural Quest Not Configured',
         message:
@@ -643,7 +674,7 @@ class _ArtisanHeritageTaskManagementViewState
         Text(
           'MY CULTURAL QUEST',
           style: GoogleFonts.plusJakartaSans(
-            color: _green,
+            color: isDark ? const Color(0xFFFFD54F) : _green,
             fontWeight: FontWeight.w800,
             letterSpacing: 1,
           ),
@@ -657,7 +688,7 @@ class _ArtisanHeritageTaskManagementViewState
               child: Text(
                 'TASKS',
                 style: GoogleFonts.plusJakartaSans(
-                  color: _green,
+                  color: isDark ? const Color(0xFFFFD54F) : _green,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 1,
                 ),
@@ -672,16 +703,18 @@ class _ArtisanHeritageTaskManagementViewState
         const SizedBox(height: 6),
         Row(
           children: [
-            const Expanded(
+            Expanded(
               child: Text(
                 'Potential XP',
-                style: TextStyle(color: Color(0xFF64748B)),
+                style: TextStyle(
+                  color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                ),
               ),
             ),
             Text(
               '${viewModel.artisanTotalPotentialXp} XP',
-              style: const TextStyle(
-                color: _green,
+              style: TextStyle(
+                color: isDark ? const Color(0xFFFFD54F) : _green,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -693,10 +726,10 @@ class _ArtisanHeritageTaskManagementViewState
         ],
         const SizedBox(height: 14),
         if (viewModel.artisanTasks.isEmpty)
-          _emptyTasks()
+          _emptyTasks(isDark)
         else
           for (var index = 0; index < viewModel.artisanTasks.length; index++)
-            _taskCard(index, viewModel.artisanTasks[index]),
+            _taskCard(index, viewModel.artisanTasks[index], isDark),
         const SizedBox(height: 72),
       ],
     );
@@ -1015,7 +1048,7 @@ class _ArtisanHeritageTaskManagementViewState
     ],
   );
 
-  Widget _taskCard(int index, HeritageTask task) {
+  Widget _taskCard(int index, HeritageTask task, bool isDark) {
     final viewModel = context.read<GamificationViewModel>();
     final pendingChange = viewModel.pendingChangeForTask(task.id);
     final rejectedEdit = viewModel.rejectedEditForTask(task.id);
@@ -1034,9 +1067,11 @@ class _ArtisanHeritageTaskManagementViewState
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF0D2825) : Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE3E6E2)),
+        border: Border.all(
+          color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFE3E6E2),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1071,8 +1106,8 @@ class _ArtisanHeritageTaskManagementViewState
           const SizedBox(height: 8),
           Text(
             task.title,
-            style: const TextStyle(
-              color: Color(0xFF183B34),
+            style: TextStyle(
+              color: isDark ? Colors.white : const Color(0xFF183B34),
               fontSize: 16,
               fontWeight: FontWeight.w700,
             ),
@@ -1084,14 +1119,16 @@ class _ArtisanHeritageTaskManagementViewState
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                 decoration: BoxDecoration(
                   color: task.isRequired
-                      ? const Color(0xFFE0F2ED)
-                      : const Color(0xFFF1F3F2),
+                      ? (isDark ? const Color(0xFF1E3A34) : const Color(0xFFE0F2ED))
+                      : (isDark ? const Color(0xFF041412) : const Color(0xFFF1F3F2)),
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
                   task.isRequired ? 'REQUIRED' : 'OPTIONAL',
-                  style: const TextStyle(
-                    color: _green,
+                  style: TextStyle(
+                    color: task.isRequired
+                        ? (isDark ? const Color(0xFF34D399) : _green)
+                        : (isDark ? Colors.white70 : const Color(0xFF64748B)),
                     fontSize: 10,
                     fontWeight: FontWeight.w800,
                   ),
@@ -1117,14 +1154,18 @@ class _ArtisanHeritageTaskManagementViewState
           ],
           const SizedBox(height: 12),
           if (task.isSystemTask)
-            const Row(
+            Row(
               children: [
-                Icon(Icons.lock_rounded, size: 15, color: Color(0xFF64748B)),
-                SizedBox(width: 6),
+                Icon(
+                  Icons.lock_rounded,
+                  size: 15,
+                  color: isDark ? Colors.white54 : const Color(0xFF64748B),
+                ),
+                const SizedBox(width: 6),
                 Text(
                   'SYSTEM TASK · EDITING LOCKED',
                   style: TextStyle(
-                    color: Color(0xFF64748B),
+                    color: isDark ? Colors.white54 : const Color(0xFF64748B),
                     fontSize: 10,
                     fontWeight: FontWeight.w800,
                   ),
@@ -1135,12 +1176,12 @@ class _ArtisanHeritageTaskManagementViewState
             InkWell(
               onTap: () => _showPendingTaskSubmission(task),
               borderRadius: BorderRadius.circular(12),
-              child: const Padding(
-                padding: EdgeInsets.symmetric(vertical: 4),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       '🕒 Task pending admin review',
                       style: TextStyle(
                         color: Color(0xFF9A6700),
@@ -1148,11 +1189,11 @@ class _ArtisanHeritageTaskManagementViewState
                         fontWeight: FontWeight.w800,
                       ),
                     ),
-                    SizedBox(height: 4),
+                    const SizedBox(height: 4),
                     Text(
                       'View submission ›',
                       style: TextStyle(
-                        color: _green,
+                        color: isDark ? const Color(0xFFFFD54F) : _green,
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
                       ),
@@ -1165,12 +1206,12 @@ class _ArtisanHeritageTaskManagementViewState
             InkWell(
               onTap: () => _showTaskChanges(task, pendingChange),
               borderRadius: BorderRadius.circular(12),
-              child: const Padding(
-                padding: EdgeInsets.symmetric(vertical: 4),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       '🕒 Update pending admin review',
                       style: TextStyle(
                         color: Color(0xFF9A6700),
@@ -1178,11 +1219,11 @@ class _ArtisanHeritageTaskManagementViewState
                         fontWeight: FontWeight.w800,
                       ),
                     ),
-                    SizedBox(height: 4),
+                    const SizedBox(height: 4),
                     Text(
                       'View changes ›',
                       style: TextStyle(
-                        color: _green,
+                        color: isDark ? const Color(0xFFFFD54F) : _green,
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
                       ),
@@ -1240,7 +1281,10 @@ class _ArtisanHeritageTaskManagementViewState
                                 task,
                                 rejectedChange: rejectedEdit,
                               ),
-                        style: FilledButton.styleFrom(backgroundColor: _green),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: isDark ? const Color(0xFFFFD54F) : _green,
+                          foregroundColor: isDark ? const Color(0xFF041412) : Colors.white,
+                        ),
                         icon: const Icon(Icons.edit_outlined, size: 16),
                         label: const Text('Edit & Resubmit'),
                       ),
@@ -1257,6 +1301,9 @@ class _ArtisanHeritageTaskManagementViewState
                   onPressed: isTaskActionBusy
                       ? null
                       : () => _showEditTaskSheet(task),
+                  style: TextButton.styleFrom(
+                    foregroundColor: isDark ? const Color(0xFFFFD54F) : _green,
+                  ),
                   icon: const Icon(Icons.edit_outlined, size: 17),
                   label: const Text('Edit'),
                 ),
@@ -1267,7 +1314,7 @@ class _ArtisanHeritageTaskManagementViewState
                             ? _deleteRejectedTask(task)
                             : _requestTaskDeletion(task),
                   style: TextButton.styleFrom(
-                    foregroundColor: const Color(0xFFB42318),
+                    foregroundColor: const Color(0xFFEF4444),
                   ),
                   icon: const Icon(Icons.delete_outline_rounded, size: 17),
                   label: const Text('Delete'),
@@ -1279,18 +1326,26 @@ class _ArtisanHeritageTaskManagementViewState
     );
   }
 
-  Widget _emptyTasks() => Container(
+  Widget _emptyTasks(bool isDark) => Container(
     margin: const EdgeInsets.only(bottom: 14),
     padding: const EdgeInsets.all(24),
     decoration: BoxDecoration(
-      color: Colors.white,
+      color: isDark ? const Color(0xFF0D2825) : Colors.white,
       borderRadius: BorderRadius.circular(18),
+      border: Border.all(
+        color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFE3E6E2),
+      ),
     ),
-    child: const Column(
+    child: Column(
       children: [
-        Icon(Icons.playlist_add_rounded, color: _gold, size: 38),
-        SizedBox(height: 10),
-        Text('No tasks yet.'),
+        const Icon(Icons.playlist_add_rounded, color: _gold, size: 38),
+        const SizedBox(height: 10),
+        Text(
+          'No tasks yet.',
+          style: TextStyle(
+            color: isDark ? Colors.white70 : Colors.black87,
+          ),
+        ),
       ],
     ),
   );
@@ -1311,6 +1366,7 @@ class _ArtisanHeritageTaskManagementViewState
   );
 
   Widget _stateView({
+    required bool isDark,
     required IconData icon,
     required String title,
     required String message,
@@ -1326,13 +1382,19 @@ class _ArtisanHeritageTaskManagementViewState
       Text(
         title,
         textAlign: TextAlign.center,
-        style: GoogleFonts.dmSerifDisplay(color: _green, fontSize: 24),
+        style: GoogleFonts.dmSerifDisplay(
+          color: isDark ? const Color(0xFFFFD54F) : _green,
+          fontSize: 24,
+        ),
       ),
       const SizedBox(height: 8),
       Text(
         message,
         textAlign: TextAlign.center,
-        style: const TextStyle(color: Color(0xFF64748B), height: 1.5),
+        style: TextStyle(
+          color: isDark ? Colors.white70 : const Color(0xFF64748B),
+          height: 1.5,
+        ),
       ),
       if (actionLabel != null && onAction != null) ...[
         const SizedBox(height: 20),

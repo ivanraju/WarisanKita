@@ -31,8 +31,8 @@ class _ShimmerLoadingCardState extends State<ShimmerLoadingCard>
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     
-    final baseColor = isDark ? Colors.grey[800]! : Colors.grey[300]!;
-    final highlightColor = isDark ? Colors.grey[700]! : Colors.grey[100]!;
+    final baseColor = isDark ? const Color(0xFF1E3A34) : Colors.grey[300]!;
+    final highlightColor = isDark ? const Color(0xFF041412) : Colors.grey[100]!;
 
     return AnimatedBuilder(
       animation: _controller,
@@ -41,14 +41,14 @@ class _ShimmerLoadingCardState extends State<ShimmerLoadingCard>
           margin: const EdgeInsets.only(bottom: 16),
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1E293B) : Colors.white,
+            color: isDark ? const Color(0xFF0D2825) : Colors.white,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: isDark ? Colors.white10 : Colors.black.withOpacity(0.06),
+              color: isDark ? const Color(0xFF1E3A34) : Colors.black.withValues(alpha: 0.06),
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.04),
+                color: Colors.black.withValues(alpha: 0.04),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               )

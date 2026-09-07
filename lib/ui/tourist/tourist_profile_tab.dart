@@ -98,6 +98,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
   ];
 
   void _showStampDetailModal(Map<String, dynamic> stamp) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,
       builder: (context) {
@@ -105,7 +106,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
 
         return Dialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-          backgroundColor: Colors.white,
+          backgroundColor: isDark ? const Color(0xFF0D2825) : Colors.white,
           child: Container(
             padding: const EdgeInsets.all(28),
             child: Column(
@@ -114,17 +115,17 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: unlocked ? (stamp['color'] as Color).withValues(alpha: 0.15) : Colors.grey[200],
+                    color: unlocked ? (stamp['color'] as Color).withValues(alpha: 0.15) : (isDark ? const Color(0xFF041412) : Colors.grey[200]),
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: unlocked ? (stamp['color'] as Color) : Colors.grey,
+                      color: unlocked ? (stamp['color'] as Color) : (isDark ? Colors.white24 : Colors.grey),
                       width: 2,
                     ),
                   ),
                   child: Icon(
                     stamp['icon'],
                     size: 48,
-                    color: unlocked ? (stamp['color'] as Color) : Colors.grey[500],
+                    color: unlocked ? (stamp['color'] as Color) : (isDark ? Colors.white38 : Colors.grey[500]),
                   ),
                 ),
 
@@ -133,15 +134,16 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: unlocked ? const Color(0xFFFEF3C7) : Colors.grey[200],
+                    color: unlocked ? (isDark ? const Color(0xFF78350F).withValues(alpha: 0.4) : const Color(0xFFFEF3C7)) : (isDark ? const Color(0xFF041412) : Colors.grey[200]),
                     borderRadius: BorderRadius.circular(8),
+                    border: isDark && unlocked ? Border.all(color: const Color(0xFFD97706).withValues(alpha: 0.5)) : null,
                   ),
                   child: Text(
                     stamp['stampCode'],
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
-                      color: unlocked ? const Color(0xFFB45309) : Colors.grey[600],
+                      color: unlocked ? (isDark ? const Color(0xFFFDE68A) : const Color(0xFFB45309)) : (isDark ? Colors.white60 : Colors.grey[600]),
                     ),
                   ),
                 ),
@@ -150,7 +152,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
 
                 Text(
                   stamp['title'],
-                  style: GoogleFonts.dmSerifDisplay(fontSize: 22, color: const Color(0xFF0F172A)),
+                  style: GoogleFonts.dmSerifDisplay(fontSize: 22, color: isDark ? Colors.white : const Color(0xFF0F172A)),
                 ),
                 Text(
                   stamp['category'],
@@ -158,17 +160,17 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                 ),
 
                 const SizedBox(height: 14),
-                const Divider(),
+                Divider(color: isDark ? const Color(0xFF1E3A34) : null),
                 const SizedBox(height: 14),
 
                 Row(
                   children: [
-                    const Icon(Icons.location_on_rounded, size: 16, color: Color(0xFF004D40)),
+                    Icon(Icons.location_on_rounded, size: 16, color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40)),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         stamp['location'],
-                        style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF334155)),
+                        style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w600, color: isDark ? Colors.white70 : const Color(0xFF334155)),
                       ),
                     ),
                   ],
@@ -192,7 +194,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                 Text(
                   stamp['lore'],
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.grey[600], height: 1.4),
+                  style: GoogleFonts.plusJakartaSans(fontSize: 12, color: isDark ? Colors.white60 : Colors.grey[600], height: 1.4),
                 ),
 
                 const SizedBox(height: 24),
@@ -203,7 +205,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                   child: FilledButton(
                     onPressed: () => Navigator.of(context).pop(),
                     style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF004D40),
+                      backgroundColor: isDark ? const Color(0xFF00695C) : const Color(0xFF004D40),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     ),
                     child: const Text('CLOSE STAMP SEAL', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -218,10 +220,12 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
   }
 
   void _showCertificateModal(String username) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,
       builder: (context) {
         return Dialog(
+          backgroundColor: isDark ? const Color(0xFF0D2825) : Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
           child: Padding(
             padding: const EdgeInsets.all(24.0),
@@ -231,17 +235,17 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFEF3C7),
+                    color: isDark ? const Color(0xFF78350F).withValues(alpha: 0.3) : const Color(0xFFFEF3C7),
                     shape: BoxShape.circle,
                     border: Border.all(color: const Color(0xFFD97706), width: 2),
                   ),
-                  child: const Icon(Icons.workspace_premium_rounded, size: 48, color: Color(0xFFB45309)),
+                  child: const Icon(Icons.workspace_premium_rounded, size: 48, color: Color(0xFFD97706)),
                 ),
                 const SizedBox(height: 16),
                 Text(
                   'NATIONAL HERITAGE GUARDIAN',
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
+                  style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40)),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -249,12 +253,12 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                   style: GoogleFonts.plusJakartaSans(fontSize: 9, fontWeight: FontWeight.w900, color: const Color(0xFFD97706), letterSpacing: 1),
                 ),
                 const SizedBox(height: 16),
-                const Divider(),
+                Divider(color: isDark ? const Color(0xFF1E3A34) : null),
                 const SizedBox(height: 12),
                 Text(
                   'This certifies that $username has actively supported Malaysian craft preservation by completing 14 cultural quests across 8 verified master studios.',
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.plusJakartaSans(fontSize: 12, height: 1.4, color: const Color(0xFF334155)),
+                  style: GoogleFonts.plusJakartaSans(fontSize: 12, height: 1.4, color: isDark ? Colors.white70 : const Color(0xFF334155)),
                 ),
                 const SizedBox(height: 20),
                 SizedBox(
@@ -263,7 +267,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                   child: FilledButton(
                     onPressed: () => Navigator.of(context).pop(),
                     style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF004D40),
+                      backgroundColor: isDark ? const Color(0xFF00695C) : const Color(0xFF004D40),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
                     child: const Text('CLOSE PASSPORT SEAL'),
@@ -284,12 +288,13 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
     final user = authVM.currentUser;
     final username = user?.effectiveUsername ?? 'Aiman Haziq';
     final initials = user?.initials ?? 'AH';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [
         SliverAppBar(
-          backgroundColor: const Color(0xFFF8F9FA),
+          backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
           elevation: 0,
           title: FittedBox(
             fit: BoxFit.scaleDown,
@@ -297,7 +302,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
             child: Text(
               langVM.translate('Heritage Passport & Mastery'),
               style: GoogleFonts.dmSerifDisplay(
-                color: const Color(0xFF004D40),
+                color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
@@ -305,7 +310,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
           ),
           actions: [
             IconButton(
-              icon: const Icon(Icons.edit_outlined, color: Color(0xFF004D40)),
+              icon: Icon(Icons.edit_outlined, color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40)),
               tooltip: 'Edit Explorer Profile',
               onPressed: () {
                 Navigator.of(context).push(
@@ -314,7 +319,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
               },
             ),
             IconButton(
-              icon: const Icon(Icons.settings_outlined, color: Color(0xFF004D40)),
+              icon: Icon(Icons.settings_outlined, color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40)),
               tooltip: 'Settings',
               onPressed: () {
                 Navigator.of(context).push(
@@ -551,12 +556,12 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF0FDF4),
+                    color: isDark ? const Color(0xFF0D2825) : const Color(0xFFF0FDF4),
                     borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: const Color(0xFF86EFAC)),
+                    border: Border.all(color: isDark ? const Color(0xFF1E3A34) : const Color(0xFF86EFAC)),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF166534).withValues(alpha: 0.05),
+                        color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       )
@@ -567,10 +572,10 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF166534).withValues(alpha: 0.12),
+                          color: isDark ? const Color(0xFF34D399).withValues(alpha: 0.15) : const Color(0xFF166534).withValues(alpha: 0.12),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.nature_people_rounded, size: 28, color: Color(0xFF166534)),
+                        child: Icon(Icons.nature_people_rounded, size: 28, color: isDark ? const Color(0xFF34D399) : const Color(0xFF166534)),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -579,11 +584,11 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                           children: [
                             Text(
                               'Preservation Impact',
-                              style: GoogleFonts.dmSerifDisplay(fontSize: 16, color: const Color(0xFF14532D)),
+                              style: GoogleFonts.dmSerifDisplay(fontSize: 16, color: isDark ? const Color(0xFF34D399) : const Color(0xFF14532D)),
                             ),
                             Text(
                               'Your visits directly supported 4 Master Artisan Families and preserved 1,200 hours of heritage craft lore in 2026.',
-                              style: GoogleFonts.plusJakartaSans(fontSize: 11, color: const Color(0xFF166534), height: 1.3),
+                              style: GoogleFonts.plusJakartaSans(fontSize: 11, color: isDark ? Colors.white70 : const Color(0xFF166534), height: 1.3),
                             ),
                           ],
                         ),
@@ -596,9 +601,9 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFEF3C7),
+                      color: isDark ? const Color(0xFF0D2825) : const Color(0xFFFEF3C7),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0xFFF59E0B)),
+                      border: Border.all(color: isDark ? const Color(0xFFD97706).withValues(alpha: 0.6) : const Color(0xFFF59E0B)),
                     ),
                     child: Row(
                       children: [
@@ -608,7 +613,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                             color: const Color(0xFFD97706).withValues(alpha: 0.2),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.storefront_rounded, color: Color(0xFFB45309), size: 24),
+                          child: const Icon(Icons.storefront_rounded, color: Color(0xFFD97706), size: 24),
                         ),
                         const SizedBox(width: 14),
                         Expanded(
@@ -620,14 +625,14 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                 style: GoogleFonts.plusJakartaSans(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 13,
-                                  color: const Color(0xFF92400E),
+                                  color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF92400E),
                                 ),
                               ),
                               Text(
                                 'Switch to manage your craft studio, live sessions, and masterworks.',
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 11,
-                                  color: const Color(0xFFB45309),
+                                  color: isDark ? Colors.white70 : const Color(0xFFB45309),
                                 ),
                               ),
                             ],
@@ -656,9 +661,9 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFFBEB),
+                      color: isDark ? const Color(0xFF0D2825) : const Color(0xFFFFFBEB),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0xFFFCD34D)),
+                      border: Border.all(color: isDark ? const Color(0xFFD97706).withValues(alpha: 0.5) : const Color(0xFFFCD34D)),
                     ),
                     child: Row(
                       children: [
@@ -668,7 +673,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                             color: const Color(0xFFD97706).withValues(alpha: 0.15),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.hourglass_top_rounded, color: Color(0xFFB45309), size: 24),
+                          child: const Icon(Icons.hourglass_top_rounded, color: Color(0xFFD97706), size: 24),
                         ),
                         const SizedBox(width: 14),
                         Expanded(
@@ -684,7 +689,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                       style: GoogleFonts.plusJakartaSans(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 13,
-                                        color: const Color(0xFF92400E),
+                                        color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF92400E),
                                       ),
                                     ),
                                   ),
@@ -692,13 +697,13 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFFEF3C7),
+                                      color: isDark ? const Color(0xFF78350F).withValues(alpha: 0.4) : const Color(0xFFFEF3C7),
                                       borderRadius: BorderRadius.circular(6),
                                       border: Border.all(color: const Color(0xFFF59E0B)),
                                     ),
                                     child: Text(
                                       'PENDING REVIEW',
-                                      style: GoogleFonts.plusJakartaSans(fontSize: 8, fontWeight: FontWeight.w900, color: const Color(0xFF92400E)),
+                                      style: GoogleFonts.plusJakartaSans(fontSize: 8, fontWeight: FontWeight.w900, color: isDark ? const Color(0xFFFDE68A) : const Color(0xFF92400E)),
                                     ),
                                   ),
                                 ],
@@ -708,7 +713,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                 'Your Master Artisan registration is undergoing Kraftangan Malaysia verification. Studio access unlocks upon approval.',
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 11,
-                                  color: const Color(0xFF78350F),
+                                  color: isDark ? Colors.white70 : const Color(0xFF78350F),
                                   height: 1.3,
                                 ),
                               ),
@@ -743,19 +748,19 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: isDark ? const Color(0xFF0D2825) : Colors.white,
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0xFF004D40).withValues(alpha: 0.15)),
+                      border: Border.all(color: isDark ? const Color(0xFF1E3A34) : const Color(0xFF004D40).withValues(alpha: 0.15)),
                     ),
                     child: Row(
                       children: [
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF004D40).withValues(alpha: 0.08),
+                            color: isDark ? const Color(0xFF34D399).withValues(alpha: 0.15) : const Color(0xFF004D40).withValues(alpha: 0.08),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.palette_outlined, color: Color(0xFF004D40), size: 22),
+                          child: Icon(Icons.palette_outlined, color: isDark ? const Color(0xFF34D399) : const Color(0xFF004D40), size: 22),
                         ),
                         const SizedBox(width: 14),
                         Expanded(
@@ -767,12 +772,12 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                 style: GoogleFonts.plusJakartaSans(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 13,
-                                  color: const Color(0xFF004D40),
+                                  color: isDark ? Colors.white : const Color(0xFF004D40),
                                 ),
                               ),
                               Text(
                                 'Register your traditional studio to host quests and earn Kraftangan recognition.',
-                                style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[600]),
+                                style: GoogleFonts.plusJakartaSans(fontSize: 11, color: isDark ? Colors.white60 : Colors.grey[600]),
                               ),
                             ],
                           ),
@@ -787,11 +792,11 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                             );
                           },
                           style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: Color(0xFF004D40)),
+                            side: BorderSide(color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40)),
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
-                          child: const Text('Apply', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Color(0xFF004D40))),
+                          child: Text('Apply', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40))),
                         ),
                       ],
                     ),
@@ -814,14 +819,14 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                             softWrap: true,
                             style: GoogleFonts.dmSerifDisplay(
                               fontSize: 22,
-                              color: const Color(0xFF004D40),
+                              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
                             ),
                           ),
                           Text(
                             'Tap any stamp to inspect certificate lore',
                             maxLines: 2,
                             softWrap: true,
-                            style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[600]),
+                            style: GoogleFonts.plusJakartaSans(fontSize: 11, color: isDark ? Colors.white60 : Colors.grey[600]),
                           ),
                         ],
                       ),
@@ -830,20 +835,20 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFEF3C7),
+                        color: isDark ? const Color(0xFF78350F).withValues(alpha: 0.4) : const Color(0xFFFEF3C7),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.5)),
+                        border: Border.all(color: isDark ? const Color(0xFFD97706).withValues(alpha: 0.5) : const Color(0xFFF59E0B).withValues(alpha: 0.5)),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.verified_rounded, size: 12, color: Color(0xFFB45309)),
+                          const Icon(Icons.verified_rounded, size: 12, color: Color(0xFFD97706)),
                           const SizedBox(width: 4),
                           Text(
                             '4 / 6 STAMPS',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 10,
                               fontWeight: FontWeight.w900,
-                              color: const Color(0xFFB45309),
+                              color: isDark ? const Color(0xFFFDE68A) : const Color(0xFFB45309),
                             ),
                           ),
                         ],
@@ -879,16 +884,16 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: unlocked ? Colors.white : const Color(0xFFF8FAFC),
+                      color: unlocked ? (isDark ? const Color(0xFF0D2825) : Colors.white) : (isDark ? const Color(0xFF041412) : const Color(0xFFF8FAFC)),
                       borderRadius: BorderRadius.circular(24),
                       border: Border.all(
-                        color: unlocked ? color.withValues(alpha: 0.35) : Colors.black12,
+                        color: unlocked ? (isDark ? color.withValues(alpha: 0.5) : color.withValues(alpha: 0.35)) : (isDark ? const Color(0xFF1E3A34) : Colors.black12),
                         width: unlocked ? 1.5 : 1.0,
                       ),
                       boxShadow: unlocked
                           ? [
                               BoxShadow(
-                                color: color.withValues(alpha: 0.12),
+                                color: color.withValues(alpha: isDark ? 0.2 : 0.12),
                                 blurRadius: 16,
                                 offset: const Offset(0, 6),
                               )
@@ -906,17 +911,17 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                               width: 64,
                               height: 64,
                               decoration: BoxDecoration(
-                                color: unlocked ? color.withValues(alpha: 0.12) : Colors.grey[200],
+                                color: unlocked ? color.withValues(alpha: 0.12) : (isDark ? const Color(0xFF0A1F1C) : Colors.grey[200]),
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: unlocked ? color : Colors.grey[400]!,
+                                  color: unlocked ? color : (isDark ? Colors.white24 : Colors.grey[400]!),
                                   width: 2.0,
                                 ),
                               ),
                             ),
                             Icon(
                               stamp['icon'],
-                              color: unlocked ? color : Colors.grey[400],
+                              color: unlocked ? color : (isDark ? Colors.white38 : Colors.grey[400]),
                               size: 30,
                             ),
                             if (unlocked)
@@ -946,7 +951,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                           style: GoogleFonts.dmSerifDisplay(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
-                            color: unlocked ? const Color(0xFF0F172A) : Colors.grey[500],
+                            color: unlocked ? (isDark ? Colors.white : const Color(0xFF0F172A)) : (isDark ? Colors.white38 : Colors.grey[500]),
                           ),
                         ),
 
@@ -955,7 +960,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: unlocked ? color.withValues(alpha: 0.1) : Colors.grey[200],
+                            color: unlocked ? color.withValues(alpha: 0.1) : (isDark ? const Color(0xFF0A1F1C) : Colors.grey[200]),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
@@ -963,7 +968,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
-                              color: unlocked ? color : Colors.grey[500],
+                              color: unlocked ? color : (isDark ? Colors.white38 : Colors.grey[500]),
                             ),
                           ),
                         ),

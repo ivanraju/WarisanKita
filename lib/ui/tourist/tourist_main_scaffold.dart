@@ -20,8 +20,10 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
   @override
   Widget build(BuildContext context) {
     final langVM = context.watch<LanguageViewModel>();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
       extendBody: true,
       body: IndexedStack(
         index: _currentIndex,
@@ -37,7 +39,7 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
           margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
-            color: const Color(0xFF0F172A),
+            color: isDark ? const Color(0xFF0D2825) : const Color(0xFF0F172A),
             borderRadius: BorderRadius.circular(32),
             boxShadow: [
               BoxShadow(
@@ -46,13 +48,13 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
                 offset: const Offset(0, 10),
               ),
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.2),
+                color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.2),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
             ],
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.12),
+              color: isDark ? const Color(0xFF1E3A34) : Colors.white.withValues(alpha: 0.12),
               width: 1.5,
             ),
           ),
