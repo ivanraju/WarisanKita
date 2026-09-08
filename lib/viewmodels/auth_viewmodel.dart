@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:warisan_kita/data/repositories/user_repository.dart';
 import 'package:warisan_kita/domain/models/user.dart';
@@ -40,6 +39,12 @@ class AuthViewModel extends ChangeNotifier {
 
   UserModel? _currentUser;
   UserModel? get currentUser => _currentUser;
+
+  @visibleForTesting
+  void setCurrentUserForTesting(UserModel? user) {
+    _currentUser = user;
+    notifyListeners();
+  }
 
   bool get isAuthenticated => _currentUser != null;
 

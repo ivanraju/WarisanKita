@@ -10,7 +10,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:warisan_kita/domain/models/artisan_profile.dart';
 import 'package:warisan_kita/domain/models/active_artisan_master.dart';
 import 'package:warisan_kita/domain/models/forum_post.dart';
-import 'package:warisan_kita/domain/models/badge.dart';
 import 'package:warisan_kita/domain/models/user.dart';
 import 'package:warisan_kita/domain/validators/ssm_validator.dart';
 
@@ -1277,8 +1276,11 @@ class SupabaseService {
         }
       } catch (e) {
         debugPrint('Supabase verifyOTP note: $e');
-        if (!e.toString().contains('Token has expired') && cleanToken != '123456') {
-          throw Exception('INVALID_OTP: The verification code entered is invalid or has expired.');
+        if (!e.toString().contains('Token has expired') &&
+            cleanToken != '123456') {
+          throw Exception(
+            'INVALID_OTP: The verification code entered is invalid or has expired.',
+          );
         }
       }
     }
@@ -1290,19 +1292,24 @@ class SupabaseService {
     final isStoredTokenMatch = hasPending && pendingData?['otp'] == cleanToken;
 
     if (!isMasterToken && !isStoredTokenMatch) {
-      throw Exception('INVALID_OTP: The verification code entered is invalid or has expired.');
+      throw Exception(
+        'INVALID_OTP: The verification code entered is invalid or has expired.',
+      );
     }
 
     if (hasPending && pendingData?['expiresAt'] != null) {
       final DateTime expiresAt = pendingData!['expiresAt'] as DateTime;
       if (DateTime.now().isAfter(expiresAt) && !isMasterToken) {
-        throw Exception('OTP_EXPIRED: The verification code has expired. Please request a new one.');
+        throw Exception(
+          'OTP_EXPIRED: The verification code has expired. Please request a new one.',
+        );
       }
     }
 
     if (_userStore.containsKey(cleanEmail)) {
       _userStore[cleanEmail]!['email_verified'] = true;
-      _userStore[cleanEmail]!['email_confirmed_at'] = DateTime.now().toIso8601String();
+      _userStore[cleanEmail]!['email_confirmed_at'] = DateTime.now()
+          .toIso8601String();
       final user = UserModel.fromMap(_userStore[cleanEmail]!);
       await _saveAuthSession(user);
       _pendingEmailOtps.remove(cleanEmail);
@@ -1324,7 +1331,8 @@ class SupabaseService {
     final cleanEmail = email.trim().toLowerCase();
     await Future.delayed(const Duration(milliseconds: 400));
 
-    final newOtp = (100000 + (DateTime.now().millisecondsSinceEpoch % 900000)).toString();
+    final newOtp = (100000 + (DateTime.now().millisecondsSinceEpoch % 900000))
+        .toString();
     _pendingEmailOtps[cleanEmail] = {
       'otp': newOtp,
       'expiresAt': DateTime.now().add(const Duration(minutes: 15)),
@@ -1334,10 +1342,7 @@ class SupabaseService {
     final client = _client;
     if (client != null) {
       try {
-        await client.auth.resend(
-          type: OtpType.signup,
-          email: cleanEmail,
-        );
+        await client.auth.resend(type: OtpType.signup, email: cleanEmail);
       } catch (e) {
         debugPrint('Supabase resend OTP note: $e');
       }
@@ -1530,7 +1535,11 @@ class SupabaseService {
           if (profileRes != null) {
             final artisanId = profileRes['id'];
 
-            Future<Map<String, String>?> uploadDoc(PlatformFile? file, String bucket, String folder) async {
+            Future<Map<String, String>?> uploadDoc(
+              PlatformFile? file,
+              String bucket,
+              String folder,
+            ) async {
               if (file == null) return null;
               try {
                 Uint8List? bytes;
@@ -1539,51 +1548,62 @@ class SupabaseService {
                 } else if (file.path != null) {
                   bytes = await io.File(file.path!).readAsBytes();
                 }
-                
+
                 if (bytes == null) return null;
 
-                final fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.name.replaceAll(' ', '_')}';
+                final fileName =
+                    '${DateTime.now().millisecondsSinceEpoch}_${file.name.replaceAll(' ', '_')}';
                 String finalFileName = fileName;
                 String mimeType = 'application/octet-stream';
-                
+
                 final lcName = file.name.toLowerCase();
                 if (lcName.endsWith('.pdf')) {
                   mimeType = 'application/pdf';
-                } else if (lcName.endsWith('.png') || lcName.endsWith('.jpg') || lcName.endsWith('.jpeg')) {
+                } else if (lcName.endsWith('.png') ||
+                    lcName.endsWith('.jpg') ||
+                    lcName.endsWith('.jpeg')) {
                   try {
-                    final compressed = await FlutterImageCompress.compressWithList(
-                      bytes,
-                      format: CompressFormat.webp,
-                      quality: 85,
-                    );
-                    
+                    final compressed =
+                        await FlutterImageCompress.compressWithList(
+                          bytes,
+                          format: CompressFormat.webp,
+                          quality: 85,
+                        );
+
                     if (compressed.isNotEmpty) {
                       bytes = compressed;
                       mimeType = 'image/webp';
                       final lastDot = finalFileName.lastIndexOf('.');
                       if (lastDot != -1) {
-                        finalFileName = finalFileName.substring(0, lastDot) + '.webp';
+                        finalFileName =
+                            finalFileName.substring(0, lastDot) + '.webp';
                       } else {
                         finalFileName += '.webp';
                       }
                     } else {
-                      if (lcName.endsWith('.png')) mimeType = 'image/png';
-                      else mimeType = 'image/jpeg';
+                      if (lcName.endsWith('.png'))
+                        mimeType = 'image/png';
+                      else
+                        mimeType = 'image/jpeg';
                     }
                   } catch (e) {
                     debugPrint('WebP conversion failed: $e');
-                    if (lcName.endsWith('.png')) mimeType = 'image/png';
-                    else mimeType = 'image/jpeg';
+                    if (lcName.endsWith('.png'))
+                      mimeType = 'image/png';
+                    else
+                      mimeType = 'image/jpeg';
                   }
                 }
 
                 final path = '$folder/$finalFileName';
 
-                await client.storage.from(bucket).uploadBinary(
-                  path,
-                  bytes!,
-                  fileOptions: FileOptions(contentType: mimeType),
-                );
+                await client.storage
+                    .from(bucket)
+                    .uploadBinary(
+                      path,
+                      bytes!,
+                      fileOptions: FileOptions(contentType: mimeType),
+                    );
                 final url = client.storage.from(bucket).getPublicUrl(path);
                 return {'url': url, 'name': finalFileName};
               } catch (e) {
@@ -2370,7 +2390,9 @@ class SupabaseService {
       debugPrint('Fetching artisans from Supabase...');
       final response = await client
           .from('artisan_profiles')
-          .select('*, users(full_name, avatar_url), artisan_documents(file_url, doc_type)')
+          .select(
+            '*, users(full_name, avatar_url), artisan_documents(file_url, doc_type)',
+          )
           .eq('status', 'APPROVED');
 
       debugPrint('Supabase response: $response');
@@ -2385,7 +2407,10 @@ class SupabaseService {
   }
 
   Future<Map<String, String>?> uploadArtisanDocument(
-      String artisanId, PlatformFile file, String docType) async {
+    String artisanId,
+    PlatformFile file,
+    String docType,
+  ) async {
     try {
       final client = _client;
       if (client == null) return null;
@@ -2401,14 +2426,17 @@ class SupabaseService {
           ? 'artisan_public_media'
           : 'artisan_private_docs';
       final folder = '$artisanId/$docType';
-      final fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.name.replaceAll(' ', '_')}';
+      final fileName =
+          '${DateTime.now().millisecondsSinceEpoch}_${file.name.replaceAll(' ', '_')}';
       String finalFileName = fileName;
       String mimeType = 'application/octet-stream';
 
       final lcName = file.name.toLowerCase();
       if (lcName.endsWith('.pdf')) {
         mimeType = 'application/pdf';
-      } else if (lcName.endsWith('.png') || lcName.endsWith('.jpg') || lcName.endsWith('.jpeg')) {
+      } else if (lcName.endsWith('.png') ||
+          lcName.endsWith('.jpg') ||
+          lcName.endsWith('.jpeg')) {
         try {
           final compressed = await FlutterImageCompress.compressWithList(
             bytes,
@@ -2426,26 +2454,32 @@ class SupabaseService {
               finalFileName += '.webp';
             }
           } else {
-            if (lcName.endsWith('.png')) mimeType = 'image/png';
-            else mimeType = 'image/jpeg';
+            if (lcName.endsWith('.png'))
+              mimeType = 'image/png';
+            else
+              mimeType = 'image/jpeg';
           }
         } catch (e) {
           debugPrint('WebP conversion failed: $e');
-          if (lcName.endsWith('.png')) mimeType = 'image/png';
-          else mimeType = 'image/jpeg';
+          if (lcName.endsWith('.png'))
+            mimeType = 'image/png';
+          else
+            mimeType = 'image/jpeg';
         }
       }
 
       final path = '$folder/$finalFileName';
 
-      await client.storage.from(bucket).uploadBinary(
-        path,
-        bytes,
-        fileOptions: FileOptions(contentType: mimeType),
-      );
-      
+      await client.storage
+          .from(bucket)
+          .uploadBinary(
+            path,
+            bytes,
+            fileOptions: FileOptions(contentType: mimeType),
+          );
+
       final url = client.storage.from(bucket).getPublicUrl(path);
-      
+
       // Update DB
       await client.from('artisan_documents').insert({
         'artisan_id': artisanId,
@@ -2453,7 +2487,7 @@ class SupabaseService {
         'file_name': finalFileName,
         'file_url': url,
       });
-      
+
       return {'url': url, 'name': finalFileName};
     } catch (e) {
       debugPrint('Error uploading doc: $e');
@@ -2461,7 +2495,10 @@ class SupabaseService {
     }
   }
 
-  Future<String?> uploadUserAvatar(String userIdOrEmail, PlatformFile file) async {
+  Future<String?> uploadUserAvatar(
+    String userIdOrEmail,
+    PlatformFile file,
+  ) async {
     try {
       final client = _client;
       Uint8List bytes;
@@ -2504,11 +2541,13 @@ class SupabaseService {
       final fileName = 'avatar_${DateTime.now().millisecondsSinceEpoch}.webp';
       final path = 'avatars/$cleanId/$fileName';
 
-      await client.storage.from(bucket).uploadBinary(
-        path,
-        bytes,
-        fileOptions: FileOptions(contentType: mimeType, upsert: true),
-      );
+      await client.storage
+          .from(bucket)
+          .uploadBinary(
+            path,
+            bytes,
+            fileOptions: FileOptions(contentType: mimeType, upsert: true),
+          );
 
       final url = client.storage.from(bucket).getPublicUrl(path);
       return url;
@@ -2549,14 +2588,17 @@ class SupabaseService {
           final pathSegments = uri.pathSegments;
           final publicIndex = pathSegments.indexOf('public');
           if (publicIndex != -1 && publicIndex + 2 < pathSegments.length) {
-             final extractedBucket = pathSegments[publicIndex + 1];
-             final filePath = pathSegments.sublist(publicIndex + 2).join('/');
-             await client.storage.from(extractedBucket).remove([filePath]);
+            final extractedBucket = pathSegments[publicIndex + 1];
+            final filePath = pathSegments.sublist(publicIndex + 2).join('/');
+            await client.storage.from(extractedBucket).remove([filePath]);
           }
         }
-        
+
         // Delete the database row
-        await client.from('artisan_documents').delete().eq('id', response['id']);
+        await client
+            .from('artisan_documents')
+            .delete()
+            .eq('id', response['id']);
       }
       return true;
     } catch (e) {
@@ -4536,27 +4578,262 @@ class SupabaseService {
 
   // --- Gamification Services ---
 
-  Future<List<HeritageStamp>> fetchUserStamps(String userId) async {
-    await Future.delayed(const Duration(milliseconds: 400));
-    return [
-      HeritageStamp(
-        id: 's1',
-        title: 'Batik Apprentice',
-        iconUrl:
-            'https://images.unsplash.com/photo-1544967082-d9d25d867d66?w=200',
-        isUnlocked: true,
-        description: 'Earned for visiting a master batik chanting workshop.',
-      ),
-      HeritageStamp(
-        id: 's2',
-        title: 'Wood Guardian',
-        iconUrl:
-            'https://images.unsplash.com/photo-1605721911519-3dfeb3be25e7?w=200',
-        isUnlocked: true,
-        description:
-            'Earned for identifying three royal Cengal carving motifs.',
-      ),
-    ];
+  Future<Map<String, dynamic>> fetchPassportData() async {
+    final client = _requireSupabaseClient();
+    final user = _requireAuthenticatedUser(
+      client,
+      'You must be signed in to view your Heritage Passport.',
+    );
+
+    final warnings = <String>[];
+    Map<String, dynamic>? experienceRow;
+    var taskAwardRows = <Map<String, dynamic>>[];
+    var stampRows = <Map<String, dynamic>>[];
+    var availableQuestRows = <Map<String, dynamic>>[];
+    var completedQuestRows = <Map<String, dynamic>>[];
+    var digitalPlaqueCount = 0;
+    var xpAvailable = false;
+    var taskAwardsAvailable = false;
+    var stampsAvailable = false;
+    var availableQuestsAvailable = false;
+    var questStatisticsAvailable = false;
+    var digitalPlaquesAvailable = false;
+
+    try {
+      experienceRow = await client
+          .from('user_experience')
+          .select('user_id, total_xp, updated_at')
+          .eq('user_id', user.id)
+          .maybeSingle();
+      xpAvailable = true;
+    } catch (error) {
+      warnings.add('xp');
+      debugPrint('fetchPassportData XP note: $error');
+    }
+
+    try {
+      taskAwardRows = List<Map<String, dynamic>>.from(
+        await client
+            .from('user_task_xp_awards')
+            .select(
+              'task_id, xp_awarded, awarded_at, '
+              'heritage_tasks!inner('
+              'quest_id, status, is_archived, is_system_task, sort_order, '
+              'quests!inner(artisan_id)'
+              ')',
+            )
+            .eq('user_id', user.id)
+            .eq('heritage_tasks.status', 'APPROVED')
+            .eq('heritage_tasks.is_archived', false),
+      );
+      taskAwardsAvailable = true;
+    } catch (error) {
+      warnings.add('task_awards');
+      debugPrint('fetchPassportData task awards note: $error');
+    }
+
+    try {
+      stampRows = List<Map<String, dynamic>>.from(
+        await client
+            .from('passport_stamps')
+            .select(
+              'id, quest_id, stamp_code, unlocked_at, '
+              'quests!inner('
+              'id, title, category, stamp_title, stamp_image_url, status'
+              ')',
+            )
+            .eq('user_id', user.id)
+            .eq('quests.status', 'APPROVED')
+            .order('unlocked_at', ascending: false),
+      );
+      stampsAvailable = true;
+    } catch (error) {
+      warnings.add('stamps');
+      debugPrint('fetchPassportData stamps note: $error');
+    }
+
+    try {
+      availableQuestRows = List<Map<String, dynamic>>.from(
+        await client
+            .from('quests')
+            .select('id, title, category, stamp_title, stamp_image_url, status')
+            .eq('status', 'APPROVED'),
+      );
+      availableQuestsAvailable = true;
+    } catch (error) {
+      warnings.add('available_quests');
+      debugPrint('fetchPassportData available quests note: $error');
+    }
+
+    try {
+      completedQuestRows = List<Map<String, dynamic>>.from(
+        await client
+            .from('quest_progress')
+            .select('quest_id, quests!inner(id, artisan_id, status)')
+            .eq('user_id', user.id)
+            .eq('status', 'COMPLETED')
+            .eq('quests.status', 'APPROVED'),
+      );
+      questStatisticsAvailable = true;
+    } catch (error) {
+      warnings.add('quest_statistics');
+      debugPrint('fetchPassportData quest statistics note: $error');
+    }
+
+    try {
+      final plaqueRows = List<Map<String, dynamic>>.from(
+        await client
+            .from('digital_plaques')
+            .select('id')
+            .eq('user_id', user.id),
+      );
+      digitalPlaqueCount = plaqueRows.length;
+      digitalPlaquesAvailable = true;
+    } catch (error) {
+      warnings.add('digital_plaques');
+      debugPrint('fetchPassportData digital plaques note: $error');
+    }
+
+    if (!xpAvailable &&
+        !taskAwardsAvailable &&
+        !stampsAvailable &&
+        !availableQuestsAvailable &&
+        !questStatisticsAvailable &&
+        !digitalPlaquesAvailable) {
+      throw StateError('Unable to load your Heritage Passport.');
+    }
+
+    return {
+      'total_xp': experienceRow?['total_xp'] ?? 0,
+      'xp_updated_at': experienceRow?['updated_at'],
+      'task_awards': taskAwardRows,
+      'stamps': stampRows,
+      'available_quests': availableQuestRows,
+      'completed_quests': completedQuestRows,
+      'digital_plaque_count': digitalPlaqueCount,
+      'xp_available': xpAvailable,
+      'task_awards_available': taskAwardsAvailable,
+      'stamps_available': stampsAvailable,
+      'available_quests_available': availableQuestsAvailable,
+      'quest_statistics_available': questStatisticsAvailable,
+      'digital_plaques_available': digitalPlaquesAvailable,
+      'warnings': warnings,
+    };
+  }
+
+  Future<Map<String, dynamic>> fetchTouristMapJourneyData() async {
+    final client = _requireSupabaseClient();
+    final user = _requireAuthenticatedUser(
+      client,
+      'You must be signed in to view Heritage Quest journeys.',
+    );
+
+    final warnings = <String>[];
+    var questRows = <Map<String, dynamic>>[];
+    var taskRows = <Map<String, dynamic>>[];
+    var questProgressRows = <Map<String, dynamic>>[];
+    var taskProgressRows = <Map<String, dynamic>>[];
+    var stampRows = <Map<String, dynamic>>[];
+    Map<String, dynamic>? experienceRow;
+    var questDataAvailable = false;
+    var xpAvailable = false;
+    var stampsAvailable = false;
+
+    try {
+      questRows = List<Map<String, dynamic>>.from(
+        await client
+            .from('quests')
+            .select(
+              'id, artisan_id, title, category, stamp_title, '
+              'stamp_image_url, status, created_at',
+            )
+            .eq('status', 'APPROVED')
+            .order('created_at', ascending: false),
+      );
+      questDataAvailable = true;
+    } catch (error) {
+      warnings.add('quests');
+      debugPrint('fetchTouristMapJourneyData quests note: $error');
+    }
+
+    try {
+      taskRows = List<Map<String, dynamic>>.from(
+        await client
+            .from('heritage_tasks')
+            .select('id, quest_id, xp_reward, status, is_archived')
+            .eq('status', 'APPROVED')
+            .eq('is_archived', false),
+      );
+    } catch (error) {
+      warnings.add('tasks');
+      debugPrint('fetchTouristMapJourneyData tasks note: $error');
+    }
+
+    try {
+      questProgressRows = List<Map<String, dynamic>>.from(
+        await client
+            .from('quest_progress')
+            .select('quest_id, status')
+            .eq('user_id', user.id),
+      );
+    } catch (error) {
+      warnings.add('quest_progress');
+      debugPrint('fetchTouristMapJourneyData quest progress note: $error');
+    }
+
+    try {
+      taskProgressRows = List<Map<String, dynamic>>.from(
+        await client
+            .from('task_progress')
+            .select('task_id, is_completed')
+            .eq('user_id', user.id),
+      );
+    } catch (error) {
+      warnings.add('task_progress');
+      debugPrint('fetchTouristMapJourneyData task progress note: $error');
+    }
+
+    try {
+      stampRows = List<Map<String, dynamic>>.from(
+        await client
+            .from('passport_stamps')
+            .select('quest_id')
+            .eq('user_id', user.id),
+      );
+      stampsAvailable = true;
+    } catch (error) {
+      warnings.add('stamps');
+      debugPrint('fetchTouristMapJourneyData stamps note: $error');
+    }
+
+    try {
+      experienceRow = await client
+          .from('user_experience')
+          .select('total_xp')
+          .eq('user_id', user.id)
+          .maybeSingle();
+      xpAvailable = true;
+    } catch (error) {
+      warnings.add('xp');
+      debugPrint('fetchTouristMapJourneyData XP note: $error');
+    }
+
+    if (!questDataAvailable && !xpAvailable && !stampsAvailable) {
+      throw StateError('Unable to load Heritage Quest journeys.');
+    }
+
+    return {
+      'quests': questRows,
+      'tasks': taskRows,
+      'quest_progress': questProgressRows,
+      'task_progress': taskProgressRows,
+      'stamps': stampRows,
+      'total_xp': experienceRow?['total_xp'] ?? 0,
+      'quest_data_available': questDataAvailable,
+      'xp_available': xpAvailable,
+      'stamps_available': stampsAvailable,
+      'warnings': warnings,
+    };
   }
 
   Future<List<Map<String, dynamic>>> fetchApprovedQuestsForArtisan(
@@ -4734,6 +5011,47 @@ class SupabaseService {
         .single();
   }
 
+  Future<Map<String, dynamic>> updatePendingQuestChangeRequest({
+    required String requestId,
+    required String questId,
+    required String proposedTitle,
+    required String proposedDescription,
+    required String proposedCategory,
+  }) async {
+    final client = _client;
+    if (client == null) {
+      throw StateError('Supabase is not initialized.');
+    }
+    if (client.auth.currentUser == null) {
+      throw StateError('You must be signed in to edit a pending quest update.');
+    }
+
+    final updatedRequest = await client
+        .from('quest_change_requests')
+        .update({
+          'proposed_title': proposedTitle.trim(),
+          'proposed_description': proposedDescription.trim(),
+          'proposed_category': proposedCategory.trim(),
+          'submitted_at': DateTime.now().toUtc().toIso8601String(),
+        })
+        .eq('id', requestId)
+        .eq('quest_id', questId)
+        .eq('status', 'PENDING_APPROVAL')
+        .select(
+          'id, quest_id, proposed_title, proposed_description, '
+          'proposed_category, status, rejection_reason, submitted_at, '
+          'reviewed_at, reviewed_by',
+        )
+        .maybeSingle();
+
+    if (updatedRequest == null) {
+      throw StateError(
+        'This quest update is no longer pending. Refresh to see the latest admin decision.',
+      );
+    }
+    return updatedRequest;
+  }
+
   Future<Map<String, dynamic>> insertHeritageTask({
     required String questId,
     required String title,
@@ -4909,6 +5227,16 @@ class SupabaseService {
       client,
       'You must be signed in to complete a task.',
     );
+    final task = await client
+        .from('heritage_tasks')
+        .select('quest_id')
+        .eq('id', taskId)
+        .eq('status', 'APPROVED')
+        .eq('is_archived', false)
+        .maybeSingle();
+    if (task == null) {
+      throw StateError('This task is not available for completion.');
+    }
     await _ensureTaskProgress(client, user.id, taskId);
 
     final now = DateTime.now().toUtc().toIso8601String();
@@ -4924,7 +5252,13 @@ class SupabaseService {
         .eq('user_id', user.id)
         .eq('task_id', taskId)
         .eq('is_completed', false);
-    return _fetchTaskProgressRow(client, user.id, taskId);
+    final completed = await _fetchTaskProgressRow(client, user.id, taskId);
+    await _updateQuestRewardAndCompletion(
+      client: client,
+      userId: user.id,
+      questId: task['quest_id'].toString(),
+    );
+    return completed;
   }
 
   Future<Map<String, dynamic>> completeTaskWithArtisanQr({
@@ -4990,13 +5324,7 @@ class SupabaseService {
     final current = await _fetchTaskProgressRow(client, user.id, taskId);
     if (current['is_completed'] == true) return current;
 
-    final completed = await completeTask(taskId);
-    await _updateQuestRewardAndCompletion(
-      client: client,
-      userId: user.id,
-      questId: questId,
-    );
-    return completed;
+    return completeTask(taskId);
   }
 
   Future<void> _updateQuestRewardAndCompletion({
@@ -5031,19 +5359,17 @@ class SupabaseService {
     ).map((row) => row['task_id'].toString()).toSet();
     if (!requiredTaskIds.every(completedIds.contains)) return;
 
-    final existingStamp = await client
+    await client
         .from('passport_stamps')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('quest_id', questId)
-        .maybeSingle();
-    if (existingStamp == null) {
-      await client.from('passport_stamps').insert({
-        'user_id': userId,
-        'quest_id': questId,
-        'stamp_code': 'QUEST_$questId',
-      });
-    }
+        .upsert(
+          {
+            'user_id': userId,
+            'quest_id': questId,
+            'stamp_code': 'QUEST_$questId',
+          },
+          onConflict: 'user_id,quest_id',
+          ignoreDuplicates: true,
+        );
 
     if (allTaskIds.every(completedIds.contains)) {
       final now = DateTime.now().toUtc().toIso8601String();
@@ -5262,15 +5588,11 @@ class SupabaseService {
         .select('id')
         .maybeSingle();
     if (deletedTask == null) {
-      throw StateError(
-        'Only a rejected new task can be deleted immediately.',
-      );
+      throw StateError('Only a rejected new task can be deleted immediately.');
     }
   }
 
-  Future<void> deleteRejectedHeritageTaskEditRequest(
-    String requestId,
-  ) async {
+  Future<void> deleteRejectedHeritageTaskEditRequest(String requestId) async {
     final client = _client;
     if (client == null) {
       throw StateError('Supabase is not initialized.');
@@ -5347,6 +5669,78 @@ class SupabaseService {
           'reviewed_at, reviewed_by',
         )
         .single();
+  }
+
+  Future<Map<String, dynamic>> updatePendingHeritageTaskEditRequest({
+    required String requestId,
+    required String taskId,
+    required String proposedTitle,
+    required bool proposedIsRequired,
+    required int proposedXpReward,
+  }) async {
+    final client = _client;
+    if (client == null) {
+      throw StateError('Supabase is not initialized.');
+    }
+    if (client.auth.currentUser == null) {
+      throw StateError('You must be signed in to edit a pending task update.');
+    }
+
+    final updatedRequest = await client
+        .from('heritage_task_change_requests')
+        .update({
+          'proposed_title': proposedTitle.trim(),
+          'proposed_is_required': proposedIsRequired,
+          'proposed_xp_reward': proposedXpReward,
+          'submitted_at': DateTime.now().toUtc().toIso8601String(),
+        })
+        .eq('id', requestId)
+        .eq('task_id', taskId)
+        .eq('request_type', 'EDIT')
+        .eq('status', 'PENDING_APPROVAL')
+        .select(
+          'id, task_id, request_type, proposed_title, proposed_is_required, '
+          'proposed_xp_reward, status, rejection_reason, submitted_at, '
+          'reviewed_at, reviewed_by',
+        )
+        .maybeSingle();
+
+    if (updatedRequest == null) {
+      throw StateError(
+        'This task update is no longer pending. Refresh to see the latest admin decision.',
+      );
+    }
+    return updatedRequest;
+  }
+
+  Future<void> deletePendingHeritageTaskEditRequest({
+    required String requestId,
+    required String taskId,
+  }) async {
+    final client = _client;
+    if (client == null) {
+      throw StateError('Supabase is not initialized.');
+    }
+    if (client.auth.currentUser == null) {
+      throw StateError(
+        'You must be signed in to cancel a pending task update.',
+      );
+    }
+
+    final deletedRequest = await client
+        .from('heritage_task_change_requests')
+        .delete()
+        .eq('id', requestId)
+        .eq('task_id', taskId)
+        .eq('request_type', 'EDIT')
+        .eq('status', 'PENDING_APPROVAL')
+        .select('id')
+        .maybeSingle();
+    if (deletedRequest == null) {
+      throw StateError(
+        'This task update is no longer pending. Refresh to see the latest admin decision.',
+      );
+    }
   }
 
   Future<Map<String, dynamic>> resubmitRejectedQuestChangeRequest({
@@ -5624,7 +6018,20 @@ class SupabaseService {
     String? rejectionReason,
   }) async {
     final client = _requireSupabaseClient();
-    final reviewedTask = await client
+    final pendingRows = List<Map<String, dynamic>>.from(
+      await client
+          .from('heritage_tasks')
+          .select('id')
+          .eq('id', taskId)
+          .eq('status', 'PENDING_APPROVAL')
+          .eq('is_system_task', false)
+          .limit(1),
+    );
+    if (pendingRows.isEmpty) {
+      throw StateError('This task is no longer pending or cannot be reviewed.');
+    }
+
+    await client
         .from('heritage_tasks')
         .update(
           _gamificationReviewFields(
@@ -5634,12 +6041,7 @@ class SupabaseService {
         )
         .eq('id', taskId)
         .eq('status', 'PENDING_APPROVAL')
-        .eq('is_system_task', false)
-        .select('id')
-        .maybeSingle();
-    if (reviewedTask == null) {
-      throw StateError('This task is no longer pending or cannot be reviewed.');
-    }
+        .eq('is_system_task', false);
   }
 
   Future<void> reviewHeritageTaskChange({
@@ -5664,16 +6066,11 @@ class SupabaseService {
     if (approve) {
       final requestType = request['request_type'].toString().toUpperCase();
       if (requestType == 'DELETE') {
-        final archivedTask = await client
+        await client
             .from('heritage_tasks')
             .update({'is_archived': true})
             .eq('id', request['task_id'])
-            .eq('is_system_task', false)
-            .select('id')
-            .maybeSingle();
-        if (archivedTask == null) {
-          throw StateError('The task could not be archived.');
-        }
+            .eq('is_system_task', false);
       } else {
         final updates = <String, dynamic>{};
         if (request['proposed_title'] != null) {
@@ -5686,21 +6083,16 @@ class SupabaseService {
           updates['xp_reward'] = request['proposed_xp_reward'];
         }
         if (updates.isNotEmpty) {
-          final updatedTask = await client
+          await client
               .from('heritage_tasks')
               .update(updates)
               .eq('id', request['task_id'])
-              .eq('is_system_task', false)
-              .select('id')
-              .maybeSingle();
-          if (updatedTask == null) {
-            throw StateError('The task changes could not be applied.');
-          }
+              .eq('is_system_task', false);
         }
       }
     }
 
-    final reviewedRequest = await client
+    await client
         .from('heritage_task_change_requests')
         .update(
           _gamificationReviewFields(
@@ -5709,12 +6101,7 @@ class SupabaseService {
           ),
         )
         .eq('id', requestId)
-        .eq('status', 'PENDING_APPROVAL')
-        .select('id')
-        .maybeSingle();
-    if (reviewedRequest == null) {
-      throw StateError('The task review decision could not be saved.');
-    }
+        .eq('status', 'PENDING_APPROVAL');
   }
 
   Future<void> reviewQuestChange({
@@ -5737,22 +6124,17 @@ class SupabaseService {
     }
 
     if (approve) {
-      final updatedQuest = await client
+      await client
           .from('quests')
           .update({
             'title': request['proposed_title'],
             'description': request['proposed_description'],
             'category': request['proposed_category'],
           })
-          .eq('id', request['quest_id'])
-          .select('id')
-          .maybeSingle();
-      if (updatedQuest == null) {
-        throw StateError('The quest changes could not be applied.');
-      }
+          .eq('id', request['quest_id']);
     }
 
-    final reviewedRequest = await client
+    await client
         .from('quest_change_requests')
         .update(
           _gamificationReviewFields(
@@ -5761,12 +6143,7 @@ class SupabaseService {
           ),
         )
         .eq('id', requestId)
-        .eq('status', 'PENDING_APPROVAL')
-        .select('id')
-        .maybeSingle();
-    if (reviewedRequest == null) {
-      throw StateError('The quest review decision could not be saved.');
-    }
+        .eq('status', 'PENDING_APPROVAL');
   }
 
   Map<String, dynamic> _gamificationReviewFields({

@@ -1,4 +1,5 @@
 import 'package:warisan_kita/domain/models/workshop_location.dart';
+import 'package:warisan_kita/domain/models/workshop_quest_journey.dart';
 
 class NearbyArtisan {
   final String id;
@@ -17,6 +18,7 @@ class NearbyArtisan {
   final bool isOpenNow;
   final String locationName;
   final WorkshopLocation? workshop;
+  final WorkshopQuestJourney? journey;
 
   const NearbyArtisan({
     required this.id,
@@ -33,6 +35,7 @@ class NearbyArtisan {
     this.isOpenNow = true,
     required this.locationName,
     this.workshop,
+    this.journey,
   });
 
   /// Factory constructor to create a [NearbyArtisan] from a verified [WorkshopLocation] and calculated GPS distance.
@@ -43,6 +46,7 @@ class NearbyArtisan {
     double rating = 4.9,
     int reviewCount = 12,
     bool isOpenNow = true,
+    WorkshopQuestJourney? journey,
   }) {
     // Format distance: < 1000m -> "350 m", >= 1000m -> "2.4 km"
     final String formattedDistance = distanceMeters < 1000
@@ -62,8 +66,7 @@ class NearbyArtisan {
       distance: formattedDistance,
       distanceMeters: distanceMeters,
       walkingTime: estimatedWalkingTime,
-      imageUrl: imageUrl ??
-          'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&auto=format&fit=crop&q=80',
+      imageUrl: imageUrl ?? '',
       rating: rating,
       reviewCount: reviewCount,
       latitude: workshop.latitude,
@@ -71,6 +74,7 @@ class NearbyArtisan {
       isOpenNow: isOpenNow,
       locationName: workshop.locationName,
       workshop: workshop,
+      journey: journey,
     );
   }
 }

@@ -5,9 +5,11 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import 'package:warisan_kita/domain/models/workshop_location.dart';
 import 'package:warisan_kita/domain/models/user_location.dart';
+import 'package:warisan_kita/domain/models/workshop_quest_journey.dart';
 
 class GoogleMapWidget extends StatefulWidget {
   final List<WorkshopLocation> workshops;
+  final Map<String, WorkshopQuestJourney> journeysByWorkshopId;
 
   final WorkshopLocation? selectedWorkshop;
 
@@ -25,10 +27,12 @@ class GoogleMapWidget extends StatefulWidget {
   final bool isActive;
 
   final bool isLoading;
+  final double controlsBottom;
 
   const GoogleMapWidget({
     super.key,
     required this.workshops,
+    this.journeysByWorkshopId = const {},
     required this.selectedWorkshop,
     required this.onWorkshopSelected,
     required this.myLocationEnabled,
@@ -36,6 +40,7 @@ class GoogleMapWidget extends StatefulWidget {
     required this.interactionRadiusMeters,
     this.isActive = true,
     this.isLoading = false,
+    this.controlsBottom = 190,
   });
 
   @override
@@ -51,6 +56,7 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget>
   double _displayedHeading = 0.0;
 
   bool _hasAutoCentered = false;
+  bool _autoCenterScheduled = false;
 
   BitmapDescriptor _touristMarkerIcon = BitmapDescriptor.defaultMarkerWithHue(
     BitmapDescriptor.hueCyan,
@@ -60,10 +66,36 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget>
   );
   BitmapDescriptor _selectedWorkshopMarkerIcon =
       BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
+  BitmapDescriptor _activeQuestMarkerIcon =
+      BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange);
+  BitmapDescriptor _completedQuestMarkerIcon =
+      BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
+  BitmapDescriptor _unavailableQuestMarkerIcon =
+      BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRose);
 
   static const double _minimumZoom = 3.0;
   static const double _maximumZoom = 20.0;
   static const double _locationZoom = 18.0;
+
+  // Local map styling keeps live Google streets and geographic labels.
+  static const String _heritageMapStyle = '''
+  [
+    {"elementType":"geometry","stylers":[{"color":"#f7f2e8"}]},
+    {"elementType":"labels.text.fill","stylers":[{"color":"#51483f"}]},
+    {"elementType":"labels.text.stroke","stylers":[{"color":"#f7f2e8"}]},
+    {"featureType":"poi","elementType":"labels.icon","stylers":[{"visibility":"off"}]},
+    {"featureType":"poi.business","stylers":[{"visibility":"off"}]},
+    {"featureType":"poi.park","elementType":"geometry","stylers":[{"color":"#d0dbc6"}]},
+    {"featureType":"road","elementType":"geometry","stylers":[{"color":"#e4d5bc"}]},
+    {"featureType":"road","elementType":"geometry.stroke","stylers":[{"color":"#d5c3a5"}]},
+    {"featureType":"road.highway","elementType":"geometry","stylers":[{"color":"#b59a79"}]},
+    {"featureType":"road.highway","elementType":"geometry.stroke","stylers":[{"color":"#a38a6c"}]},
+    {"featureType":"road","elementType":"labels.icon","stylers":[{"visibility":"off"}]},
+    {"featureType":"transit","elementType":"labels.icon","stylers":[{"visibility":"off"}]},
+    {"featureType":"water","elementType":"geometry","stylers":[{"color":"#a6c5c3"}]},
+    {"featureType":"water","elementType":"labels.text.fill","stylers":[{"color":"#526e70"}]}
+  ]
+  ''';
 
   // Default Malaysia view.
   static const LatLng _initialPosition = LatLng(3.1390, 101.6869);
@@ -95,15 +127,18 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget>
       _animateTouristHeading(widget.userLocation?.heading);
     }
 
+    if (widget.selectedWorkshop?.id != oldWidget.selectedWorkshop?.id &&
+        widget.selectedWorkshop != null) {
+      _centerOnWorkshop(widget.selectedWorkshop!);
+    }
+
     if (widget.isActive && !oldWidget.isActive) {
       _hasAutoCentered = false;
       _tryAutoCenterOnUser();
       return;
     }
 
-    if (!_hasAutoCentered &&
-        widget.isActive &&
-        widget.userLocation != oldWidget.userLocation) {
+    if (!_hasAutoCentered && widget.isActive) {
       _tryAutoCenterOnUser();
     }
   }
@@ -135,19 +170,14 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget>
     final animationMilliseconds = (85 + delta.abs() * 0.65)
         .clamp(85, 190)
         .round();
-    _headingController.duration = Duration(
-      milliseconds: animationMilliseconds,
-    );
+    _headingController.duration = Duration(milliseconds: animationMilliseconds);
 
     _headingAnimation =
         Tween<double>(
           begin: _displayedHeading,
           end: _displayedHeading + delta,
         ).animate(
-          CurvedAnimation(
-            parent: _headingController,
-            curve: Curves.easeOut,
-          ),
+          CurvedAnimation(parent: _headingController, curve: Curves.easeOut),
         );
     _headingController.forward(from: 0);
   }
@@ -173,7 +203,7 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget>
         directional: true,
       ),
       _createGameMarkerIcon(
-        backgroundColor: const Color(0xFFFFC107),
+        backgroundColor: const Color(0xFFFFD54F),
         borderColor: const Color(0xFF00695C),
         glyph: _drawWorkshopGlyph,
       ),
@@ -181,6 +211,22 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget>
         backgroundColor: const Color(0xFFD97706),
         borderColor: const Color(0xFFFFF8E1),
         glyph: _drawWorkshopGlyph,
+        selected: true,
+      ),
+      _createGameMarkerIcon(
+        backgroundColor: const Color(0xFFE67E00),
+        borderColor: const Color(0xFFFFD54F),
+        glyph: _drawWorkshopGlyph,
+      ),
+      _createGameMarkerIcon(
+        backgroundColor: const Color(0xFF00695C),
+        borderColor: const Color(0xFFFFD54F),
+        glyph: _drawCompletedGlyph,
+      ),
+      _createGameMarkerIcon(
+        backgroundColor: const Color(0xFF94A3B8),
+        borderColor: const Color(0xFFE2E8F0),
+        glyph: _drawLockedGlyph,
       ),
     ]);
 
@@ -192,6 +238,9 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget>
       _touristMarkerIcon = icons[0];
       _workshopMarkerIcon = icons[1];
       _selectedWorkshopMarkerIcon = icons[2];
+      _activeQuestMarkerIcon = icons[3];
+      _completedQuestMarkerIcon = icons[4];
+      _unavailableQuestMarkerIcon = icons[5];
     });
   }
 
@@ -200,6 +249,7 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget>
     required Color borderColor,
     required void Function(ui.Canvas canvas, ui.Offset center) glyph,
     bool directional = false,
+    bool selected = false,
   }) async {
     const double width = 112;
     final double height = directional ? 112 : 140;
@@ -272,8 +322,8 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget>
 
     return BitmapDescriptor.bytes(
       byteData.buffer.asUint8List(),
-      width: directional ? 52 : 46,
-      height: directional ? 52 : 58,
+      width: directional ? 52 : (selected ? 52 : 46),
+      height: directional ? 52 : (selected ? 65.5 : 58),
     );
   }
 
@@ -325,6 +375,68 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget>
     canvas.drawCircle(center.translate(13, 9), 4, accentPaint);
   }
 
+  void _drawCompletedGlyph(ui.Canvas canvas, ui.Offset center) {
+    final check = ui.Path()
+      ..moveTo(center.dx - 20, center.dy)
+      ..lineTo(center.dx - 6, center.dy + 15)
+      ..lineTo(center.dx + 23, center.dy - 18);
+    canvas.drawPath(
+      check,
+      ui.Paint()
+        ..color = Colors.white
+        ..style = ui.PaintingStyle.stroke
+        ..strokeWidth = 9
+        ..strokeCap = ui.StrokeCap.round
+        ..strokeJoin = ui.StrokeJoin.round,
+    );
+  }
+
+  void _drawLockedGlyph(ui.Canvas canvas, ui.Offset center) {
+    final paint = ui.Paint()
+      ..color = Colors.white
+      ..style = ui.PaintingStyle.stroke
+      ..strokeWidth = 7
+      ..strokeCap = ui.StrokeCap.round;
+    canvas.drawRRect(
+      ui.RRect.fromRectAndRadius(
+        ui.Rect.fromCenter(
+          center: center.translate(0, 9),
+          width: 38,
+          height: 31,
+        ),
+        const ui.Radius.circular(5),
+      ),
+      paint,
+    );
+    canvas.drawArc(
+      ui.Rect.fromCenter(
+        center: center.translate(0, -7),
+        width: 25,
+        height: 28,
+      ),
+      3.14,
+      3.14,
+      false,
+      paint,
+    );
+  }
+
+  BitmapDescriptor _iconForWorkshop(
+    WorkshopQuestJourney? journey, {
+    required bool isSelected,
+  }) {
+    if (journey?.state == WorkshopQuestState.completed) {
+      return _completedQuestMarkerIcon;
+    }
+    if (isSelected) return _selectedWorkshopMarkerIcon;
+    return switch (journey?.state) {
+      WorkshopQuestState.inProgress => _activeQuestMarkerIcon,
+      WorkshopQuestState.available => _workshopMarkerIcon,
+      WorkshopQuestState.completed => _completedQuestMarkerIcon,
+      WorkshopQuestState.unavailable || null => _unavailableQuestMarkerIcon,
+    };
+  }
+
   // ============================================================
   // WORKSHOP MARKERS
   // ============================================================
@@ -332,17 +444,20 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget>
   Set<Marker> _buildMarkers() {
     final markers = widget.workshops.map((workshop) {
       final bool isSelected = widget.selectedWorkshop?.id == workshop.id;
+      final journey = widget.journeysByWorkshopId[workshop.id];
 
       return Marker(
         markerId: MarkerId(workshop.id),
 
         position: LatLng(workshop.latitude, workshop.longitude),
 
-        icon: isSelected ? _selectedWorkshopMarkerIcon : _workshopMarkerIcon,
+        icon: _iconForWorkshop(journey, isSelected: isSelected),
 
         infoWindow: InfoWindow(
           title: workshop.name,
-          snippet: workshop.craftCategory,
+          snippet: journey == null
+              ? '${workshop.craftCategory} • View studio'
+              : '${journey.stateLabel} • ${journey.progressLabel}',
         ),
 
         onTap: () {
@@ -387,17 +502,18 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget>
       return const <Circle>{};
     }
 
-    return {
+    final circles = <Circle>{
       Circle(
         circleId: const CircleId('user_interaction_radius'),
         center: LatLng(location.latitude, location.longitude),
         radius: widget.interactionRadiusMeters,
         strokeColor: const Color(0xFF00897B),
         strokeWidth: 2,
-        fillColor: const Color(0xFF26A69A).withValues(alpha: 0.16),
+        fillColor: const Color(0xFF26A69A).withValues(alpha: 0.11),
         consumeTapEvents: false,
       ),
     };
+    return circles;
   }
 
   // ============================================================
@@ -409,6 +525,7 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget>
     final location = widget.userLocation;
 
     if (_hasAutoCentered ||
+        _autoCenterScheduled ||
         controller == null ||
         !widget.isActive ||
         !widget.myLocationEnabled ||
@@ -417,18 +534,34 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget>
       return;
     }
 
-    // Set before awaiting so rapid Provider updates cannot start a second
-    // camera animation. Later GPS movement only moves the marker and circle.
-    _hasAutoCentered = true;
-
-    await controller.animateCamera(
-      CameraUpdate.newCameraPosition(
-        CameraPosition(
-          target: LatLng(location.latitude, location.longitude),
-          zoom: _locationZoom,
-        ),
-      ),
-    );
+    // Wait for platform-map layout, including IndexedStack tab activation.
+    _autoCenterScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        if (!mounted ||
+            !widget.isActive ||
+            !widget.myLocationEnabled ||
+            !_hasValidUserLocation() ||
+            _mapController != controller) {
+          return;
+        }
+        final latestLocation = widget.userLocation!;
+        await controller.moveCamera(
+          CameraUpdate.newCameraPosition(
+            CameraPosition(
+              target: LatLng(latestLocation.latitude, latestLocation.longitude),
+              zoom: _locationZoom,
+            ),
+          ),
+        );
+        if (mounted && widget.isActive) _hasAutoCentered = true;
+      } catch (error) {
+        debugPrint('Initial map centering failed: $error');
+      } finally {
+        _autoCenterScheduled = false;
+      }
+    });
+    WidgetsBinding.instance.ensureVisualUpdate();
   }
 
   Future<void> _recenterToUser() async {
@@ -459,6 +592,19 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget>
           zoom: _locationZoom,
         ),
       ),
+    );
+  }
+
+  Future<void> _centerOnWorkshop(WorkshopLocation workshop) async {
+    final controller = _mapController;
+    if (controller == null ||
+        !widget.isActive ||
+        !_hasAutoCentered ||
+        _autoCenterScheduled) {
+      return;
+    }
+    await controller.animateCamera(
+      CameraUpdate.newLatLng(LatLng(workshop.latitude, workshop.longitude)),
     );
   }
 
@@ -547,6 +693,7 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget>
         // ======================================================
         Positioned.fill(
           child: GoogleMap(
+            style: _heritageMapStyle,
             initialCameraPosition: CameraPosition(
               target: hasInitialUserLocation && location != null
                   ? LatLng(location.latitude, location.longitude)
@@ -608,7 +755,7 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget>
 
           // Keeps controls above the collapsed
           // Nearby Master Studios sheet.
-          bottom: 190,
+          bottom: widget.controlsBottom,
 
           child: SafeArea(
             child: Column(

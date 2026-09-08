@@ -1,12 +1,14 @@
 import 'package:warisan_kita/data/services/supabase_service.dart';
 import 'package:warisan_kita/domain/models/artisan_quest_profile.dart';
-import 'package:warisan_kita/domain/models/badge.dart' show HeritageStamp;
+import 'package:warisan_kita/domain/models/badge.dart'
+    show CompletedPassportQuest, EarnedTaskXp, HeritageStamp, PassportSnapshot;
 import 'package:warisan_kita/domain/models/gamification_moderation_request.dart';
 import 'package:warisan_kita/domain/models/heritage_task.dart';
 import 'package:warisan_kita/domain/models/heritage_task_change_request.dart';
 import 'package:warisan_kita/domain/models/quest.dart';
 import 'package:warisan_kita/domain/models/quest_change_request.dart';
 import 'package:warisan_kita/domain/models/task_progress.dart';
+import 'package:warisan_kita/domain/models/workshop_quest_journey.dart';
 
 class GamificationRepository {
   final SupabaseService _service;
@@ -14,8 +16,147 @@ class GamificationRepository {
   GamificationRepository({SupabaseService? service})
     : _service = service ?? SupabaseService();
 
-  Future<List<HeritageStamp>> getUserBadges(String userId) =>
-      _service.fetchUserStamps(userId);
+  Future<PassportSnapshot> getPassportSnapshot() async {
+    final data = await _service.fetchPassportData();
+    final totalXpValue = data['total_xp'];
+    final totalXp = totalXpValue is num
+        ? totalXpValue.toInt()
+        : int.tryParse(totalXpValue?.toString() ?? '') ?? 0;
+    final taskAwardRows = List<Map<String, dynamic>>.from(
+      data['task_awards'] as List? ?? const [],
+    );
+    final stampRows = List<Map<String, dynamic>>.from(
+      data['stamps'] as List? ?? const [],
+    );
+    final availableQuestRows = List<Map<String, dynamic>>.from(
+      data['available_quests'] as List? ?? const [],
+    );
+    final completedQuestRows = List<Map<String, dynamic>>.from(
+      data['completed_quests'] as List? ?? const [],
+    );
+    final plaqueCountValue = data['digital_plaque_count'];
+    final plaqueCount = plaqueCountValue is num
+        ? plaqueCountValue.toInt()
+        : int.tryParse(plaqueCountValue?.toString() ?? '') ?? 0;
+    return PassportSnapshot.fromData(
+      totalXp: totalXp,
+      taskAwards: taskAwardRows.map(EarnedTaskXp.fromMap),
+      earnedStamps: stampRows
+          .map(HeritageStamp.fromMap)
+          .toList(growable: false),
+      availableQuests: availableQuestRows,
+      completedQuests: completedQuestRows.map(CompletedPassportQuest.fromMap),
+      digitalPlaqueCount: plaqueCount,
+      hasXpData: data['xp_available'] != false,
+      hasStampData: data['stamps_available'] != false,
+      hasQuestStatistics: data['quest_statistics_available'] != false,
+      hasVisitedStudioData: data['task_awards_available'] != false,
+      hasDigitalPlaqueData: data['digital_plaques_available'] != false,
+      hasAvailableStampData: data['available_quests_available'] != false,
+      warnings: List<String>.from(data['warnings'] as List? ?? const []),
+    );
+  }
+
+  Future<List<HeritageStamp>> getUserBadges() async {
+    return (await getPassportSnapshot()).stamps
+        .where((stamp) => stamp.isUnlocked)
+        .toList(growable: false);
+  }
+
+  Future<TouristJourneySnapshot> getTouristJourneySnapshot() async {
+    final data = await _service.fetchTouristMapJourneyData();
+    final quests = List<Map<String, dynamic>>.from(
+      data['quests'] as List? ?? const [],
+    );
+    final tasks = List<Map<String, dynamic>>.from(
+      data['tasks'] as List? ?? const [],
+    );
+    final questProgress = List<Map<String, dynamic>>.from(
+      data['quest_progress'] as List? ?? const [],
+    );
+    final taskProgress = List<Map<String, dynamic>>.from(
+      data['task_progress'] as List? ?? const [],
+    );
+    final stamps = List<Map<String, dynamic>>.from(
+      data['stamps'] as List? ?? const [],
+    );
+
+    final tasksByQuest = <String, List<Map<String, dynamic>>>{};
+    for (final task in tasks) {
+      final questId = task['quest_id']?.toString() ?? '';
+      if (questId.isNotEmpty) {
+        tasksByQuest.putIfAbsent(questId, () => []).add(task);
+      }
+    }
+    final completedTaskIds = taskProgress
+        .where((row) => row['is_completed'] == true)
+        .map((row) => row['task_id']?.toString() ?? '')
+        .where((id) => id.isNotEmpty)
+        .toSet();
+    final progressByQuest = {
+      for (final row in questProgress)
+        if ((row['quest_id']?.toString() ?? '').isNotEmpty)
+          row['quest_id'].toString():
+              row['status']?.toString().toUpperCase() ?? '',
+    };
+    final stampedQuestIds = stamps
+        .map((row) => row['quest_id']?.toString() ?? '')
+        .where((id) => id.isNotEmpty)
+        .toSet();
+    final journeys = <String, WorkshopQuestJourney>{};
+
+    for (final quest in quests) {
+      final questId = quest['id']?.toString() ?? '';
+      final workshopId = quest['artisan_id']?.toString() ?? '';
+      if (questId.isEmpty || workshopId.isEmpty) continue;
+
+      final questTasks = tasksByQuest[questId] ?? const [];
+      final completedCount = questTasks
+          .where((task) => completedTaskIds.contains(task['id']?.toString()))
+          .length;
+      final xpReward = questTasks.fold<int>(0, (sum, task) {
+        final value = task['xp_reward'];
+        return sum +
+            (value is num ? value.toInt() : int.tryParse('$value') ?? 0);
+      });
+      final progressStatus = progressByQuest[questId];
+      final state =
+          stampedQuestIds.contains(questId) || progressStatus == 'COMPLETED'
+          ? WorkshopQuestState.completed
+          : progressStatus == 'IN_PROGRESS'
+          ? WorkshopQuestState.inProgress
+          : WorkshopQuestState.available;
+
+      journeys.putIfAbsent(
+        workshopId,
+        () => WorkshopQuestJourney(
+          workshopId: workshopId,
+          questId: questId,
+          questTitle: quest['title']?.toString().trim() ?? 'Heritage Quest',
+          category: quest['category']?.toString().trim() ?? '',
+          stampTitle: quest['stamp_title']?.toString().trim() ?? '',
+          stampImageUrl: quest['stamp_image_url']?.toString().trim() ?? '',
+          xpReward: xpReward,
+          completedTaskCount: completedCount,
+          totalTaskCount: questTasks.length,
+          state: state,
+        ),
+      );
+    }
+
+    final xpValue = data['total_xp'];
+    final totalXp = xpValue is num
+        ? xpValue.toInt()
+        : int.tryParse('$xpValue') ?? 0;
+    return TouristJourneySnapshot(
+      journeysByWorkshopId: Map.unmodifiable(journeys),
+      totalXp: totalXp < 0 ? 0 : totalXp,
+      earnedStampCount: stampedQuestIds.length,
+      hasXpData: data['xp_available'] != false,
+      hasStampData: data['stamps_available'] != false,
+      warnings: List<String>.from(data['warnings'] as List? ?? const []),
+    );
+  }
 
   Future<List<Quest>> getApprovedQuestsForArtisan(
     String artisanProfileId,
@@ -180,6 +321,23 @@ class GamificationRepository {
     return QuestChangeRequest.fromMap(row);
   }
 
+  Future<QuestChangeRequest> updatePendingQuestUpdate({
+    required String requestId,
+    required String questId,
+    required String proposedTitle,
+    required String proposedDescription,
+    required String proposedCategory,
+  }) async {
+    final row = await _service.updatePendingQuestChangeRequest(
+      requestId: requestId,
+      questId: questId,
+      proposedTitle: proposedTitle,
+      proposedDescription: proposedDescription,
+      proposedCategory: proposedCategory,
+    );
+    return QuestChangeRequest.fromMap(row);
+  }
+
   Future<QuestChangeRequest> resubmitRejectedQuestUpdate({
     required String requestId,
     required String questId,
@@ -270,6 +428,33 @@ class GamificationRepository {
       requestType: 'DELETE',
     );
     return HeritageTaskChangeRequest.fromMap(row);
+  }
+
+  Future<HeritageTaskChangeRequest> updatePendingHeritageTaskEdit({
+    required String requestId,
+    required String taskId,
+    required String proposedTitle,
+    required bool proposedIsRequired,
+    required int proposedXpReward,
+  }) async {
+    final row = await _service.updatePendingHeritageTaskEditRequest(
+      requestId: requestId,
+      taskId: taskId,
+      proposedTitle: proposedTitle,
+      proposedIsRequired: proposedIsRequired,
+      proposedXpReward: proposedXpReward,
+    );
+    return HeritageTaskChangeRequest.fromMap(row);
+  }
+
+  Future<void> deletePendingHeritageTaskEdit({
+    required String requestId,
+    required String taskId,
+  }) {
+    return _service.deletePendingHeritageTaskEditRequest(
+      requestId: requestId,
+      taskId: taskId,
+    );
   }
 
   Future<HeritageTaskChangeRequest> resubmitRejectedHeritageTaskEdit({
