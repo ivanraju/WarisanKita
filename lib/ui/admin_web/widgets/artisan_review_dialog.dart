@@ -30,6 +30,8 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isRelocation = widget.artisan.isRelocationRequest;
+
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
       backgroundColor: Colors.white,
@@ -52,10 +54,14 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                            color: (isRelocation ? const Color(0xFFD97706) : const Color(0xFF10B981)).withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(Icons.rate_review_rounded, color: Color(0xFF10B981), size: 22),
+                          child: Icon(
+                            isRelocation ? Icons.swap_horiz_rounded : Icons.rate_review_rounded,
+                            color: isRelocation ? const Color(0xFFD97706) : const Color(0xFF10B981),
+                            size: 22,
+                          ),
                         ),
                         const SizedBox(width: 14),
                         Expanded(
@@ -63,12 +69,14 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Review Artisan Profile Application',
+                                isRelocation ? 'Review Workshop Premise Relocation' : 'Review Artisan Profile Application',
                                 softWrap: true,
                                 style: GoogleFonts.dmSerifDisplay(fontSize: 22, fontWeight: FontWeight.bold),
                               ),
                               Text(
-                                'Submitted on ${widget.artisan.dateSubmitted}',
+                                isRelocation
+                                    ? 'Requested on ${widget.artisan.dateSubmitted} • ${widget.artisan.name}'
+                                    : 'Submitted on ${widget.artisan.dateSubmitted}',
                                 softWrap: true,
                                 style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.grey[500]),
                               ),
@@ -88,6 +96,10 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
             const SizedBox(height: 20),
             const Divider(),
             const SizedBox(height: 20),
+
+            if (isRelocation)
+              _buildRelocationReview()
+            else
 
             // Responsive Split View
             LayoutBuilder(
@@ -294,7 +306,10 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
                     icon: const Icon(Icons.close_rounded, size: 18),
-                    label: const Text('Reject Application', style: TextStyle(fontWeight: FontWeight.bold)),
+                    label: Text(
+                      isRelocation ? 'Reject Relocation' : 'Reject Application',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
                   ElevatedButton.icon(
                     onPressed: () {
@@ -310,7 +325,9 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
                     ),
                     icon: const Icon(Icons.check_rounded, size: 18),
                     label: Text(
-                      widget.artisan.isUpgradeFromTourist ? 'Approve & Upgrade to Dual Role' : 'Approve Artisan Studio',
+                      isRelocation
+                          ? 'Approve Relocation & Update Map'
+                          : (widget.artisan.isUpgradeFromTourist ? 'Approve & Upgrade to Dual Role' : 'Approve Artisan Studio'),
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
@@ -322,6 +339,156 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
       ),
     ),
   );
+  }
+
+  Widget _buildRelocationReview() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEFF6FF),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFF3B82F6)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.info_outline_rounded, color: Color(0xFF2563EB), size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'The artisan has formally submitted a workshop premise relocation request. Upon approval, their public map pin and accredited address will update immediately.',
+                  style: GoogleFonts.plusJakartaSans(fontSize: 12, color: const Color(0xFF1E40AF)),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.verified_rounded, color: Color(0xFF10B981), size: 18),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Current Accredited Premise',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF334155),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _buildDetailRow(Icons.place_outlined, 'State', widget.artisan.state),
+                    _buildDetailRow(
+                      Icons.home_work_outlined,
+                      'Address',
+                      widget.artisan.currentAddress ?? 'Accredited Studio Location',
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFFBEB),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFF59E0B)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.new_releases_rounded, color: Color(0xFFD97706), size: 18),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Proposed New Premise',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF92400E),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _buildDetailRow(Icons.place_outlined, 'State', widget.artisan.proposedState ?? widget.artisan.state),
+                    _buildDetailRow(
+                      Icons.location_on_outlined,
+                      'New Address',
+                      widget.artisan.proposedAddress ?? 'Not Specified',
+                    ),
+                    if (widget.artisan.proposedLatitude != null && widget.artisan.proposedLongitude != null)
+                      _buildDetailRow(
+                        Icons.gps_fixed_rounded,
+                        'Coordinates',
+                        '${widget.artisan.proposedLatitude!.toStringAsFixed(5)}, ${widget.artisan.proposedLongitude!.toStringAsFixed(5)}',
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Relocation Justification & Reason',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF334155),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                widget.artisan.relocationReason ?? 'No reason provided by artisan.',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12,
+                  fontStyle: FontStyle.italic,
+                  color: const Color(0xFF475569),
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildDetailRow(IconData icon, String label, String value) {

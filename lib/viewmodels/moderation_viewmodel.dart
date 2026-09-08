@@ -529,11 +529,41 @@ class ModerationViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void addRelocationRequest(PendingArtisanProfile profile) {
+    _pendingArtisans.removeWhere((p) => p.email.toLowerCase() == profile.email.toLowerCase() && p.isRelocationRequest);
+    _pendingArtisans.insert(0, profile);
+    notifyListeners();
+  }
+
   Future<void> approveArtisan(String id) async {
     final idx = _pendingArtisans.indexWhere((item) => item.id == id);
     if (idx != -1) {
       final artisan = _pendingArtisans[idx];
       _pendingArtisans.removeAt(idx);
+
+      if (artisan.isRelocationRequest) {
+        await _repository.approveRelocationRequest(email: artisan.email);
+        final userIdx = _registeredUsers.indexWhere((u) => u.email.toLowerCase() == artisan.email.toLowerCase());
+        if (userIdx != -1) {
+          final u = _registeredUsers[userIdx];
+          _registeredUsers[userIdx] = u.copyWith(
+            address: artisan.proposedAddress ?? u.address,
+            state: artisan.proposedState ?? u.state,
+            latitude: artisan.proposedLatitude ?? u.latitude,
+            longitude: artisan.proposedLongitude ?? u.longitude,
+            clearPendingRelocation: true,
+          );
+        }
+        final aIdx = _activeArtisanMasters.indexWhere((a) => a.email.toLowerCase() == artisan.email.toLowerCase());
+        if (aIdx != -1) {
+          final a = _activeArtisanMasters[aIdx];
+          _activeArtisanMasters[aIdx] = a.copyWith(
+            state: artisan.proposedState ?? a.state,
+          );
+        }
+        notifyListeners();
+        return;
+      }
 
       // Determine target role
       final userIdx = _registeredUsers.indexWhere((u) => u.email.toLowerCase() == artisan.email.toLowerCase());
@@ -677,6 +707,18 @@ class ModerationViewModel extends ChangeNotifier {
     if (idx != -1) {
       final artisan = _pendingArtisans[idx];
       _pendingArtisans.removeAt(idx);
+
+      if (artisan.isRelocationRequest) {
+        await _repository.rejectRelocationRequest(email: artisan.email);
+        final userIdx = _registeredUsers.indexWhere((u) => u.email.toLowerCase() == artisan.email.toLowerCase());
+        if (userIdx != -1) {
+          _registeredUsers[userIdx] = _registeredUsers[userIdx].copyWith(
+            clearPendingRelocation: true,
+          );
+        }
+        notifyListeners();
+        return;
+      }
 
       final userIdx = _registeredUsers.indexWhere((u) => u.email.toLowerCase() == artisan.email.toLowerCase());
       if (userIdx != -1) {

@@ -2042,6 +2042,152 @@ class SupabaseService {
     return UserModel.fromMap(userRecord);
   }
 
+  Future<UserModel> submitRelocationRequest({
+    required String email,
+    required String address,
+    required String state,
+    required double latitude,
+    required double longitude,
+    required String reason,
+  }) async {
+    final cleanEmail = email.trim().toLowerCase();
+    await Future.delayed(const Duration(milliseconds: 200));
+
+    final userRecord = _userStore[cleanEmail] ?? <String, dynamic>{'email': cleanEmail};
+    userRecord['pending_relocation_address'] = address.trim();
+    userRecord['pending_relocation_state'] = state.trim();
+    userRecord['pending_relocation_lat'] = latitude;
+    userRecord['pending_relocation_lng'] = longitude;
+    userRecord['pending_relocation_reason'] = reason.trim();
+    userRecord['pending_relocation_date'] = DateTime.now().toIso8601String();
+
+    _userStore[cleanEmail] = userRecord;
+
+    final client = _client;
+    if (client != null) {
+      try {
+        final userId = userRecord['id'];
+        if (userId != null) {
+          await client.from('artisan_profiles').update({
+            'pending_relocation_address': address.trim(),
+            'pending_relocation_state': state.trim(),
+            'pending_relocation_lat': latitude,
+            'pending_relocation_lng': longitude,
+            'pending_relocation_reason': reason.trim(),
+            'updated_at': DateTime.now().toIso8601String(),
+          }).eq('user_id', userId);
+        }
+      } catch (e) {
+        debugPrint('Supabase submitRelocationRequest note: $e');
+      }
+    }
+
+    return UserModel.fromMap(userRecord);
+  }
+
+  Future<UserModel> cancelRelocationRequest({required String email}) async {
+    final cleanEmail = email.trim().toLowerCase();
+    await Future.delayed(const Duration(milliseconds: 100));
+
+    final userRecord = _userStore[cleanEmail] ?? <String, dynamic>{'email': cleanEmail};
+    userRecord.remove('pending_relocation_address');
+    userRecord.remove('pending_relocation_state');
+    userRecord.remove('pending_relocation_lat');
+    userRecord.remove('pending_relocation_lng');
+    userRecord.remove('pending_relocation_reason');
+    userRecord.remove('pending_relocation_date');
+    userRecord.remove('pendingRelocationAddress');
+    userRecord.remove('pendingRelocationState');
+    userRecord.remove('pendingRelocationLatitude');
+    userRecord.remove('pendingRelocationLongitude');
+    userRecord.remove('pendingRelocationReason');
+    userRecord.remove('pendingRelocationDate');
+
+    _userStore[cleanEmail] = userRecord;
+
+    final client = _client;
+    if (client != null) {
+      try {
+        final userId = userRecord['id'];
+        if (userId != null) {
+          await client.from('artisan_profiles').update({
+            'pending_relocation_address': null,
+            'pending_relocation_state': null,
+            'pending_relocation_lat': null,
+            'pending_relocation_lng': null,
+            'pending_relocation_reason': null,
+            'updated_at': DateTime.now().toIso8601String(),
+          }).eq('user_id', userId);
+        }
+      } catch (e) {
+        debugPrint('Supabase cancelRelocationRequest note: $e');
+      }
+    }
+
+    return UserModel.fromMap(userRecord);
+  }
+
+  Future<UserModel> approveRelocationRequest({required String email}) async {
+    final cleanEmail = email.trim().toLowerCase();
+    await Future.delayed(const Duration(milliseconds: 200));
+
+    final userRecord = _userStore[cleanEmail] ?? <String, dynamic>{'email': cleanEmail};
+    final newAddress = userRecord['pending_relocation_address'] ?? userRecord['pendingRelocationAddress'];
+    final newState = userRecord['pending_relocation_state'] ?? userRecord['pendingRelocationState'];
+    final newLat = userRecord['pending_relocation_lat'] ?? userRecord['pendingRelocationLatitude'];
+    final newLng = userRecord['pending_relocation_lng'] ?? userRecord['pendingRelocationLongitude'];
+
+    if (newAddress != null) userRecord['address'] = newAddress;
+    if (newState != null) userRecord['state'] = newState;
+    if (newLat != null) userRecord['latitude'] = newLat;
+    if (newLng != null) userRecord['longitude'] = newLng;
+
+    userRecord.remove('pending_relocation_address');
+    userRecord.remove('pending_relocation_state');
+    userRecord.remove('pending_relocation_lat');
+    userRecord.remove('pending_relocation_lng');
+    userRecord.remove('pending_relocation_reason');
+    userRecord.remove('pending_relocation_date');
+    userRecord.remove('pendingRelocationAddress');
+    userRecord.remove('pendingRelocationState');
+    userRecord.remove('pendingRelocationLatitude');
+    userRecord.remove('pendingRelocationLongitude');
+    userRecord.remove('pendingRelocationReason');
+    userRecord.remove('pendingRelocationDate');
+
+    _userStore[cleanEmail] = userRecord;
+
+    final client = _client;
+    if (client != null) {
+      try {
+        final userId = userRecord['id'];
+        if (userId != null) {
+          final updates = <String, dynamic>{
+            if (newAddress != null) 'address': newAddress,
+            if (newState != null) 'state': newState,
+            if (newLat != null) 'latitude': newLat,
+            if (newLng != null) 'longitude': newLng,
+            'pending_relocation_address': null,
+            'pending_relocation_state': null,
+            'pending_relocation_lat': null,
+            'pending_relocation_lng': null,
+            'pending_relocation_reason': null,
+            'updated_at': DateTime.now().toIso8601String(),
+          };
+          await client.from('artisan_profiles').update(updates).eq('user_id', userId);
+        }
+      } catch (e) {
+        debugPrint('Supabase approveRelocationRequest note: $e');
+      }
+    }
+
+    return UserModel.fromMap(userRecord);
+  }
+
+  Future<UserModel> rejectRelocationRequest({required String email, String? feedback}) async {
+    return cancelRelocationRequest(email: email);
+  }
+
   Future<List<Map<String, dynamic>>> getPendingArtisans() async {
     final List<Map<String, dynamic>> results = [];
     final client = _client;

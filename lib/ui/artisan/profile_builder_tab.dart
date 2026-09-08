@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart' as fp;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:warisan_kita/data/services/supabase_service.dart';
+import 'package:warisan_kita/domain/models/pending_artisan_profile.dart';
 import 'package:warisan_kita/domain/validators/profile_validator.dart';
 import 'package:warisan_kita/ui/tourist/artisan_detail_screen.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
@@ -217,6 +218,254 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
         CameraUpdate.newLatLngZoom(result.position, 17),
       );
     }
+  }
+
+  Future<void> _handleCancelRelocation() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Withdraw Relocation Request?'),
+        content: const Text('Are you sure you want to cancel your pending premise relocation review? Your current verified location will remain unchanged.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Keep Pending')),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),
+            child: const Text('Withdraw Request'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      final authVM = context.read<AuthViewModel>();
+      await authVM.cancelRelocationRequest();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Relocation request withdrawn successfully.'),
+            backgroundColor: Color(0xFF047857),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _openRelocationDialog() async {
+    final authVM = context.read<AuthViewModel>();
+    final currentUser = authVM.currentUser;
+    if (currentUser == null) return;
+
+    LatLng? proposedPin;
+    String? proposedAddress;
+    String? proposedState;
+    final reasonController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogCtx) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+            return AlertDialog(
+              title: Row(
+                children: [
+                  const Icon(Icons.swap_horiz_rounded, color: Color(0xFFD97706)),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Request Premise Relocation',
+                    style: GoogleFonts.dmSerifDisplay(fontSize: 18),
+                  ),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: SizedBox(
+                  width: 480,
+                  child: Form(
+                    key: formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Workshop locations are legally verified by Kraftangan Malaysia officers. Moving premises requires formal administrative re-verification.',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12,
+                            color: isDark ? Colors.white70 : Colors.grey[700],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Current Accredited Address:',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          currentUser.address ?? 'Registered Accredited Workshop',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11,
+                            color: isDark ? Colors.white60 : Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Select Proposed New Premise:',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        OutlinedButton.icon(
+                          onPressed: () async {
+                            final result = await Navigator.of(context).push<WorkshopPlaceResult>(
+                              MaterialPageRoute(
+                                builder: (_) => WorkshopMapPickerPage(
+                                  initialState: proposedState ?? currentUser.state ?? 'Melaka',
+                                  initialLocation: proposedPin ?? _selectedWorkshopPin,
+                                  initialAddress: proposedAddress ?? currentUser.address,
+                                  stateCenters: _stateCenters,
+                                ),
+                              ),
+                            );
+                            if (result != null) {
+                              setDialogState(() {
+                                proposedPin = result.position;
+                                proposedAddress = result.displayName;
+                                proposedState = result.malaysiaState;
+                              });
+                            }
+                          },
+                          icon: const Icon(Icons.place_outlined),
+                          label: Text(
+                            proposedAddress == null ? 'Pin New Location on Map' : 'Change Selected Location',
+                            style: GoogleFonts.plusJakartaSans(fontSize: 12),
+                          ),
+                        ),
+                        if (proposedAddress != null) ...[
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFEF3C7),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFFF59E0B)),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(Icons.location_on, color: Color(0xFFD97706), size: 16),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    proposedAddress!,
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: const Color(0xFF92400E),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: reasonController,
+                          maxLines: 3,
+                          validator: (v) => ProfileValidator.validateNotEmpty(v, 'Justification reason'),
+                          decoration: InputDecoration(
+                            labelText: 'Relocation Reason / Justification',
+                            hintText: 'e.g., Relocated to larger studio lot to support traditional weaving loom capacity',
+                            labelStyle: GoogleFonts.plusJakartaSans(fontSize: 12),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogCtx),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () async {
+                    if (proposedAddress == null || proposedPin == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Please select the proposed new workshop location on the map.'),
+                          backgroundColor: Color(0xFFEF4444),
+                        ),
+                      );
+                      return;
+                    }
+                    if (!(formKey.currentState?.validate() ?? false)) {
+                      return;
+                    }
+
+                    final reason = reasonController.text.trim();
+                    await authVM.submitRelocationRequest(
+                      address: proposedAddress!,
+                      state: proposedState ?? currentUser.state ?? 'Melaka',
+                      latitude: proposedPin!.latitude,
+                      longitude: proposedPin!.longitude,
+                      reason: reason,
+                    );
+
+                    if (mounted) {
+                      try {
+                        context.read<ModerationViewModel>().addRelocationRequest(
+                          PendingArtisanProfile(
+                            id: 'reloc_${currentUser.id}',
+                            name: currentUser.studioName ?? currentUser.displayName ?? 'Artisan Studio',
+                            craftCategory: currentUser.craftCategory ?? 'Handicraft & Heritage',
+                            state: currentUser.state ?? 'Melaka',
+                            dateSubmitted: 'Today',
+                            imageUrl: currentUser.avatarUrl ?? 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600',
+                            email: currentUser.email,
+                            experience: 'Accredited Studio',
+                            phone: currentUser.phone ?? '+60 12-345 6789',
+                            ssmNumber: currentUser.ssmNumber ?? 'Verified Studio',
+                            bio: currentUser.bio,
+                            isUpgradeFromTourist: false,
+                            isRelocationRequest: true,
+                            currentAddress: currentUser.address,
+                            proposedAddress: proposedAddress,
+                            proposedLatitude: proposedPin!.latitude,
+                            proposedLongitude: proposedPin!.longitude,
+                            proposedState: proposedState ?? currentUser.state,
+                            relocationReason: reason,
+                          ),
+                        );
+                      } catch (_) {}
+
+                      Navigator.pop(dialogCtx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Relocation request submitted for Administrative Review.'),
+                          backgroundColor: Color(0xFF047857),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  },
+                  child: const Text('Submit Request'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   Future<void> _handleSave() async {
@@ -452,6 +701,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final currentUser = context.watch<AuthViewModel>().currentUser;
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
@@ -778,17 +1028,45 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
 
             const SizedBox(height: 24),
 
-            // 🗺️ Workshop Map Location
-            Text(
-              'Workshop Location',
-              style: GoogleFonts.dmSerifDisplay(
-                fontSize: 20,
-                color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
-              ),
+            // 🗺️ Workshop Map Location - Verified Premise & Relocation Flow
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Workshop Location',
+                  style: GoogleFonts.dmSerifDisplay(
+                    fontSize: 20,
+                    color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFF10B981)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.verified_rounded, size: 14, color: Color(0xFF10B981)),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Verified Premise',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF10B981),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 6),
             Text(
-              'Pin your exact workshop or studio location on the map.',
+              'Your workshop premise is verified and locked to protect consumers. Official relocation requests require Administrative Review.',
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 12,
                 color: isDark ? Colors.white70 : Colors.grey[600],
@@ -801,10 +1079,8 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                 color: isDark ? const Color(0xFF0D2825) : const Color(0xFFE8EFEC),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: _selectedWorkshopPin == null
-                      ? (isDark ? const Color(0xFF1E3A34) : const Color(0xFFD7E0DC))
-                      : const Color(0xFF10B981),
-                  width: _selectedWorkshopPin == null ? 1 : 2,
+                  color: const Color(0xFF10B981),
+                  width: 2,
                 ),
               ),
               clipBehavior: Clip.antiAlias,
@@ -814,8 +1090,8 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                     child: IgnorePointer(
                       child: GoogleMap(
                         initialCameraPosition: CameraPosition(
-                          target: _selectedStateCenter,
-                          zoom: 12,
+                          target: _selectedWorkshopPin ?? _selectedStateCenter,
+                          zoom: 14,
                         ),
                         onMapCreated: (controller) {
                           _workshopMapController = controller;
@@ -827,7 +1103,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                                   markerId: const MarkerId('workshop-location'),
                                   position: _selectedWorkshopPin!,
                                   icon: BitmapDescriptor.defaultMarkerWithHue(
-                                    BitmapDescriptor.hueOrange,
+                                    BitmapDescriptor.hueGreen,
                                   ),
                                 ),
                               },
@@ -839,47 +1115,29 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                       ),
                     ),
                   ),
-                  Positioned.fill(
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(onTap: _openWorkshopMapPicker),
-                    ),
-                  ),
                   Positioned(
                     top: 10,
                     right: 10,
-                    child: IgnorePointer(
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF0D2825) : const Color(0xFF004D40),
-                          borderRadius: BorderRadius.circular(20),
-                          border: isDark ? Border.all(color: const Color(0xFFFFD54F)) : null,
-                          boxShadow: const [
-                            BoxShadow(color: Colors.black26, blurRadius: 8),
-                          ],
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.open_in_full_rounded,
-                                color: isDark ? const Color(0xFFFFD54F) : Colors.white,
-                                size: 15,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                'Open Large Map',
-                                style: GoogleFonts.plusJakartaSans(
-                                  color: isDark ? const Color(0xFFFFD54F) : Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.7),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.lock_rounded, color: Colors.white, size: 12),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Location Locked',
+                            style: GoogleFonts.plusJakartaSans(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                     ),
                   ),
@@ -890,32 +1148,117 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  _selectedWorkshopPin == null
-                      ? Icons.touch_app_rounded
-                      : Icons.check_circle_rounded,
+                const Icon(
+                  Icons.verified_user_rounded,
                   size: 16,
-                  color: _selectedWorkshopPin == null
-                      ? (isDark ? Colors.white54 : const Color(0xFF64748B))
-                      : (isDark ? const Color(0xFF34D399) : const Color(0xFF047857)),
+                  color: Color(0xFF10B981),
                 ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    _selectedWorkshopPin == null
-                        ? 'Tap the map to place your exact workshop pin.'
-                        : _workshopAddress ?? 'Resolving the selected address…',
+                    _workshopAddress ?? currentUser?.address ?? 'Accredited Heritage Workshop Premise',
                     style: GoogleFonts.plusJakartaSans(
-                      fontSize: 10.5,
-                      height: 1.35,
-                      color: _selectedWorkshopPin == null
-                          ? (isDark ? Colors.white54 : const Color(0xFF64748B))
-                          : (isDark ? const Color(0xFF34D399) : const Color(0xFF047857)),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? const Color(0xFF34D399) : const Color(0xFF047857),
                     ),
                   ),
                 ),
               ],
             ),
+            const SizedBox(height: 12),
+            if (currentUser?.hasPendingRelocation == true) ...[
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF3C7),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFF59E0B)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.pending_actions_rounded, color: Color(0xFFD97706), size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Relocation Request Pending Administrative Review',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF92400E),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Proposed Premise: ${currentUser?.pendingRelocationAddress ?? ""}',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        color: const Color(0xFF78350F),
+                      ),
+                    ),
+                    if (currentUser?.pendingRelocationReason != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Justification: "${currentUser!.pendingRelocationReason}"',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          fontStyle: FontStyle.italic,
+                          color: const Color(0xFF78350F),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Public directory shows current verified address until approved.',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 10.5,
+                              color: const Color(0xFF92400E),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        OutlinedButton(
+                          onPressed: _handleCancelRelocation,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFFDC2626),
+                            side: const BorderSide(color: Color(0xFFDC2626)),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          ),
+                          child: const Text('Withdraw Request', style: TextStyle(fontSize: 11)),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ] else ...[
+              OutlinedButton.icon(
+                onPressed: _openRelocationDialog,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFFD97706),
+                  side: const BorderSide(color: Color(0xFFD97706)),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                icon: const Icon(Icons.edit_location_alt_rounded, size: 18),
+                label: Text(
+                  'Request Workshop Relocation',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
             
             const SizedBox(height: 24),
 

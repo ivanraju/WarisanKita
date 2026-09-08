@@ -28,6 +28,12 @@ class UserModel {
   final String? artisanStatus;
   final List<Map<String, dynamic>> artisanDocuments;
   final List<String> tags;
+  final String? pendingRelocationAddress;
+  final String? pendingRelocationState;
+  final double? pendingRelocationLatitude;
+  final double? pendingRelocationLongitude;
+  final String? pendingRelocationReason;
+  final String? pendingRelocationDate;
 
   const UserModel({
     required this.id,
@@ -54,7 +60,16 @@ class UserModel {
     this.artisanStatus,
     this.artisanDocuments = const [],
     this.tags = const [],
+    this.pendingRelocationAddress,
+    this.pendingRelocationState,
+    this.pendingRelocationLatitude,
+    this.pendingRelocationLongitude,
+    this.pendingRelocationReason,
+    this.pendingRelocationDate,
   });
+
+  bool get hasPendingRelocation =>
+      pendingRelocationAddress != null && pendingRelocationAddress!.trim().isNotEmpty;
 
   bool get isDualRole =>
       role == 'Artisan & Tourist' ||
@@ -190,6 +205,13 @@ class UserModel {
     List<String>? tags,
     String? suspensionReason,
     bool clearSuspensionReason = false,
+    String? pendingRelocationAddress,
+    String? pendingRelocationState,
+    double? pendingRelocationLatitude,
+    double? pendingRelocationLongitude,
+    String? pendingRelocationReason,
+    String? pendingRelocationDate,
+    bool clearPendingRelocation = false,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -216,6 +238,12 @@ class UserModel {
       artisanStatus: artisanStatus ?? this.artisanStatus,
       artisanDocuments: artisanDocuments ?? this.artisanDocuments,
       tags: tags ?? this.tags,
+      pendingRelocationAddress: clearPendingRelocation ? null : (pendingRelocationAddress ?? this.pendingRelocationAddress),
+      pendingRelocationState: clearPendingRelocation ? null : (pendingRelocationState ?? this.pendingRelocationState),
+      pendingRelocationLatitude: clearPendingRelocation ? null : (pendingRelocationLatitude ?? this.pendingRelocationLatitude),
+      pendingRelocationLongitude: clearPendingRelocation ? null : (pendingRelocationLongitude ?? this.pendingRelocationLongitude),
+      pendingRelocationReason: clearPendingRelocation ? null : (pendingRelocationReason ?? this.pendingRelocationReason),
+      pendingRelocationDate: clearPendingRelocation ? null : (pendingRelocationDate ?? this.pendingRelocationDate),
     );
   }
 
@@ -244,6 +272,12 @@ class UserModel {
       'artisanStatus': artisanStatus,
       'latitude': latitude,
       'longitude': longitude,
+      'pending_relocation_address': pendingRelocationAddress,
+      'pending_relocation_state': pendingRelocationState,
+      'pending_relocation_lat': pendingRelocationLatitude,
+      'pending_relocation_lng': pendingRelocationLongitude,
+      'pending_relocation_reason': pendingRelocationReason,
+      'pending_relocation_date': pendingRelocationDate,
     };
   }
 
@@ -271,6 +305,12 @@ class UserModel {
     final lonRaw = artisanMap?['longitude'] ?? map['longitude'];
     final double? lon = lonRaw is num ? lonRaw.toDouble() : (lonRaw != null ? double.tryParse(lonRaw.toString()) : null);
 
+    final pLatRaw = artisanMap?['pending_relocation_lat'] ?? map['pending_relocation_lat'] ?? map['pendingRelocationLatitude'];
+    final double? pLat = pLatRaw is num ? pLatRaw.toDouble() : (pLatRaw != null ? double.tryParse(pLatRaw.toString()) : null);
+
+    final pLonRaw = artisanMap?['pending_relocation_lng'] ?? map['pending_relocation_lng'] ?? map['pendingRelocationLongitude'];
+    final double? pLon = pLonRaw is num ? pLonRaw.toDouble() : (pLonRaw != null ? double.tryParse(pLonRaw.toString()) : null);
+
     return UserModel(
       id: map['id'] ?? '',
       email: map['email'] ?? '',
@@ -296,6 +336,12 @@ class UserModel {
       artisanStatus: artisanMap?['status'] ?? map['artisanStatus'] ?? map['artisan_status'],
       artisanDocuments: docs,
       tags: artisanMap?['tags'] != null ? List<String>.from(artisanMap!['tags']) : const [],
+      pendingRelocationAddress: map['pending_relocation_address'] ?? map['pendingRelocationAddress'] ?? artisanMap?['pending_relocation_address'],
+      pendingRelocationState: map['pending_relocation_state'] ?? map['pendingRelocationState'] ?? artisanMap?['pending_relocation_state'],
+      pendingRelocationLatitude: pLat,
+      pendingRelocationLongitude: pLon,
+      pendingRelocationReason: map['pending_relocation_reason'] ?? map['pendingRelocationReason'] ?? artisanMap?['pending_relocation_reason'],
+      pendingRelocationDate: map['pending_relocation_date'] ?? map['pendingRelocationDate'] ?? artisanMap?['pending_relocation_date'],
     );
   }
 }

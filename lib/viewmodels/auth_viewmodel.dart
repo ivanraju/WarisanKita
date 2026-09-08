@@ -197,6 +197,45 @@ class AuthViewModel extends ChangeNotifier {
     }
   }
 
+  Future<void> submitRelocationRequest({
+    required String address,
+    required String state,
+    required double latitude,
+    required double longitude,
+    required String reason,
+  }) async {
+    final email = _currentUser?.email ?? 'artisan@warisankita.my';
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final updated = await _repository.submitRelocationRequest(
+        email: email,
+        address: address,
+        state: state,
+        latitude: latitude,
+        longitude: longitude,
+        reason: reason,
+      );
+      _currentUser = updated;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> cancelRelocationRequest() async {
+    final email = _currentUser?.email ?? 'artisan@warisankita.my';
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final updated = await _repository.cancelRelocationRequest(email: email);
+      _currentUser = updated;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<String?> uploadAvatar(PlatformFile file) async {
     final email = _currentUser?.email ?? 'tourist@warisankita.my';
     final userId = _currentUser?.id ?? email;
