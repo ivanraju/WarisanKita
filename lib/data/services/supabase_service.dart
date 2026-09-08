@@ -2277,6 +2277,9 @@ class SupabaseService {
             imageUrl: 'https://images.unsplash.com/photo-1605721911519-3dfeb3be25e7?w=800',
             rating: 4.9,
             experience: '35 Years',
+            address: 'Jalan Hiliran, 20300 Kuala Terengganu, Terengganu',
+            latitude: 5.3117,
+            longitude: 103.1324,
           ),
           ArtisanModel(
             id: 'dummy_2',
@@ -2287,6 +2290,9 @@ class SupabaseService {
             imageUrl: 'https://images.unsplash.com/photo-1590739225287-bd31519780c3?w=800',
             rating: 4.8,
             experience: '45 Years',
+            address: 'Kampung Penambang, 15350 Kota Bharu, Kelantan',
+            latitude: 6.1384,
+            longitude: 102.2476,
           ),
         ];
       }
@@ -2588,8 +2594,7 @@ class SupabaseService {
               .select('post_id, reply_id, reason, notes, status')
               .eq('status', 'pending');
 
-          if (pendingReportsRes is List) {
-            for (final r in pendingReportsRes) {
+          for (final r in pendingReportsRes) {
               final rMap = Map<String, dynamic>.from(r);
               final pId = rMap['post_id']?.toString();
               final repId = rMap['reply_id']?.toString();
@@ -2602,7 +2607,6 @@ class SupabaseService {
                 activeReportDetails['reply_$repId'] = rMap;
               }
             }
-          }
         } catch (e) {
           debugPrint('fetch pending reports note: $e');
         }
@@ -3497,7 +3501,7 @@ class SupabaseService {
               .from('forum_replies')
               .select('id')
               .eq('post_id', threadId);
-          if (repliesRes is List && repliesRes.isNotEmpty) {
+          if (repliesRes.isNotEmpty) {
             final replyIds = repliesRes.map((r) => r['id'].toString()).toList();
             try {
               await client
@@ -3650,10 +3654,10 @@ class SupabaseService {
             .eq('id', postId)
             .select('id');
         debugPrint('adminDeleteForumPost: direct delete result: $result');
-        if (result is List && result.isEmpty) {
+        if (result.isEmpty) {
           // Deleted successfully (no rows returned means the row is gone)
           deleteError = '';
-        } else if (result is List && result.isNotEmpty) {
+        } else if (result.isNotEmpty) {
           // Row still exists somehow - report as error
           deleteError =
               'Post still exists after delete (rows returned: ${result.length})';
