@@ -376,6 +376,7 @@ class ModerationViewModel extends ChangeNotifier {
     }).toList();
   }
 
+  List<PendingArtisanProfile> get pendingArtisans => List.unmodifiable(_pendingArtisans);
   int get totalPendingCount => _pendingArtisans.length;
 
   void setActiveTab(String tab) {
