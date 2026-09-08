@@ -648,7 +648,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                   TextFormField(
                     controller: _ssmController,
                     decoration: InputDecoration(
-                      labelText: 'SSM Business / Kraftangan Registration No. *',
+                      labelText: 'SSM / Kraftangan Reg. No. *',
                       hintText: 'e.g. 202601004821 or KT/2026/0491',
                       prefixIcon: const Icon(
                         Icons.badge_outlined,
@@ -656,14 +656,57 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                       ),
                       filled: true,
                       fillColor: const Color(0xFFF8F9FA),
+                      errorMaxLines: 2,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
                         borderSide: BorderSide.none,
                       ),
                     ),
-                    validator: (v) => (v == null || v.trim().isEmpty)
-                        ? 'Please enter SSM or Kraftangan registration number'
-                        : null,
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) {
+                        return 'Please enter SSM or Kraftangan number';
+                      }
+                      final clean = v.trim();
+                      final lower = clean.toLowerCase();
+                      const disallowedPlaceholders = {
+                        'none', 'na', 'n/a', 'nil', 'null', 'test', 'testing', 'dummy', 'asdf', '1234', '12345', '123456', 'no', 'tiada'
+                      };
+                      if (disallowedPlaceholders.contains(lower)) {
+                        return 'Please provide a valid SSM or Kraftangan ID';
+                      }
+                      if (clean.length < 6 || clean.length > 30) {
+                        return 'Must be between 6 and 30 characters';
+                      }
+                      final validCharsRegex = RegExp(r'^[a-zA-Z0-9\s\/\.\-]+$');
+                      if (!validCharsRegex.hasMatch(clean)) {
+                        return 'Letters, numbers, hyphens, and slashes only';
+                      }
+                      if (!RegExp(r'\d').hasMatch(clean)) {
+                        return 'Registration number must contain digits';
+                      }
+                      // Formats:
+                      // 1. New 12-digit SSM (e.g. 202601004821)
+                      final newSsmRegex = RegExp(r'^\d{12}$');
+                      // 2. Old SSM format (e.g. 123456-A, 001234567-W, KT0012345-M)
+                      final oldSsmRegex = RegExp(r'^[a-zA-Z]{0,3}\d{5,9}[-\s]?[a-zA-Z]$');
+                      // 3. Kraftangan / State heritage formats (e.g. KT/2026/0491, KT-TRG-99482, KM-123456)
+                      final kraftanganRegex = RegExp(r'^(KT|KM|KRAFTANGAN|PKKM|ST|MK)[-/\s][\w/\-\s]{3,20}$', caseSensitive: false);
+                      // 4. District / Local council business license (e.g. DBKL/L/2024/123, MPKB-12345, TR-12345)
+                      final generalTradeLicenseRegex = RegExp(r'^[a-zA-Z0-9]{2,10}[-/\s][a-zA-Z0-9/\-\s]{3,20}$');
+
+                      final normalized = clean.replaceAll(RegExp(r'\s+'), ' ');
+                      final noSpaces = clean.replaceAll(RegExp(r'\s+'), '');
+
+                      final isValidFormat = newSsmRegex.hasMatch(noSpaces) ||
+                          oldSsmRegex.hasMatch(noSpaces) ||
+                          kraftanganRegex.hasMatch(normalized) ||
+                          generalTradeLicenseRegex.hasMatch(normalized);
+
+                      if (!isValidFormat) {
+                        return 'Invalid format (e.g. 202601004821 or KT/2026/0491)';
+                      }
+                      return null;
+                    },
                   ),
 
                   const SizedBox(height: 16),
@@ -681,6 +724,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                       ),
                       filled: true,
                       fillColor: const Color(0xFFF8F9FA),
+                      errorMaxLines: 2,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
                         borderSide: BorderSide.none,
@@ -707,9 +751,9 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                     controller: _bioController,
                     maxLines: 3,
                     decoration: InputDecoration(
-                      labelText: 'Studio Heritage Bio & Master Story',
+                      labelText: 'Studio Heritage Bio',
                       hintText:
-                          'Describe your heritage craft experience, workshop history, and master lineage...',
+                          'Describe your craft background, workshop history, and master lineage...',
                       prefixIcon: const Padding(
                         padding: EdgeInsets.only(bottom: 45),
                         child: Icon(
@@ -1088,6 +1132,8 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                 children: [
                   Text(
                     title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.plusJakartaSans(
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
@@ -1096,6 +1142,8 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                   ),
                   Text(
                     subtitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 10.5,
                       color: isAttached

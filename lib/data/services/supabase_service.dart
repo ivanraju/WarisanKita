@@ -1059,7 +1059,7 @@ class SupabaseService {
 
     final client = _client;
 
-    if (!existsLocally && !existsInDb && client == null) {
+    if (!existsLocally && !existsInDb) {
       throw Exception(
         'EMAIL NOT FOUND: No account registered with this email.',
       );
@@ -1129,7 +1129,7 @@ class SupabaseService {
     final existsLocally = _userStore.containsKey(cleanEmail);
     final existsInDb = accountCheck.exists;
 
-    if (!existsLocally && !existsInDb && _client == null) {
+    if (!existsLocally && !existsInDb) {
       throw Exception('EMAIL NOT FOUND: Account does not exist.');
     }
 
