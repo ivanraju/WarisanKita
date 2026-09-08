@@ -24,6 +24,7 @@ class UserModel {
   final double? longitude;
   final String? phone;
   final String? artisanProfileId;
+  final String? artisanStatus;
   final List<Map<String, dynamic>> artisanDocuments;
   final List<String> tags;
 
@@ -48,6 +49,7 @@ class UserModel {
     this.longitude,
     this.phone,
     this.artisanProfileId,
+    this.artisanStatus,
     this.artisanDocuments = const [],
     this.tags = const [],
   });
@@ -84,16 +86,23 @@ class UserModel {
   bool get isApproved => status == 'ACTIVE' || status == 'APPROVED';
   bool get isPendingApproval => status == 'PENDING_APPROVAL' || status == 'PENDING';
 
+  bool get isArtisanStudioSuspended =>
+      artisanStatus?.toUpperCase() == 'SUSPENDED';
+
   bool get isApprovedArtisan =>
       (role == 'Artisan' ||
        role == 'Master Artisan' ||
        roles.contains('Artisan') ||
        roles.contains('Master Artisan')) &&
-      isApproved;
+      isApproved &&
+      !isArtisanStudioSuspended;
 
   bool get isPendingArtisan =>
-      isPendingApproval ||
-      (studioName != null && studioName!.trim().isNotEmpty && !isApprovedArtisan);
+      (artisanStatus == 'PENDING_APPROVAL' ||
+       artisanStatus == 'PENDING' ||
+       isPendingApproval ||
+       (studioName != null && studioName!.trim().isNotEmpty && !isApprovedArtisan)) &&
+      !isArtisanStudioSuspended;
 
   String get handle {
     if (username != null && username!.trim().isNotEmpty) {
@@ -174,6 +183,7 @@ class UserModel {
     double? longitude,
     String? phone,
     String? artisanProfileId,
+    String? artisanStatus,
     List<Map<String, dynamic>>? artisanDocuments,
     List<String>? tags,
   }) {
@@ -198,6 +208,7 @@ class UserModel {
       longitude: longitude ?? this.longitude,
       phone: phone ?? this.phone,
       artisanProfileId: artisanProfileId ?? this.artisanProfileId,
+      artisanStatus: artisanStatus ?? this.artisanStatus,
       artisanDocuments: artisanDocuments ?? this.artisanDocuments,
       tags: tags ?? this.tags,
     );
@@ -223,6 +234,7 @@ class UserModel {
       'state': state,
       'phone': phone,
       'artisanProfileId': artisanProfileId,
+      'artisanStatus': artisanStatus,
       'latitude': latitude,
       'longitude': longitude,
     };
@@ -273,6 +285,7 @@ class UserModel {
       longitude: lon,
       phone: map['phone'] ?? map['phone_number'] ?? artisanMap?['phone'],
       artisanProfileId: artisanMap?['id'],
+      artisanStatus: artisanMap?['status'] ?? map['artisanStatus'] ?? map['artisan_status'],
       artisanDocuments: docs,
       tags: artisanMap?['tags'] != null ? List<String>.from(artisanMap!['tags']) : const [],
     );
