@@ -26,6 +26,7 @@ class MapViewModel extends ChangeNotifier {
        _locationRepository = locationRepository {
     loadWorkshops();
     loadJourneyData();
+    _watchWorkshopUpdates();
   }
 
   // ============================================================
@@ -102,6 +103,7 @@ class MapViewModel extends ChangeNotifier {
 
   StreamSubscription<UserLocation>? _locationSubscription;
   StreamSubscription<double>? _headingSubscription;
+  StreamSubscription<List<WorkshopLocation>>? _workshopSubscription;
   double? _compassHeading;
 
   // ============================================================
@@ -151,6 +153,25 @@ class MapViewModel extends ChangeNotifier {
       _isLoadingJourneys = false;
       notifyListeners();
     }
+  }
+
+  void _watchWorkshopUpdates() {
+    _workshopSubscription?.cancel();
+    _workshopSubscription = _artisanRepository.watchWorkshopLocations().listen(
+      (workshops) {
+        _workshops = workshops;
+        if (_selectedWorkshop != null &&
+            !_workshops.any((item) => item.id == _selectedWorkshop!.id)) {
+          _selectedWorkshop = null;
+        }
+        _updateArtisanDistances();
+        notifyListeners();
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        debugPrint('Workshop realtime subscription error: $error');
+        debugPrintStack(stackTrace: stackTrace);
+      },
+    );
   }
 
   // ============================================================
@@ -462,6 +483,7 @@ class MapViewModel extends ChangeNotifier {
   void dispose() {
     _locationSubscription?.cancel();
     _headingSubscription?.cancel();
+    _workshopSubscription?.cancel();
     super.dispose();
   }
 }

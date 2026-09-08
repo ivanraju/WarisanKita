@@ -2757,18 +2757,18 @@ class SupabaseService {
               .eq('status', 'pending');
 
           for (final r in pendingReportsRes) {
-              final rMap = Map<String, dynamic>.from(r);
-              final pId = rMap['post_id']?.toString();
-              final repId = rMap['reply_id']?.toString();
-              if (pId != null && pId.isNotEmpty) {
-                activePendingPostReports.add(pId);
-                activeReportDetails['post_$pId'] = rMap;
-              }
-              if (repId != null && repId.isNotEmpty) {
-                activePendingReplyReports.add(repId);
-                activeReportDetails['reply_$repId'] = rMap;
-              }
+            final rMap = Map<String, dynamic>.from(r);
+            final pId = rMap['post_id']?.toString();
+            final repId = rMap['reply_id']?.toString();
+            if (pId != null && pId.isNotEmpty) {
+              activePendingPostReports.add(pId);
+              activeReportDetails['post_$pId'] = rMap;
             }
+            if (repId != null && repId.isNotEmpty) {
+              activePendingReplyReports.add(repId);
+              activeReportDetails['reply_$repId'] = rMap;
+            }
+          }
         } catch (e) {
           debugPrint('fetch pending reports note: $e');
         }
@@ -2941,14 +2941,12 @@ class SupabaseService {
     // =====================================================
     for (final item in _localReportQueue) {
       final String? postId =
-      (item['postId'] ??
-          (item['type'] == 'post' ? item['id'] : null))
-          ?.toString();
+          (item['postId'] ?? (item['type'] == 'post' ? item['id'] : null))
+              ?.toString();
 
       final String? replyId =
-      (item['replyId'] ??
-          (item['type'] == 'reply' ? item['id'] : null))
-          ?.toString();
+          (item['replyId'] ?? (item['type'] == 'reply' ? item['id'] : null))
+              ?.toString();
 
       if (postId != null &&
           (_deletedPostIds.contains(postId) ||
@@ -2956,32 +2954,24 @@ class SupabaseService {
         continue;
       }
 
-      if (replyId != null &&
-          _dismissedReportReplyIds.contains(replyId)) {
+      if (replyId != null && _dismissedReportReplyIds.contains(replyId)) {
         continue;
       }
 
       if (_forumStore.isNotEmpty) {
-        if (postId != null &&
-            !_forumStore.any((t) => t.id == postId)) {
+        if (postId != null && !_forumStore.any((t) => t.id == postId)) {
           continue;
         }
 
         if (replyId != null &&
-            !_forumStore.any(
-                  (t) => t.replies.any((r) => r.id == replyId),
-            )) {
+            !_forumStore.any((t) => t.replies.any((r) => r.id == replyId))) {
           continue;
         }
       }
 
-      final String key =
-      postId != null
-          ? 'post_$postId'
-          : 'reply_$replyId';
+      final String key = postId != null ? 'post_$postId' : 'reply_$replyId';
 
-      groupedReports[key] =
-      Map<String, dynamic>.from(item);
+      groupedReports[key] = Map<String, dynamic>.from(item);
     }
 
     // =====================================================
@@ -3002,12 +2992,10 @@ class SupabaseService {
             'postId': thread.id,
             'reports': [
               {
-                'reason':
-                thread.reportReason ??
-                    'Inappropriate Content',
+                'reason': thread.reportReason ?? 'Inappropriate Content',
                 'notes': thread.reportNotes ?? '',
                 'created_at': thread.timestamp,
-              }
+              },
             ],
             'reportsCount': 1,
           };
@@ -3018,8 +3006,7 @@ class SupabaseService {
       // Reported replies
       // -------------------------
       for (final reply in thread.replies) {
-        if (reply.isReported &&
-            !_dismissedReportReplyIds.contains(reply.id)) {
+        if (reply.isReported && !_dismissedReportReplyIds.contains(reply.id)) {
           final String key = 'reply_${reply.id}';
 
           if (!groupedReports.containsKey(key)) {
@@ -3029,12 +3016,10 @@ class SupabaseService {
               'replyId': reply.id,
               'reports': [
                 {
-                  'reason':
-                  reply.reportReason ??
-                      'Inappropriate Content',
+                  'reason': reply.reportReason ?? 'Inappropriate Content',
                   'notes': reply.reportNotes ?? '',
                   'created_at': reply.timestamp,
-                }
+                },
               ],
               'reportsCount': 1,
             };
@@ -3057,14 +3042,12 @@ class SupabaseService {
             .order('created_at', ascending: false);
 
         final List<Map<String, dynamic>> reports =
-        List<Map<String, dynamic>>.from(response);
+            List<Map<String, dynamic>>.from(response);
 
         for (final report in reports) {
-          final String? postId =
-          report['post_id']?.toString();
+          final String? postId = report['post_id']?.toString();
 
-          final String? replyId =
-          report['reply_id']?.toString();
+          final String? replyId = report['reply_id']?.toString();
 
           // Skip deleted/dismissed posts
           if (postId != null &&
@@ -3074,22 +3057,19 @@ class SupabaseService {
           }
 
           // Skip dismissed replies
-          if (replyId != null &&
-              _dismissedReportReplyIds.contains(replyId)) {
+          if (replyId != null && _dismissedReportReplyIds.contains(replyId)) {
             continue;
           }
 
           // Make sure target still exists
           if (_forumStore.isNotEmpty) {
-            if (postId != null &&
-                !_forumStore.any((t) => t.id == postId)) {
+            if (postId != null && !_forumStore.any((t) => t.id == postId)) {
               continue;
             }
 
             if (replyId != null &&
                 !_forumStore.any(
-                      (t) =>
-                      t.replies.any((r) => r.id == replyId),
+                  (t) => t.replies.any((r) => r.id == replyId),
                 )) {
               continue;
             }
@@ -3109,8 +3089,7 @@ class SupabaseService {
           // Create group if it does not exist
           if (!groupedReports.containsKey(key)) {
             groupedReports[key] = {
-              'type':
-              postId != null ? 'post' : 'reply',
+              'type': postId != null ? 'post' : 'reply',
               'postId': postId,
               'replyId': replyId,
               'reports': <Map<String, dynamic>>[],
@@ -3119,12 +3098,11 @@ class SupabaseService {
           }
 
           final List<Map<String, dynamic>> reportList =
-          List<Map<String, dynamic>>.from(
-            groupedReports[key]!['reports'] ?? [],
-          );
+              List<Map<String, dynamic>>.from(
+                groupedReports[key]!['reports'] ?? [],
+              );
 
-          final String? realReportId =
-          report['id']?.toString();
+          final String? realReportId = report['id']?.toString();
 
           // =================================================
           // Remove temporary/local placeholder reports.
@@ -3133,8 +3111,7 @@ class SupabaseService {
           // Local placeholders do not.
           // =================================================
           reportList.removeWhere((existingReport) {
-            final String? existingId =
-            existingReport['id']?.toString();
+            final String? existingId = existingReport['id']?.toString();
 
             return existingId == null ||
                 existingId.isEmpty ||
@@ -3144,31 +3121,23 @@ class SupabaseService {
           // =================================================
           // Prevent duplicate REAL reports using DB report id
           // =================================================
-          final bool alreadyExists =
-          reportList.any((existingReport) {
-            return existingReport['id']?.toString() ==
-                realReportId;
+          final bool alreadyExists = reportList.any((existingReport) {
+            return existingReport['id']?.toString() == realReportId;
           });
 
           if (!alreadyExists) {
             // IMPORTANT:
             // "report" comes directly from Supabase .select(),
             // therefore reporter_id is preserved here.
-            reportList.add(
-              Map<String, dynamic>.from(report),
-            );
+            reportList.add(Map<String, dynamic>.from(report));
           }
 
-          groupedReports[key]!['reports'] =
-              reportList;
+          groupedReports[key]!['reports'] = reportList;
 
-          groupedReports[key]!['reportsCount'] =
-              reportList.length;
+          groupedReports[key]!['reportsCount'] = reportList.length;
         }
       } catch (e) {
-        debugPrint(
-          'fetchForumReportQueue Supabase note: $e',
-        );
+        debugPrint('fetchForumReportQueue Supabase note: $e');
       }
     }
 
@@ -3815,7 +3784,7 @@ class SupabaseService {
 
     final client = _client;
 
-// Always use username for moderation history
+    // Always use username for moderation history
     if (client != null && authorEmail.trim().isNotEmpty) {
       try {
         final userRow = await client
@@ -3825,17 +3794,14 @@ class SupabaseService {
             .maybeSingle();
 
         if (userRow != null) {
-          final String username =
-          (userRow['username'] ?? '').toString().trim();
+          final String username = (userRow['username'] ?? '').toString().trim();
 
           if (username.isNotEmpty) {
             authorName = username;
           }
         }
       } catch (e) {
-        debugPrint(
-          'adminDeleteForumPost author lookup note: $e',
-        );
+        debugPrint('adminDeleteForumPost author lookup note: $e');
       }
     }
 
@@ -4010,10 +3976,10 @@ class SupabaseService {
       }
     }
 
-// =====================================================
-// Resolve the REAL author name from public.users
-// instead of relying only on reply.sender
-// =====================================================
+    // =====================================================
+    // Resolve the REAL author name from public.users
+    // instead of relying only on reply.sender
+    // =====================================================
     final client = _client;
 
     if (client != null && authorEmail.trim().isNotEmpty) {
@@ -4025,17 +3991,14 @@ class SupabaseService {
             .maybeSingle();
 
         if (userRow != null) {
-          final String username =
-          (userRow['username'] ?? '').toString().trim();
+          final String username = (userRow['username'] ?? '').toString().trim();
 
           if (username.isNotEmpty) {
             authorName = username;
           }
         }
       } catch (e) {
-        debugPrint(
-          'adminDeleteForumReply author lookup note: $e',
-        );
+        debugPrint('adminDeleteForumReply author lookup note: $e');
       }
     }
 
@@ -6220,5 +6183,25 @@ class SupabaseService {
       debugPrint('Supabase fetchWorkshopLocations error: $e');
       return [];
     }
+  }
+
+  Stream<List<Map<String, dynamic>>> watchWorkshopLocations() {
+    final client = _client;
+    if (client == null) {
+      return const Stream<List<Map<String, dynamic>>>.empty();
+    }
+
+    return client
+        .from('artisan_profiles')
+        .stream(primaryKey: const ['id'])
+        .eq('status', 'APPROVED')
+        .map(
+          (rows) => rows
+              .where(
+                (row) => row['latitude'] != null && row['longitude'] != null,
+              )
+              .map(Map<String, dynamic>.from)
+              .toList(growable: false),
+        );
   }
 }
