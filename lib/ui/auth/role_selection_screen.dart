@@ -86,6 +86,10 @@ class RoleSelectionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final authVM = context.watch<AuthViewModel>();
+    final user = authVM.currentUser;
+    final isArtisanSuspended = user?.isArtisanStudioSuspended == true;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
@@ -128,13 +132,31 @@ class RoleSelectionScreen extends StatelessWidget {
               _buildRoleCard(
                 context: context,
                 title: 'Heritage Master Artisan',
-                subtitle: 'Register your studio, manage your craft portfolio, track application status, and engage with heritage enthusiasts in the live forum.',
-                icon: Icons.palette_rounded,
-                accentColor: const Color(0xFFD97706),
+                subtitle: isArtisanSuspended
+                    ? '⚠️ Studio license suspended by admin. Please explore as a Cultural Tourist.'
+                    : 'Register your studio, manage your craft portfolio, track application status, and engage with heritage enthusiasts in the live forum.',
+                icon: isArtisanSuspended ? Icons.block_rounded : Icons.palette_rounded,
+                accentColor: isArtisanSuspended ? const Color(0xFFDC2626) : const Color(0xFFD97706),
                 onTap: () {
-                  final authVM = context.read<AuthViewModel>();
-                  final user = authVM.currentUser;
                   if (user != null) {
+                    if (isArtisanSuspended) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Row(
+                            children: [
+                              Icon(Icons.block_rounded, color: Colors.white, size: 18),
+                              SizedBox(width: 10),
+                              Expanded(
+                                child: Text('⚠️ Your Master Artisan Studio is currently suspended by admin. Please explore as a Cultural Tourist.'),
+                              ),
+                            ],
+                          ),
+                          backgroundColor: Color(0xFFDC2626),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                      return;
+                    }
                     if (user.isApprovedArtisan) {
                       Navigator.of(context).pushReplacementNamed('/artisan');
                     } else if (user.isPendingArtisan) {

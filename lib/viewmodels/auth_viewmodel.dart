@@ -80,6 +80,24 @@ class AuthViewModel extends ChangeNotifier {
     return null;
   }
 
+  Future<UserModel?> refreshCurrentUser() async {
+    try {
+      final user = await _repository.getCurrentUser();
+      if (user != null) {
+        _currentUser = user;
+        if (user.isArtisanStudioSuspended &&
+            (_activeRole == 'Artisan' || _activeRole == 'Master Artisan')) {
+          _activeRole = 'Cultural Tourist';
+        }
+        notifyListeners();
+        return user;
+      }
+    } catch (e) {
+      debugPrint('refreshCurrentUser note: $e');
+    }
+    return _currentUser;
+  }
+
   void clearError() {
     _errorMessage = null;
     _statusMessage = null;
