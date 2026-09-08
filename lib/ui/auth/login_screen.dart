@@ -76,16 +76,30 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 18),
             ...roles.map((role) {
               final isArtisan = role.contains('Artisan');
-              final bool isArtisanPending = isArtisan && (authVM.currentUser?.isApprovedArtisan != true);
+              final bool isArtisanSuspended = isArtisan && (authVM.currentUser?.isArtisanStudioSuspended == true);
+              final bool isArtisanPending = isArtisan && !isArtisanSuspended && (authVM.currentUser?.isApprovedArtisan != true);
 
               return Padding(
                 padding: const EdgeInsets.only(bottom: 10),
                 child: Material(
-                  color: isArtisan ? const Color(0xFFFEF3C7) : const Color(0xFFE0F2FE),
+                  color: isArtisan
+                      ? (isArtisanSuspended ? const Color(0xFFFEE2E2) : const Color(0xFFFEF3C7))
+                      : const Color(0xFFE0F2FE),
                   borderRadius: BorderRadius.circular(16),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(16),
                     onTap: () {
+                      if (isArtisan && isArtisanSuspended) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('⚠️ Your Master Artisan Studio is currently suspended by admin. Please explore as a Cultural Tourist.'),
+                            backgroundColor: Color(0xFFEF4444),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                        return;
+                      }
+
                       Navigator.of(ctx).pop();
                       authVM.selectActiveRole(role);
                       if (isArtisan) {
@@ -132,8 +146,16 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: Row(
                         children: [
                           Icon(
-                            isArtisan ? (isArtisanPending ? Icons.lock_clock_rounded : Icons.palette_rounded) : Icons.explore_rounded,
-                            color: isArtisan ? (isArtisanPending ? Colors.grey : const Color(0xFFD97706)) : const Color(0xFF0284C7),
+                            isArtisan
+                                ? (isArtisanSuspended
+                                    ? Icons.block_rounded
+                                    : (isArtisanPending ? Icons.lock_clock_rounded : Icons.palette_rounded))
+                                : Icons.explore_rounded,
+                            color: isArtisan
+                                ? (isArtisanSuspended
+                                    ? const Color(0xFFEF4444)
+                                    : (isArtisanPending ? Colors.grey : const Color(0xFFD97706)))
+                                : const Color(0xFF0284C7),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -150,12 +172,27 @@ class _LoginScreenState extends State<LoginScreen> {
                                           fontSize: 14,
                                           fontWeight: FontWeight.bold,
                                           color: isArtisan
-                                              ? (isArtisanPending ? Colors.grey[700] : const Color(0xFFB45309))
+                                              ? (isArtisanSuspended
+                                                  ? const Color(0xFF991B1B)
+                                                  : (isArtisanPending ? Colors.grey[700] : const Color(0xFFB45309)))
                                               : const Color(0xFF0369A1),
                                         ),
                                       ),
                                     ),
-                                    if (isArtisanPending) ...[
+                                    if (isArtisanSuspended) ...[
+                                      const SizedBox(width: 6),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFFCA5A5),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          'STUDIO SUSPENDED',
+                                          style: GoogleFonts.plusJakartaSans(fontSize: 9, fontWeight: FontWeight.bold, color: const Color(0xFF991B1B)),
+                                        ),
+                                      ),
+                                    ] else if (isArtisanPending) ...[
                                       const SizedBox(width: 6),
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -173,7 +210,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                                 Text(
                                   isArtisan
-                                      ? (isArtisanPending ? 'Studio application currently under admin verification' : 'Access studio management & masterwork')
+                                      ? (isArtisanSuspended
+                                          ? 'Studio license suspended by admin. Please contact support.'
+                                          : (isArtisanPending ? 'Studio application currently under admin verification' : 'Access studio management & masterwork'))
                                       : 'Explore crafts, map & quests',
                                   style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.black54),
                                 ),

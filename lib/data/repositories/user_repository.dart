@@ -166,11 +166,13 @@ class UserRepository {
     required String email,
     required String newStatus,
     required String newRole,
+    bool updateArtisanProfileOnly = false,
   }) {
     return _service.updateArtisanStatusInDb(
       email: email,
       newStatus: newStatus,
       newRole: newRole,
+      updateArtisanProfileOnly: updateArtisanProfileOnly,
     );
   }
 

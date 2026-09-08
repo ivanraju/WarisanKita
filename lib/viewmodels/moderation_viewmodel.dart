@@ -628,11 +628,20 @@ class ModerationViewModel extends ChangeNotifier {
       final artisan = _activeArtisanMasters[idx];
       _activeArtisanMasters[idx] = artisan.copyWith(isSuspended: true, isLiveOpen: false);
 
+      // Suspend only the Artisan Studio Profile in DB; user account remains ACTIVE as Tourist
       await _repository.updateArtisanStatus(
         email: artisan.email,
         newStatus: 'SUSPENDED',
-        newRole: 'Artisan',
+        newRole: 'Artisan & Tourist',
+        updateArtisanProfileOnly: true,
       );
+
+      final uIdx = _registeredUsers.indexWhere((u) => u.email.toLowerCase() == artisan.email.toLowerCase());
+      if (uIdx != -1) {
+        _registeredUsers[uIdx] = _registeredUsers[uIdx].copyWith(
+          artisanStatus: 'SUSPENDED',
+        );
+      }
 
       notifyListeners();
     }
@@ -646,9 +655,17 @@ class ModerationViewModel extends ChangeNotifier {
 
       await _repository.updateArtisanStatus(
         email: artisan.email,
-        newStatus: 'ACTIVE',
-        newRole: 'Artisan',
+        newStatus: 'APPROVED',
+        newRole: 'Artisan & Tourist',
+        updateArtisanProfileOnly: true,
       );
+
+      final uIdx = _registeredUsers.indexWhere((u) => u.email.toLowerCase() == artisan.email.toLowerCase());
+      if (uIdx != -1) {
+        _registeredUsers[uIdx] = _registeredUsers[uIdx].copyWith(
+          artisanStatus: 'APPROVED',
+        );
+      }
 
       notifyListeners();
     }

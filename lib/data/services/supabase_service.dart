@@ -2032,48 +2032,64 @@ class SupabaseService {
     required String email,
     required String newStatus,
     required String newRole,
+    bool updateArtisanProfileOnly = false,
   }) async {
     final cleanEmail = email.trim().toLowerCase();
     if (_userStore.containsKey(cleanEmail)) {
-      _userStore[cleanEmail]!['status'] = newStatus;
-      _userStore[cleanEmail]!['role'] = newRole;
-      if (newRole == 'Artisan & Tourist') {
-        _userStore[cleanEmail]!['roles'] = ['Tourist', 'Artisan'];
-      } else if (newRole == 'Artisan') {
-        _userStore[cleanEmail]!['roles'] = ['Artisan'];
+      if (updateArtisanProfileOnly) {
+        _userStore[cleanEmail]!['artisanStatus'] = newStatus;
+        _userStore[cleanEmail]!['artisan_status'] = newStatus;
+        _userStore[cleanEmail]!['status'] = 'ACTIVE';
+        _userStore[cleanEmail]!['isSuspended'] = false;
+        if (newRole.isNotEmpty) {
+          _userStore[cleanEmail]!['role'] = newRole;
+        }
+      } else {
+        _userStore[cleanEmail]!['status'] = newStatus;
+        _userStore[cleanEmail]!['role'] = newRole;
+        _userStore[cleanEmail]!['isSuspended'] = (newStatus == 'SUSPENDED');
+        if (newRole == 'Artisan & Tourist') {
+          _userStore[cleanEmail]!['roles'] = ['Tourist', 'Artisan'];
+        } else if (newRole == 'Artisan') {
+          _userStore[cleanEmail]!['roles'] = ['Artisan'];
+        }
       }
     }
 
     final client = _client;
     if (client != null) {
-      // 1. Try invoking PostgreSQL SECURITY DEFINER RPC
-      try {
-        await client.rpc(
-          'admin_update_user_status',
-          params: {
-            'p_email': cleanEmail,
-            'p_status': newStatus,
-            'p_role': newRole,
-          },
-        );
-        debugPrint(
-          'Supabase RPC admin_update_user_status succeeded for $cleanEmail',
-        );
-      } catch (rpcError) {
-        debugPrint('Supabase RPC admin_update_user_status note: $rpcError');
+      if (!updateArtisanProfileOnly) {
+        // 1. Try invoking PostgreSQL SECURITY DEFINER RPC
+        try {
+          await client.rpc(
+            'admin_update_user_status',
+            params: {
+              'p_email': cleanEmail,
+              'p_status': newStatus,
+              'p_role': newRole,
+            },
+          );
+          debugPrint(
+            'Supabase RPC admin_update_user_status succeeded for $cleanEmail',
+          );
+        } catch (rpcError) {
+          debugPrint('Supabase RPC admin_update_user_status note: $rpcError');
+        }
       }
 
       // 2. Direct Table Updates Fallback
       try {
-        final updatePayload = <String, dynamic>{
-          'status': newStatus,
-          'role': newRole,
-          'updated_at': DateTime.now().toIso8601String(),
-        };
-        await client
-            .from('users')
-            .update(updatePayload)
-            .ilike('email', cleanEmail);
+        if (!updateArtisanProfileOnly) {
+          final updatePayload = <String, dynamic>{
+            'status': newStatus,
+            'role': newRole,
+            'updated_at': DateTime.now().toIso8601String(),
+          };
+          await client
+              .from('users')
+              .update(updatePayload)
+              .ilike('email', cleanEmail);
+        }
 
         // Update artisan_profiles status matching user_id
         final userRow = await client

@@ -260,7 +260,7 @@ class AuthViewModel extends ChangeNotifier {
       _currentUser = user;
 
       // Alternate Flow A5: Artisan Active Mode Selection (Master Artisan vs Cultural Tourist)
-      if (user.isArtisan || user.isApprovedArtisan || user.isPendingArtisan) {
+      if (user.isArtisan || user.isApprovedArtisan || user.isPendingArtisan || user.isArtisanStudioSuspended) {
         _requiresRoleSelection = true;
         _availableRoles = const ['Master Artisan', 'Cultural Tourist'];
         _statusMessage = 'SELECT YOUR ACTIVE ROLE MODE';
@@ -389,8 +389,8 @@ class AuthViewModel extends ChangeNotifier {
   void selectActiveRole(String role) {
     if (role.contains('Artisan') &&
         _currentUser != null &&
-        !_currentUser!.isApprovedArtisan) {
-      // Security guard: Cannot select Master Artisan role unless approved by admin
+        (!_currentUser!.isApprovedArtisan || _currentUser!.isArtisanStudioSuspended)) {
+      // Security guard: Cannot select Master Artisan role unless approved by admin and studio is not suspended
       return;
     }
     _activeRole = role;
