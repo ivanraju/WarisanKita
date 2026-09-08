@@ -138,6 +138,34 @@ class _LiveForumTabState extends State<LiveForumTab> {
     super.dispose();
   }
 
+  String _formatDateTime(dynamic value) {
+    if (value == null) return '';
+
+    final raw = value.toString();
+
+    if (raw.isEmpty ||
+        raw == 'null' ||
+        raw == 'Just now' ||
+        raw == 'Recent') {
+      return raw;
+    }
+
+    try {
+      final time = DateTime.parse(raw).toLocal();
+
+      final day = time.day.toString().padLeft(2, '0');
+      final month = time.month.toString().padLeft(2, '0');
+      final year = time.year;
+
+      final hour = time.hour.toString().padLeft(2, '0');
+      final minute = time.minute.toString().padLeft(2, '0');
+
+      return '$day/$month/$year $hour:$minute';
+    } catch (_) {
+      return raw;
+    }
+  }
+
   Future<void> _sendMessage(BuildContext context) async {
     final text = _messageController.text.trim();
     if (text.isEmpty || _activeThread == null) return;
@@ -1279,6 +1307,17 @@ class _LiveForumTabState extends State<LiveForumTab> {
         return rMap;
       }).toList();
       map['messages'] = msgMaps;
+
+      // Count only replies that are visible to the current user
+      final visibleMessages = msgMaps.where((msg) {
+        if (msg['isReported'] == true) {
+          return msg['isMe'] == true;
+        }
+        return true;
+      }).toList();
+      map['repliesCount'] = visibleMessages.length;
+      map['replyCount'] = visibleMessages.length;
+      map['replies'] = visibleMessages.length;
       return map;
     }).toList();
 
@@ -1450,7 +1489,10 @@ class _LiveForumTabState extends State<LiveForumTab> {
         ..sort((a, b) {
           double hotScore(Map<String, dynamic> thread) {
             final int upvotes = (thread['upvotes'] as int?) ?? 0;
-            final int replies = (thread['repliesCount'] as int?) ?? 0;
+            final int replies =
+                (thread['replyCount'] as int?) ??
+                    (thread['repliesCount'] as int?) ??
+                    ((thread['messages'] as List?)?.length ?? 0);
 
             final DateTime createdAt =
                 DateTime.tryParse(thread['timestamp']?.toString() ?? '') ??
@@ -1480,12 +1522,29 @@ class _LiveForumTabState extends State<LiveForumTab> {
           return bTime.compareTo(aTime); // newest first
         });
     } else if (_selectedSort == 'Top') {
-      filteredThreads = List.from(filteredThreads)
-        ..sort(
-          (a, b) => ((b['upvotes'] as int?) ?? 0).compareTo(
-            (a['upvotes'] as int?) ?? 0,
-          ),
-        );
+      filteredThreads = List<Map<String, dynamic>>.from(filteredThreads)
+        ..sort((a, b) {
+          final int aVotes = (a['upvotes'] as int?) ?? 0;
+          final int bVotes = (b['upvotes'] as int?) ?? 0;
+
+          // 1. Higher vote score first
+          final int voteCompare = bVotes.compareTo(aVotes);
+
+          if (voteCompare != 0) {
+            return voteCompare;
+          }
+
+          // 2. Same vote score -> newest post first
+          final DateTime aTime =
+              DateTime.tryParse(a['timestamp']?.toString() ?? '') ??
+                  DateTime.fromMillisecondsSinceEpoch(0);
+
+          final DateTime bTime =
+              DateTime.tryParse(b['timestamp']?.toString() ?? '') ??
+                  DateTime.fromMillisecondsSinceEpoch(0);
+
+          return bTime.compareTo(aTime);
+        });
     } else if (_selectedSort == 'Verified Q&A') {
       filteredThreads = filteredThreads
           .where((t) => t['isSolved'] == true)
@@ -2122,7 +2181,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                thread['timestamp'].toString(),
+                                _formatDateTime(thread['timestamp']),
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 10,
                                   color: isDark ? Colors.white38 : Colors.grey[400],
@@ -2191,17 +2250,34 @@ class _LiveForumTabState extends State<LiveForumTab> {
                                         color: isDark ? Colors.white60 : Colors.grey[600],
                                       ),
                                       const SizedBox(width: 5),
-                                      Text(
-                                        '${thread['repliesCount']} '
-                                        '${thread['repliesCount'] == 1 ? 'Answer' : 'Answers'}',
-                                        maxLines: 1,
-                                        softWrap: false,
-                                        overflow: TextOverflow.visible,
-                                        style: GoogleFonts.plusJakartaSans(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                          color: isDark ? Colors.white70 : Colors.grey[700],
-                                        ),
+                                      Builder(
+                                        builder: (context) {
+                                          final List<dynamic> allReplies =
+                                              (thread['messages'] as List?) ?? [];
+
+                                          final int visibleReplyCount = allReplies.where((msg) {
+                                            if (msg is! Map) return false;
+
+                                            if (msg['isReported'] == true) {
+                                              return msg['isMe'] == true;
+                                            }
+
+                                            return true;
+                                          }).length;
+
+                                          return Text(
+                                            '$visibleReplyCount '
+                                                '${visibleReplyCount == 1 ? 'Answer' : 'Answers'}',
+                                            maxLines: 1,
+                                            softWrap: false,
+                                            overflow: TextOverflow.visible,
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              color: isDark ? Colors.white70 : Colors.grey[700],
+                                            ),
+                                          );
+                                        },
                                       ),
                                     ],
                                   ),
@@ -2948,7 +3024,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                     Row(
                       children: [
                         Text(
-                          msg['time'].toString(),
+                          _formatDateTime(msg['time']),
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 10,
                             color: isDark ? Colors.white38 : Colors.grey,
