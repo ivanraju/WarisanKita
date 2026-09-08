@@ -2153,10 +2153,29 @@ class SupabaseService {
             'role': newRole,
             'updated_at': DateTime.now().toIso8601String(),
           };
-          await client
-              .from('users')
-              .update(updatePayload)
-              .ilike('email', cleanEmail);
+          if (newStatus == 'SUSPENDED') {
+            updatePayload['is_suspended'] = true;
+            if (suspensionReason != null) {
+              updatePayload['suspension_reason'] = suspensionReason;
+            }
+          } else if (newStatus == 'ACTIVE') {
+            updatePayload['is_suspended'] = false;
+            updatePayload['suspension_reason'] = null;
+          }
+          try {
+            await client
+                .from('users')
+                .update(updatePayload)
+                .ilike('email', cleanEmail);
+          } catch (updateErr) {
+            // Fallback if remote table does not yet have suspension_reason column
+            debugPrint('Direct user table update note: $updateErr');
+            updatePayload.remove('suspension_reason');
+            await client
+                .from('users')
+                .update(updatePayload)
+                .ilike('email', cleanEmail);
+          }
         }
 
         // Update artisan_profiles status matching user_id
