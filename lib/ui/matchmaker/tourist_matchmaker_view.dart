@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
@@ -10,8 +11,10 @@ import 'package:warisan_kita/viewmodels/gamification_viewmodel.dart';
 
 import 'package:warisan_kita/domain/models/nearby_artisan.dart';
 import 'package:warisan_kita/domain/models/workshop_location.dart';
+import 'package:warisan_kita/domain/models/workshop_quest_journey.dart';
 
 import 'package:warisan_kita/ui/matchmaker/widgets/artisan_match_card.dart';
+import 'package:warisan_kita/ui/matchmaker/widgets/heritage_map_chrome.dart';
 import 'package:warisan_kita/ui/matchmaker/widgets/empty_matchmaker_widget.dart';
 import 'package:warisan_kita/ui/matchmaker/widgets/shimmer_loading_card.dart';
 
@@ -33,10 +36,23 @@ class TouristMatchmakerView extends StatefulWidget {
 }
 
 class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
+  double get _sheetMinSize =>
+      ((HeritageSheetHeader.heightFor(
+                    MediaQuery.textScalerOf(context).scale(1),
+                  ) +
+                  MediaQuery.paddingOf(context).bottom +
+                  86) /
+              MediaQuery.sizeOf(context).height)
+          .clamp(0.18, 0.45);
+  static const double _sheetMiddleSize = 0.50;
+  static const double _sheetMaxSize = 0.88;
+
   final DraggableScrollableController _sheetController =
       DraggableScrollableController();
 
   ScrollController? _sheetScrollController;
+  double? _sheetHeaderDragStartSize;
+  double? _sheetHeaderDragSize;
   final Map<String, GlobalKey> _artisanCardKeys = {};
   int _revealRequestId = 0;
 
@@ -45,6 +61,7 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
   bool _isOpeningQuest = false;
   String? _proximityQuestId;
   bool? _lastReportedQuestInside;
+  final Set<String> _discoveredQuestIds = <String>{};
 
   // ============================================================
   // START LIVE GPS
@@ -60,6 +77,14 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
 
       // Starts GPS permission request + live position stream.
       _mapVM!.startLocationTracking();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant TouristMatchmakerView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isActive && !oldWidget.isActive) {
+      unawaited(context.read<MapViewModel>().loadJourneyData());
     }
   }
 
@@ -206,7 +231,7 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
     }
 
     if (matchingWorkshop != null) {
-      mapVM.selectWorkshop(matchingWorkshop);
+      mapVM.focusWorkshop(matchingWorkshop);
     }
   }
 
@@ -263,7 +288,28 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
       ).push(MaterialPageRoute(builder: (_) => QuestView(workshop: workshop)));
     } finally {
       _isOpeningQuest = false;
+      if (context.mounted) {
+        unawaited(context.read<MapViewModel>().loadJourneyData());
+        unawaited(context.read<GamificationViewModel>().loadPassport());
+      }
     }
+  }
+
+  List<NearbyArtisan> _selectedFirst(
+    List<NearbyArtisan> artisans,
+    String? selectedId,
+  ) {
+    if (selectedId == null ||
+        artisans.isEmpty ||
+        artisans.first.id == selectedId) {
+      return artisans;
+    }
+    final selectedIndex = artisans.indexWhere((item) => item.id == selectedId);
+    if (selectedIndex < 0) return artisans;
+    return [
+      artisans[selectedIndex],
+      ...artisans.where((item) => item.id != selectedId),
+    ];
   }
 
   Widget _buildArtisanCard(
@@ -285,7 +331,11 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
         _handleViewProfile(context, artisan);
       },
       onViewQuest: () {
-        _handleViewQuest(context, artisan);
+        if (artisan.journey == null) {
+          _handleViewProfile(context, artisan);
+        } else {
+          _handleViewQuest(context, artisan);
+        }
       },
     );
   }
@@ -309,7 +359,9 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
                   title,
                   style: GoogleFonts.dmSerifDisplay(
                     fontSize: 19,
-                    color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                    color: isDark
+                        ? const Color(0xFFFFD54F)
+                        : const Color(0xFF004D40),
                   ),
                 ),
               ),
@@ -324,7 +376,9 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
                 child: Text(
                   '$count',
                   style: GoogleFonts.plusJakartaSans(
-                    color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                    color: isDark
+                        ? const Color(0xFFFFD54F)
+                        : const Color(0xFF004D40),
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
                   ),
@@ -424,6 +478,84 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
     });
   }
 
+  void _reportQuestDiscovery(
+    NearbyArtisan? artisan,
+    MapViewModel mapViewModel,
+  ) {
+    final journey = artisan?.journey;
+    if (artisan == null ||
+        journey == null ||
+        journey.state == WorkshopQuestState.completed ||
+        _discoveredQuestIds.contains(journey.questId) ||
+        !(ModalRoute.of(context)?.isCurrent ?? false)) {
+      return;
+    }
+
+    _discoveredQuestIds.add(journey.questId);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !(ModalRoute.of(context)?.isCurrent ?? false)) return;
+      HapticFeedback.lightImpact();
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: const Color(0xFF004D40),
+            content: Text(
+              'Heritage Quest Discovered • ${artisan.name}',
+              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
+            ),
+          ),
+        );
+      if (mapViewModel.selectedWorkshop?.id != artisan.id &&
+          artisan.workshop != null) {
+        mapViewModel.selectWorkshop(artisan.workshop);
+        unawaited(_revealWorkshopCard(artisan.id));
+      }
+    });
+  }
+
+  Future<void> _showMapSettings() async {
+    final lang = context.read<LanguageViewModel>();
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.tune_rounded),
+              title: Text(lang.translate('Mood & craft preferences')),
+              onTap: () => Navigator.pop(context, 'mood'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.translate_rounded),
+              title: Text(lang.translate('Language')),
+              onTap: () => Navigator.pop(context, 'language'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.refresh_rounded),
+              title: Text(lang.translate('Refresh studios')),
+              onTap: () => Navigator.pop(context, 'refresh'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted) return;
+    if (action == 'mood') _triggerMoodCheckin(context);
+    if (action == 'refresh') context.read<MapViewModel>().refreshWorkshops();
+    if (action == 'language') {
+      showDialog(
+        context: context,
+        builder: (_) => TranslationLanguageDialog(
+          currentLanguage: lang.currentLanguageCode,
+          onLanguageChanged: (code, name) => lang.setLanguage(code, name),
+        ),
+      );
+    }
+  }
+
   // ============================================================
   // MOOD CHECK-IN
   // ============================================================
@@ -450,17 +582,74 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
 
     if (_sheetController.size < 0.3) {
       _sheetController.animateTo(
-        0.50,
+        _sheetMiddleSize,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOutCubic,
       );
     } else {
       _sheetController.animateTo(
-        0.20,
+        _sheetMinSize,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOutCubic,
       );
     }
+  }
+
+  void _startSheetHeaderDrag(DragStartDetails details) {
+    if (!_sheetController.isAttached) return;
+
+    _revealRequestId++;
+    _sheetHeaderDragStartSize = _sheetController.size;
+    _sheetHeaderDragSize = _sheetController.size;
+  }
+
+  void _updateSheetHeaderDrag(DragUpdateDetails details) {
+    if (!_sheetController.isAttached || _sheetHeaderDragSize == null) return;
+
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    if (screenHeight <= 0) return;
+
+    final nextSize = (_sheetHeaderDragSize! - details.delta.dy / screenHeight)
+        .clamp(_sheetMinSize, _sheetMaxSize)
+        .toDouble();
+    _sheetHeaderDragSize = nextSize;
+    _sheetController.jumpTo(nextSize);
+  }
+
+  void _endSheetHeaderDrag(DragEndDetails details) {
+    if (!_sheetController.isAttached) {
+      _clearSheetHeaderDrag();
+      return;
+    }
+
+    final startSize = _sheetHeaderDragStartSize ?? _sheetController.size;
+    final currentSize = _sheetHeaderDragSize ?? _sheetController.size;
+    final velocity = details.primaryVelocity ?? 0;
+    final draggedDown = currentSize < startSize - 0.015;
+    final draggedUp = currentSize > startSize + 0.015;
+
+    final double targetSize;
+    if (velocity > 250 || draggedDown) {
+      targetSize = _sheetMinSize;
+    } else if (velocity < -250 || draggedUp) {
+      targetSize = startSize < 0.35 ? _sheetMiddleSize : _sheetMaxSize;
+    } else {
+      targetSize = startSize;
+    }
+
+    _clearSheetHeaderDrag();
+    unawaited(
+      _sheetController.animateTo(
+        targetSize,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+      ),
+    );
+  }
+
+  void _clearSheetHeaderDrag() {
+    _sheetHeaderDragStartSize = null;
+    _sheetHeaderDragSize = null;
   }
 
   // ============================================================
@@ -473,29 +662,43 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
     final mapVM = context.watch<MapViewModel>();
     final gamificationVM = context.watch<GamificationViewModel>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final nearbyArtisans = _selectedFirst(
+      mapVM.nearbyArtisans,
+      mapVM.selectedWorkshop?.id,
+    );
+    final otherArtisans = _selectedFirst(
+      mapVM.otherArtisans,
+      mapVM.selectedWorkshop?.id,
+    );
     _reportActiveQuestProximity(mapVM, gamificationVM);
     NearbyArtisan? nearestQuestArtisan;
     for (final artisan in mapVM.nearbyArtisans) {
       if (artisan.workshop != null &&
+          artisan.journey != null &&
           artisan.distanceMeters <= mapVM.questInteractionRadiusMeters) {
         nearestQuestArtisan = artisan;
         break;
       }
     }
+    _reportQuestDiscovery(nearestQuestArtisan, mapVM);
 
     const double navigationBarHeight = 58.0;
     final double bottomSafeArea = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
+      backgroundColor: isDark
+          ? const Color(0xFF041412)
+          : const Color(0xFFF8F9FA),
       body: Stack(
         children: [
           // ======================================================
           // 1. GOOGLE MAP
           // ======================================================
           Positioned.fill(
+            key: const ValueKey('heritage-map-layer'),
             child: GoogleMapWidget(
               workshops: mapVM.workshops,
+              journeysByWorkshopId: mapVM.journeysByWorkshopId,
               selectedWorkshop: mapVM.selectedWorkshop,
               onWorkshopSelected: (workshop) {
                 _onWorkshopSelected(context, workshop);
@@ -507,6 +710,8 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
               interactionRadiusMeters: mapVM.questInteractionRadiusMeters,
               isActive: widget.isActive,
               isLoading: mapVM.isLoading,
+              controlsBottom:
+                  MediaQuery.sizeOf(context).height * _sheetMinSize + 12,
             ),
           ),
 
@@ -514,487 +719,316 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
           // 2. TOP ACTION BAR
           // ======================================================
           Positioned(
-            top: MediaQuery.of(context).padding.top + 10,
+            key: const ValueKey('heritage-map-controls-layer'),
+            top: MediaQuery.paddingOf(context).top + 8,
             left: 16,
             right: 16,
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF0D2825) : const Color(0xFF004D40),
-                    borderRadius: BorderRadius.circular(20),
-                    border: isDark ? Border.all(color: const Color(0xFF1E3A34)) : null,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.15),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.explore_rounded,
-                        color: Color(0xFFFFD54F),
-                        size: 16,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        langVM.translate('All Living Crafts'),
-                        style: GoogleFonts.plusJakartaSans(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Spacer(),
-
-                // Translate
-                FloatingActionButton.small(
-                  heroTag: 'translate_btn',
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (_) => TranslationLanguageDialog(
-                        currentLanguage: langVM.currentLanguageCode,
-                        onLanguageChanged: (code, name) {
-                          context.read<LanguageViewModel>().setLanguage(
-                            code,
-                            name,
-                          );
-                        },
-                      ),
-                    );
-                  },
-                  backgroundColor: isDark ? const Color(0xFF0D2825) : Colors.white,
-                  child: Icon(
-                    Icons.g_translate_rounded,
-                    color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
-                    size: 18,
-                  ),
-                ),
-
-                const SizedBox(width: 8),
-
-                // Mood
-                FloatingActionButton.small(
-                  heroTag: 'mood_checkin',
-                  onPressed: () {
-                    _triggerMoodCheckin(context);
-                  },
-                  backgroundColor: isDark ? const Color(0xFF0D2825) : Colors.white,
-                  child: Icon(
-                    Icons.tune_rounded,
-                    color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
-                    size: 18,
-                  ),
-                ),
-              ],
+            child: HeritageMapControls(
+              translate: langVM.translate,
+              onSettings: _showMapSettings,
             ),
           ),
-
-          // ======================================================
-          // 3. PROXIMITY QUEST BANNER
-          // ======================================================
           if (nearestQuestArtisan != null)
             Positioned(
-              top: MediaQuery.of(context).padding.top + 64,
+              key: const ValueKey('heritage-nearby-banner-layer'),
+              top: MediaQuery.paddingOf(context).top + 62,
               left: 16,
               right: 16,
-              child: GestureDetector(
+              child: HeritageNearbyBanner(
+                title: nearestQuestArtisan.journey!.questTitle,
+                distanceMeters: nearestQuestArtisan.distanceMeters.round(),
+                translate: langVM.translate,
                 onTap: () => _handleViewQuest(context, nearestQuestArtisan!),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: isDark
-                          ? const [Color(0xFF0D2825), Color(0xFF041412)]
-                          : const [Color(0xFF004D40), Color(0xFF065F46)],
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                    border: isDark ? Border.all(color: const Color(0xFFFFD54F).withValues(alpha: 0.3)) : null,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.15),
-                        blurRadius: 14,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFFFD54F),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.radar_rounded,
-                          color: Color(0xFF004D40),
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Row(
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    langVM.translate('PROXIMITY QUEST RADAR'),
-                                    softWrap: true,
-                                    style: GoogleFonts.plusJakartaSans(
-                                      color: const Color(0xFFFFD54F),
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: 1.1,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF10B981),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Text(
-                                    '${nearestQuestArtisan.distanceMeters.round()}m AWAY',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '${nearestQuestArtisan.name} Quest Ready!',
-                              style: GoogleFonts.dmSerifDisplay(
-                                color: Colors.white,
-                                fontSize: 15,
-                              ),
-                            ),
-                            Text(
-                              langVM.translate(
-                                'Tap to view this cultural quest',
-                              ),
-                              style: GoogleFonts.plusJakartaSans(
-                                color: Colors.white70,
-                                fontSize: 11,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        color: Color(0xFFFFD54F),
-                        size: 14,
-                      ),
-                    ],
-                  ),
-                ),
               ),
             ),
 
           // ======================================================
           // 4. DRAGGABLE NEARBY ARTISAN SHEET
           // ======================================================
-          DraggableScrollableSheet(
-            controller: _sheetController,
-            initialChildSize: 0.22,
-            minChildSize: 0.20,
-            maxChildSize: 0.88,
-            snap: true,
-            snapSizes: const [0.20, 0.50, 0.88],
-            builder: (context, scrollController) {
-              _sheetScrollController = scrollController;
+          Positioned.fill(
+            key: const ValueKey('heritage-trails-sheet-layer'),
+            bottom: 0,
+            child: DraggableScrollableSheet(
+              controller: _sheetController,
+              initialChildSize: _sheetMinSize,
+              minChildSize: _sheetMinSize,
+              maxChildSize: _sheetMaxSize,
+              snap: true,
+              snapSizes: [_sheetMinSize, _sheetMiddleSize, _sheetMaxSize],
+              builder: (context, scrollController) {
+                _sheetScrollController = scrollController;
 
-              return Container(
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF0D2825) : Colors.white,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(28),
-                    topRight: Radius.circular(28),
-                  ),
-                  border: isDark ? const Border(top: BorderSide(color: Color(0xFF1E3A34))) : null,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.15),
-                      blurRadius: 20,
-                      offset: const Offset(0, -6),
+                return Container(
+                  clipBehavior: Clip.antiAlias,
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? const Color(0xFF0D2825)
+                        : const Color(0xFFF7F2E8),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(28),
+                      topRight: Radius.circular(28),
                     ),
-                  ],
-                ),
-                child: CustomScrollView(
-                  controller: scrollController,
-                  slivers: [
-                    // ==========================================
-                    // HEADER
-                    // ==========================================
-                    SliverPersistentHeader(
-                      pinned: true,
-                      delegate: _PinnedSheetHeaderDelegate(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(height: 12),
-                            Center(
-                              child: Container(
-                                width: 44,
-                                height: 5,
-                                decoration: BoxDecoration(
-                                  color: isDark ? const Color(0xFF1E3A34) : Colors.grey[300],
-                                  borderRadius: BorderRadius.circular(10),
+                    border: isDark
+                        ? const Border(
+                            top: BorderSide(color: Color(0xFF1E3A34)),
+                          )
+                        : null,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.15),
+                        blurRadius: 20,
+                        offset: const Offset(0, -6),
+                      ),
+                    ],
+                  ),
+                  child: CustomScrollView(
+                    controller: scrollController,
+                    slivers: [
+                      DecoratedSliver(
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? const Color(0xFF0D2825)
+                              : const Color(0xFFF7F2E8),
+                          image: isDark
+                              ? null
+                              : const DecorationImage(
+                                  image: ResizeImage(
+                                    AssetImage(
+                                      'assets/images/heritage_batik_background.png',
+                                    ),
+                                    width: 768,
+                                  ),
+                                  fit: BoxFit.fitWidth,
+                                  alignment: Alignment.topCenter,
+                                  repeat: ImageRepeat.repeatY,
+                                  opacity: 0.14,
+                                ),
+                        ),
+                        sliver: SliverMainAxisGroup(
+                          slivers: [
+                            // ==========================================
+                            // HEADER
+                            // ==========================================
+                            SliverPersistentHeader(
+                              pinned: true,
+                              delegate: _PinnedSheetHeaderDelegate(
+                                child: GestureDetector(
+                                  key: const Key(
+                                    'master-studios-sheet-drag-handle',
+                                  ),
+                                  behavior: HitTestBehavior.opaque,
+                                  onVerticalDragStart: _startSheetHeaderDrag,
+                                  onVerticalDragUpdate: _updateSheetHeaderDrag,
+                                  onVerticalDragEnd: _endSheetHeaderDrag,
+                                  onVerticalDragCancel: _clearSheetHeaderDrag,
+                                  child: ListenableBuilder(
+                                    listenable: _sheetController,
+                                    builder: (context, _) =>
+                                        HeritageSheetHeader(
+                                          nearbyCount:
+                                              mapVM.nearbyArtisans.length,
+                                          questCount: mapVM.nearbyQuestCount,
+                                          translate: langVM.translate,
+                                          expanded:
+                                              _sheetController.isAttached &&
+                                              _sheetController.size >
+                                                  _sheetMinSize + 0.03,
+                                          onToggle: _toggleSliderSheet,
+                                        ),
+                                  ),
+                                ),
+                                height: HeritageSheetHeader.heightFor(
+                                  MediaQuery.textScalerOf(context).scale(1),
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 10),
-                            InkWell(
-                              onTap: _toggleSliderSheet,
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                  vertical: 4,
-                                ),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            langVM.translate('Master Studios'),
-                                            softWrap: true,
-                                            style: GoogleFonts.dmSerifDisplay(
-                                              fontSize: 20,
-                                              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
-                                            ),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            langVM.translate(
-                                              'Tap or slide up to view master studios',
-                                            ),
-                                            softWrap: true,
-                                            style: GoogleFonts.plusJakartaSans(
-                                              fontSize: 11,
-                                              color: isDark ? Colors.white70 : Colors.grey[600],
-                                            ),
-                                          ),
-                                        ],
+
+                            if (mapVM.journeyError != null)
+                              SliverToBoxAdapter(
+                                child: Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    20,
+                                    0,
+                                    20,
+                                    12,
+                                  ),
+                                  child: Material(
+                                    color: const Color(0xFFFFF8E1),
+                                    borderRadius: BorderRadius.circular(14),
+                                    child: ListTile(
+                                      dense: true,
+                                      leading: const Icon(
+                                        Icons.cloud_off_rounded,
+                                        color: Color(0xFFB45309),
+                                      ),
+                                      title: Text(
+                                        mapVM.journeyError!,
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 11,
+                                        ),
+                                      ),
+                                      trailing: TextButton(
+                                        onPressed: mapVM.loadJourneyData,
+                                        child: const Text('RETRY'),
                                       ),
                                     ),
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 6,
+                                  ),
+                                ),
+                              ),
+
+                            // ==========================================
+                            // LOADING
+                            // ==========================================
+                            if (mapVM.isLoading)
+                              SliverPadding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                ),
+                                sliver: SliverList(
+                                  delegate: SliverChildBuilderDelegate((
+                                    context,
+                                    index,
+                                  ) {
+                                    return const ShimmerLoadingCard();
+                                  }, childCount: 3),
+                                ),
+                              )
+                            // ==========================================
+                            // NO APPROVED WORKSHOPS IN DATABASE
+                            // ==========================================
+                            else if (mapVM.workshops.isEmpty)
+                              const SliverToBoxAdapter(
+                                child: EmptyMatchmakerWidget(),
+                              ),
+
+                            // ==========================================
+                            // NEARBY MASTER STUDIOS
+                            // ==========================================
+                            if (!mapVM.isLoading &&
+                                mapVM.workshops.isNotEmpty &&
+                                nearbyArtisans.isEmpty)
+                              SliverToBoxAdapter(
+                                child: _buildInlineStudioMessage(
+                                  context,
+                                  mapVM.userLocation == null
+                                      ? langVM.translate(
+                                          'Waiting for your location to calculate studio distances.',
+                                        )
+                                      : langVM.translate(
+                                          'No studios within 5 km of your current location.',
+                                        ),
+                                ),
+                              ),
+
+                            if (!mapVM.isLoading &&
+                                mapVM.workshops.isNotEmpty &&
+                                nearbyArtisans.isNotEmpty)
+                              SliverPadding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                ),
+                                sliver: SliverList(
+                                  delegate: SliverChildBuilderDelegate((
+                                    context,
+                                    index,
+                                  ) {
+                                    final artisan = nearbyArtisans[index];
+
+                                    return _buildArtisanCard(
+                                      context,
+                                      mapVM,
+                                      artisan,
+                                    );
+                                  }, childCount: nearbyArtisans.length),
+                                ),
+                              ),
+
+                            // ==========================================
+                            // OTHER MASTER STUDIOS
+                            // ==========================================
+                            if (!mapVM.isLoading && mapVM.workshops.isNotEmpty)
+                              SliverToBoxAdapter(
+                                child: Column(
+                                  children: [
+                                    const Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 20,
                                       ),
-                                      decoration: BoxDecoration(
-                                        color: isDark ? const Color(0xFF1E3A34) : const Color(0xFF004D40),
-                                        borderRadius: BorderRadius.circular(16),
+                                      child: Divider(
+                                        height: 24,
+                                        color: Color(0xFFE2E8F0),
                                       ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          const Icon(
-                                            Icons.unfold_more_rounded,
-                                            size: 14,
-                                            color: Color(0xFFFFD54F),
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            langVM.translate('Slide Studios'),
-                                            style: GoogleFonts.plusJakartaSans(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.bold,
-                                              color: isDark ? const Color(0xFFFFD54F) : Colors.white,
-                                            ),
-                                          ),
-                                        ],
+                                    ),
+                                    _buildStudioSectionHeader(
+                                      context,
+                                      title: langVM.translate(
+                                        'Other Master Studios',
                                       ),
+                                      subtitle: langVM.translate(
+                                        'Explore artisan studios across Malaysia',
+                                      ),
+                                      count: otherArtisans.length,
                                     ),
                                   ],
                                 ),
                               ),
-                            ),
-                            const SizedBox(height: 12),
-                            Divider(
-                              height: 1,
-                              thickness: 1,
-                              color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFF1F5F9),
-                            ),
-                            const SizedBox(height: 14),
-                          ],
-                        ),
-                      ),
-                    ),
 
-                    // ==========================================
-                    // LOADING
-                    // ==========================================
-                    if (mapVM.isLoading)
-                      SliverPadding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        sliver: SliverList(
-                          delegate: SliverChildBuilderDelegate((
-                            context,
-                            index,
-                          ) {
-                            return const ShimmerLoadingCard();
-                          }, childCount: 3),
-                        ),
-                      )
-                    // ==========================================
-                    // NO APPROVED WORKSHOPS IN DATABASE
-                    // ==========================================
-                    else if (mapVM.workshops.isEmpty)
-                      const SliverToBoxAdapter(child: EmptyMatchmakerWidget()),
-
-                    // ==========================================
-                    // NEARBY MASTER STUDIOS
-                    // ==========================================
-                    if (!mapVM.isLoading && mapVM.workshops.isNotEmpty)
-                      SliverToBoxAdapter(
-                        child: _buildStudioSectionHeader(
-                          context,
-                          title: langVM.translate('Nearby Master Studios'),
-                          subtitle: langVM.translate(
-                            'Within 5 km of your current location',
-                          ),
-                          count: mapVM.nearbyArtisans.length,
-                        ),
-                      ),
-
-                    if (!mapVM.isLoading &&
-                        mapVM.workshops.isNotEmpty &&
-                        mapVM.nearbyArtisans.isEmpty)
-                      SliverToBoxAdapter(
-                        child: _buildInlineStudioMessage(
-                          context,
-                          mapVM.userLocation == null
-                              ? langVM.translate(
-                                  'Waiting for your location to calculate studio distances.',
-                                )
-                              : langVM.translate(
-                                  'No studios within 5 km of your current location.',
+                            if (!mapVM.isLoading &&
+                                mapVM.workshops.isNotEmpty &&
+                                otherArtisans.isEmpty)
+                              SliverToBoxAdapter(
+                                child: _buildInlineStudioMessage(
+                                  context,
+                                  mapVM.userLocation == null
+                                      ? langVM.translate(
+                                          'Waiting for your location to classify other studios.',
+                                        )
+                                      : langVM.translate(
+                                          'All available studios are within 5 km of you.',
+                                        ),
                                 ),
-                        ),
-                      ),
-
-                    if (!mapVM.isLoading &&
-                        mapVM.workshops.isNotEmpty &&
-                        mapVM.nearbyArtisans.isNotEmpty)
-                      SliverPadding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        sliver: SliverList(
-                          delegate: SliverChildBuilderDelegate((
-                            context,
-                            index,
-                          ) {
-                            final artisan = mapVM.nearbyArtisans[index];
-
-                            return _buildArtisanCard(context, mapVM, artisan);
-                          }, childCount: mapVM.nearbyArtisans.length),
-                        ),
-                      ),
-
-                    // ==========================================
-                    // OTHER MASTER STUDIOS
-                    // ==========================================
-                    if (!mapVM.isLoading && mapVM.workshops.isNotEmpty)
-                      SliverToBoxAdapter(
-                        child: Column(
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 20),
-                              child: Divider(
-                                height: 24,
-                                color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFE2E8F0),
                               ),
-                            ),
-                            _buildStudioSectionHeader(
-                              context,
-                              title: langVM.translate('Other Master Studios'),
-                              subtitle: langVM.translate(
-                                'Explore artisan studios across Malaysia',
+
+                            if (!mapVM.isLoading &&
+                                mapVM.workshops.isNotEmpty &&
+                                otherArtisans.isNotEmpty)
+                              SliverPadding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                ),
+                                sliver: SliverList(
+                                  delegate: SliverChildBuilderDelegate((
+                                    context,
+                                    index,
+                                  ) {
+                                    final artisan = otherArtisans[index];
+
+                                    return _buildArtisanCard(
+                                      context,
+                                      mapVM,
+                                      artisan,
+                                    );
+                                  }, childCount: otherArtisans.length),
+                                ),
                               ),
-                              count: mapVM.otherArtisans.length,
+
+                            // ==========================================
+                            // NAVIGATION BAR SAFE SPACE
+                            // ==========================================
+                            SliverToBoxAdapter(
+                              child: SizedBox(
+                                height:
+                                    navigationBarHeight + bottomSafeArea + 30,
+                              ),
                             ),
                           ],
                         ),
                       ),
-
-                    if (!mapVM.isLoading &&
-                        mapVM.workshops.isNotEmpty &&
-                        mapVM.otherArtisans.isEmpty)
-                      SliverToBoxAdapter(
-                        child: _buildInlineStudioMessage(
-                          context,
-                          mapVM.userLocation == null
-                              ? langVM.translate(
-                                  'Waiting for your location to classify other studios.',
-                                )
-                              : langVM.translate(
-                                  'All available studios are within 5 km of you.',
-                                ),
-                        ),
-                      ),
-
-                    if (!mapVM.isLoading &&
-                        mapVM.workshops.isNotEmpty &&
-                        mapVM.otherArtisans.isNotEmpty)
-                      SliverPadding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        sliver: SliverList(
-                          delegate: SliverChildBuilderDelegate((
-                            context,
-                            index,
-                          ) {
-                            final artisan = mapVM.otherArtisans[index];
-
-                            return _buildArtisanCard(context, mapVM, artisan);
-                          }, childCount: mapVM.otherArtisans.length),
-                        ),
-                      ),
-
-                    // ==========================================
-                    // NAVIGATION BAR SAFE SPACE
-                    // ==========================================
-                    SliverToBoxAdapter(
-                      child: SizedBox(
-                        height: navigationBarHeight + bottomSafeArea + 30,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
+                    ],
+                  ),
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -1005,15 +1039,14 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
 class _PinnedSheetHeaderDelegate extends SliverPersistentHeaderDelegate {
   final Widget child;
 
-  const _PinnedSheetHeaderDelegate({required this.child});
-
-  static const double _headerHeight = 126;
-
-  @override
-  double get minExtent => _headerHeight;
+  final double height;
+  const _PinnedSheetHeaderDelegate({required this.child, required this.height});
 
   @override
-  double get maxExtent => _headerHeight;
+  double get minExtent => height;
+
+  @override
+  double get maxExtent => height;
 
   @override
   Widget build(
@@ -1023,7 +1056,7 @@ class _PinnedSheetHeaderDelegate extends SliverPersistentHeaderDelegate {
   ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Material(
-      color: isDark ? const Color(0xFF0D2825) : Colors.white,
+      color: isDark ? const Color(0xFF0D2825) : const Color(0xFFF7F2E8),
       elevation: overlapsContent ? 2 : 0,
       shadowColor: Colors.black.withValues(alpha: 0.12),
       child: child,

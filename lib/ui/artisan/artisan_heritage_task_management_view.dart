@@ -71,6 +71,7 @@ class _ArtisanHeritageTaskManagementViewState
 
   Future<void> _showEditTaskSheet(
     HeritageTask task, {
+    HeritageTaskChangeRequest? pendingChange,
     HeritageTaskChangeRequest? rejectedChange,
   }) async {
     final viewModel = context.read<GamificationViewModel>();
@@ -84,6 +85,7 @@ class _ArtisanHeritageTaskManagementViewState
         value: viewModel,
         child: _EditHeritageTaskSheet(
           task: task,
+          pendingChange: pendingChange,
           rejectedChange: rejectedChange,
         ),
       ),
@@ -92,8 +94,12 @@ class _ArtisanHeritageTaskManagementViewState
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            isNewTaskResubmission
+            viewModel.lastTaskEditReverted
+                ? 'Task update cancelled. The approved task was kept unchanged.'
+                : isNewTaskResubmission
                 ? 'Task updated and resubmitted for admin approval.'
+                : pendingChange != null
+                ? 'Pending task update revised successfully.'
                 : rejectedChange != null
                 ? 'Task update revised and resubmitted for admin approval.'
                 : 'Task edit request submitted for admin approval.',
@@ -106,6 +112,7 @@ class _ArtisanHeritageTaskManagementViewState
 
   Future<void> _showEditQuestSheet(
     Quest quest, {
+    QuestChangeRequest? pendingChange,
     QuestChangeRequest? rejectedChange,
   }) async {
     final viewModel = context.read<GamificationViewModel>();
@@ -116,16 +123,22 @@ class _ArtisanHeritageTaskManagementViewState
       backgroundColor: Colors.transparent,
       builder: (_) => ChangeNotifierProvider.value(
         value: viewModel,
-        child: _EditQuestSheet(quest: quest, rejectedChange: rejectedChange),
+        child: _EditQuestSheet(
+          quest: quest,
+          pendingChange: pendingChange,
+          rejectedChange: rejectedChange,
+        ),
       ),
     );
     if (submitted == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            rejectedChange == null
-                ? 'Quest update submitted for admin approval.'
-                : 'Quest update revised and resubmitted for admin approval.',
+            pendingChange != null
+                ? 'Pending quest update revised successfully.'
+                : rejectedChange != null
+                ? 'Quest update revised and resubmitted for admin approval.'
+                : 'Quest update submitted for admin approval.',
           ),
           backgroundColor: _green,
         ),
@@ -146,6 +159,10 @@ class _ArtisanHeritageTaskManagementViewState
         ('Category', change.proposedCategory),
         ('Description', change.proposedDescription),
       ],
+      actionLabel: change.isPending ? 'Edit Pending Update' : null,
+      onAction: change.isPending
+          ? () => _showEditQuestSheet(quest, pendingChange: change)
+          : null,
     );
   }
 
@@ -209,6 +226,13 @@ class _ArtisanHeritageTaskManagementViewState
               ),
               ('XP reward', '${change.proposedXpReward ?? task.xpReward} XP'),
             ],
+      actionLabel:
+          !isDelete && change.status.toUpperCase() == 'PENDING_APPROVAL'
+          ? 'Edit Pending Update'
+          : null,
+      onAction: !isDelete && change.status.toUpperCase() == 'PENDING_APPROVAL'
+          ? () => _showEditTaskSheet(task, pendingChange: change)
+          : null,
     );
   }
 
@@ -264,6 +288,8 @@ class _ArtisanHeritageTaskManagementViewState
     required String title,
     required List<(String, String)> current,
     required List<(String, String)> requested,
+    String? actionLabel,
+    VoidCallback? onAction,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet<void>(
@@ -301,18 +327,37 @@ class _ArtisanHeritageTaskManagementViewState
                 const SizedBox(height: 18),
                 _changeVersion('CURRENT / APPROVED', current, isDark: isDark),
                 const SizedBox(height: 14),
-                _changeVersion('REQUESTED CHANGES', requested, pending: true, isDark: isDark),
+                _changeVersion(
+                  'REQUESTED CHANGES',
+                  requested,
+                  pending: true,
+                  isDark: isDark,
+                ),
                 const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: () => Navigator.pop(sheetContext),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: isDark ? const Color(0xFFFFD54F) : _green,
-                      foregroundColor: isDark ? const Color(0xFF041412) : Colors.white,
+                Row(
+                  children: [
+                    if (actionLabel != null && onAction != null) ...[
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            Navigator.pop(sheetContext);
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (mounted) onAction();
+                            });
+                          },
+                          child: Text(actionLabel),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                    ],
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: () => Navigator.pop(sheetContext),
+                        style: FilledButton.styleFrom(backgroundColor: _green),
+                        child: const Text('Done'),
+                      ),
                     ),
-                    child: const Text('Done'),
-                  ),
+                  ],
                 ),
               ],
             ),
@@ -350,7 +395,9 @@ class _ArtisanHeritageTaskManagementViewState
             style: TextStyle(
               color: pending
                   ? (isDark ? const Color(0xFFFFD54F) : const Color(0xFFB87800))
-                  : (isDark ? const Color(0xFF34D399) : const Color(0xFF64748B)),
+                  : (isDark
+                        ? const Color(0xFF34D399)
+                        : const Color(0xFF64748B)),
               fontSize: 10,
               fontWeight: FontWeight.w800,
               letterSpacing: 0.7,
@@ -519,7 +566,9 @@ class _ArtisanHeritageTaskManagementViewState
         clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(26),
-          side: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+          side: isDark
+              ? const BorderSide(color: Color(0xFF1E3A34))
+              : BorderSide.none,
         ),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 360),
@@ -541,7 +590,10 @@ class _ArtisanHeritageTaskManagementViewState
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: isDark ? const Color(0xFFFFD54F) : _green, width: 2),
+                    border: Border.all(
+                      color: isDark ? const Color(0xFFFFD54F) : _green,
+                      width: 2,
+                    ),
                   ),
                   child: SizedBox.square(
                     dimension: 200,
@@ -576,8 +628,12 @@ class _ArtisanHeritageTaskManagementViewState
                   child: FilledButton(
                     onPressed: () => Navigator.of(dialogContext).pop(),
                     style: FilledButton.styleFrom(
-                      backgroundColor: isDark ? const Color(0xFFFFD54F) : _green,
-                      foregroundColor: isDark ? const Color(0xFF041412) : Colors.white,
+                      backgroundColor: isDark
+                          ? const Color(0xFFFFD54F)
+                          : _green,
+                      foregroundColor: isDark
+                          ? const Color(0xFF041412)
+                          : Colors.white,
                     ),
                     child: const Text('Done'),
                   ),
@@ -596,7 +652,9 @@ class _ArtisanHeritageTaskManagementViewState
     final viewModel = context.watch<GamificationViewModel>();
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF7F5EF),
+      backgroundColor: isDark
+          ? const Color(0xFF041412)
+          : const Color(0xFFF7F5EF),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: viewModel.isLoadingArtisanQuest || viewModel.isAddingTask
             ? null
@@ -766,16 +824,18 @@ class _ArtisanHeritageTaskManagementViewState
               ),
               IconButton.filled(
                 tooltip: pendingChange != null
-                    ? 'Update awaiting approval'
+                    ? 'Edit pending update'
                     : rejectedChange != null
                     ? 'Resolve rejected update below'
                     : 'Edit quest information',
                 onPressed:
-                    pendingChange == null &&
-                        rejectedChange == null &&
+                    rejectedChange == null &&
                         quest.status.toUpperCase() == 'APPROVED' &&
                         !viewModel.isUpdatingArtisanQuest
-                    ? () => _showEditQuestSheet(quest)
+                    ? () => _showEditQuestSheet(
+                        quest,
+                        pendingChange: pendingChange,
+                      )
                     : null,
                 style: IconButton.styleFrom(
                   backgroundColor: Colors.white.withValues(alpha: 0.12),
@@ -1051,6 +1111,7 @@ class _ArtisanHeritageTaskManagementViewState
   Widget _taskCard(int index, HeritageTask task, bool isDark) {
     final viewModel = context.read<GamificationViewModel>();
     final pendingChange = viewModel.pendingChangeForTask(task.id);
+    final hasPendingEdit = pendingChange?.requestType.toUpperCase() == 'EDIT';
     final rejectedEdit = viewModel.rejectedEditForTask(task.id);
     final isPendingSubmission = task.status.toUpperCase() == 'PENDING_APPROVAL';
     final isRejectedSubmission = task.status.toUpperCase() == 'REJECTED';
@@ -1119,8 +1180,12 @@ class _ArtisanHeritageTaskManagementViewState
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                 decoration: BoxDecoration(
                   color: task.isRequired
-                      ? (isDark ? const Color(0xFF1E3A34) : const Color(0xFFE0F2ED))
-                      : (isDark ? const Color(0xFF041412) : const Color(0xFFF1F3F2)),
+                      ? (isDark
+                            ? const Color(0xFF1E3A34)
+                            : const Color(0xFFE0F2ED))
+                      : (isDark
+                            ? const Color(0xFF041412)
+                            : const Color(0xFFF1F3F2)),
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
@@ -1203,34 +1268,54 @@ class _ArtisanHeritageTaskManagementViewState
               ),
             )
           else if (pendingChange != null)
-            InkWell(
-              onTap: () => _showTaskChanges(task, pendingChange),
-              borderRadius: BorderRadius.circular(12),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      '🕒 Update pending admin review',
-                      style: TextStyle(
-                        color: Color(0xFF9A6700),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                      ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                InkWell(
+                  onTap: () => _showTaskChanges(task, pendingChange),
+                  borderRadius: BorderRadius.circular(12),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '🕒 Update pending admin review',
+                          style: TextStyle(
+                            color: Color(0xFF9A6700),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'View changes ›',
+                          style: TextStyle(
+                            color: _green,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'View changes ›',
-                      style: TextStyle(
-                        color: isDark ? const Color(0xFFFFD54F) : _green,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: hasPendingEdit
+                      ? TextButton.icon(
+                          onPressed: isTaskActionBusy
+                              ? null
+                              : () => _showEditTaskSheet(
+                                  task,
+                                  pendingChange: pendingChange,
+                                ),
+                          icon: const Icon(Icons.edit_outlined, size: 17),
+                          label: const Text('Edit'),
+                        )
+                      : const SizedBox.shrink(),
+                ),
+              ],
             )
           else if (rejectedEdit != null)
             Container(
@@ -1282,8 +1367,12 @@ class _ArtisanHeritageTaskManagementViewState
                                 rejectedChange: rejectedEdit,
                               ),
                         style: FilledButton.styleFrom(
-                          backgroundColor: isDark ? const Color(0xFFFFD54F) : _green,
-                          foregroundColor: isDark ? const Color(0xFF041412) : Colors.white,
+                          backgroundColor: isDark
+                              ? const Color(0xFFFFD54F)
+                              : _green,
+                          foregroundColor: isDark
+                              ? const Color(0xFF041412)
+                              : Colors.white,
                         ),
                         icon: const Icon(Icons.edit_outlined, size: 16),
                         label: const Text('Edit & Resubmit'),
@@ -1342,9 +1431,7 @@ class _ArtisanHeritageTaskManagementViewState
         const SizedBox(height: 10),
         Text(
           'No tasks yet.',
-          style: TextStyle(
-            color: isDark ? Colors.white70 : Colors.black87,
-          ),
+          style: TextStyle(color: isDark ? Colors.white70 : Colors.black87),
         ),
       ],
     ),
@@ -1408,9 +1495,14 @@ class _ArtisanHeritageTaskManagementViewState
 
 class _EditQuestSheet extends StatefulWidget {
   final Quest quest;
+  final QuestChangeRequest? pendingChange;
   final QuestChangeRequest? rejectedChange;
 
-  const _EditQuestSheet({required this.quest, this.rejectedChange});
+  const _EditQuestSheet({
+    required this.quest,
+    this.pendingChange,
+    this.rejectedChange,
+  }) : assert(pendingChange == null || rejectedChange == null);
 
   @override
   State<_EditQuestSheet> createState() => _EditQuestSheetState();
@@ -1430,19 +1522,20 @@ class _EditQuestSheetState extends State<_EditQuestSheet> {
   late String _selectedCategory;
 
   bool get _isResubmission => widget.rejectedChange != null;
+  bool get _isPendingRevision => widget.pendingChange != null;
 
   @override
   void initState() {
     super.initState();
-    final rejectedChange = widget.rejectedChange;
+    final requestedChange = widget.pendingChange ?? widget.rejectedChange;
     _title = TextEditingController(
-      text: rejectedChange?.proposedTitle ?? widget.quest.title,
+      text: requestedChange?.proposedTitle ?? widget.quest.title,
     );
     _description = TextEditingController(
-      text: rejectedChange?.proposedDescription ?? widget.quest.description,
+      text: requestedChange?.proposedDescription ?? widget.quest.description,
     );
     final initialCategory =
-        rejectedChange?.proposedCategory ?? widget.quest.category;
+        requestedChange?.proposedCategory ?? widget.quest.category;
     _selectedCategory = _questCategories.contains(initialCategory)
         ? initialCategory
         : _questCategories.first;
@@ -1458,7 +1551,14 @@ class _EditQuestSheetState extends State<_EditQuestSheet> {
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     final viewModel = context.read<GamificationViewModel>();
-    final success = _isResubmission
+    final success = _isPendingRevision
+        ? await viewModel.updatePendingQuestUpdate(
+            request: widget.pendingChange!,
+            title: _title.text,
+            category: _selectedCategory,
+            description: _description.text,
+          )
+        : _isResubmission
         ? await viewModel.resubmitRejectedQuestUpdate(
             request: widget.rejectedChange!,
             title: _title.text,
@@ -1578,7 +1678,9 @@ class _EditQuestSheetState extends State<_EditQuestSheet> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _isResubmission
+                  _isPendingRevision
+                      ? 'Edit Pending Quest Update'
+                      : _isResubmission
                       ? 'Edit & Resubmit Quest'
                       : 'Edit Cultural Quest',
                   style: GoogleFonts.dmSerifDisplay(
@@ -1588,7 +1690,9 @@ class _EditQuestSheetState extends State<_EditQuestSheet> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  _isResubmission
+                  _isPendingRevision
+                      ? 'Revise the update that is awaiting admin review. The approved quest remains unchanged.'
+                      : _isResubmission
                       ? 'Revise the rejected update and submit it again. The approved quest remains visible until admin approval.'
                       : 'Only the title, category, and description can be changed. The approved version remains visible during admin review.',
                   style: const TextStyle(
@@ -1687,7 +1791,9 @@ class _EditQuestSheetState extends State<_EditQuestSheet> {
                                 ),
                               )
                             : Text(
-                                _isResubmission
+                                _isPendingRevision
+                                    ? 'Save Pending Update'
+                                    : _isResubmission
                                     ? 'Resubmit Update'
                                     : 'Submit Update',
                               ),
@@ -1876,9 +1982,14 @@ class _AddHeritageTaskSheetState extends State<_AddHeritageTaskSheet> {
 
 class _EditHeritageTaskSheet extends StatefulWidget {
   final HeritageTask task;
+  final HeritageTaskChangeRequest? pendingChange;
   final HeritageTaskChangeRequest? rejectedChange;
 
-  const _EditHeritageTaskSheet({required this.task, this.rejectedChange});
+  const _EditHeritageTaskSheet({
+    required this.task,
+    this.pendingChange,
+    this.rejectedChange,
+  }) : assert(pendingChange == null || rejectedChange == null);
 
   @override
   State<_EditHeritageTaskSheet> createState() => _EditHeritageTaskSheetState();
@@ -1894,21 +2005,22 @@ class _EditHeritageTaskSheetState extends State<_EditHeritageTaskSheet> {
   bool get _isNewTaskResubmission =>
       widget.task.status.toUpperCase() == 'REJECTED';
   bool get _isRejectedEditResubmission => widget.rejectedChange != null;
+  bool get _isPendingEdit => widget.pendingChange != null;
   bool get _isResubmission =>
       _isNewTaskResubmission || _isRejectedEditResubmission;
 
   @override
   void initState() {
     super.initState();
-    final rejectedChange = widget.rejectedChange;
+    final proposedChange = widget.pendingChange ?? widget.rejectedChange;
     _title = TextEditingController(
-      text: rejectedChange?.proposedTitle ?? widget.task.title,
+      text: proposedChange?.proposedTitle ?? widget.task.title,
     );
     _xp = TextEditingController(
-      text: (rejectedChange?.proposedXpReward ?? widget.task.xpReward)
+      text: (proposedChange?.proposedXpReward ?? widget.task.xpReward)
           .toString(),
     );
-    _required = rejectedChange?.proposedIsRequired ?? widget.task.isRequired;
+    _required = proposedChange?.proposedIsRequired ?? widget.task.isRequired;
   }
 
   @override
@@ -1933,6 +2045,14 @@ class _EditHeritageTaskSheetState extends State<_EditHeritageTaskSheet> {
         ? await viewModel.resubmitRejectedTaskEdit(
             task: widget.task,
             request: widget.rejectedChange!,
+            title: _title.text,
+            isRequired: _required,
+            xpReward: xpReward,
+          )
+        : _isPendingEdit
+        ? await viewModel.updatePendingTaskEdit(
+            task: widget.task,
+            request: widget.pendingChange!,
             title: _title.text,
             isRequired: _required,
             xpReward: xpReward,
@@ -1975,7 +2095,9 @@ class _EditHeritageTaskSheetState extends State<_EditHeritageTaskSheet> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _isResubmission
+                  _isPendingEdit
+                      ? 'Edit Pending Task Update'
+                      : _isResubmission
                       ? 'Edit & Resubmit Task'
                       : 'Request Task Edit',
                   style: GoogleFonts.dmSerifDisplay(
@@ -1985,7 +2107,9 @@ class _EditHeritageTaskSheetState extends State<_EditHeritageTaskSheet> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  _isResubmission
+                  _isPendingEdit
+                      ? 'Revise the pending request. The approved task remains unchanged during admin review.'
+                      : _isResubmission
                       ? _isNewTaskResubmission
                             ? 'Update the rejected new task and submit it for admin review again.'
                             : 'Revise the rejected update and submit it for admin review again. The approved task stays unchanged.'
@@ -2065,7 +2189,9 @@ class _EditHeritageTaskSheetState extends State<_EditHeritageTaskSheet> {
                                 ),
                               )
                             : Text(
-                                _isResubmission
+                                _isPendingEdit
+                                    ? 'Update Request'
+                                    : _isResubmission
                                     ? 'Resubmit Task'
                                     : 'Submit Request',
                               ),

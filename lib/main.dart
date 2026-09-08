@@ -146,7 +146,7 @@ void main() async {
         ChangeNotifierProvider<MapViewModel>(
           create: (context) => MapViewModel(
             artisanRepository: context.read<ArtisanRepository>(),
-
+            gamificationRepository: context.read<GamificationRepository>(),
             locationRepository: context.read<LocationRepository>(),
           ),
         ),
@@ -207,7 +207,8 @@ class _WarisanKitaAppState extends State<WarisanKitaApp> {
     '/role-selection': (context) =>
         kIsWeb ? const LoginScreen() : const RoleSelectionScreen(),
     '/forgot-password': (context) => const ForgotPasswordScreen(),
-    '/verify-email': (context) => const EmailVerificationScreen(email: 'user@warisankita.my'),
+    '/verify-email': (context) =>
+        const EmailVerificationScreen(email: 'user@warisankita.my'),
     '/tourist': (context) =>
         kIsWeb ? const LoginScreen() : const TouristMainScaffold(),
     '/apply-artisan': (context) =>

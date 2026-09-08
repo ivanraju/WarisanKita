@@ -151,6 +151,12 @@ class GamificationModerationViewModel extends ChangeNotifier {
         .replaceFirst('Bad state: ', '')
         .replaceFirst('Exception: ', '')
         .trim();
+    final lower = message.toLowerCase();
+    if (lower.contains('pgrst116') ||
+        lower.contains('cannot coerce the result to a single json object')) {
+      return 'This request is no longer pending. Refresh to load the latest moderation queue.';
+    }
+    if (lower.contains('postgrestexception')) return fallback;
     return message.isEmpty ? fallback : message;
   }
 }

@@ -4,22 +4,28 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import 'package:warisan_kita/data/repositories/artisan_repository.dart';
+import 'package:warisan_kita/data/repositories/gamification_repository.dart';
 import 'package:warisan_kita/data/repositories/location_repository.dart';
 
 import 'package:warisan_kita/domain/models/nearby_artisan.dart';
 import 'package:warisan_kita/domain/models/user_location.dart';
 import 'package:warisan_kita/domain/models/workshop_location.dart';
+import 'package:warisan_kita/domain/models/workshop_quest_journey.dart';
 
 class MapViewModel extends ChangeNotifier {
   final ArtisanRepository _artisanRepository;
+  final GamificationRepository _gamificationRepository;
   final LocationRepository _locationRepository;
 
   MapViewModel({
     required ArtisanRepository artisanRepository,
+    required GamificationRepository gamificationRepository,
     required LocationRepository locationRepository,
   }) : _artisanRepository = artisanRepository,
+       _gamificationRepository = gamificationRepository,
        _locationRepository = locationRepository {
     loadWorkshops();
+    loadJourneyData();
   }
 
   // ============================================================
@@ -40,6 +46,31 @@ class MapViewModel extends ChangeNotifier {
 
   WorkshopLocation? _selectedWorkshop;
   WorkshopLocation? get selectedWorkshop => _selectedWorkshop;
+
+  TouristJourneySnapshot _journeySnapshot = TouristJourneySnapshot.empty;
+  TouristJourneySnapshot get journeySnapshot => _journeySnapshot;
+
+  bool _isLoadingJourneys = false;
+  bool get isLoadingJourneys => _isLoadingJourneys;
+
+  String? _journeyError;
+  String? get journeyError => _journeyError;
+
+  Map<String, WorkshopQuestJourney> get journeysByWorkshopId =>
+      _journeySnapshot.journeysByWorkshopId;
+  int get totalXp => _journeySnapshot.totalXp;
+  int get earnedStampCount => _journeySnapshot.earnedStampCount;
+
+  WorkshopQuestJourney? journeyForWorkshop(String workshopId) =>
+      _journeySnapshot.journeysByWorkshopId[workshopId];
+
+  int get nearbyQuestCount => _nearbyArtisans
+      .where(
+        (artisan) =>
+            artisan.journey != null &&
+            artisan.distanceMeters <= _questInteractionRadiusMeters,
+      )
+      .length;
 
   // ============================================================
   // PROXIMITY RADII
@@ -84,6 +115,11 @@ class MapViewModel extends ChangeNotifier {
     try {
       _workshops = await _artisanRepository.getWorkshopLocations();
 
+      if (_selectedWorkshop != null &&
+          !_workshops.any((item) => item.id == _selectedWorkshop!.id)) {
+        _selectedWorkshop = null;
+      }
+
       debugPrint('Loaded workshops: ${_workshops.length}');
 
       // Recalculate both groups if GPS was already available.
@@ -95,6 +131,24 @@ class MapViewModel extends ChangeNotifier {
       _otherArtisans = [];
     } finally {
       _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadJourneyData() async {
+    _isLoadingJourneys = true;
+    _journeyError = null;
+    notifyListeners();
+
+    try {
+      _journeySnapshot = await _gamificationRepository
+          .getTouristJourneySnapshot();
+      _updateArtisanDistances();
+    } catch (error) {
+      _journeyError = 'Quest journey information is temporarily unavailable.';
+      debugPrint('MapViewModel loadJourneyData error: $error');
+    } finally {
+      _isLoadingJourneys = false;
       notifyListeners();
     }
   }
@@ -189,9 +243,11 @@ class MapViewModel extends ChangeNotifier {
 
   UserLocation _withReliableHeading(UserLocation next) {
     final previous = _userLocation;
-    var heading = _compassHeading ?? (_validHeading(next.heading)
-        ? _normalizeHeading(next.heading)
-        : previous?.heading ?? 0.0);
+    var heading =
+        _compassHeading ??
+        (_validHeading(next.heading)
+            ? _normalizeHeading(next.heading)
+            : previous?.heading ?? 0.0);
 
     if (previous != null) {
       final movementMeters = _locationRepository.calculateDistance(
@@ -339,6 +395,7 @@ class MapViewModel extends ChangeNotifier {
       final artisan = NearbyArtisan.fromWorkshop(
         workshop: workshop,
         distanceMeters: distance,
+        journey: journeyForWorkshop(workshop.id),
       );
 
       if (distance <= nearbySearchRadiusMeters) {
@@ -374,12 +431,18 @@ class MapViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void focusWorkshop(WorkshopLocation workshop) {
+    if (_selectedWorkshop?.id == workshop.id) return;
+    _selectedWorkshop = workshop;
+    notifyListeners();
+  }
+
   // ============================================================
   // REFRESH
   // ============================================================
 
   Future<void> refreshWorkshops() async {
-    await loadWorkshops();
+    await Future.wait([loadWorkshops(), loadJourneyData()]);
   }
 
   // ============================================================

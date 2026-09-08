@@ -101,6 +101,9 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
   bool _isSubmittingTaskChange = false;
   bool get isSubmittingTaskChange => _isSubmittingTaskChange;
 
+  bool _lastTaskEditReverted = false;
+  bool get lastTaskEditReverted => _lastTaskEditReverted;
+
   bool _isUpdatingNewTask = false;
   bool get isUpdatingNewTask => _isUpdatingNewTask;
 
@@ -129,15 +132,62 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
 
   List<HeritageStamp> _stamps = [];
   List<HeritageStamp> get stamps => _stamps;
+  List<HeritageStamp> get earnedPassportStamps =>
+      _stamps.where((stamp) => stamp.isUnlocked).toList(growable: false);
+
+  bool _isLoadingPassport = false;
+  bool get isLoadingPassport => _isLoadingPassport;
+  bool _passportRefreshRequested = false;
+
+  String? _passportError;
+  String? get passportError => _passportError;
+
+  String? _passportWarning;
+  String? get passportWarning => _passportWarning;
+
+  int _completedPassportTasks = 0;
+  int get completedPassportTasks => _completedPassportTasks;
+
+  int _visitedPassportQuests = 0;
+  int get visitedPassportQuests => _visitedPassportQuests;
+  bool _hasVisitedPassportStudioData = false;
+  bool get hasVisitedPassportStudioData => _hasVisitedPassportStudioData;
+
+  int _completedPassportQuests = 0;
+  int get completedPassportQuests => _completedPassportQuests;
+
+  int _digitalPassportPlaques = 0;
+  int get digitalPassportPlaques => _digitalPassportPlaques;
+
+  int _availablePassportStamps = 0;
+  int get availablePassportStamps => _availablePassportStamps;
+
+  bool _hasPassportXpData = true;
+  bool get hasPassportXpData => _hasPassportXpData;
+
+  bool _hasPassportStampData = true;
+  bool get hasPassportStampData => _hasPassportStampData;
+
+  bool _hasPassportQuestStatistics = true;
+  bool get hasPassportQuestStatistics => _hasPassportQuestStatistics;
+
+  bool _hasDigitalPassportPlaqueData = true;
+  bool get hasDigitalPassportPlaqueData => _hasDigitalPassportPlaqueData;
+
+  bool _hasAvailablePassportStampData = true;
+  bool get hasAvailablePassportStampData => _hasAvailablePassportStampData;
+
+  HeritageProgress _heritageProgress = HeritageProgression.fromXp(0);
+  int get totalEarnedXp => _heritageProgress.totalXp;
+  HeritageTier get currentTier => _heritageProgress.currentTier;
+  HeritageTier? get nextTier => _heritageProgress.nextTier;
+  int get currentTierXp => _heritageProgress.currentTierXp;
+  int get xpForNextTier => _heritageProgress.xpForNextTier;
 
   List<HeritageTask> _activeTasks = [];
   List<HeritageTask> get activeTasks => _activeTasks;
 
-  double _rankProgress = 0.65;
-  double get rankProgress => _rankProgress;
-
-  final TierStatus _currentTier = TierStatus.apprentice;
-  TierStatus get currentTier => _currentTier;
+  double get rankProgress => _heritageProgress.progress.clamp(0.0, 1.0);
 
   GamificationViewModel({required GamificationRepository repository})
     : _repository = repository {
@@ -164,6 +214,53 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
           (task) => task.status.toUpperCase() == 'APPROVED' && !task.isArchived,
         )
         .fold(0, (total, task) => total + task.xpReward);
+  }
+
+  Future<void> loadPassport() async {
+    if (_isLoadingPassport) {
+      _passportRefreshRequested = true;
+      return;
+    }
+
+    do {
+      _passportRefreshRequested = false;
+      _isLoadingPassport = true;
+      _passportError = null;
+      _passportWarning = null;
+      notifyListeners();
+      try {
+        final snapshot = await _repository.getPassportSnapshot();
+        _stamps = snapshot.stamps;
+        _completedPassportTasks = snapshot.completedTaskCount;
+        _visitedPassportQuests = snapshot.visitedQuestCount;
+        _hasVisitedPassportStudioData = snapshot.hasVisitedStudioData;
+        _completedPassportQuests = snapshot.completedQuestCount;
+        _digitalPassportPlaques = snapshot.digitalPlaqueCount;
+        _availablePassportStamps = snapshot.availableStampCount;
+        _hasPassportXpData = snapshot.hasXpData;
+        _hasPassportStampData = snapshot.hasStampData;
+        _hasPassportQuestStatistics = snapshot.hasQuestStatistics;
+        _hasDigitalPassportPlaqueData = snapshot.hasDigitalPlaqueData;
+        _hasAvailablePassportStampData = snapshot.hasAvailableStampData;
+        _passportWarning = snapshot.warnings.isEmpty
+            ? null
+            : 'Some Passport information could not be refreshed.';
+        _heritageProgress = HeritageProgression.fromXp(snapshot.totalXp);
+      } catch (error, stackTrace) {
+        debugPrint('GamificationViewModel load passport error: $error');
+        debugPrintStack(stackTrace: stackTrace);
+        final message = error
+            .toString()
+            .replaceFirst('Bad state: ', '')
+            .replaceFirst('Exception: ', '');
+        _passportError = message.toLowerCase().contains('signed in')
+            ? message
+            : 'Unable to load your Heritage Passport. Please try again.';
+      } finally {
+        _isLoadingPassport = false;
+        notifyListeners();
+      }
+    } while (_passportRefreshRequested);
   }
 
   Future<void> loadQuestsForArtisan(String artisanProfileId) async {
@@ -447,6 +544,7 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
         _markQuestFullyCompleted();
       }
       notifyListeners();
+      unawaited(loadPassport());
       return true;
     } catch (error, stackTrace) {
       debugPrint('GamificationViewModel QR verification error: $error');
@@ -623,6 +721,7 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
       if (areAllHeritageTasksCompleted) {
         _markQuestFullyCompleted();
       }
+      unawaited(loadPassport());
     } catch (error, stackTrace) {
       debugPrint('GamificationViewModel complete dwell error: $error');
       debugPrintStack(stackTrace: stackTrace);
@@ -864,6 +963,54 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
         : null;
   }
 
+  Future<bool> updatePendingQuestUpdate({
+    required QuestChangeRequest request,
+    required String title,
+    required String description,
+    required String category,
+  }) async {
+    if (_isUpdatingArtisanQuest || !request.isPending) return false;
+
+    final quest = _artisanQuest;
+    if (quest == null || request.questId != quest.id) return false;
+
+    final cleanTitle = title.trim();
+    final cleanDescription = description.trim();
+    final cleanCategory = category.trim();
+    if (cleanTitle.isEmpty ||
+        cleanDescription.isEmpty ||
+        cleanCategory.isEmpty) {
+      _artisanTaskError =
+          'Quest title, description, and category are required.';
+      notifyListeners();
+      return false;
+    }
+
+    _isUpdatingArtisanQuest = true;
+    _artisanTaskError = null;
+    notifyListeners();
+    try {
+      _pendingArtisanQuestChange = await _repository.updatePendingQuestUpdate(
+        requestId: request.id,
+        questId: quest.id,
+        proposedTitle: cleanTitle,
+        proposedDescription: cleanDescription,
+        proposedCategory: cleanCategory,
+      );
+      return true;
+    } catch (error, stackTrace) {
+      debugPrint('GamificationViewModel update pending quest: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      await loadArtisanQuestAndTasks();
+      _artisanTaskError =
+          'This request may already have been reviewed. The latest quest status has been reloaded.';
+      return false;
+    } finally {
+      _isUpdatingArtisanQuest = false;
+      notifyListeners();
+    }
+  }
+
   Future<bool> resubmitRejectedQuestUpdate({
     required QuestChangeRequest request,
     required String title,
@@ -1101,8 +1248,19 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
       notifyListeners();
       return false;
     }
+    if (_matchesApprovedTask(
+      task,
+      title: cleanTitle,
+      isRequired: isRequired,
+      xpReward: xpReward,
+    )) {
+      _artisanTaskError = 'No changes to submit.';
+      notifyListeners();
+      return false;
+    }
 
     _isSubmittingTaskChange = true;
+    _lastTaskEditReverted = false;
     _artisanTaskError = null;
     notifyListeners();
     try {
@@ -1121,6 +1279,77 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
         error,
         fallback: 'The task edit request could not be submitted.',
       );
+      return false;
+    } finally {
+      _isSubmittingTaskChange = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> updatePendingTaskEdit({
+    required quest_domain.HeritageTask task,
+    required HeritageTaskChangeRequest request,
+    required String title,
+    required bool isRequired,
+    required int xpReward,
+  }) async {
+    if (_isSubmittingTaskChange ||
+        task.isSystemTask ||
+        task.status.toUpperCase() != 'APPROVED' ||
+        task.isArchived ||
+        request.taskId != task.id ||
+        request.requestType.toUpperCase() != 'EDIT' ||
+        request.status.toUpperCase() != 'PENDING_APPROVAL') {
+      return false;
+    }
+
+    final cleanTitle = title.trim();
+    if (cleanTitle.isEmpty || xpReward < 0) {
+      _artisanTaskError = cleanTitle.isEmpty
+          ? 'Task title must not be empty.'
+          : 'XP reward must be 0 or more.';
+      notifyListeners();
+      return false;
+    }
+
+    _isSubmittingTaskChange = true;
+    _lastTaskEditReverted = false;
+    _artisanTaskError = null;
+    notifyListeners();
+    try {
+      if (_matchesApprovedTask(
+        task,
+        title: cleanTitle,
+        isRequired: isRequired,
+        xpReward: xpReward,
+      )) {
+        await _repository.deletePendingHeritageTaskEdit(
+          requestId: request.id,
+          taskId: task.id,
+        );
+        _artisanTaskChangeRequests = _artisanTaskChangeRequests
+            .where((item) => item.id != request.id)
+            .toList(growable: false);
+        _lastTaskEditReverted = true;
+      } else {
+        final updated = await _repository.updatePendingHeritageTaskEdit(
+          requestId: request.id,
+          taskId: task.id,
+          proposedTitle: cleanTitle,
+          proposedIsRequired: isRequired,
+          proposedXpReward: xpReward,
+        );
+        _artisanTaskChangeRequests = _artisanTaskChangeRequests
+            .map((item) => item.id == updated.id ? updated : item)
+            .toList(growable: false);
+      }
+      return true;
+    } catch (error, stackTrace) {
+      debugPrint('GamificationViewModel update pending task edit: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      await refreshArtisanTasks();
+      _artisanTaskError =
+          'This request may already have been reviewed. The latest task status has been reloaded.';
       return false;
     } finally {
       _isSubmittingTaskChange = false;
@@ -1206,9 +1435,23 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
     }
 
     _isSubmittingTaskChange = true;
+    _lastTaskEditReverted = false;
     _artisanTaskError = null;
     notifyListeners();
     try {
+      if (_matchesApprovedTask(
+        task,
+        title: cleanTitle,
+        isRequired: isRequired,
+        xpReward: xpReward,
+      )) {
+        await _repository.deleteRejectedHeritageTaskEditRequest(request.id);
+        _artisanTaskChangeRequests = _artisanTaskChangeRequests
+            .where((item) => item.id != request.id)
+            .toList(growable: false);
+        _lastTaskEditReverted = true;
+        return true;
+      }
       final updatedRequest = await _repository.resubmitRejectedHeritageTaskEdit(
         requestId: request.id,
         taskId: task.id,
@@ -1234,6 +1477,17 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  bool _matchesApprovedTask(
+    quest_domain.HeritageTask task, {
+    required String title,
+    required bool isRequired,
+    required int xpReward,
+  }) {
+    return title.trim() == task.title.trim() &&
+        isRequired == task.isRequired &&
+        xpReward == task.xpReward;
+  }
+
   bool _isRejectedCustomTask(quest_domain.HeritageTask task) {
     return !task.isSystemTask && task.status.toUpperCase() == 'REJECTED';
   }
@@ -1247,6 +1501,7 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
 
   void clearArtisanTaskError() {
     _artisanTaskError = null;
+    _lastTaskEditReverted = false;
   }
 
   String _friendlyArtisanTaskError(Object error, {required String fallback}) {
@@ -1265,51 +1520,6 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   void _initializeMockData() {
-    _stamps = [
-      HeritageStamp(
-        id: '1',
-        title: 'Batik Master',
-        iconUrl:
-            'https://images.unsplash.com/photo-1590739225287-bd31519780c3?w=200',
-        isUnlocked: true,
-      ),
-      HeritageStamp(
-        id: '2',
-        title: 'Songket Weaver',
-        iconUrl:
-            'https://images.unsplash.com/photo-1544967082-d9d25d867d66?w=200',
-        isUnlocked: true,
-      ),
-      HeritageStamp(
-        id: '3',
-        title: 'Wood Carver',
-        iconUrl:
-            'https://images.unsplash.com/photo-1605721911519-3dfeb3be25e7?w=200',
-        isUnlocked: true,
-      ),
-      HeritageStamp(
-        id: '4',
-        title: 'Metal Smith',
-        iconUrl:
-            'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?w=200',
-        isUnlocked: true,
-      ),
-      HeritageStamp(
-        id: '5',
-        title: 'Wau Maker',
-        iconUrl:
-            'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?w=200',
-        isUnlocked: false,
-      ),
-      HeritageStamp(
-        id: '6',
-        title: 'Pottery Artist',
-        iconUrl:
-            'https://images.unsplash.com/photo-1565193998771-e64b81bd957d?w=200',
-        isUnlocked: false,
-      ),
-    ];
-
     _activeTasks = [
       HeritageTask(
         id: '101',
@@ -1340,19 +1550,6 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> verifyQRCode(String code) async {
-    await Future.delayed(const Duration(seconds: 1));
-    for (int i = 0; i < _stamps.length; i++) {
-      if (!_stamps[i].isUnlocked) {
-        _stamps[i] = HeritageStamp(
-          id: _stamps[i].id,
-          title: _stamps[i].title,
-          iconUrl: _stamps[i].iconUrl,
-          isUnlocked: true,
-        );
-        break;
-      }
-    }
-    _rankProgress = 0.85;
-    notifyListeners();
+    await loadPassport();
   }
 }
