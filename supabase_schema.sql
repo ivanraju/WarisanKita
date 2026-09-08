@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS public.users (
     
     -- Account Flags & Timestamps
     is_suspended BOOLEAN DEFAULT FALSE,
+    suspension_reason TEXT,
     created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -100,6 +101,9 @@ BEGIN
     END IF;
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='is_suspended') THEN
         ALTER TABLE public.users ADD COLUMN is_suspended BOOLEAN DEFAULT FALSE;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='suspension_reason') THEN
+        ALTER TABLE public.users ADD COLUMN suspension_reason TEXT;
     END IF;
 END $$;
 

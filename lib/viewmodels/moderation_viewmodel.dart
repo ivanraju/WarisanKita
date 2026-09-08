@@ -703,12 +703,18 @@ class ModerationViewModel extends ChangeNotifier {
         debugPrint('Cannot suspend an Administrator account.');
         return;
       }
-      _registeredUsers[idx] = user.copyWith(isSuspended: true, status: 'SUSPENDED');
+      final trimmedReason = (reason != null && reason.trim().isNotEmpty) ? reason.trim() : null;
+      _registeredUsers[idx] = user.copyWith(
+        isSuspended: true,
+        status: 'SUSPENDED',
+        suspensionReason: trimmedReason,
+      );
 
       await _repository.updateArtisanStatus(
         email: user.email,
         newStatus: 'SUSPENDED',
         newRole: user.role,
+        suspensionReason: trimmedReason,
       );
 
       notifyListeners();
@@ -719,12 +725,17 @@ class ModerationViewModel extends ChangeNotifier {
     final idx = _registeredUsers.indexWhere((u) => u.id == id);
     if (idx != -1) {
       final user = _registeredUsers[idx];
-      _registeredUsers[idx] = user.copyWith(isSuspended: false, status: 'ACTIVE');
+      _registeredUsers[idx] = user.copyWith(
+        isSuspended: false,
+        status: 'ACTIVE',
+        clearSuspensionReason: true,
+      );
 
       await _repository.updateArtisanStatus(
         email: user.email,
         newStatus: 'ACTIVE',
         newRole: user.role,
+        suspensionReason: null,
       );
 
       notifyListeners();

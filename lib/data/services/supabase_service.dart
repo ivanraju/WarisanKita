@@ -130,6 +130,7 @@ class SupabaseService {
       'status': 'SUSPENDED',
       'joinedDate': 'Dec 2025',
       'isSuspended': true,
+      'suspensionReason': 'Violation of community guidelines',
     },
     'admin@warisankita.my': {
       'id': 'a0000000-0000-0000-0000-000000000001',
@@ -2053,6 +2054,7 @@ class SupabaseService {
     required String newStatus,
     required String newRole,
     bool updateArtisanProfileOnly = false,
+    String? suspensionReason,
   }) async {
     final cleanEmail = email.trim().toLowerCase();
     if (_userStore.containsKey(cleanEmail)) {
@@ -2061,6 +2063,8 @@ class SupabaseService {
         _userStore[cleanEmail]!['artisan_status'] = newStatus;
         _userStore[cleanEmail]!['status'] = 'ACTIVE';
         _userStore[cleanEmail]!['isSuspended'] = false;
+        _userStore[cleanEmail]!['suspensionReason'] = null;
+        _userStore[cleanEmail]!['suspension_reason'] = null;
         if (newRole.isNotEmpty) {
           _userStore[cleanEmail]!['role'] = newRole;
         }
@@ -2068,6 +2072,13 @@ class SupabaseService {
         _userStore[cleanEmail]!['status'] = newStatus;
         _userStore[cleanEmail]!['role'] = newRole;
         _userStore[cleanEmail]!['isSuspended'] = (newStatus == 'SUSPENDED');
+        if (newStatus == 'SUSPENDED') {
+          _userStore[cleanEmail]!['suspensionReason'] = suspensionReason;
+          _userStore[cleanEmail]!['suspension_reason'] = suspensionReason;
+        } else {
+          _userStore[cleanEmail]!['suspensionReason'] = null;
+          _userStore[cleanEmail]!['suspension_reason'] = null;
+        }
         if (newRole == 'Artisan & Tourist') {
           _userStore[cleanEmail]!['roles'] = ['Tourist', 'Artisan'];
         } else if (newRole == 'Artisan') {
@@ -2086,12 +2097,21 @@ class SupabaseService {
               map['artisan_status'] = newStatus;
               map['status'] = 'ACTIVE';
               map['isSuspended'] = false;
+              map['suspensionReason'] = null;
+              map['suspension_reason'] = null;
               if (newRole.isNotEmpty) {
                 map['role'] = newRole;
               }
             } else {
               map['status'] = newStatus;
               map['isSuspended'] = (newStatus == 'SUSPENDED');
+              if (newStatus == 'SUSPENDED') {
+                map['suspensionReason'] = suspensionReason;
+                map['suspension_reason'] = suspensionReason;
+              } else {
+                map['suspensionReason'] = null;
+                map['suspension_reason'] = null;
+              }
               if (newRole.isNotEmpty) {
                 map['role'] = newRole;
               }
@@ -2133,10 +2153,29 @@ class SupabaseService {
             'role': newRole,
             'updated_at': DateTime.now().toIso8601String(),
           };
-          await client
-              .from('users')
-              .update(updatePayload)
-              .ilike('email', cleanEmail);
+          if (newStatus == 'SUSPENDED') {
+            updatePayload['is_suspended'] = true;
+            if (suspensionReason != null) {
+              updatePayload['suspension_reason'] = suspensionReason;
+            }
+          } else if (newStatus == 'ACTIVE') {
+            updatePayload['is_suspended'] = false;
+            updatePayload['suspension_reason'] = null;
+          }
+          try {
+            await client
+                .from('users')
+                .update(updatePayload)
+                .ilike('email', cleanEmail);
+          } catch (updateErr) {
+            // Fallback if remote table does not yet have suspension_reason column
+            debugPrint('Direct user table update note: $updateErr');
+            updatePayload.remove('suspension_reason');
+            await client
+                .from('users')
+                .update(updatePayload)
+                .ilike('email', cleanEmail);
+          }
         }
 
         // Update artisan_profiles status matching user_id
