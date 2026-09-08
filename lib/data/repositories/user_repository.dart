@@ -191,4 +191,7 @@ class UserRepository {
   }
 
   Future<void> signOut() => _service.signOut();
+
+  Future<void> deleteAccount({required String userId, required String email}) =>
+      _service.deleteAccount(userId: userId, email: email);
 }

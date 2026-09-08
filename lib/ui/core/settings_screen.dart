@@ -49,25 +49,69 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _handleDeleteAccount(LanguageViewModel langVM) {
+    final nav = Navigator.of(context, rootNavigator: true);
+    final authVM = context.read<AuthViewModel>();
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogCtx) => AlertDialog(
         backgroundColor: isDark ? const Color(0xFF0D2825) : Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(langVM.translate('Delete Account'), style: GoogleFonts.dmSerifDisplay(color: const Color(0xFFEF4444))),
+        title: Text(
+          langVM.translate('Delete Account'),
+          style: GoogleFonts.dmSerifDisplay(color: const Color(0xFFEF4444)),
+        ),
         content: Text(
-          langVM.translate('This action is permanent and will remove all your data, unlocked heritage badges, and craft profile records.'),
-          style: GoogleFonts.plusJakartaSans(fontSize: 13, color: isDark ? Colors.white70 : const Color(0xFF334155)),
+          langVM.translate(
+            'This action is permanent and will remove all your data, unlocked heritage badges, and craft profile records.',
+          ),
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 13,
+            color: isDark ? Colors.white70 : const Color(0xFF334155),
+          ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(langVM.translate('Cancel'), style: TextStyle(color: isDark ? Colors.white60 : null))),
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(),
+            child: Text(
+              langVM.translate('Cancel'),
+              style: TextStyle(color: isDark ? Colors.white60 : null),
+            ),
+          ),
           FilledButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+            onPressed: () async {
+              Navigator.of(dialogCtx).pop();
+              final result = await authVM.deleteCurrentAccount();
+              if (!mounted) return;
+              if (result.success) {
+                scaffoldMessenger.showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      langVM.translate(
+                        'Your account has been permanently deleted.',
+                      ),
+                    ),
+                    backgroundColor: const Color(0xFF004D40),
+                  ),
+                );
+                nav.pushNamedAndRemoveUntil('/login', (route) => false);
+              } else {
+                scaffoldMessenger.showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      result.message ??
+                          langVM.translate('Failed to delete account.'),
+                    ),
+                    backgroundColor: const Color(0xFFEF4444),
+                  ),
+                );
+              }
             },
-            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444),
+            ),
             child: Text(langVM.translate('PERMANENTLY DELETE')),
           ),
         ],
@@ -77,7 +121,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final isDark = context.watch<ThemeViewModel>().isDarkMode;
     final langVM = context.watch<LanguageViewModel>();
     final authVM = context.watch<AuthViewModel>();

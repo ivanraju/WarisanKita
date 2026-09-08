@@ -2419,6 +2419,77 @@ class SupabaseService {
     }
   }
 
+  Future<void> deleteAccount({
+    required String userId,
+    required String email,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 200));
+    final cleanEmail = email.trim().toLowerCase();
+
+    // 1. Remove user from local in-memory store
+    _userStore.remove(cleanEmail);
+    _userStore.removeWhere(
+      (key, value) =>
+          key.toLowerCase() == cleanEmail ||
+          (userId.isNotEmpty && value['id'] == userId),
+    );
+
+    // 2. Clear any pending OTPs or reset tokens for this account
+    _pendingEmailOtps.remove(cleanEmail);
+    _resetTokens.removeWhere(
+      (key, value) =>
+          (value['email'] as String?)?.toLowerCase() == cleanEmail,
+    );
+
+    // 3. Clear local session from SharedPreferences
+    await _clearAuthSession();
+
+    // 4. Delete from Supabase if connected
+    final client = _client;
+    if (client != null) {
+      try {
+        // Delete artisan profile records if any exist
+        if (userId.isNotEmpty) {
+          try {
+            await client
+                .from('artisan_profiles')
+                .delete()
+                .eq('user_id', userId);
+          } catch (e) {
+            debugPrint('Supabase deleteAccount artisan_profiles by user_id note: $e');
+          }
+        }
+
+        // Delete from public.users table
+        if (userId.isNotEmpty) {
+          try {
+            await client.from('users').delete().eq('id', userId);
+          } catch (e) {
+            debugPrint('Supabase deleteAccount users by id note: $e');
+          }
+        }
+
+        // Fallback delete by email in case id differed
+        if (cleanEmail.isNotEmpty) {
+          try {
+            await client.from('users').delete().ilike('email', cleanEmail);
+          } catch (e) {
+            debugPrint('Supabase deleteAccount users by email note: $e');
+          }
+        }
+
+        // Sign out Supabase auth session
+        try {
+          await client.auth.signOut();
+        } catch (e) {
+          debugPrint('Supabase deleteAccount auth.signOut note: $e');
+        }
+      } catch (e) {
+        debugPrint('Supabase deleteAccount general note: $e');
+      }
+    }
+  }
+
   // --- Directory Services ---
 
   Future<List<ArtisanModel>> fetchArtisans() async {
