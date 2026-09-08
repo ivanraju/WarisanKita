@@ -648,7 +648,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                   TextFormField(
                     controller: _ssmController,
                     decoration: InputDecoration(
-                      labelText: 'SSM Business / Kraftangan Registration No. *',
+                      labelText: 'SSM / Kraftangan Reg. No. *',
                       hintText: 'e.g. 202601004821 or KT/2026/0491',
                       prefixIcon: const Icon(
                         Icons.badge_outlined,
@@ -751,9 +751,9 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                     controller: _bioController,
                     maxLines: 3,
                     decoration: InputDecoration(
-                      labelText: 'Studio Heritage Bio & Master Story',
+                      labelText: 'Studio Heritage Bio',
                       hintText:
-                          'Describe your heritage craft experience, workshop history, and master lineage...',
+                          'Describe your craft background, workshop history, and master lineage...',
                       prefixIcon: const Padding(
                         padding: EdgeInsets.only(bottom: 45),
                         child: Icon(
@@ -1132,6 +1132,8 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                 children: [
                   Text(
                     title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.plusJakartaSans(
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
@@ -1140,6 +1142,8 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                   ),
                   Text(
                     subtitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 10.5,
                       color: isAttached
