@@ -252,6 +252,9 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
           experience: _experienceController.text.trim().isEmpty ? '25+ Years Experience' : _experienceController.text.trim(),
           imageUrl: _portfolioImages.firstWhere((img) => img.isNotEmpty, orElse: () => 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&auto=format&fit=crop&q=80'),
           tags: _toolsAndMaterials,
+          address: _workshopAddress,
+          latitude: _selectedWorkshopPin?.latitude,
+          longitude: _selectedWorkshopPin?.longitude,
         ),
       ),
     );

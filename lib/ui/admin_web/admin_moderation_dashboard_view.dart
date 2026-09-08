@@ -429,7 +429,27 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
                 const SizedBox(width: 8),
                 IconButton(
                   icon: const Icon(Icons.notifications_none_rounded, color: Color(0xFF64748B)),
-                  onPressed: () {},
+                  onPressed: () {
+                    final pendingCount = context.read<ModerationViewModel>().pendingArtisans.length;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Row(
+                          children: [
+                            const Icon(Icons.notifications_active_rounded, color: Color(0xFF10B981), size: 18),
+                            const SizedBox(width: 10),
+                            Text(
+                              pendingCount > 0
+                                  ? '$pendingCount pending artisan application(s) awaiting review.'
+                                  : 'All caught up! No pending moderation tasks.',
+                              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                        behavior: SnackBarBehavior.floating,
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  },
                   tooltip: 'Notifications',
                 ),
               ],

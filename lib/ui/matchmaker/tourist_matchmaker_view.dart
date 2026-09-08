@@ -223,6 +223,9 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
           state: artisan.locationName,
           imageUrl: artisan.imageUrl,
           rating: artisan.rating,
+          address: artisan.workshop?.address,
+          latitude: artisan.latitude,
+          longitude: artisan.longitude,
         ),
       ),
     );

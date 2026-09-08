@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:warisan_kita/ui/tourist/artisan_direct_chat_screen.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:warisan_kita/data/services/google_map_service.dart';
 import 'package:warisan_kita/ui/tourist/quest_completion_screen.dart';
+import 'package:warisan_kita/ui/tourist/widgets/workshop_map_picker.dart';
 
 class ArtisanDetailScreen extends StatefulWidget {
   final String artisanName;
@@ -13,6 +16,9 @@ class ArtisanDetailScreen extends StatefulWidget {
   final double rating;
   final String experience;
   final List<String> tags;
+  final String? address;
+  final double? latitude;
+  final double? longitude;
 
   const ArtisanDetailScreen({
     super.key,
@@ -25,6 +31,9 @@ class ArtisanDetailScreen extends StatefulWidget {
     this.rating = 4.9,
     this.experience = '25+ Years Experience',
     this.tags = const [],
+    this.address,
+    this.latitude,
+    this.longitude,
   });
 
   @override
@@ -35,6 +44,28 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
   final PageController _pageController = PageController();
   int _currentCarouselIndex = 0;
   bool _isPlayingAudioLore = false;
+  GoogleMapController? _mapController;
+  late final LatLng? _workshopPin;
+  late final LatLng _mapTarget;
+
+  static const Map<String, LatLng> _stateCenters = {
+    'Johor': LatLng(1.4927, 103.7414),
+    'Kedah': LatLng(6.1184, 100.3685),
+    'Kelantan': LatLng(6.1254, 102.2381),
+    'Melaka': LatLng(2.1896, 102.2501),
+    'Negeri Sembilan': LatLng(2.7258, 101.9424),
+    'Pahang': LatLng(3.8077, 103.3260),
+    'Penang': LatLng(5.4141, 100.3288),
+    'Perak': LatLng(4.5975, 101.0901),
+    'Perlis': LatLng(6.4414, 100.1986),
+    'Sabah': LatLng(5.9804, 116.0735),
+    'Sarawak': LatLng(1.5533, 110.3592),
+    'Selangor': LatLng(3.0738, 101.5183),
+    'Terengganu': LatLng(5.3117, 103.1324),
+    'Kuala Lumpur': LatLng(3.1390, 101.6869),
+    'Putrajaya': LatLng(2.9264, 101.6964),
+    'Labuan': LatLng(5.2831, 115.2308),
+  };
 
   late final List<String> _carouselImages = widget.imageUrls != null && widget.imageUrls!.isNotEmpty
       ? widget.imageUrls!
@@ -45,9 +76,52 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
         ];
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.latitude != null && widget.longitude != null) {
+      _workshopPin = LatLng(widget.latitude!, widget.longitude!);
+      _mapTarget = _workshopPin!;
+    } else {
+      _workshopPin = null;
+      _mapTarget = _stateCenters[widget.state] ?? const LatLng(2.1896, 102.2501);
+    }
+  }
+
+  @override
   void dispose() {
     _pageController.dispose();
+    _mapController?.dispose();
     super.dispose();
+  }
+
+  void _openWorkshopMap() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => WorkshopMapPickerPage(
+          initialState: widget.state,
+          initialLocation: _workshopPin,
+          initialAddress: widget.address,
+          stateCenters: _stateCenters,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openDirections() async {
+    final target = _workshopPin ?? _mapTarget;
+    final uri = await const GoogleMapService().directionsTo(
+      latitude: target.latitude,
+      longitude: target.longitude,
+    );
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open map directions')),
+        );
+      }
+    }
   }
 
   void _toggleAudioLore() {
@@ -89,7 +163,28 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                 backgroundColor: Colors.black.withValues(alpha: 0.4),
                 child: IconButton(
                   icon: const Icon(Icons.share_rounded, color: Colors.white),
-                  onPressed: () {},
+                  tooltip: 'Share Artisan Profile',
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Row(
+                          children: [
+                            const Icon(Icons.check_circle_rounded, color: Color(0xFFFFD54F), size: 18),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                '🔗 Link copied: https://warisankita.my/artisan/${Uri.encodeComponent(widget.artisanName)}',
+                                style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ],
+                        ),
+                        backgroundColor: const Color(0xFF004D40),
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    );
+                  },
                 ),
               ),
               const SizedBox(width: 12),
@@ -514,74 +609,166 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                   const SizedBox(height: 28),
 
                   // Studio Location Map Card
-                  Text(
-                    'Studio Location & Workshop Map',
-                    style: GoogleFonts.dmSerifDisplay(
-                      fontSize: 20,
-                      color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
-                    ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Studio Location & Workshop Map',
+                          style: GoogleFonts.dmSerifDisplay(
+                            fontSize: 19,
+                            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                          ),
+                        ),
+                      ),
+                      if (_workshopPin != null) ...[
+                        const SizedBox(width: 8),
+                        TextButton.icon(
+                          onPressed: _openDirections,
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          icon: Icon(
+                            Icons.directions_rounded,
+                            size: 16,
+                            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                          ),
+                          label: Text(
+                            'Directions',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 12),
                   Container(
-                    height: 140,
+                    height: 180,
                     width: double.infinity,
                     decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF0D2825) : const Color(0xFFE2E8F0),
+                      color: isDark ? const Color(0xFF0D2825) : const Color(0xFFE8EFEC),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: isDark ? const Color(0xFF1E3A34) : Colors.black.withValues(alpha: 0.06)),
+                      border: Border.all(
+                        color: _workshopPin != null
+                            ? const Color(0xFF10B981)
+                            : (isDark ? const Color(0xFF1E3A34) : const Color(0xFFD7E0DC)),
+                        width: _workshopPin != null ? 1.5 : 1,
+                      ),
                     ),
+                    clipBehavior: Clip.antiAlias,
                     child: Stack(
-                      alignment: Alignment.center,
                       children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(20),
-                          child: Container(
-                            color: isDark ? const Color(0xFF041412) : const Color(0xFFE0E7FF),
-                            child: Center(
-                              child: Icon(
-                                Icons.map_outlined,
-                                size: 80,
-                                color: isDark ? const Color(0xFF1E3A34) : Colors.indigo.withValues(alpha: 0.2),
+                        Positioned.fill(
+                          child: GoogleMap(
+                            initialCameraPosition: CameraPosition(
+                              target: _mapTarget,
+                              zoom: _workshopPin != null ? 14 : 11,
+                            ),
+                            onMapCreated: (controller) {
+                              _mapController = controller;
+                            },
+                            markers: _workshopPin == null
+                                ? const <Marker>{}
+                                : {
+                                    Marker(
+                                      markerId: const MarkerId('workshop_pin'),
+                                      position: _workshopPin,
+                                      infoWindow: InfoWindow(
+                                        title: widget.artisanName,
+                                        snippet: widget.craftCategory,
+                                      ),
+                                      icon: BitmapDescriptor.defaultMarkerWithHue(
+                                        BitmapDescriptor.hueOrange,
+                                      ),
+                                    ),
+                                  },
+                            zoomControlsEnabled: false,
+                            mapToolbarEnabled: false,
+                            myLocationButtonEnabled: false,
+                            myLocationEnabled: false,
+                            compassEnabled: false,
+                          ),
+                        ),
+                        Positioned.fill(
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: _openWorkshopMap,
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          top: 10,
+                          right: 10,
+                          child: IgnorePointer(
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF0D2825) : const Color(0xFF004D40),
+                                borderRadius: BorderRadius.circular(20),
+                                border: isDark ? Border.all(color: const Color(0xFFFFD54F)) : null,
+                                boxShadow: const [
+                                  BoxShadow(color: Colors.black26, blurRadius: 8),
+                                ],
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.open_in_full_rounded,
+                                      color: isDark ? const Color(0xFFFFD54F) : Colors.white,
+                                      size: 14,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Open Large Map',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        color: isDark ? const Color(0xFFFFD54F) : Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
                         ),
-                        Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFEF4444),
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 4))
-                                ],
-                              ),
-                              child: const Icon(Icons.location_on_rounded, color: Colors.white, size: 24),
-                            ),
-                            const SizedBox(height: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: isDark ? const Color(0xFF0D2825) : Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                border: isDark ? Border.all(color: const Color(0xFF1E3A34)) : null,
-                                boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
-                              ),
-                              child: Text(
-                                'Kampung Morten, ${widget.state} (12 mins away)',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  color: isDark ? Colors.white : const Color(0xFF1E293B),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
                       ],
                     ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.location_on_rounded,
+                        size: 16,
+                        color: _workshopPin != null
+                            ? const Color(0xFFEF4444)
+                            : (isDark ? Colors.white54 : const Color(0xFF64748B)),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          widget.address != null && widget.address!.trim().isNotEmpty
+                              ? widget.address!
+                              : 'Kampung Morten, ${widget.state}',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.white70 : const Color(0xFF334155),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
 
                   const SizedBox(height: 100),
@@ -605,59 +792,30 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
             ],
             border: Border(top: BorderSide(color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFE2E8F0))),
           ),
-          child: Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => ArtisanDirectChatScreen(
-                          artisanName: widget.artisanName,
-                          craftCategory: widget.craftCategory,
-                          imageUrl: widget.imageUrl,
-                        ),
-                      ),
-                    );
-                  },
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40), width: 1.5),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => QuestCompletionScreen(
+                      workshopName: widget.artisanName,
+                      craftCategory: widget.craftCategory,
+                    ),
                   ),
-                  icon: Icon(Icons.chat_bubble_outline_rounded, color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40), size: 18),
-                  label: Text(
-                    'Chat Master',
-                    style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40)),
-                  ),
-                ),
+                );
+              },
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF004D40),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: FilledButton.icon(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => QuestCompletionScreen(
-                          workshopName: widget.artisanName,
-                          craftCategory: widget.craftCategory,
-                        ),
-                      ),
-                    );
-                  },
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF004D40),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  ),
-                  icon: const Icon(Icons.stars_rounded, color: Color(0xFFFFD54F), size: 18),
-                  label: Text(
-                    'START QUEST',
-                    style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w900, letterSpacing: 0.5),
-                  ),
-                ),
+              icon: const Icon(Icons.stars_rounded, color: Color(0xFFFFD54F), size: 18),
+              label: Text(
+                'START QUEST',
+                style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w900, letterSpacing: 0.5),
               ),
-            ],
+            ),
           ),
         ),
       ),

@@ -71,6 +71,9 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
         'bio': langVM.translate('Master Pak Mat has been hand-crafting traditional clay labu sayong and ceramic vessels for over 25 years in Kampung Morten.'),
         'exp': '+150 EXP',
         'experienceYears': '25 Yrs',
+        'address': 'Kampung Morten, 75300 Melaka',
+        'latitude': 2.2008,
+        'longitude': 102.2505,
       },
       {
         'id': 'a2',
@@ -90,6 +93,9 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
         'bio': langVM.translate('Royal songket weaving utilizing metallic gold and silver threads on handloom wooden apparatus in Kota Bharu.'),
         'exp': '+200 EXP',
         'experienceYears': '32 Yrs',
+        'address': 'Kampung Penambang, 15350 Kota Bharu, Kelantan',
+        'latitude': 6.1384,
+        'longitude': 102.2476,
       },
       {
         'id': 'a3',
@@ -109,6 +115,9 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
         'bio': langVM.translate('Hand-drawn canting batik studio utilizing organic natural dyes and silk fabrics in coastal Terengganu.'),
         'exp': '+180 EXP',
         'experienceYears': '18 Yrs',
+        'address': 'Pasir Panjang, 21100 Kuala Terengganu, Terengganu',
+        'latitude': 5.3117,
+        'longitude': 103.1324,
       },
       {
         'id': 'a4',
@@ -128,6 +137,9 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
         'bio': langVM.translate('Ornate timber carving specializing in traditional Malay architectural wood panels and keris handles in Perak.'),
         'exp': '+160 EXP',
         'experienceYears': '29 Yrs',
+        'address': 'Jalan Besar, 33000 Kuala Kangsar, Perak',
+        'latitude': 4.7735,
+        'longitude': 100.9419,
       },
     ];
   }
@@ -354,6 +366,9 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
       'exp': '+150 EXP',
       'experienceYears': a.experience,
       'tags': a.tags,
+      'address': a.address,
+      'latitude': a.latitude,
+      'longitude': a.longitude,
       'artisanModel': a, // pass the model for the detail screen
     }).toList();
 
@@ -971,6 +986,9 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                     bio: artisan['bio'],
                     rating: artisan['rating'],
                     tags: List<String>.from(artisan['tags'] ?? []),
+                    address: artisan['address'] as String?,
+                    latitude: (artisan['latitude'] as num?)?.toDouble(),
+                    longitude: (artisan['longitude'] as num?)?.toDouble(),
                   ),
                 ),
               );
@@ -1174,6 +1192,9 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                                 bio: artisan['bio'],
                                 rating: artisan['rating'],
                                 tags: List<String>.from(artisan['tags'] ?? []),
+                                address: artisan['address'] as String?,
+                                latitude: (artisan['latitude'] as num?)?.toDouble(),
+                                longitude: (artisan['longitude'] as num?)?.toDouble(),
                               ),
                             ),
                           );
@@ -1253,6 +1274,9 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
     final rating = (artisan['rating'] is num) ? (artisan['rating'] as num).toDouble() : 4.8;
     final tags = artisan['tags'] != null ? List<String>.from(artisan['tags']) : <String>[];
     final experience = artisan['experienceYears']?.toString() ?? (artisan['experience']?.toString() ?? '20+ Years');
+    final address = artisan['address']?.toString();
+    final latitude = (artisan['latitude'] is num) ? (artisan['latitude'] as num).toDouble() : null;
+    final longitude = (artisan['longitude'] is num) ? (artisan['longitude'] as num).toDouble() : null;
 
     return Container(
       width: 250,
@@ -1285,6 +1309,9 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                   rating: rating,
                   experience: experience,
                   tags: tags,
+                  address: address,
+                  latitude: latitude,
+                  longitude: longitude,
                 ),
               ),
             );

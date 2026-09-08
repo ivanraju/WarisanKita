@@ -10,6 +10,9 @@ class ArtisanModel {
   final int workshopCount;
   final List<String> tags;
   final List<String> images;
+  final String? address;
+  final double? latitude;
+  final double? longitude;
 
   ArtisanModel({
     required this.id,
@@ -23,6 +26,9 @@ class ArtisanModel {
     this.workshopCount = 0,
     this.tags = const [],
     this.images = const [],
+    this.address,
+    this.latitude,
+    this.longitude,
   });
 
   factory ArtisanModel.fromMap(Map<String, dynamic> map) {
@@ -54,6 +60,24 @@ class ArtisanModel {
       allImages.add(extractedImageUrl);
     }
 
+    double? lat;
+    if (map['latitude'] != null) {
+      if (map['latitude'] is num) {
+        lat = (map['latitude'] as num).toDouble();
+      } else {
+        lat = double.tryParse(map['latitude'].toString());
+      }
+    }
+
+    double? lng;
+    if (map['longitude'] != null) {
+      if (map['longitude'] is num) {
+        lng = (map['longitude'] as num).toDouble();
+      } else {
+        lng = double.tryParse(map['longitude'].toString());
+      }
+    }
+
     return ArtisanModel(
       id: map['id'] ?? '',
       name: map['studio_name'] ?? 'Unknown Studio',
@@ -66,6 +90,9 @@ class ArtisanModel {
       workshopCount: 0,
       tags: map['tags'] != null ? List<String>.from(map['tags']) : [map['craft_category'] ?? 'Heritage'],
       images: allImages,
+      address: map['address'] as String?,
+      latitude: lat,
+      longitude: lng,
     );
   }
 }
