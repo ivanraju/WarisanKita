@@ -18,6 +18,48 @@ class SupabaseService {
   static const String _keyAuthUser = 'wk_last_auth_user';
   static const String _keyAuthEmail = 'wk_last_auth_email';
   static const String _keyActiveRole = 'wk_last_active_role';
+  static const String _keyDeletedAccounts = 'wk_deleted_accounts';
+  static final Set<String> _deletedAccounts = {};
+
+  static Future<void> _recordDeletedAccount(String email) async {
+    final clean = email.trim().toLowerCase();
+    _deletedAccounts.add(clean);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final list = prefs.getStringList(_keyDeletedAccounts) ?? [];
+      if (!list.contains(clean)) {
+        list.add(clean);
+        await prefs.setStringList(_keyDeletedAccounts, list);
+      }
+    } catch (_) {}
+  }
+
+  static Future<void> _unrecordDeletedAccount(String email) async {
+    final clean = email.trim().toLowerCase();
+    _deletedAccounts.remove(clean);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final list = prefs.getStringList(_keyDeletedAccounts) ?? [];
+      if (list.contains(clean)) {
+        list.remove(clean);
+        await prefs.setStringList(_keyDeletedAccounts, list);
+      }
+    } catch (_) {}
+  }
+
+  static Future<bool> _isAccountDeleted(String email) async {
+    final clean = email.trim().toLowerCase();
+    if (_deletedAccounts.contains(clean)) return true;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final list = prefs.getStringList(_keyDeletedAccounts) ?? [];
+      if (list.contains(clean)) {
+        _deletedAccounts.add(clean);
+        return true;
+      }
+    } catch (_) {}
+    return false;
+  }
 
   static Future<void> _saveAuthSession(UserModel user) async {
     try {
@@ -289,6 +331,10 @@ class SupabaseService {
       return const ExistingAccountCheck(exists: false);
     }
 
+    if (await _isAccountDeleted(cleanEmail)) {
+      return const ExistingAccountCheck(exists: false);
+    }
+
     // 1. Check local prototype/in-memory store
     if (_userStore.containsKey(cleanEmail)) {
       final u = _userStore[cleanEmail]!;
@@ -543,6 +589,21 @@ class SupabaseService {
         storeMatch = true;
         break;
       }
+    }
+
+    if (await _isAccountDeleted(cleanEmail) ||
+        await _isAccountDeleted(rawInput)) {
+      final client = _client;
+      if (client != null) {
+        try {
+          await client.auth.signOut();
+        } catch (_) {}
+      }
+      await _clearAuthSession();
+      _userStore.remove(cleanEmail);
+      throw Exception(
+        'ACCOUNT DELETED: This account has been permanently deleted. Please create a new account.',
+      );
     }
 
     final client = _client;
@@ -834,6 +895,7 @@ class SupabaseService {
     List<String>? photos,
   }) async {
     final cleanEmail = email.trim().toLowerCase();
+    await _unrecordDeletedAccount(cleanEmail);
     await Future.delayed(const Duration(milliseconds: 600));
 
     // Account already exists check:
@@ -2495,7 +2557,10 @@ class SupabaseService {
     await Future.delayed(const Duration(milliseconds: 200));
     final cleanEmail = email.trim().toLowerCase();
 
-    // 1. Remove user from local in-memory store
+    // 1. Record in persistent deleted accounts store
+    await _recordDeletedAccount(cleanEmail);
+
+    // 2. Remove user from local in-memory store
     _userStore.remove(cleanEmail);
     _userStore.removeWhere(
       (key, value) =>
@@ -2503,17 +2568,17 @@ class SupabaseService {
           (userId.isNotEmpty && value['id'] == userId),
     );
 
-    // 2. Clear any pending OTPs or reset tokens for this account
+    // 3. Clear any pending OTPs or reset tokens for this account
     _pendingEmailOtps.remove(cleanEmail);
     _resetTokens.removeWhere(
       (key, value) =>
           (value['email'] as String?)?.toLowerCase() == cleanEmail,
     );
 
-    // 3. Clear local session from SharedPreferences
+    // 4. Clear local session from SharedPreferences
     await _clearAuthSession();
 
-    // 4. Delete from Supabase if connected
+    // 5. Delete or deactivate in Supabase if connected
     final client = _client;
     if (client != null) {
       final effectiveUserId = userId.isNotEmpty
@@ -2521,7 +2586,17 @@ class SupabaseService {
           : (client.auth.currentUser?.id ?? '');
 
       try {
-        // A. Call stored procedure if available in database
+        // A. Try admin_update_user_status RPC (SECURITY DEFINER, updates users & auth.users metadata)
+        try {
+          await client.rpc('admin_update_user_status', params: {
+            'p_email': cleanEmail,
+            'p_status': 'DELETED',
+          });
+        } catch (rpcErr) {
+          debugPrint('admin_update_user_status RPC note: $rpcErr');
+        }
+
+        // B. Try delete_user_account RPC if present
         if (effectiveUserId.isNotEmpty) {
           try {
             await client.rpc(
@@ -2533,106 +2608,40 @@ class SupabaseService {
           }
         }
 
-        // B. Cascade delete all dependent relational records
-        if (effectiveUserId.isNotEmpty) {
-          final tables = [
-            'quest_progress',
-            'task_progress',
-            'passport_stamps',
-            'user_experience',
-            'user_task_xp_awards',
-            'artisan_documents',
-            'artisan_profiles',
-            'forum_post_votes',
-            'forum_reply_votes',
-            'heritage_task_change_requests',
-            'quest_change_requests',
-          ];
-          for (final tbl in tables) {
-            try {
-              await client.from(tbl).delete().eq('user_id', effectiveUserId);
-            } catch (e) {
-              debugPrint('deleteAccount $tbl note: $e');
-            }
-          }
-
-          try {
-            await client
-                .from('forum_reports')
-                .delete()
-                .eq('reporter_id', effectiveUserId);
-          } catch (e) {
-            debugPrint('deleteAccount forum_reports note: $e');
-          }
-
-          try {
-            await client
-                .from('digital_plaques')
-                .delete()
-                .eq('artisan_id', effectiveUserId);
-          } catch (e) {
-            debugPrint('deleteAccount digital_plaques note: $e');
-          }
-        }
-
-        // C. Delete from public.users table directly
-        bool hardDeleted = false;
+        // C. Clean up artisan profile record
         if (effectiveUserId.isNotEmpty) {
           try {
-            final res = await client
-                .from('users')
+            await client
+                .from('artisan_profiles')
                 .delete()
-                .eq('id', effectiveUserId)
-                .select();
-            if (res.isNotEmpty) hardDeleted = true;
+                .eq('user_id', effectiveUserId);
           } catch (e) {
-            debugPrint('deleteAccount users by id note: $e');
+            debugPrint('deleteAccount artisan_profiles note: $e');
           }
         }
 
-        if (!hardDeleted && cleanEmail.isNotEmpty) {
-          try {
-            final res = await client
+        // D. Update public.users status to DELETED (using only existing columns)
+        try {
+          final updateData = {
+            'status': 'DELETED',
+            'updated_at': DateTime.now().toIso8601String(),
+          };
+          if (effectiveUserId.isNotEmpty) {
+            await client
                 .from('users')
-                .delete()
-                .ilike('email', cleanEmail)
-                .select();
-            if (res.isNotEmpty) hardDeleted = true;
-          } catch (e) {
-            debugPrint('deleteAccount users by email note: $e');
+                .update(updateData)
+                .eq('id', effectiveUserId);
+          } else if (cleanEmail.isNotEmpty) {
+            await client
+                .from('users')
+                .update(updateData)
+                .ilike('email', cleanEmail);
           }
+        } catch (updateErr) {
+          debugPrint('deleteAccount direct users update note: $updateErr');
         }
 
-        // D. If hard delete on public.users is blocked by RLS/FK, mark user DELETED and anonymize
-        if (!hardDeleted) {
-          try {
-            final anonymized =
-                'deleted_${DateTime.now().millisecondsSinceEpoch}@deleted.local';
-            final updateData = {
-              'status': 'DELETED',
-              'is_suspended': true,
-              'suspension_reason': 'ACCOUNT_DELETED',
-              'email': anonymized,
-              'username': null,
-              'updated_at': DateTime.now().toIso8601String(),
-            };
-            if (effectiveUserId.isNotEmpty) {
-              await client
-                  .from('users')
-                  .update(updateData)
-                  .eq('id', effectiveUserId);
-            } else if (cleanEmail.isNotEmpty) {
-              await client
-                  .from('users')
-                  .update(updateData)
-                  .ilike('email', cleanEmail);
-            }
-          } catch (e) {
-            debugPrint('deleteAccount fallback update note: $e');
-          }
-        }
-
-        // E. Update auth user metadata so Supabase Auth recognizes account as DELETED
+        // E. Update Supabase Auth user metadata so it flags as DELETED
         try {
           await client.auth.updateUser(
             UserAttributes(
@@ -2642,8 +2651,8 @@ class SupabaseService {
               },
             ),
           );
-        } catch (e) {
-          debugPrint('deleteAccount auth.updateUser note: $e');
+        } catch (metaErr) {
+          debugPrint('deleteAccount auth.updateUser note: $metaErr');
         }
 
         // F. Sign out Supabase auth session
