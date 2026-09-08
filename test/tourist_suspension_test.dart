@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -31,7 +31,7 @@ void main() {
   });
 
   group('Tourist Account Suspension Guard Tests', () {
-    testWidgets('AccountSuspendedScreen displays suspension info and sign out button with fallback reason', (tester) async {
+    testWidgets('AccountSuspendedScreen displays suspension info, description, and sign out button', (tester) async {
       const suspendedUser = UserModel(
         id: 'tourist-101',
         email: 'suspended.tourist@warisankita.my',
@@ -60,41 +60,9 @@ void main() {
       expect(find.text('ACCOUNT SUSPENDED'), findsOneWidget);
       expect(find.text('Access Suspended'), findsOneWidget);
       expect(find.text('Ahmad Suspended'), findsOneWidget);
-      expect(find.text('REASON FOR SUSPENSION'), findsOneWidget);
-      expect(find.text('Violation of community guidelines and platform terms of service.'), findsOneWidget);
+      expect(find.textContaining('Your account has been administratively suspended due to a moderation review'), findsOneWidget);
       expect(find.byKey(const Key('account_suspended_sign_out_button')), findsOneWidget);
       expect(find.text('Sign Out'), findsOneWidget);
-    });
-
-    testWidgets('AccountSuspendedScreen displays specific admin suspension reason when provided', (tester) async {
-      const suspendedUser = UserModel(
-        id: 'tourist-102',
-        email: 'reason.test@warisankita.my',
-        username: 'abusive_user',
-        displayName: 'Siti Flagged',
-        role: 'Tourist',
-        status: 'SUSPENDED',
-        isSuspended: true,
-        suspensionReason: 'Repeated offensive comments in Live Forum discussion',
-      );
-      authVM.setCurrentUserForTesting(suspendedUser);
-
-      await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            ChangeNotifierProvider<AuthViewModel>.value(value: authVM),
-            ChangeNotifierProvider<LanguageViewModel>.value(value: langVM),
-          ],
-          child: const MaterialApp(
-            home: AccountSuspendedScreen(),
-          ),
-        ),
-      );
-
-      await tester.pumpAndSettle();
-
-      expect(find.text('REASON FOR SUSPENSION'), findsOneWidget);
-      expect(find.text('Repeated offensive comments in Live Forum discussion'), findsOneWidget);
     });
 
     testWidgets('TouristMainScaffold shows AccountSuspendedScreen when user is suspended', (tester) async {
@@ -105,7 +73,6 @@ void main() {
         role: 'Tourist',
         status: 'SUSPENDED',
         isSuspended: true,
-        suspensionReason: 'Fraudulent activity report',
       );
       authVM.setCurrentUserForTesting(suspendedUser);
 
@@ -127,7 +94,6 @@ void main() {
       expect(find.byType(AccountSuspendedScreen), findsOneWidget);
       expect(find.text('ACCOUNT SUSPENDED'), findsOneWidget);
       expect(find.text('Access Suspended'), findsOneWidget);
-      expect(find.text('Fraudulent activity report'), findsOneWidget);
     });
 
     testWidgets('AccountSuspendedScreen Sign Out logs out the user', (tester) async {
@@ -169,22 +135,20 @@ void main() {
       expect(find.text('Login Screen'), findsOneWidget);
     });
 
-    test('ModerationViewModel.suspendUser records reason and reactivateUser clears it', () async {
+    test('ModerationViewModel.suspendUser sets suspended state and reactivateUser clears it', () async {
       final moderationVM = ModerationViewModel(repository: repository);
       final users = await repository.getAllUsers();
       final targetUser = users.firstWhere((u) => !u.isAdmin);
 
-      await moderationVM.suspendUser(targetUser.id, reason: 'Disrespectful forum behavior');
+      await moderationVM.suspendUser(targetUser.id);
       final suspended = moderationVM.registeredUsers.firstWhere((u) => u.id == targetUser.id);
       expect(suspended.isSuspended, isTrue);
       expect(suspended.status, 'SUSPENDED');
-      expect(suspended.suspensionReason, 'Disrespectful forum behavior');
 
       await moderationVM.reactivateUser(targetUser.id);
       final reactivated = moderationVM.registeredUsers.firstWhere((u) => u.id == targetUser.id);
       expect(reactivated.isSuspended, isFalse);
       expect(reactivated.status, 'ACTIVE');
-      expect(reactivated.suspensionReason, isNull);
     });
 
     testWidgets('ArtisanMainScaffold shows AccountSuspendedScreen when whole account is suspended', (tester) async {
@@ -197,7 +161,6 @@ void main() {
         status: 'SUSPENDED',
         isSuspended: true,
         artisanStatus: 'SUSPENDED',
-        suspensionReason: 'Violation of merchant terms and fake SSM',
       );
       authVM.setCurrentUserForTesting(suspendedArtisan);
 
@@ -215,10 +178,9 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Must show AccountSuspendedScreen with exact reason, NOT ArtisanStudioSuspendedScreen
+      // Must show AccountSuspendedScreen, NOT ArtisanStudioSuspendedScreen
       expect(find.byType(AccountSuspendedScreen), findsOneWidget);
       expect(find.text('ACCOUNT SUSPENDED'), findsOneWidget);
-      expect(find.text('Violation of merchant terms and fake SSM'), findsOneWidget);
       expect(find.text('Your account remains active as a Cultural Tourist.'), findsNothing);
     });
   });
