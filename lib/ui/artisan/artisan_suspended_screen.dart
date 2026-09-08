@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
@@ -99,7 +99,60 @@ class ArtisanStudioSuspendedScreen extends StatelessWidget {
                       color: isDark ? Colors.white70 : const Color(0xFF475569),
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
+
+                  if (user?.suspensionReason != null && user!.suspensionReason!.trim().isNotEmpty) ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFD97706).withValues(alpha: isDark ? 0.15 : 0.08),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: const Color(0xFFD97706).withValues(alpha: isDark ? 0.4 : 0.25),
+                          width: 1.2,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.assignment_late_outlined,
+                                color: Color(0xFFD97706),
+                                size: 17,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'REASON FOR SUSPENSION',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFFD97706),
+                                  letterSpacing: 0.8,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            user.suspensionReason!.trim(),
+                            key: const Key('artisan_suspension_reason_text'),
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              height: 1.4,
+                              color: isDark ? Colors.white : const Color(0xFF0F172A),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                  ] else ...[
+                    const SizedBox(height: 4),
+                  ],
 
                   // Tourist Privileges Card
                   Container(

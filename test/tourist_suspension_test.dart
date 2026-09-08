@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:warisan_kita/data/repositories/user_repository.dart';
 import 'package:warisan_kita/data/services/supabase_service.dart';
 import 'package:warisan_kita/domain/models/user.dart';
+import 'package:warisan_kita/ui/artisan/artisan_main_scaffold.dart';
 import 'package:warisan_kita/ui/core/account_suspended_screen.dart';
 import 'package:warisan_kita/ui/tourist/tourist_main_scaffold.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
@@ -184,6 +185,41 @@ void main() {
       expect(reactivated.isSuspended, isFalse);
       expect(reactivated.status, 'ACTIVE');
       expect(reactivated.suspensionReason, isNull);
+    });
+
+    testWidgets('ArtisanMainScaffold shows AccountSuspendedScreen when whole account is suspended', (tester) async {
+      const suspendedArtisan = UserModel(
+        id: 'artisan-105',
+        email: 'artisan.suspended@warisankita.my',
+        username: 'artisan_suspended',
+        displayName: 'Pak Mat Suspended',
+        role: 'Artisan',
+        status: 'SUSPENDED',
+        isSuspended: true,
+        artisanStatus: 'SUSPENDED',
+        suspensionReason: 'Violation of merchant terms and fake SSM',
+      );
+      authVM.setCurrentUserForTesting(suspendedArtisan);
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<AuthViewModel>.value(value: authVM),
+            ChangeNotifierProvider<LanguageViewModel>.value(value: langVM),
+          ],
+          child: const MaterialApp(
+            home: ArtisanMainScaffold(enableLivePolling: false),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Must show AccountSuspendedScreen with exact reason, NOT ArtisanStudioSuspendedScreen
+      expect(find.byType(AccountSuspendedScreen), findsOneWidget);
+      expect(find.text('ACCOUNT SUSPENDED'), findsOneWidget);
+      expect(find.text('Violation of merchant terms and fake SSM'), findsOneWidget);
+      expect(find.text('Your account remains active as a Cultural Tourist.'), findsNothing);
     });
   });
 }
