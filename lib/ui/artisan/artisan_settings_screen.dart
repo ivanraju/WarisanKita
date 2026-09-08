@@ -45,6 +45,68 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
     );
   }
 
+  void _handleDeleteAccount() {
+    final nav = Navigator.of(context, rootNavigator: true);
+    final authVM = context.read<AuthViewModel>();
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF0D2825) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          'Delete Studio Account',
+          style: GoogleFonts.dmSerifDisplay(color: const Color(0xFFEF4444)),
+        ),
+        content: Text(
+          'This action is permanent and will remove your studio profile, crafts, workshop records, and login credentials.',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 13,
+            color: isDark ? Colors.white70 : const Color(0xFF334155),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: isDark ? Colors.white60 : null),
+            ),
+          ),
+          FilledButton(
+            onPressed: () async {
+              Navigator.of(dialogCtx).pop();
+              final result = await authVM.deleteCurrentAccount();
+              if (!mounted) return;
+              if (result.success) {
+                scaffoldMessenger.showSnackBar(
+                  const SnackBar(
+                    content: Text('Your account has been permanently deleted.'),
+                    backgroundColor: Color(0xFF004D40),
+                  ),
+                );
+                nav.pushNamedAndRemoveUntil('/login', (route) => false);
+              } else {
+                scaffoldMessenger.showSnackBar(
+                  SnackBar(
+                    content: Text(result.message ?? 'Failed to delete account.'),
+                    backgroundColor: const Color(0xFFEF4444),
+                  ),
+                );
+              }
+            },
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444),
+            ),
+            child: const Text('PERMANENTLY DELETE'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = context.watch<ThemeViewModel>().isDarkMode;
@@ -231,6 +293,11 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
             icon: Icons.logout_rounded,
             title: 'Logout of Studio Account',
             onTap: _handleLogout,
+          ),
+          _buildDangerTile(
+            icon: Icons.delete_forever_outlined,
+            title: 'Delete Studio Account',
+            onTap: _handleDeleteAccount,
           ),
 
           const SizedBox(height: 32),

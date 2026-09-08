@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 
@@ -42,13 +43,27 @@ class LocationService {
   }
 
   Stream<double> getHeadingStream() {
-    final events = FlutterCompass.events;
-    if (events == null) return const Stream<double>.empty();
+    if (kIsWeb ||
+        (defaultTargetPlatform != TargetPlatform.android &&
+            defaultTargetPlatform != TargetPlatform.iOS)) {
+      return const Stream<double>.empty();
+    }
 
-    return events
-        .map((event) => event.heading)
-        .where((heading) => heading != null && heading.isFinite)
-        .cast<double>();
+    try {
+      final events = FlutterCompass.events;
+      if (events == null) return const Stream<double>.empty();
+
+      return events
+          .handleError((error) {
+            debugPrint('FlutterCompass platform stream error: $error');
+          })
+          .map((event) => event.heading)
+          .where((heading) => heading != null && heading.isFinite)
+          .cast<double>();
+    } catch (e) {
+      debugPrint('FlutterCompass initialization error: $e');
+      return const Stream<double>.empty();
+    }
   }
 
   Future<Position> getCurrentPosition() {
