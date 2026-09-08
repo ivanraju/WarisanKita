@@ -2292,38 +2292,6 @@ class SupabaseService {
       final list = List<Map<String, dynamic>>.from(response);
       final mapped = list.map((map) => ArtisanModel.fromMap(map)).toList();
       debugPrint('Mapped artisans count: ${mapped.length}');
-      
-      if (mapped.isEmpty) {
-        debugPrint('DB returned 0 approved artisans. Falling back to dummy data so directory is not empty...');
-        return [
-          ArtisanModel(
-            id: 'dummy_1',
-            name: 'Master Zaid',
-            craftType: 'Woodwork',
-            state: 'Terengganu',
-            description: 'A 5th generation master of the Cengal wood carving tradition.',
-            imageUrl: 'https://images.unsplash.com/photo-1605721911519-3dfeb3be25e7?w=800',
-            rating: 4.9,
-            experience: '35 Years',
-            address: 'Jalan Hiliran, 20300 Kuala Terengganu, Terengganu',
-            latitude: 5.3117,
-            longitude: 103.1324,
-          ),
-          ArtisanModel(
-            id: 'dummy_2',
-            name: 'Tok Wan',
-            craftType: 'Songket',
-            state: 'Kelantan',
-            description: 'Custodian of traditional Bunga Dalam weaving motifs.',
-            imageUrl: 'https://images.unsplash.com/photo-1590739225287-bd31519780c3?w=800',
-            rating: 4.8,
-            experience: '45 Years',
-            address: 'Kampung Penambang, 15350 Kota Bharu, Kelantan',
-            latitude: 6.1384,
-            longitude: 102.2476,
-          ),
-        ];
-      }
       return mapped;
     } catch (e) {
       debugPrint('Error fetching artisans from Supabase: $e');

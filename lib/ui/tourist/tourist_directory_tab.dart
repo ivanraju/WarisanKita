@@ -51,125 +51,10 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
     'Sarawak',
   ];
 
-  List<Map<String, dynamic>> _getArtisans(LanguageViewModel langVM) {
-    return [
-      {
-        'id': 'a1',
-        'name': langVM.translate('Pak Mat Pottery Studio'),
-        'category': langVM.translate('Clay Pottery & Ceramics'),
-        'craft': 'Ceramics',
-        'state': 'Melaka',
-        'rating': 4.9,
-        'image': 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&auto=format&fit=crop&q=80',
-        'images': const [
-          'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&auto=format&fit=crop&q=80',
-          'https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=600&auto=format&fit=crop&q=80',
-          'https://images.unsplash.com/photo-1590736969955-71cc94801759?w=600&auto=format&fit=crop&q=80',
-          'https://images.unsplash.com/photo-1610701596007-11502861dcfa?w=600&auto=format&fit=crop&q=80',
-        ],
-        'tags': ['Kampung Morten River Clay', 'Paddy Husk Kiln Ash', 'Organic Indigo Dyes', 'Hand-spun Wooden Wheel'],
-        'bio': langVM.translate('Master Pak Mat has been hand-crafting traditional clay labu sayong and ceramic vessels for over 25 years in Kampung Morten.'),
-        'exp': '+150 EXP',
-        'experienceYears': '25 Yrs',
-        'address': 'Kampung Morten, 75300 Melaka',
-        'latitude': 2.2008,
-        'longitude': 102.2505,
-      },
-      {
-        'id': 'a2',
-        'name': langVM.translate('Wan Songket Heritage Weavers'),
-        'category': langVM.translate('Songket Gold Weaving'),
-        'craft': 'Songket',
-        'state': 'Kelantan',
-        'rating': 4.8,
-        'image': 'https://images.unsplash.com/photo-1528459801416-a9e53bbf4e17?w=600&auto=format&fit=crop&q=80',
-        'images': const [
-          'https://images.unsplash.com/photo-1528459801416-a9e53bbf4e17?w=600&auto=format&fit=crop&q=80',
-          'https://images.unsplash.com/photo-1606744837616-56c9a5c6a6eb?w=600&auto=format&fit=crop&q=80',
-          'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=600&auto=format&fit=crop&q=80',
-          'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=600&auto=format&fit=crop&q=80',
-        ],
-        'tags': ['Gold Thread', 'Silk Yarns', 'Traditional Wooden Loom', 'Natural Dyes'],
-        'bio': langVM.translate('Royal songket weaving utilizing metallic gold and silver threads on handloom wooden apparatus in Kota Bharu.'),
-        'exp': '+200 EXP',
-        'experienceYears': '32 Yrs',
-        'address': 'Kampung Penambang, 15350 Kota Bharu, Kelantan',
-        'latitude': 6.1384,
-        'longitude': 102.2476,
-      },
-      {
-        'id': 'a3',
-        'name': langVM.translate('Siti Batik Craft Workshop'),
-        'category': langVM.translate('Batik Wax Painting'),
-        'craft': 'Batik',
-        'state': 'Terengganu',
-        'rating': 4.9,
-        'image': 'https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=600&auto=format&fit=crop&q=80',
-        'images': const [
-          'https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=600&auto=format&fit=crop&q=80',
-          'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=600&auto=format&fit=crop&q=80',
-          'https://images.unsplash.com/photo-1582562124811-c09040d0a901?w=600&auto=format&fit=crop&q=80',
-          'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=600&auto=format&fit=crop&q=80',
-        ],
-        'tags': ['Brass Canting', 'Beeswax', 'Cotton Canvas', 'Indigo Dyes'],
-        'bio': langVM.translate('Hand-drawn canting batik studio utilizing organic natural dyes and silk fabrics in coastal Terengganu.'),
-        'exp': '+180 EXP',
-        'experienceYears': '18 Yrs',
-        'address': 'Pasir Panjang, 21100 Kuala Terengganu, Terengganu',
-        'latitude': 5.3117,
-        'longitude': 103.1324,
-      },
-      {
-        'id': 'a4',
-        'name': langVM.translate('Master Wong Woodcraft'),
-        'category': langVM.translate('Traditional Woodcarving'),
-        'craft': 'Woodwork',
-        'state': 'Perak',
-        'rating': 4.7,
-        'image': 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80',
-        'images': const [
-          'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80',
-          'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?w=600&auto=format&fit=crop&q=80',
-          'https://images.unsplash.com/photo-1513694203232-719a280e022f?w=600&auto=format&fit=crop&q=80',
-          'https://images.unsplash.com/photo-1586864387967-d02ef85d93e8?w=600&auto=format&fit=crop&q=80',
-        ],
-        'tags': ['Cengal Wood', 'Traditional Chisel', 'Floral Motif', 'Varnish Finish'],
-        'bio': langVM.translate('Ornate timber carving specializing in traditional Malay architectural wood panels and keris handles in Perak.'),
-        'exp': '+160 EXP',
-        'experienceYears': '29 Yrs',
-        'address': 'Jalan Besar, 33000 Kuala Kangsar, Perak',
-        'latitude': 4.7735,
-        'longitude': 100.9419,
-      },
-    ];
-  }
-
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
-  }
-
-  void _showOfflineToast(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.wifi_off_rounded, color: Colors.white, size: 18),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'No internet connection. Showing cached data.',
-                softWrap: true,
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: const Color(0xFFEF4444),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
   }
 
   void _showFilterBottomSheet(LanguageViewModel langVM) {
@@ -372,8 +257,8 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
       'artisanModel': a, // pass the model for the detail screen
     }).toList();
 
-    // Fallback to dummy data if directory is entirely empty
-    final artisans = realArtisans.isNotEmpty ? realArtisans : _getArtisans(langVM);
+    // Directory is 100% bound to real artisans from Supabase
+    final artisans = realArtisans;
 
     final filtered = artisans.where((artisan) {
       final matchesQuery = query.isEmpty ||
@@ -404,7 +289,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
       }).toList();
     }
 
-    if (recommendedArtisans.isEmpty) {
+    if (recommendedArtisans.isEmpty && artisans.isNotEmpty) {
       recommendedArtisans = artisans.take(4).toList();
     }
 
@@ -517,8 +402,18 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                           shape: BoxShape.circle,
                         ),
                         child: IconButton(
-                          icon: const Icon(Icons.wifi_off_rounded, color: Color(0xFFFCA5A5), size: 20),
-                          onPressed: () => _showOfflineToast(context),
+                          icon: const Icon(Icons.refresh_rounded, color: Colors.white, size: 20),
+                          tooltip: 'Refresh Directory',
+                          onPressed: () {
+                            context.read<DirectoryViewModel>().fetchArtisans();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Refreshing artisan directory from Supabase...'),
+                                duration: Duration(seconds: 1),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          },
                         ),
                       ),
                     ],
@@ -792,7 +687,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                   ],
                 ),
 
-                if (_hasPreferences) ...[
+                if (_hasPreferences && recommendedArtisans.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.all(16),
