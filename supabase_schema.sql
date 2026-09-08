@@ -920,34 +920,37 @@ CREATE POLICY "Public delete forum_reply_votes" ON public.forum_reply_votes FOR 
 -- ==============================================================================
 -- 8. Permanent User Account Deletion Stored Procedure
 -- ==============================================================================
-CREATE OR REPLACE FUNCTION public.delete_user_account(p_user_id UUID)
-RETURNS JSONB AS $$
+CREATE OR REPLACE FUNCTION public.delete_user_account(p_user_id UUID DEFAULT NULL)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, auth
+AS $$
+DECLARE
+    v_uid UUID;
 BEGIN
-    -- Delete dependent progress, awards, stamps
-    DELETE FROM public.user_task_xp_awards WHERE user_id = p_user_id;
-    DELETE FROM public.task_progress WHERE user_id = p_user_id;
-    DELETE FROM public.quest_progress WHERE user_id = p_user_id;
-    DELETE FROM public.passport_stamps WHERE user_id = p_user_id;
-    DELETE FROM public.user_experience WHERE user_id = p_user_id;
-    DELETE FROM public.digital_plaques WHERE artisan_id = p_user_id;
-    DELETE FROM public.artisan_documents WHERE artisan_id = p_user_id;
-    DELETE FROM public.artisan_profiles WHERE user_id = p_user_id;
-    DELETE FROM public.forum_post_votes WHERE user_id = p_user_id;
-    DELETE FROM public.forum_reply_votes WHERE user_id = p_user_id;
-    DELETE FROM public.heritage_task_change_requests WHERE user_id = p_user_id;
-    DELETE FROM public.quest_change_requests WHERE user_id = p_user_id;
+    v_uid := COALESCE(p_user_id, auth.uid());
+    IF v_uid IS NULL THEN
+        RETURN jsonb_build_object('success', false, 'error', 'No user ID provided or authenticated');
+    END IF;
 
-    -- Delete forum content authored by user
-    DELETE FROM public.forum_reports WHERE reporter_id = p_user_id;
-    DELETE FROM public.forum_replies WHERE user_id = p_user_id;
-    DELETE FROM public.forum_posts WHERE user_id = p_user_id;
-
-    -- Delete from public.users
-    DELETE FROM public.users WHERE id = p_user_id;
-
-    -- Delete from auth.users (if accessible via security definer)
+    -- 1. Delete associated artisan profiles
     BEGIN
-        DELETE FROM auth.users WHERE id = p_user_id;
+        DELETE FROM public.artisan_profiles WHERE user_id = v_uid;
+    EXCEPTION WHEN OTHERS THEN
+        NULL;
+    END;
+
+    -- 2. Delete from public.users table
+    BEGIN
+        DELETE FROM public.users WHERE id = v_uid;
+    EXCEPTION WHEN OTHERS THEN
+        NULL;
+    END;
+
+    -- 3. Delete from auth.users (Supabase Authentication user list)
+    BEGIN
+        DELETE FROM auth.users WHERE id = v_uid;
     EXCEPTION WHEN OTHERS THEN
         NULL;
     END;
@@ -956,7 +959,8 @@ BEGIN
 EXCEPTION WHEN OTHERS THEN
     RETURN jsonb_build_object('success', false, 'error', SQLERRM);
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 GRANT EXECUTE ON FUNCTION public.delete_user_account(UUID) TO anon, authenticated;
+
 
