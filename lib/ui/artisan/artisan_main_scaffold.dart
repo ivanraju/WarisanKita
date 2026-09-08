@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -5,12 +6,14 @@ import 'package:warisan_kita/ui/artisan/artisan_application_pending_screen.dart'
 import 'package:warisan_kita/ui/artisan/artisan_application_approved_screen.dart';
 import 'package:warisan_kita/ui/artisan/artisan_dashboard_tab.dart';
 import 'package:warisan_kita/ui/artisan/artisan_settings_screen.dart';
+import 'package:warisan_kita/ui/artisan/artisan_suspended_screen.dart';
 import 'package:warisan_kita/ui/artisan/profile_builder_tab.dart';
 import 'package:warisan_kita/ui/core/live_forum_tab.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 
 class ArtisanMainScaffold extends StatefulWidget {
-  const ArtisanMainScaffold({super.key});
+  final bool enableLivePolling;
+  const ArtisanMainScaffold({super.key, this.enableLivePolling = true});
 
   @override
   State<ArtisanMainScaffold> createState() => _ArtisanMainScaffoldState();
@@ -20,6 +23,7 @@ class _ArtisanMainScaffoldState extends State<ArtisanMainScaffold> {
   int _currentIndex = 0;
   bool _hasSeenApprovalScreen = false;
   bool _isLoading = true;
+  Timer? _statusPollTimer;
 
   final List<Widget> _tabs = const [
     ArtisanDashboardTab(),
@@ -32,6 +36,19 @@ class _ArtisanMainScaffoldState extends State<ArtisanMainScaffold> {
   void initState() {
     super.initState();
     _checkApprovalStatus();
+    if (widget.enableLivePolling) {
+      _statusPollTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+        if (mounted) {
+          context.read<AuthViewModel>().refreshCurrentUser();
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _statusPollTimer?.cancel();
+    super.dispose();
   }
   
   Future<void> _checkApprovalStatus() async {
@@ -69,6 +86,11 @@ class _ArtisanMainScaffoldState extends State<ArtisanMainScaffold> {
 
     final authVM = context.watch<AuthViewModel>();
     final user = authVM.currentUser;
+
+    // Security Guard: If Artisan Studio is suspended, immediately eject from artisan tabs
+    if (user != null && user.isArtisanStudioSuspended) {
+      return const ArtisanStudioSuspendedScreen();
+    }
 
     if (user != null && !user.isApprovedArtisan && (user.isPendingArtisan || user.status == 'PENDING_APPROVAL' || user.status == 'PENDING')) {
       return const ArtisanApplicationPendingScreen();

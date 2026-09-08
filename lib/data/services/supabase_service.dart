@@ -2054,6 +2054,34 @@ class SupabaseService {
           _userStore[cleanEmail]!['roles'] = ['Artisan'];
         }
       }
+
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final rawUser = prefs.getString(_keyAuthUser);
+        if (rawUser != null && rawUser.isNotEmpty) {
+          final map = jsonDecode(rawUser) as Map<String, dynamic>;
+          if ((map['email'] as String?)?.toLowerCase() == cleanEmail) {
+            if (updateArtisanProfileOnly) {
+              map['artisanStatus'] = newStatus;
+              map['artisan_status'] = newStatus;
+              map['status'] = 'ACTIVE';
+              map['isSuspended'] = false;
+              if (newRole.isNotEmpty) {
+                map['role'] = newRole;
+              }
+            } else {
+              map['status'] = newStatus;
+              map['isSuspended'] = (newStatus == 'SUSPENDED');
+              if (newRole.isNotEmpty) {
+                map['role'] = newRole;
+              }
+            }
+            await prefs.setString(_keyAuthUser, jsonEncode(map));
+          }
+        }
+      } catch (e) {
+        debugPrint('updateArtisanStatusInDb local sync note: $e');
+      }
     }
 
     final client = _client;
