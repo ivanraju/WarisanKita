@@ -348,9 +348,8 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
     final studioName = _studioNameController.text.trim();
     final ssm = _ssmController.text.trim();
     final bio = _bioController.text.trim();
-    final phone = _phoneController.text.trim().isNotEmpty
-        ? _phoneController.text.trim()
-        : '+60 12-345 6789';
+    final phoneText = _phoneController.text.trim();
+    final phone = phoneText.isNotEmpty ? phoneText : null;
 
     final effectiveEmail =
         (user?.email != null && user!.email.trim().isNotEmpty)
@@ -400,7 +399,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
               'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600',
           email: user?.email ?? '',
           experience: 'Master Artisan Applicant',
-          phone: phone,
+          phone: phone ?? '',
           ssmNumber: ssm,
           ssmFileName: _ssmFile?.name ?? 'SSM_Registration_Cert.pdf',
           certFileName: _kraftanganFile?.name ?? 'Kraftangan_Master_Cert.pdf',
@@ -675,7 +674,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                     keyboardType: TextInputType.phone,
                     decoration: InputDecoration(
                       labelText: 'Studio Contact Phone',
-                      hintText: '+60 12-345 6789',
+                      hintText: 'e.g. 012-345 6789 or +60123456789',
                       prefixIcon: const Icon(
                         Icons.phone_outlined,
                         color: Color(0xFF004D40),
@@ -687,6 +686,18 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                         borderSide: BorderSide.none,
                       ),
                     ),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) {
+                        return null; // Optional field
+                      }
+                      final clean = v.trim().replaceAll(RegExp(r'[\s\-]'), '');
+                      // Malaysian phone regex: optional '+', then '60' or '0', followed by valid prefix & 7-9 digits
+                      final phoneRegex = RegExp(r'^(\+?60|0)[1-9][0-9]{7,9}$');
+                      if (!phoneRegex.hasMatch(clean)) {
+                        return 'Please enter a valid Malaysian phone number (e.g. 012-3456789)';
+                      }
+                      return null;
+                    },
                   ),
 
                   const SizedBox(height: 16),
