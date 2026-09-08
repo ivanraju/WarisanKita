@@ -511,9 +511,9 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Grant permissions on tables and RPC functions
-GRANT SELECT, INSERT, UPDATE ON public.users TO anon, authenticated;
-GRANT SELECT, INSERT, UPDATE ON public.artisan_profiles TO anon, authenticated;
-GRANT SELECT, INSERT, UPDATE ON public.artisan_documents TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.users TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.artisan_profiles TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.artisan_documents TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.check_account_by_email(text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_update_user_status(text, text, text) TO anon, authenticated;
 
@@ -531,17 +531,26 @@ CREATE POLICY "Public update users" ON public.users FOR UPDATE USING (true) WITH
 DROP POLICY IF EXISTS "Public insert users" ON public.users;
 CREATE POLICY "Public insert users" ON public.users FOR INSERT WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Public delete users" ON public.users;
+CREATE POLICY "Public delete users" ON public.users FOR DELETE USING (true);
+
 DROP POLICY IF EXISTS "Public select artisan_profiles" ON public.artisan_profiles;
 CREATE POLICY "Public select artisan_profiles" ON public.artisan_profiles FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "Public update artisan_profiles" ON public.artisan_profiles;
 CREATE POLICY "Public update artisan_profiles" ON public.artisan_profiles FOR UPDATE USING (true) WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Public delete artisan_profiles" ON public.artisan_profiles;
+CREATE POLICY "Public delete artisan_profiles" ON public.artisan_profiles FOR DELETE USING (true);
+
 DROP POLICY IF EXISTS "Public select artisan_documents" ON public.artisan_documents;
 CREATE POLICY "Public select artisan_documents" ON public.artisan_documents FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "Public update artisan_documents" ON public.artisan_documents;
 CREATE POLICY "Public update artisan_documents" ON public.artisan_documents FOR UPDATE USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public delete artisan_documents" ON public.artisan_documents;
+CREATE POLICY "Public delete artisan_documents" ON public.artisan_documents FOR DELETE USING (true);
 
 -- ==============================================================================
 -- 7. Forum Module Tables, Voting, & Stored Procedures
@@ -907,3 +916,51 @@ CREATE POLICY "Public select forum_reply_votes" ON public.forum_reply_votes FOR 
 CREATE POLICY "Public insert forum_reply_votes" ON public.forum_reply_votes FOR INSERT WITH CHECK (true);
 CREATE POLICY "Public update forum_reply_votes" ON public.forum_reply_votes FOR UPDATE USING (true) WITH CHECK (true);
 CREATE POLICY "Public delete forum_reply_votes" ON public.forum_reply_votes FOR DELETE USING (true);
+
+-- ==============================================================================
+-- 8. Permanent User Account Deletion Stored Procedure
+-- ==============================================================================
+CREATE OR REPLACE FUNCTION public.delete_user_account(p_user_id UUID DEFAULT NULL)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, auth
+AS $$
+DECLARE
+    v_uid UUID;
+BEGIN
+    v_uid := COALESCE(p_user_id, auth.uid());
+    IF v_uid IS NULL THEN
+        RETURN jsonb_build_object('success', false, 'error', 'No user ID provided or authenticated');
+    END IF;
+
+    -- 1. Delete associated artisan profiles
+    BEGIN
+        DELETE FROM public.artisan_profiles WHERE user_id = v_uid;
+    EXCEPTION WHEN OTHERS THEN
+        NULL;
+    END;
+
+    -- 2. Delete from public.users table
+    BEGIN
+        DELETE FROM public.users WHERE id = v_uid;
+    EXCEPTION WHEN OTHERS THEN
+        NULL;
+    END;
+
+    -- 3. Delete from auth.users (Supabase Authentication user list)
+    BEGIN
+        DELETE FROM auth.users WHERE id = v_uid;
+    EXCEPTION WHEN OTHERS THEN
+        NULL;
+    END;
+
+    RETURN jsonb_build_object('success', true);
+EXCEPTION WHEN OTHERS THEN
+    RETURN jsonb_build_object('success', false, 'error', SQLERRM);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.delete_user_account(UUID) TO anon, authenticated;
+
+

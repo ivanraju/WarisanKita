@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:warisan_kita/ui/gamification/geofenced_tasks_view.dart';
-import 'package:warisan_kita/ui/dashboard/settings_view.dart';
+import 'package:warisan_kita/ui/core/settings_screen.dart';
 import 'package:warisan_kita/viewmodels/gamification_viewmodel.dart';
 import 'package:warisan_kita/domain/models/badge.dart';
 

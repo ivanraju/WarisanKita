@@ -18,6 +18,48 @@ class SupabaseService {
   static const String _keyAuthUser = 'wk_last_auth_user';
   static const String _keyAuthEmail = 'wk_last_auth_email';
   static const String _keyActiveRole = 'wk_last_active_role';
+  static const String _keyDeletedAccounts = 'wk_deleted_accounts';
+  static final Set<String> _deletedAccounts = {};
+
+  static Future<void> _recordDeletedAccount(String email) async {
+    final clean = email.trim().toLowerCase();
+    _deletedAccounts.add(clean);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final list = prefs.getStringList(_keyDeletedAccounts) ?? [];
+      if (!list.contains(clean)) {
+        list.add(clean);
+        await prefs.setStringList(_keyDeletedAccounts, list);
+      }
+    } catch (_) {}
+  }
+
+  static Future<void> _unrecordDeletedAccount(String email) async {
+    final clean = email.trim().toLowerCase();
+    _deletedAccounts.remove(clean);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final list = prefs.getStringList(_keyDeletedAccounts) ?? [];
+      if (list.contains(clean)) {
+        list.remove(clean);
+        await prefs.setStringList(_keyDeletedAccounts, list);
+      }
+    } catch (_) {}
+  }
+
+  static Future<bool> _isAccountDeleted(String email) async {
+    final clean = email.trim().toLowerCase();
+    if (_deletedAccounts.contains(clean)) return true;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final list = prefs.getStringList(_keyDeletedAccounts) ?? [];
+      if (list.contains(clean)) {
+        _deletedAccounts.add(clean);
+        return true;
+      }
+    } catch (_) {}
+    return false;
+  }
 
   static Future<void> _saveAuthSession(UserModel user) async {
     try {
@@ -289,9 +331,19 @@ class SupabaseService {
       return const ExistingAccountCheck(exists: false);
     }
 
+    if (await _isAccountDeleted(cleanEmail)) {
+      return const ExistingAccountCheck(exists: false);
+    }
+
     // 1. Check local prototype/in-memory store
     if (_userStore.containsKey(cleanEmail)) {
       final u = _userStore[cleanEmail]!;
+      final status = (u['status'] ?? '').toString().toUpperCase();
+      final isSuspended = u['isSuspended'] == true;
+      final reason = (u['suspensionReason'] ?? '').toString();
+      if (status == 'DELETED' || (isSuspended && reason == 'ACCOUNT_DELETED')) {
+        return const ExistingAccountCheck(exists: false);
+      }
       final role = (u['role'] ?? '').toString();
       final roles = (u['roles'] is List)
           ? List<String>.from(u['roles'])
@@ -385,6 +437,13 @@ class SupabaseService {
       }
 
       if (res != null) {
+        final status = (res['status'] ?? '').toString().toUpperCase();
+        final isSuspended = res['is_suspended'] == true;
+        final reason = (res['suspension_reason'] ?? '').toString();
+        if (status == 'DELETED' ||
+            (isSuspended && reason == 'ACCOUNT_DELETED')) {
+          return const ExistingAccountCheck(exists: false);
+        }
         final role = (res['role'] ?? '').toString();
         final rawRoles = res['roles'];
         final roles = (rawRoles is List)
@@ -532,6 +591,21 @@ class SupabaseService {
       }
     }
 
+    if (await _isAccountDeleted(cleanEmail) ||
+        await _isAccountDeleted(rawInput)) {
+      final client = _client;
+      if (client != null) {
+        try {
+          await client.auth.signOut();
+        } catch (_) {}
+      }
+      await _clearAuthSession();
+      _userStore.remove(cleanEmail);
+      throw Exception(
+        'ACCOUNT DELETED: This account has been permanently deleted. Please create a new account.',
+      );
+    }
+
     final client = _client;
     if (client != null) {
       // 2. If client connected and input does not contain '@', lookup email from Supabase users table by username only
@@ -603,6 +677,21 @@ class SupabaseService {
           }
 
           if (profileData != null) {
+            final profileStatus =
+                (profileData['status'] ?? '').toString().toUpperCase();
+            final isSuspended = profileData['is_suspended'] == true;
+            final reason = (profileData['suspension_reason'] ?? '').toString();
+
+            if (profileStatus == 'DELETED' ||
+                (isSuspended && reason == 'ACCOUNT_DELETED')) {
+              await client.auth.signOut();
+              await _clearAuthSession();
+              _userStore.remove(cleanEmail);
+              throw Exception(
+                'ACCOUNT DELETED: This account has been permanently deleted.',
+              );
+            }
+
             // Keep in-memory store in sync with database row
             _userStore[cleanEmail] = profileData;
             authenticatedUser = UserModel.fromMap(profileData);
@@ -616,6 +705,47 @@ class SupabaseService {
               ? List<String>.from(meta['roles'])
               : [role];
           final status = (meta['status'] as String?) ?? 'ACTIVE';
+          final isDeleted = meta['is_deleted'] == true || status == 'DELETED';
+
+          if (isDeleted) {
+            await client.auth.signOut();
+            await _clearAuthSession();
+            _userStore.remove(cleanEmail);
+            throw Exception(
+              'ACCOUNT DELETED: This account has been permanently deleted.',
+            );
+          }
+
+          // If profileData was null, confirm whether public.users record exists
+          bool rowExistsInDb = false;
+          try {
+            final check = await client
+                .from('users')
+                .select('id, status')
+                .eq('id', authRes.user!.id)
+                .maybeSingle();
+            if (check != null) {
+              rowExistsInDb = true;
+              final s = (check['status'] ?? '').toString().toUpperCase();
+              if (s == 'DELETED') {
+                await client.auth.signOut();
+                await _clearAuthSession();
+                _userStore.remove(cleanEmail);
+                throw Exception(
+                  'ACCOUNT DELETED: This account has been permanently deleted.',
+                );
+              }
+            }
+          } catch (_) {}
+
+          if (!rowExistsInDb) {
+            await client.auth.signOut();
+            await _clearAuthSession();
+            _userStore.remove(cleanEmail);
+            throw Exception(
+              'ACCOUNT NOT FOUND: This account record has been deleted.',
+            );
+          }
 
           if (status == 'SUSPENDED') {
             throw Exception(
@@ -765,6 +895,7 @@ class SupabaseService {
     List<String>? photos,
   }) async {
     final cleanEmail = email.trim().toLowerCase();
+    await _unrecordDeletedAccount(cleanEmail);
     await Future.delayed(const Duration(milliseconds: 600));
 
     // Account already exists check:
@@ -2415,6 +2546,123 @@ class SupabaseService {
         await client.auth.signOut();
       } catch (e) {
         debugPrint('Supabase signOut note: $e');
+      }
+    }
+  }
+
+  Future<void> deleteAccount({
+    required String userId,
+    required String email,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 200));
+    final cleanEmail = email.trim().toLowerCase();
+
+    // 1. Record in persistent deleted accounts store
+    await _recordDeletedAccount(cleanEmail);
+
+    // 2. Remove user from local in-memory store
+    _userStore.remove(cleanEmail);
+    _userStore.removeWhere(
+      (key, value) =>
+          key.toLowerCase() == cleanEmail ||
+          (userId.isNotEmpty && value['id'] == userId),
+    );
+
+    // 3. Clear any pending OTPs or reset tokens for this account
+    _pendingEmailOtps.remove(cleanEmail);
+    _resetTokens.removeWhere(
+      (key, value) =>
+          (value['email'] as String?)?.toLowerCase() == cleanEmail,
+    );
+
+    // 4. Clear local session from SharedPreferences
+    await _clearAuthSession();
+
+    // 5. Delete or deactivate in Supabase if connected
+    final client = _client;
+    if (client != null) {
+      final effectiveUserId = userId.isNotEmpty
+          ? userId
+          : (client.auth.currentUser?.id ?? '');
+
+      try {
+        // A. Try admin_update_user_status RPC (SECURITY DEFINER, updates users & auth.users metadata)
+        try {
+          await client.rpc('admin_update_user_status', params: {
+            'p_email': cleanEmail,
+            'p_status': 'DELETED',
+          });
+        } catch (rpcErr) {
+          debugPrint('admin_update_user_status RPC note: $rpcErr');
+        }
+
+        // B. Try delete_user_account RPC if present
+        if (effectiveUserId.isNotEmpty) {
+          try {
+            await client.rpc(
+              'delete_user_account',
+              params: {'p_user_id': effectiveUserId},
+            );
+          } catch (rpcErr) {
+            debugPrint('delete_user_account RPC note: $rpcErr');
+          }
+        }
+
+        // C. Clean up artisan profile record
+        if (effectiveUserId.isNotEmpty) {
+          try {
+            await client
+                .from('artisan_profiles')
+                .delete()
+                .eq('user_id', effectiveUserId);
+          } catch (e) {
+            debugPrint('deleteAccount artisan_profiles note: $e');
+          }
+        }
+
+        // D. Update public.users status to DELETED (using only existing columns)
+        try {
+          final updateData = {
+            'status': 'DELETED',
+            'updated_at': DateTime.now().toIso8601String(),
+          };
+          if (effectiveUserId.isNotEmpty) {
+            await client
+                .from('users')
+                .update(updateData)
+                .eq('id', effectiveUserId);
+          } else if (cleanEmail.isNotEmpty) {
+            await client
+                .from('users')
+                .update(updateData)
+                .ilike('email', cleanEmail);
+          }
+        } catch (updateErr) {
+          debugPrint('deleteAccount direct users update note: $updateErr');
+        }
+
+        // E. Update Supabase Auth user metadata so it flags as DELETED
+        try {
+          await client.auth.updateUser(
+            UserAttributes(
+              data: {
+                'status': 'DELETED',
+                'is_deleted': true,
+              },
+            ),
+          );
+        } catch (metaErr) {
+          debugPrint('deleteAccount auth.updateUser note: $metaErr');
+        }
+
+        // F. Sign out Supabase auth session
+        try {
+          await client.auth.signOut();
+        } catch (e) {
+          debugPrint('Supabase deleteAccount auth.signOut note: $e');
+        }
+      } catch (e) {
+        debugPrint('Supabase deleteAccount general note: $e');
       }
     }
   }

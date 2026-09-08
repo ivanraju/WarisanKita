@@ -839,4 +839,39 @@ class AuthViewModel extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  Future<AuthResult> deleteCurrentAccount() async {
+    if (_currentUser == null) {
+      return const AuthResult(
+        success: false,
+        message: 'No active user session to delete.',
+      );
+    }
+
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final userId = _currentUser!.id;
+      final email = _currentUser!.email;
+      await _repository.deleteAccount(userId: userId, email: email);
+
+      _currentUser = null;
+      _activeRole = null;
+      _requiresRoleSelection = false;
+      _errorMessage = null;
+      _isLoading = false;
+      notifyListeners();
+      return const AuthResult(
+        success: true,
+        message: 'Account successfully deleted.',
+      );
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      notifyListeners();
+      return AuthResult(success: false, message: _errorMessage);
+    }
+  }
 }

@@ -229,12 +229,16 @@ class MapViewModel extends ChangeNotifier {
 
       // Compass events update independently from GPS, allowing the tourist
       // arrow to turn immediately even while the user is standing still.
-      _headingSubscription = _locationRepository.watchHeading().listen(
-        _applyCompassHeading,
-        onError: (error) {
-          debugPrint('Compass stream error: $error');
-        },
-      );
+      try {
+        _headingSubscription = _locationRepository.watchHeading().listen(
+          _applyCompassHeading,
+          onError: (error) {
+            debugPrint('Compass stream error: $error');
+          },
+        );
+      } catch (headingErr) {
+        debugPrint('Compass subscription setup note: $headingErr');
+      }
     } catch (e) {
       _hasLocationPermission = false;
       _isTrackingLocation = false;
