@@ -109,8 +109,6 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
       return;
     }
 
-    final reasonController = TextEditingController();
-
     showDialog(
       context: context,
       builder: (dialogCtx) {
@@ -126,25 +124,9 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
               ),
             ],
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Are you sure you want to suspend ${user.displayName ?? user.email}? This will immediately invalidate their active sessions.',
-                style: GoogleFonts.plusJakartaSans(fontSize: 13, color: const Color(0xFF475569)),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: reasonController,
-                maxLines: 2,
-                decoration: InputDecoration(
-                  labelText: 'Suspension Reason',
-                  hintText: 'e.g. Violation of community guidelines',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-              ),
-            ],
+          content: Text(
+            'Are you sure you want to suspend ${user.displayName ?? user.email}? This will immediately invalidate their active sessions.',
+            style: GoogleFonts.plusJakartaSans(fontSize: 13, height: 1.5, color: const Color(0xFF475569)),
           ),
           actions: [
             TextButton(
@@ -159,7 +141,7 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
               ),
               onPressed: () {
                 final vm = context.read<ModerationViewModel>();
-                vm.suspendUser(user.id, reason: reasonController.text);
+                vm.suspendUser(user.id);
                 Navigator.pop(dialogCtx);
 
                 ScaffoldMessenger.of(context).showSnackBar(

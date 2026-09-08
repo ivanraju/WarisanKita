@@ -1,9 +1,12 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:warisan_kita/domain/models/pending_artisan_profile.dart';
+import 'package:warisan_kita/domain/validators/profile_validator.dart';
+import 'package:warisan_kita/domain/validators/ssm_validator.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import 'widgets/workshop_map_picker.dart';
 import 'package:warisan_kita/viewmodels/moderation_viewmodel.dart';
@@ -27,6 +30,71 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
   String _selectedCraftCategory = 'Woodwork';
   String _selectedState = 'Melaka';
   bool _isSubmitting = false;
+
+  Timer? _ssmDebounce;
+  bool _isCheckingSsm = false;
+  bool? _isSsmAvailable;
+  String? _ssmStatusMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _ssmController.addListener(_onSsmChanged);
+  }
+
+  @override
+  void dispose() {
+    _ssmDebounce?.cancel();
+    _ssmController.removeListener(_onSsmChanged);
+    _studioNameController.dispose();
+    _ssmController.dispose();
+    _bioController.dispose();
+    _phoneController.dispose();
+    _locationSearchController.dispose();
+    _workshopMapController?.dispose();
+    super.dispose();
+  }
+
+  void _onSsmChanged() {
+    _ssmDebounce?.cancel();
+    final raw = _ssmController.text.trim();
+    if (raw.isEmpty) {
+      setState(() {
+        _isCheckingSsm = false;
+        _isSsmAvailable = null;
+        _ssmStatusMessage = null;
+      });
+      return;
+    }
+
+    final formatErr = SsmValidator.validate(raw);
+    if (formatErr != null) {
+      setState(() {
+        _isCheckingSsm = false;
+        _isSsmAvailable = false;
+        _ssmStatusMessage = formatErr;
+      });
+      return;
+    }
+
+    setState(() {
+      _isCheckingSsm = true;
+      _ssmStatusMessage = 'Verifying SSM availability...';
+    });
+
+    _ssmDebounce = Timer(const Duration(milliseconds: 350), () async {
+      final authVM = context.read<AuthViewModel>();
+      final isAvailable = await authVM.isSsmAvailable(raw);
+      if (!mounted) return;
+      setState(() {
+        _isCheckingSsm = false;
+        _isSsmAvailable = isAvailable;
+        _ssmStatusMessage = isAvailable
+            ? '✓ Verified & Available SSM Registration ID'
+            : '⚠️ This SSM is already registered by another artisan studio';
+      });
+    });
+  }
   
   final List<String> _toolsAndMaterials = [
     'Kampung Morten River Clay',
@@ -98,17 +166,6 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
     'Terengganu',
     'Kuala Lumpur',
   ];
-
-  @override
-  void dispose() {
-    _studioNameController.dispose();
-    _ssmController.dispose();
-    _bioController.dispose();
-    _phoneController.dispose();
-    _locationSearchController.dispose();
-    _workshopMapController?.dispose();
-    super.dispose();
-  }
 
   LatLng get _selectedStateCenter =>
       _stateCenters[_selectedState] ?? _stateCenters['Melaka']!;
@@ -326,6 +383,19 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
 
   Future<void> _submitApplication() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_isSsmAvailable == false) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _ssmStatusMessage ??
+                'Please provide a valid, registered SSM or Kraftangan number.',
+          ),
+          backgroundColor: const Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
     if (_workshopLocation == null || _workshopAddress == null) {
       setState(() {
         _locationError =
@@ -558,9 +628,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                         borderSide: BorderSide.none,
                       ),
                     ),
-                    validator: (v) => (v == null || v.trim().isEmpty)
-                        ? 'Please enter your studio or workshop name'
-                        : null,
+                    validator: ProfileValidator.validateStudioName,
                   ),
 
                   const SizedBox(height: 16),
@@ -647,6 +715,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                   // SSM Registration Number
                   TextFormField(
                     controller: _ssmController,
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
                     decoration: InputDecoration(
                       labelText: 'SSM / Kraftangan Reg. No. *',
                       hintText: 'e.g. 202601004821 or KT/2026/0491',
@@ -654,56 +723,53 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                         Icons.badge_outlined,
                         color: Color(0xFF004D40),
                       ),
+                      suffixIcon: _isCheckingSsm
+                          ? const Padding(
+                              padding: EdgeInsets.all(12),
+                              child: SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Color(0xFF004D40),
+                                ),
+                              ),
+                            )
+                          : (_isSsmAvailable != null
+                              ? Icon(
+                                  _isSsmAvailable!
+                                      ? Icons.check_circle_rounded
+                                      : Icons.cancel_rounded,
+                                  color: _isSsmAvailable!
+                                      ? const Color(0xFF10B981)
+                                      : const Color(0xFFEF4444),
+                                )
+                              : null),
+                      helperText: _isSsmAvailable == true
+                          ? _ssmStatusMessage
+                          : 'Format: 12-digit SSM (202601004821), ROB (123456-A), or Kraftangan (KT/2026/0491)',
+                      helperStyle: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        fontWeight: _isSsmAvailable == true
+                            ? FontWeight.w600
+                            : FontWeight.normal,
+                        color: _isSsmAvailable == true
+                            ? const Color(0xFF10B981)
+                            : Colors.grey[600],
+                      ),
                       filled: true,
                       fillColor: const Color(0xFFF8F9FA),
-                      errorMaxLines: 2,
+                      errorMaxLines: 3,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
                         borderSide: BorderSide.none,
                       ),
                     ),
                     validator: (v) {
-                      if (v == null || v.trim().isEmpty) {
-                        return 'Please enter SSM or Kraftangan number';
-                      }
-                      final clean = v.trim();
-                      final lower = clean.toLowerCase();
-                      const disallowedPlaceholders = {
-                        'none', 'na', 'n/a', 'nil', 'null', 'test', 'testing', 'dummy', 'asdf', '1234', '12345', '123456', 'no', 'tiada'
-                      };
-                      if (disallowedPlaceholders.contains(lower)) {
-                        return 'Please provide a valid SSM or Kraftangan ID';
-                      }
-                      if (clean.length < 6 || clean.length > 30) {
-                        return 'Must be between 6 and 30 characters';
-                      }
-                      final validCharsRegex = RegExp(r'^[a-zA-Z0-9\s\/\.\-]+$');
-                      if (!validCharsRegex.hasMatch(clean)) {
-                        return 'Letters, numbers, hyphens, and slashes only';
-                      }
-                      if (!RegExp(r'\d').hasMatch(clean)) {
-                        return 'Registration number must contain digits';
-                      }
-                      // Formats:
-                      // 1. New 12-digit SSM (e.g. 202601004821)
-                      final newSsmRegex = RegExp(r'^\d{12}$');
-                      // 2. Old SSM format (e.g. 123456-A, 001234567-W, KT0012345-M)
-                      final oldSsmRegex = RegExp(r'^[a-zA-Z]{0,3}\d{5,9}[-\s]?[a-zA-Z]$');
-                      // 3. Kraftangan / State heritage formats (e.g. KT/2026/0491, KT-TRG-99482, KM-123456)
-                      final kraftanganRegex = RegExp(r'^(KT|KM|KRAFTANGAN|PKKM|ST|MK)[-/\s][\w/\-\s]{3,20}$', caseSensitive: false);
-                      // 4. District / Local council business license (e.g. DBKL/L/2024/123, MPKB-12345, TR-12345)
-                      final generalTradeLicenseRegex = RegExp(r'^[a-zA-Z0-9]{2,10}[-/\s][a-zA-Z0-9/\-\s]{3,20}$');
-
-                      final normalized = clean.replaceAll(RegExp(r'\s+'), ' ');
-                      final noSpaces = clean.replaceAll(RegExp(r'\s+'), '');
-
-                      final isValidFormat = newSsmRegex.hasMatch(noSpaces) ||
-                          oldSsmRegex.hasMatch(noSpaces) ||
-                          kraftanganRegex.hasMatch(normalized) ||
-                          generalTradeLicenseRegex.hasMatch(normalized);
-
-                      if (!isValidFormat) {
-                        return 'Invalid format (e.g. 202601004821 or KT/2026/0491)';
+                      final formatErr = SsmValidator.validate(v);
+                      if (formatErr != null) return formatErr;
+                      if (_isSsmAvailable == false) {
+                        return _ssmStatusMessage ?? 'This SSM number is already registered';
                       }
                       return null;
                     },
@@ -730,18 +796,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                         borderSide: BorderSide.none,
                       ),
                     ),
-                    validator: (v) {
-                      if (v == null || v.trim().isEmpty) {
-                        return null; // Optional field
-                      }
-                      final clean = v.trim().replaceAll(RegExp(r'[\s\-]'), '');
-                      // Malaysian phone regex: optional '+', then '60' or '0', followed by valid prefix & 7-9 digits
-                      final phoneRegex = RegExp(r'^(\+?60|0)[1-9][0-9]{7,9}$');
-                      if (!phoneRegex.hasMatch(clean)) {
-                        return 'Please enter a valid Malaysian phone number (e.g. 012-3456789)';
-                      }
-                      return null;
-                    },
+                    validator: (v) => ProfileValidator.validatePhone(v, isRequired: false),
                   ),
 
                   const SizedBox(height: 16),
@@ -750,10 +805,15 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                   TextFormField(
                     controller: _bioController,
                     maxLines: 3,
+                    validator: (v) => ProfileValidator.validateBio(
+                      v,
+                      isRequired: true,
+                      minLength: 15,
+                    ),
                     decoration: InputDecoration(
-                      labelText: 'Studio Heritage Bio',
+                      labelText: 'Studio Heritage Bio *',
                       hintText:
-                          'Describe your craft background, workshop history, and master lineage...',
+                          'Describe your craft background, workshop history, and master lineage (min 15 chars)...',
                       prefixIcon: const Padding(
                         padding: EdgeInsets.only(bottom: 45),
                         child: Icon(
@@ -798,22 +858,36 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                         side: BorderSide.none,
                         onPressed: () {
                           final textController = TextEditingController();
+                          final dialogFormKey = GlobalKey<FormState>();
                           showDialog(
                             context: context,
                             builder: (context) => AlertDialog(
                               title: const Text('Add Traditional Tool or Material'),
-                              content: TextField(
-                                controller: textController,
-                                decoration: const InputDecoration(hintText: 'e.g. Natural Indigo Dye'),
+                              content: Form(
+                                key: dialogFormKey,
+                                autovalidateMode: AutovalidateMode.onUserInteraction,
+                                child: TextFormField(
+                                  controller: textController,
+                                  validator: (v) => ProfileValidator.validateTag(
+                                    v,
+                                    _toolsAndMaterials,
+                                  ),
+                                  decoration: const InputDecoration(
+                                    hintText: 'e.g. Natural Indigo Dye',
+                                  ),
+                                ),
                               ),
                               actions: [
-                                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: const Text('Cancel'),
+                                ),
                                 ElevatedButton(
                                   onPressed: () {
-                                    if (textController.text.trim().isNotEmpty) {
+                                    if (dialogFormKey.currentState?.validate() ?? false) {
                                       setState(() => _toolsAndMaterials.add(textController.text.trim()));
+                                      Navigator.pop(context);
                                     }
-                                    Navigator.pop(context);
                                   },
                                   child: const Text('Add'),
                                 ),

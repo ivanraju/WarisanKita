@@ -13,6 +13,18 @@ class UserRepository {
     return _service.isUsernameAvailable(username, excludeEmail: excludeEmail);
   }
 
+  Future<bool> isSsmRegistered(
+    String ssmNumber, {
+    String? excludeEmail,
+    String? excludeUserId,
+  }) {
+    return _service.isSsmRegistered(
+      ssmNumber,
+      excludeEmail: excludeEmail,
+      excludeUserId: excludeUserId,
+    );
+  }
+
   Future<ExistingAccountCheck> checkExistingAccount(String email) {
     return _service.checkExistingAccount(email);
   }
@@ -167,12 +179,14 @@ class UserRepository {
     required String newStatus,
     required String newRole,
     bool updateArtisanProfileOnly = false,
+    String? suspensionReason,
   }) {
     return _service.updateArtisanStatusInDb(
       email: email,
       newStatus: newStatus,
       newRole: newRole,
       updateArtisanProfileOnly: updateArtisanProfileOnly,
+      suspensionReason: suspensionReason,
     );
   }
 

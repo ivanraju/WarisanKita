@@ -8,6 +8,7 @@ import 'package:warisan_kita/ui/artisan/artisan_dashboard_tab.dart';
 import 'package:warisan_kita/ui/artisan/artisan_settings_screen.dart';
 import 'package:warisan_kita/ui/artisan/artisan_suspended_screen.dart';
 import 'package:warisan_kita/ui/artisan/profile_builder_tab.dart';
+import 'package:warisan_kita/ui/core/account_suspended_screen.dart';
 import 'package:warisan_kita/ui/core/live_forum_tab.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 
@@ -87,7 +88,12 @@ class _ArtisanMainScaffoldState extends State<ArtisanMainScaffold> {
     final authVM = context.watch<AuthViewModel>();
     final user = authVM.currentUser;
 
-    // Security Guard: If Artisan Studio is suspended, immediately eject from artisan tabs
+    // Security Guard 1: Account-level suspension blocks entire account (Artisan & Tourist)
+    if (user != null && (user.isSuspended || user.status == 'SUSPENDED')) {
+      return const AccountSuspendedScreen();
+    }
+
+    // Security Guard 2: If Artisan Studio is suspended, immediately eject from artisan tabs
     if (user != null && user.isArtisanStudioSuspended) {
       return const ArtisanStudioSuspendedScreen();
     }

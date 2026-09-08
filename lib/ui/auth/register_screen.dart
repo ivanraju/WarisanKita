@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:warisan_kita/domain/models/user.dart';
+import 'package:warisan_kita/domain/validators/profile_validator.dart';
 import 'package:warisan_kita/ui/auth/email_verification_screen.dart';
 import 'package:warisan_kita/ui/auth/widgets/password_strength_meter.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
@@ -55,21 +56,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    if (raw.length < 3) {
+    final valErr = ProfileValidator.validateUsername(raw);
+    if (valErr != null) {
       setState(() {
         _isCheckingUsername = false;
         _isUsernameAvailable = false;
-        _usernameMessage = 'Handle must be at least 3 characters';
-      });
-      return;
-    }
-
-    final handleRegex = RegExp(r'^[a-zA-Z0-9_]+$');
-    if (!handleRegex.hasMatch(raw)) {
-      setState(() {
-        _isCheckingUsername = false;
-        _isUsernameAvailable = false;
-        _usernameMessage = 'Letters, numbers, and underscores only';
+        _usernameMessage = valErr;
       });
       return;
     }
@@ -310,10 +302,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       if (v == null || v.trim().isEmpty) {
                         return 'Please enter your full name';
                       }
-                      if (v.trim().length < 2) {
-                        return 'Full name must be at least 2 characters';
-                      }
-                      return null;
+                      return ProfileValidator.validateFullName(v);
                     },
                   ),
 
@@ -357,17 +346,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ),
                     validator: (v) {
-                      if (v == null || v.trim().isEmpty) {
-                        return 'Please choose a username handle';
-                      }
-                      final raw = v.trim().replaceAll('@', '');
-                      if (raw.length < 3) {
-                        return 'Username must be at least 3 characters';
-                      }
-                      final handleRegex = RegExp(r'^[a-zA-Z0-9_]+$');
-                      if (!handleRegex.hasMatch(raw)) {
-                        return 'Only letters, numbers, and underscores are allowed';
-                      }
+                      final err = ProfileValidator.validateUsername(v);
+                      if (err != null) return err;
                       if (_isUsernameAvailable == false) {
                         return 'This username is already taken';
                       }
