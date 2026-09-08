@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -6,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart' as fp;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:warisan_kita/data/services/supabase_service.dart';
+import 'package:warisan_kita/domain/validators/profile_validator.dart';
 import 'package:warisan_kita/ui/tourist/artisan_detail_screen.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/moderation_viewmodel.dart';
@@ -19,6 +21,7 @@ class ProfileBuilderTab extends StatefulWidget {
 }
 
 class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
+  final _formKey = GlobalKey<FormState>();
   late final TextEditingController _usernameController;
   late final TextEditingController _studioNameController;
   late final TextEditingController _craftCategoryController;
@@ -26,6 +29,12 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
   late final TextEditingController _experienceController;
   late final TextEditingController _phoneController;
   late final TextEditingController _bioController;
+
+  bool _isCheckingUsername = false;
+  bool? _isUsernameAvailable;
+  String? _usernameStatusMessage;
+  Timer? _usernameDebounce;
+  String? _initialUsername;
 
   GoogleMapController? _workshopMapController;
   LatLng? _selectedWorkshopPin;
@@ -71,7 +80,9 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     final authVM = context.read<AuthViewModel>();
     final user = authVM.currentUser;
     final initialHandle = (user?.username ?? user?.effectiveUsername ?? 'Pak Mat').replaceAll('@', '');
+    _initialUsername = initialHandle;
     _usernameController = TextEditingController(text: initialHandle);
+    _usernameController.addListener(_onUsernameChanged);
     _studioNameController = TextEditingController(
       text: user?.studioName ?? user?.displayName ?? 'Pak Mat Pottery Studio',
     );
@@ -115,8 +126,60 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     }
   }
 
+  void _onUsernameChanged() {
+    _usernameDebounce?.cancel();
+    final raw = _usernameController.text.trim().replaceAll('@', '');
+    if (raw.isEmpty) {
+      setState(() {
+        _isCheckingUsername = false;
+        _isUsernameAvailable = null;
+        _usernameStatusMessage = null;
+      });
+      return;
+    }
+
+    final validationError = ProfileValidator.validateUsername(raw);
+    if (validationError != null) {
+      setState(() {
+        _isCheckingUsername = false;
+        _isUsernameAvailable = false;
+        _usernameStatusMessage = validationError;
+      });
+      return;
+    }
+
+    if (raw.toLowerCase() == _initialUsername?.toLowerCase()) {
+      setState(() {
+        _isCheckingUsername = false;
+        _isUsernameAvailable = true;
+        _usernameStatusMessage = '@$raw is your current handle';
+      });
+      return;
+    }
+
+    setState(() {
+      _isCheckingUsername = true;
+    });
+
+    _usernameDebounce = Timer(const Duration(milliseconds: 300), () async {
+      final authVM = context.read<AuthViewModel>();
+      final isAvailable = await authVM.isUsernameAvailable(
+        raw,
+        excludeEmail: authVM.currentUser?.email,
+      );
+      if (!mounted) return;
+      setState(() {
+        _isCheckingUsername = false;
+        _isUsernameAvailable = isAvailable;
+        _usernameStatusMessage = isAvailable ? '@$raw is available' : '@$raw is already taken';
+      });
+    });
+  }
+
   @override
   void dispose() {
+    _usernameDebounce?.cancel();
+    _usernameController.removeListener(_onUsernameChanged);
     _usernameController.dispose();
     _studioNameController.dispose();
     _craftCategoryController.dispose();
@@ -157,17 +220,10 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
   }
 
   Future<void> _handleSave() async {
-    final username = _usernameController.text.trim().replaceAll('@', '');
-    final studio = _studioNameController.text.trim();
-    final craft = _craftCategoryController.text.trim();
-    final bio = _bioController.text.trim();
-    final state = _stateController.text.trim();
-    final phone = _phoneController.text.trim();
-
-    if (username.isEmpty && studio.isEmpty) {
+    if (!(_formKey.currentState?.validate() ?? false)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Username or Studio name cannot be empty!'),
+          content: Text('Please correct the highlighted form errors before saving.'),
           backgroundColor: Color(0xFFEF4444),
           behavior: SnackBarBehavior.floating,
         ),
@@ -175,12 +231,41 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
       return;
     }
 
+    if (_isUsernameAvailable == false) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_usernameStatusMessage ?? 'Username handle is already taken'),
+          backgroundColor: const Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    if (_selectedWorkshopPin == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please pin your workshop location on the map before saving.'),
+          backgroundColor: Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final username = _usernameController.text.trim().replaceAll('@', '');
+    final studio = _studioNameController.text.trim();
+    final craft = _craftCategoryController.text.trim();
+    final bio = _bioController.text.trim();
+    final state = _stateController.text.trim();
+    final phone = _phoneController.text.trim();
+
     final authVM = context.read<AuthViewModel>();
     try {
       await authVM.updateProfile(
-        username: username.isNotEmpty ? username : studio,
+        username: username,
         displayName: studio.isNotEmpty ? studio : username,
-        studioName: studio.isNotEmpty ? studio : username,
+        studioName: studio,
         craftCategory: craft,
         bio: bio,
         state: state,
@@ -195,7 +280,8 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
         final updatedUser = authVM.currentUser;
         if (updatedUser != null) {
           setState(() {
-            _usernameController.text = (updatedUser.username ?? updatedUser.effectiveUsername).replaceAll('@', '');
+            _initialUsername = (updatedUser.username ?? updatedUser.effectiveUsername).replaceAll('@', '');
+            _usernameController.text = _initialUsername!;
             _studioNameController.text = updatedUser.studioName ?? updatedUser.displayName ?? updatedUser.effectiveUsername;
           });
         }
@@ -307,7 +393,10 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     bool isDark, {
     required String labelText,
     IconData? prefixIcon,
+    Widget? suffixIcon,
     String? helperText,
+    Color? helperColor,
+    String? errorText,
   }) {
     return InputDecoration(
       labelText: labelText,
@@ -316,7 +405,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
       ),
       helperText: helperText,
       helperStyle: TextStyle(
-        color: isDark ? Colors.white54 : Colors.grey[600],
+        color: helperColor ?? (isDark ? Colors.white54 : Colors.grey[600]),
         fontSize: 11,
       ),
       prefixIcon: prefixIcon != null
@@ -325,6 +414,9 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
               color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
             )
           : null,
+      suffixIcon: suffixIcon,
+      errorText: errorText,
+      errorMaxLines: 2,
       filled: true,
       fillColor: isDark ? const Color(0xFF0D2825) : Colors.white,
       enabledBorder: OutlineInputBorder(
@@ -339,6 +431,14 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
           color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
           width: 1.8,
         ),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1.5),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1.8),
       ),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
@@ -390,11 +490,14 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      body: Form(
+        key: _formKey,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             // 🛡️ VERIFIED MASTER LICENSE BADGE BANNER
             Container(
               padding: const EdgeInsets.all(16),
@@ -587,22 +690,44 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
             const SizedBox(height: 16),
 
             // Account Username / Handle Input
-            TextField(
+            TextFormField(
               controller: _usernameController,
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+              validator: ProfileValidator.validateUsername,
               style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
               decoration: _inputDecoration(
                 isDark,
                 labelText: 'Account Username / Handle (@username)',
                 prefixIcon: Icons.person_outline_rounded,
-                helperText: 'Unified account handle synced across Tourist & Master Artisan roles',
+                helperText: _usernameStatusMessage ?? 'Unified account handle synced across Tourist & Master Artisan roles',
+                helperColor: _isUsernameAvailable == true
+                    ? const Color(0xFF10B981)
+                    : (_isUsernameAvailable == false ? const Color(0xFFEF4444) : null),
+                suffixIcon: _isCheckingUsername
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: Padding(
+                          padding: EdgeInsets.all(12),
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    : (_isUsernameAvailable != null
+                        ? Icon(
+                            _isUsernameAvailable! ? Icons.check_circle_rounded : Icons.cancel_rounded,
+                            color: _isUsernameAvailable! ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                          )
+                        : null),
               ),
             ),
 
             const SizedBox(height: 14),
 
             // Studio Name Input
-            TextField(
+            TextFormField(
               controller: _studioNameController,
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+              validator: ProfileValidator.validateStudioName,
               style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
               decoration: _inputDecoration(
                 isDark,
@@ -618,8 +743,10 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
               children: [
                 // Craft Category Input
                 Expanded(
-                  child: TextField(
+                  child: TextFormField(
                     controller: _craftCategoryController,
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    validator: ProfileValidator.validateCraftCategory,
                     style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
                     decoration: _inputDecoration(
                       isDark,
@@ -632,13 +759,17 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                 
                 // Phone Number Input
                 Expanded(
-                  child: TextField(
+                  child: TextFormField(
                     controller: _phoneController,
+                    keyboardType: TextInputType.phone,
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    validator: (v) => ProfileValidator.validatePhone(v, isRequired: true),
                     style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
                     decoration: _inputDecoration(
                       isDark,
                       labelText: 'Phone / WhatsApp',
                       prefixIcon: Icons.phone_outlined,
+                      helperText: 'e.g. +60 12-345 6789',
                     ),
                   ),
                 ),
@@ -789,22 +920,32 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
             const SizedBox(height: 24),
 
             // Experience Input
-            TextField(
+            TextFormField(
               controller: _experienceController,
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+              validator: (v) => ProfileValidator.validateExperience(v, isRequired: true),
               style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
               decoration: _inputDecoration(
                 isDark,
                 labelText: 'Years of Experience & Rank Title',
                 prefixIcon: Icons.workspace_premium_outlined,
+                helperText: 'e.g. 25+ Years Experience • Adiguru Kraf',
               ),
             ),
 
             const SizedBox(height: 14),
 
             // Bio Input
-            TextField(
+            TextFormField(
               controller: _bioController,
               maxLines: 4,
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+              validator: (v) => ProfileValidator.validateBio(
+                v,
+                isRequired: true,
+                minLength: 15,
+                maxLength: 1000,
+              ),
               style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
               decoration: InputDecoration(
                 labelText: 'Biography & Heritage Craft Story',
@@ -826,6 +967,14 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                     color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
                     width: 1.8,
                   ),
+                ),
+                errorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1.5),
+                ),
+                focusedErrorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1.8),
                 ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
@@ -887,28 +1036,35 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                   avatar: const Icon(Icons.add, size: 16, color: Color(0xFFD97706)),
                   label: Text('Add Tool/Material', style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFFD97706))),
                   onPressed: () {
+                    final dialogFormKey = GlobalKey<FormState>();
                     final textController = TextEditingController();
                     showDialog(
                       context: context,
-                      builder: (context) => AlertDialog(
+                      builder: (dialogCtx) => AlertDialog(
                         backgroundColor: isDark ? const Color(0xFF0D2825) : Colors.white,
                         title: Text(
                           'Add Traditional Tool or Material',
                           style: TextStyle(color: isDark ? Colors.white : Colors.black87),
                         ),
-                        content: TextField(
-                          controller: textController,
-                          style: TextStyle(color: isDark ? Colors.white : Colors.black87),
-                          decoration: InputDecoration(
-                            hintText: 'e.g., Paddy Husk Kiln Ash',
-                            hintStyle: TextStyle(
-                              color: isDark ? Colors.white38 : Colors.grey[500],
+                        content: Form(
+                          key: dialogFormKey,
+                          child: TextFormField(
+                            controller: textController,
+                            autofocus: true,
+                            autovalidateMode: AutovalidateMode.onUserInteraction,
+                            validator: (v) => ProfileValidator.validateTag(v, _toolsAndMaterials),
+                            style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                            decoration: InputDecoration(
+                              hintText: 'e.g., Paddy Husk Kiln Ash',
+                              hintStyle: TextStyle(
+                                color: isDark ? Colors.white38 : Colors.grey[500],
+                              ),
                             ),
                           ),
                         ),
                         actions: [
                           TextButton(
-                            onPressed: () => Navigator.pop(context),
+                            onPressed: () => Navigator.pop(dialogCtx),
                             child: Text(
                               'Cancel',
                               style: TextStyle(
@@ -922,10 +1078,10 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                               foregroundColor: isDark ? const Color(0xFF041412) : Colors.white,
                             ),
                             onPressed: () {
-                              if (textController.text.trim().isNotEmpty) {
+                              if (dialogFormKey.currentState?.validate() ?? false) {
                                 setState(() => _toolsAndMaterials.add(textController.text.trim()));
+                                Navigator.pop(dialogCtx);
                               }
-                              Navigator.pop(context);
                             },
                             child: const Text('Add'),
                           ),
@@ -1175,6 +1331,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
           ],
         ),
       ),
+    ),
     );
   }
 

@@ -10,6 +10,7 @@ import 'package:warisan_kita/viewmodels/moderation_viewmodel.dart';
 import 'package:warisan_kita/ui/admin_web/widgets/artisan_review_dialog.dart';
 import 'package:warisan_kita/ui/admin_web/widgets/admin_sidebar.dart';
 import 'package:warisan_kita/ui/admin_web/widgets/admin_active_artisans_tab.dart';
+import 'package:warisan_kita/domain/validators/ssm_validator.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -219,6 +220,74 @@ void main() {
       expect(result.user?.status, equals('PENDING_APPROVAL'));
       expect(result.user?.studioName, equals('AHMAD HERITAGE WOODCRAFT'));
       expect(result.user?.craftCategory, equals('Woodwork'));
+    });
+
+    test('A5-1 Alternate Flow: Registering artisan with invalid SSM format is rejected', () async {
+      final result = await authVM.registerArtisan(
+        email: 'invalid.ssm.artisan@warisankita.my',
+        password: 'password123',
+        confirmPassword: 'password123',
+        studioName: 'INVALID STUDIO',
+        craftCategory: 'Woodwork',
+        ssmNumber: 'invalid-ssm',
+        ssmFileName: 'SSM_Doc.pdf',
+      );
+      expect(result.success, isFalse);
+      expect(result.message, contains('INVALID SSM REGISTRATION NUMBER'));
+    });
+
+    test('A5-1 Alternate Flow: Registering artisan with placeholder dummy SSM is rejected', () async {
+      for (final placeholder in ['none', 'na', 'dummy', '1234', 'test', 'tiada']) {
+        final result = await authVM.registerArtisan(
+          email: 'placeholder.$placeholder@warisankita.my',
+          password: 'password123',
+          confirmPassword: 'password123',
+          studioName: 'PLACEHOLDER STUDIO',
+          craftCategory: 'Woodwork',
+          ssmNumber: placeholder,
+          ssmFileName: 'SSM_Doc.pdf',
+        );
+        expect(result.success, isFalse, reason: 'Failed for placeholder: $placeholder');
+        expect(result.message, contains('INVALID SSM REGISTRATION NUMBER'));
+      }
+    });
+
+    test('A5-1 Alternate Flow: Registering artisan with duplicate SSM is rejected', () async {
+      // First registration with unique SSM succeeds
+      final res1 = await authVM.registerArtisan(
+        email: 'artisan1.unique@warisankita.my',
+        password: 'password123',
+        confirmPassword: 'password123',
+        studioName: 'STUDIO 1',
+        craftCategory: 'Woodwork',
+        ssmNumber: '202601099881',
+        ssmFileName: 'SSM_Doc.pdf',
+      );
+      expect(res1.success, isTrue);
+
+      // Second registration with the identical SSM number must be rejected as duplicate
+      final res2 = await authVM.registerArtisan(
+        email: 'artisan2.duplicate@warisankita.my',
+        password: 'password123',
+        confirmPassword: 'password123',
+        studioName: 'STUDIO 2',
+        craftCategory: 'Woodwork',
+        ssmNumber: '202601099881',
+        ssmFileName: 'SSM_Doc.pdf',
+      );
+      expect(res2.success, isFalse);
+      expect(res2.message, contains('DUPLICATE SSM'));
+    });
+
+    test('A5-2 Flow: Linking artisan role with duplicate SSM is rejected', () async {
+      final res = await authVM.linkArtisanToExistingTourist(
+        email: 'tourist@warisankita.my',
+        studioName: 'DUPLICATE SSM STUDIO',
+        craftCategory: 'Woodwork',
+        ssmNumber: 'SSM-TRG-2024-0981', // already registered to Master Zaid in mock/active masters
+      );
+      expect(res.success, isFalse);
+      expect(res.message, contains('DUPLICATE SSM'));
     });
 
     test('A3 Alternate Flow: Existing email attempting registration is rejected', () async {
@@ -638,6 +707,58 @@ void main() {
 
       expect(restoredUser, isNull);
       expect(freshAuthVM.isAuthenticated, isFalse);
+    });
+  });
+
+  group('SsmValidator Unit Tests', () {
+    test('Validates new 12-digit Malaysian SSM format', () {
+      expect(SsmValidator.isValid('202601004821'), isTrue);
+      expect(SsmValidator.isValid('202401012345'), isTrue);
+      expect(SsmValidator.isValid('201901000001'), isTrue);
+      expect(SsmValidator.validate('202601004821'), isNull);
+    });
+
+    test('Validates classic ROB / ROC format', () {
+      expect(SsmValidator.isValid('123456-A'), isTrue);
+      expect(SsmValidator.isValid('001234567-W'), isTrue);
+      expect(SsmValidator.isValid('KT0012345-M'), isTrue);
+      expect(SsmValidator.isValid('12345-T'), isTrue);
+      expect(SsmValidator.isValid('LLP0001234-LGN'), isTrue);
+    });
+
+    test('Validates Kraftangan and state heritage registration IDs', () {
+      expect(SsmValidator.isValid('KT/2026/0491'), isTrue);
+      expect(SsmValidator.isValid('PKKM-2024-889'), isTrue);
+      expect(SsmValidator.isValid('KM-TRG-2024-012'), isTrue);
+      expect(SsmValidator.isValid('KFG-2024-889'), isTrue);
+    });
+
+    test('Validates standard SSM prefixed identifiers', () {
+      expect(SsmValidator.isValid('SSM-2026-9901'), isTrue);
+      expect(SsmValidator.isValid('SSM-TRG-2024-0981'), isTrue);
+      expect(SsmValidator.isValid('SSM-2026-DUAL-001'), isTrue);
+      expect(SsmValidator.isValid('SSM-LINK-2026'), isTrue);
+    });
+
+    test('Rejects empty or blank inputs', () {
+      expect(SsmValidator.isValid(null), isFalse);
+      expect(SsmValidator.isValid(''), isFalse);
+      expect(SsmValidator.isValid('   '), isFalse);
+      expect(SsmValidator.validate(''), contains('Please enter'));
+    });
+
+    test('Rejects placeholder dummy values', () {
+      for (final p in ['none', 'na', 'n/a', 'dummy', 'test', 'testing', '1234', 'tiada', 'asdf', 'ssm-pending-verify']) {
+        expect(SsmValidator.isValid(p), isFalse, reason: 'Failed to reject placeholder: $p');
+        expect(SsmValidator.validate(p), contains('official, registered SSM'));
+      }
+    });
+
+    test('Rejects inputs with invalid characters or too short/long', () {
+      expect(SsmValidator.isValid('123'), isFalse); // too short
+      expect(SsmValidator.isValid('123456789012345678901234567890123'), isFalse); // too long
+      expect(SsmValidator.isValid('202601004821@#\$%'), isFalse); // invalid chars
+      expect(SsmValidator.isValid('NO_DIGITS_HERE'), isFalse); // no digits
     });
   });
 }

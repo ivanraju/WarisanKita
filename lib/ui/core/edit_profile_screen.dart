@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:warisan_kita/domain/validators/profile_validator.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/moderation_viewmodel.dart';
 
@@ -13,6 +15,7 @@ class EditProfileScreen extends StatefulWidget {
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
+  final _formKey = GlobalKey<FormState>();
   late final TextEditingController _fullNameController;
   late final TextEditingController _usernameController;
   late final TextEditingController _phoneController;
@@ -21,6 +24,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   String _selectedCraftCategory = 'Pottery & Ceramics';
   String _selectedState = 'Melaka';
   bool _isUploadingAvatar = false;
+
+  bool _isCheckingUsername = false;
+  bool? _isUsernameAvailable;
+  String? _usernameStatusMessage;
+  Timer? _usernameDebounce;
+  String? _initialUsername;
 
   final List<String> _craftCategories = const [
     'Pottery & Ceramics',
@@ -53,8 +62,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final user = authVM.currentUser;
     final initialFullName = user?.displayName ?? user?.effectiveUsername ?? 'Aiman Haziq';
     final initialUsername = (user?.username ?? user?.effectiveUsername ?? 'aiman_haziq').replaceAll('@', '');
+    _initialUsername = initialUsername;
     _fullNameController = TextEditingController(text: initialFullName);
     _usernameController = TextEditingController(text: initialUsername);
+    _usernameController.addListener(_onUsernameChanged);
     _phoneController = TextEditingController(text: user?.phone ?? '+60 12-345 6789');
     _bioController = TextEditingController(text: user?.bio ?? 'Passionate Malaysian cultural explorer and craft preserver.');
     _studioNameController = TextEditingController(text: user?.studioName ?? user?.displayName ?? 'Warisan Craft Studio');
@@ -67,8 +78,60 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
+  void _onUsernameChanged() {
+    _usernameDebounce?.cancel();
+    final raw = _usernameController.text.trim().replaceAll('@', '');
+    if (raw.isEmpty) {
+      setState(() {
+        _isCheckingUsername = false;
+        _isUsernameAvailable = null;
+        _usernameStatusMessage = null;
+      });
+      return;
+    }
+
+    final validationError = ProfileValidator.validateUsername(raw);
+    if (validationError != null) {
+      setState(() {
+        _isCheckingUsername = false;
+        _isUsernameAvailable = false;
+        _usernameStatusMessage = validationError;
+      });
+      return;
+    }
+
+    if (raw.toLowerCase() == _initialUsername?.toLowerCase()) {
+      setState(() {
+        _isCheckingUsername = false;
+        _isUsernameAvailable = true;
+        _usernameStatusMessage = '@$raw is your current handle';
+      });
+      return;
+    }
+
+    setState(() {
+      _isCheckingUsername = true;
+    });
+
+    _usernameDebounce = Timer(const Duration(milliseconds: 300), () async {
+      final authVM = context.read<AuthViewModel>();
+      final isAvailable = await authVM.isUsernameAvailable(
+        raw,
+        excludeEmail: authVM.currentUser?.email,
+      );
+      if (!mounted) return;
+      setState(() {
+        _isCheckingUsername = false;
+        _isUsernameAvailable = isAvailable;
+        _usernameStatusMessage = isAvailable ? '@$raw is available' : '@$raw is already taken';
+      });
+    });
+  }
+
   @override
   void dispose() {
+    _usernameDebounce?.cancel();
+    _usernameController.removeListener(_onUsernameChanged);
     _fullNameController.dispose();
     _usernameController.dispose();
     _phoneController.dispose();
@@ -122,22 +185,33 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> _handleSave() async {
-    final fullName = _fullNameController.text.trim();
-    final username = _usernameController.text.trim().replaceAll('@', '');
-    final phone = _phoneController.text.trim();
-    final bio = _bioController.text.trim();
-    final studioName = _studioNameController.text.trim();
-
-    if (username.isEmpty) {
+    if (!(_formKey.currentState?.validate() ?? false)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Username cannot be empty!'),
+          content: Text('Please correct the highlighted form errors before saving.'),
           backgroundColor: Color(0xFFEF4444),
           behavior: SnackBarBehavior.floating,
         ),
       );
       return;
     }
+
+    if (_isUsernameAvailable == false) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_usernameStatusMessage ?? 'Username handle is already taken'),
+          backgroundColor: const Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final fullName = _fullNameController.text.trim();
+    final username = _usernameController.text.trim().replaceAll('@', '');
+    final phone = _phoneController.text.trim();
+    final bio = _bioController.text.trim();
+    final studioName = _studioNameController.text.trim();
 
     final authVM = context.read<AuthViewModel>();
     final user = authVM.currentUser;
@@ -265,11 +339,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           ),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      body: Form(
+        key: _formKey,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             const SizedBox(height: 12),
 
             // Avatar Image Picker
@@ -349,9 +426,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             const SizedBox(height: 12),
 
             // Full Name Input Field
-            TextField(
+            TextFormField(
               controller: _fullNameController,
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+              validator: ProfileValidator.validateFullName,
               textCapitalization: TextCapitalization.words,
+              style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
               decoration: InputDecoration(
                 labelText: 'Full Name',
                 hintText: 'e.g. Siti Nurhaliza',
@@ -366,12 +446,37 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             const SizedBox(height: 16),
 
             // Unique Username Handle Input Field
-            TextField(
+            TextFormField(
               controller: _usernameController,
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+              validator: ProfileValidator.validateUsername,
+              style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
               decoration: InputDecoration(
                 labelText: 'Unique Username Handle',
                 hintText: 'e.g. siticrafts',
                 prefixText: '@',
+                helperText: _usernameStatusMessage,
+                helperStyle: TextStyle(
+                  color: _isUsernameAvailable == true
+                      ? const Color(0xFF10B981)
+                      : (_isUsernameAvailable == false ? const Color(0xFFEF4444) : null),
+                  fontSize: 11,
+                ),
+                suffixIcon: _isCheckingUsername
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: Padding(
+                          padding: EdgeInsets.all(12),
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    : (_isUsernameAvailable != null
+                        ? Icon(
+                            _isUsernameAvailable! ? Icons.check_circle_rounded : Icons.cancel_rounded,
+                            color: _isUsernameAvailable! ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                          )
+                        : null),
                 prefixIcon: Icon(
                   Icons.alternate_email_rounded,
                   color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
@@ -383,11 +488,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             const SizedBox(height: 16),
 
             // Phone Number Input Field
-            TextField(
+            TextFormField(
               controller: _phoneController,
               keyboardType: TextInputType.phone,
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+              validator: (v) => ProfileValidator.validatePhone(v, isRequired: false),
+              style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
               decoration: InputDecoration(
                 labelText: 'Phone Number',
+                hintText: 'e.g. +60 12-345 6789',
                 prefixIcon: Icon(
                   Icons.phone_outlined,
                   color: isDark ? const Color(0xFFFFD54F) : null,
@@ -399,9 +508,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             const SizedBox(height: 16),
 
             // Bio / Explorer Note Field
-            TextField(
+            TextFormField(
               controller: _bioController,
               maxLines: 3,
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+              validator: (v) => ProfileValidator.validateBio(
+                v,
+                isRequired: false,
+                minLength: 10,
+                maxLength: 500,
+              ),
+              style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
               decoration: InputDecoration(
                 labelText: 'Heritage Bio / Explorer Note',
                 prefixIcon: Icon(
@@ -456,8 +573,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     const SizedBox(height: 16),
 
                     // Studio Name Input
-                    TextField(
+                    TextFormField(
                       controller: _studioNameController,
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
+                      validator: ProfileValidator.validateStudioName,
+                      style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
                       decoration: InputDecoration(
                         labelText: 'Artisan Studio Name',
                         prefixIcon: Icon(
@@ -530,6 +650,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 }

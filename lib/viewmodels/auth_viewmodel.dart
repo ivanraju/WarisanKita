@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:warisan_kita/data/repositories/user_repository.dart';
 import 'package:warisan_kita/domain/models/user.dart';
+import 'package:warisan_kita/domain/validators/ssm_validator.dart';
 
 enum AuthStatus { unauthenticated, authenticating, authenticated, error }
 
@@ -571,10 +572,27 @@ class AuthViewModel extends ChangeNotifier {
         return AuthResult(success: false, message: _errorMessage);
       }
 
-      // Alternate Flow A4-1: Missing proof documents
-      if (ssmFileName == null && cleanSsm.isEmpty) {
+      // Alternate Flow A4-1: Missing proof documents or invalid SSM
+      if (cleanSsm.isEmpty && ssmFileName == null) {
         _errorMessage =
             'PLEASE PROVIDE REQUIRED VERIFICATION PROOFS (SSM OR CERTIFICATE)';
+        _isLoading = false;
+        notifyListeners();
+        return AuthResult(success: false, message: _errorMessage);
+      }
+
+      final ssmError = SsmValidator.validate(cleanSsm);
+      if (ssmError != null) {
+        _errorMessage = 'INVALID SSM REGISTRATION NUMBER: $ssmError';
+        _isLoading = false;
+        notifyListeners();
+        return AuthResult(success: false, message: _errorMessage);
+      }
+
+      final isSsmDuplicate = await _repository.isSsmRegistered(cleanSsm);
+      if (isSsmDuplicate) {
+        _errorMessage =
+            'DUPLICATE SSM: An artisan studio is already registered with SSM number "$cleanSsm"';
         _isLoading = false;
         notifyListeners();
         return AuthResult(success: false, message: _errorMessage);
@@ -645,11 +663,33 @@ class AuthViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
+      final cleanSsm = ssmNumber.trim();
+      final ssmError = SsmValidator.validate(cleanSsm);
+      if (ssmError != null) {
+        _errorMessage = 'INVALID SSM REGISTRATION NUMBER: $ssmError';
+        _isLoading = false;
+        notifyListeners();
+        return AuthResult(success: false, message: _errorMessage);
+      }
+
+      final isSsmDuplicate = await _repository.isSsmRegistered(
+        cleanSsm,
+        excludeEmail: email.trim(),
+        excludeUserId: _currentUser?.id,
+      );
+      if (isSsmDuplicate) {
+        _errorMessage =
+            'DUPLICATE SSM: An artisan studio is already registered with SSM number "$cleanSsm"';
+        _isLoading = false;
+        notifyListeners();
+        return AuthResult(success: false, message: _errorMessage);
+      }
+
       final user = await _repository.linkArtisanRoleToTourist(
         email: email,
         studioName: studioName,
         craftCategory: craftCategory,
-        ssmNumber: ssmNumber,
+        ssmNumber: cleanSsm,
         bio: bio,
         phone: phone,
         state: state,
@@ -679,6 +719,21 @@ class AuthViewModel extends ChangeNotifier {
       notifyListeners();
       return AuthResult(success: false, message: _errorMessage);
     }
+  }
+
+  Future<bool> isSsmAvailable(
+    String ssmNumber, {
+    String? excludeEmail,
+    String? excludeUserId,
+  }) async {
+    final clean = ssmNumber.trim();
+    if (!SsmValidator.isValid(clean)) return false;
+    final isRegistered = await _repository.isSsmRegistered(
+      clean,
+      excludeEmail: excludeEmail ?? _currentUser?.email,
+      excludeUserId: excludeUserId ?? _currentUser?.id,
+    );
+    return !isRegistered;
   }
 
   // UC003_RESET_PASSWORD: Step 1 - Send reset token email

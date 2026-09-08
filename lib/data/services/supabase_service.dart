@@ -12,6 +12,7 @@ import 'package:warisan_kita/domain/models/active_artisan_master.dart';
 import 'package:warisan_kita/domain/models/forum_post.dart';
 import 'package:warisan_kita/domain/models/badge.dart';
 import 'package:warisan_kita/domain/models/user.dart';
+import 'package:warisan_kita/domain/validators/ssm_validator.dart';
 
 class SupabaseService {
   // Session Persistence Keys
@@ -225,6 +226,61 @@ class SupabaseService {
     }
 
     return true;
+  }
+
+  Future<bool> isSsmRegistered(
+    String ssmNumber, {
+    String? excludeEmail,
+    String? excludeUserId,
+  }) async {
+    final clean = ssmNumber.trim();
+    if (clean.isEmpty) return false;
+    final normalized = SsmValidator.normalize(clean);
+    final noSpaces = clean.replaceAll(RegExp(r'\s+'), '').toUpperCase();
+
+    // 1. Check local in-memory store
+    for (final entry in _userStore.entries) {
+      if (excludeEmail != null &&
+          entry.key.toLowerCase() == excludeEmail.toLowerCase()) {
+        continue;
+      }
+      final u = entry.value;
+      if (excludeUserId != null && u['id'] == excludeUserId) {
+        continue;
+      }
+      final existingSsm = (u['ssmNumber'] ?? u['ssm_number']) as String?;
+      if (existingSsm != null && existingSsm.trim().isNotEmpty) {
+        final existingNorm = SsmValidator.normalize(existingSsm);
+        final existingNoSpaces = existingSsm.replaceAll(RegExp(r'\s+'), '').toUpperCase();
+        if (existingNorm == normalized || existingNoSpaces == noSpaces) {
+          return true;
+        }
+      }
+    }
+
+    // 2. Check Supabase artisan_profiles table
+    final client = _client;
+    if (client != null) {
+      try {
+        final res = await client
+            .from('artisan_profiles')
+            .select('id, user_id, ssm_number')
+            .or('ssm_number.ilike.$normalized,ssm_number.ilike.$noSpaces')
+            .maybeSingle();
+
+        if (res != null) {
+          final matchedUserId = res['user_id']?.toString();
+          if (excludeUserId != null && matchedUserId == excludeUserId) {
+            return false;
+          }
+          return true;
+        }
+      } catch (e) {
+        debugPrint('Supabase SSM uniqueness check note: $e');
+      }
+    }
+
+    return false;
   }
 
   Future<ExistingAccountCheck> checkExistingAccount(String email) async {
@@ -780,6 +836,19 @@ class SupabaseService {
     }
 
     final initialStatus = isArtisan ? 'PENDING_APPROVAL' : 'ACTIVE';
+
+    if (isArtisan) {
+      final ssmErr = SsmValidator.validate(ssmNumber);
+      if (ssmErr != null) {
+        throw Exception('INVALID_SSM: $ssmErr');
+      }
+      final isTaken = await isSsmRegistered(ssmNumber!);
+      if (isTaken) {
+        throw Exception(
+          'DUPLICATE_SSM: An artisan studio is already registered with SSM number "$ssmNumber".',
+        );
+      }
+    }
 
     final newUser = <String, dynamic>{
       'id': _generateUuidV4(),
@@ -1341,6 +1410,22 @@ class SupabaseService {
         'isSuspended': false,
       };
       _userStore[cleanEmail] = userRecord;
+    }
+
+    final cleanSsm = ssmNumber.trim();
+    final ssmErr = SsmValidator.validate(cleanSsm);
+    if (ssmErr != null) {
+      throw Exception('INVALID_SSM: $ssmErr');
+    }
+    final isTaken = await isSsmRegistered(
+      cleanSsm,
+      excludeEmail: cleanEmail,
+      excludeUserId: userRecord['id'],
+    );
+    if (isTaken) {
+      throw Exception(
+        'DUPLICATE_SSM: An artisan studio is already registered with SSM number "$cleanSsm".',
+      );
     }
 
     // Update user record with pending artisan credentials
