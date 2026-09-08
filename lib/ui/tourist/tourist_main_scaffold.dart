@@ -1,14 +1,18 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:warisan_kita/ui/core/account_suspended_screen.dart';
 import 'package:warisan_kita/ui/matchmaker/tourist_matchmaker_view.dart';
 import 'package:warisan_kita/ui/core/live_forum_tab.dart';
 import 'package:warisan_kita/ui/tourist/tourist_directory_tab.dart';
 import 'package:warisan_kita/ui/tourist/tourist_profile_tab.dart';
+import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
 
 class TouristMainScaffold extends StatefulWidget {
-  const TouristMainScaffold({super.key});
+  final bool enableLivePolling;
+  const TouristMainScaffold({super.key, this.enableLivePolling = true});
 
   @override
   State<TouristMainScaffold> createState() => _TouristMainScaffoldState();
@@ -16,9 +20,36 @@ class TouristMainScaffold extends StatefulWidget {
 
 class _TouristMainScaffoldState extends State<TouristMainScaffold> {
   int _currentIndex = 0;
+  Timer? _statusPollTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.enableLivePolling) {
+      _statusPollTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+        if (mounted) {
+          context.read<AuthViewModel>().refreshCurrentUser();
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _statusPollTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final authVM = context.watch<AuthViewModel>();
+    final user = authVM.currentUser;
+
+    // Security Guard: If account is administratively suspended, immediately lock out
+    if (user != null && (user.isSuspended || user.status == 'SUSPENDED')) {
+      return const AccountSuspendedScreen();
+    }
+
     final langVM = context.watch<LanguageViewModel>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
