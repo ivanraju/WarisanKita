@@ -12,6 +12,7 @@ class UserModel {
   final String? avatarUrl;
   final String joinedDate;
   final bool isSuspended;
+  final String? suspensionReason;
 
   // Master Artisan profile metadata (if applicable)
   final String? studioName;
@@ -39,6 +40,7 @@ class UserModel {
     this.avatarUrl,
     this.joinedDate = 'Jan 2026',
     this.isSuspended = false,
+    this.suspensionReason,
     this.studioName,
     this.ssmNumber,
     this.craftCategory,
@@ -186,6 +188,8 @@ class UserModel {
     String? artisanStatus,
     List<Map<String, dynamic>>? artisanDocuments,
     List<String>? tags,
+    String? suspensionReason,
+    bool clearSuspensionReason = false,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -198,6 +202,7 @@ class UserModel {
       avatarUrl: avatarUrl ?? this.avatarUrl,
       joinedDate: joinedDate ?? this.joinedDate,
       isSuspended: isSuspended ?? this.isSuspended,
+      suspensionReason: clearSuspensionReason ? null : (suspensionReason ?? this.suspensionReason),
       studioName: studioName ?? this.studioName,
       ssmNumber: ssmNumber ?? this.ssmNumber,
       craftCategory: craftCategory ?? this.craftCategory,
@@ -226,6 +231,8 @@ class UserModel {
       'avatarUrl': avatarUrl,
       'joinedDate': joinedDate,
       'isSuspended': isSuspended,
+      'suspensionReason': suspensionReason,
+      'suspension_reason': suspensionReason,
       'studioName': studioName,
       'ssmNumber': ssmNumber,
       'craftCategory': craftCategory,
@@ -275,6 +282,7 @@ class UserModel {
       avatarUrl: map['avatarUrl'] ?? map['avatar_url'],
       joinedDate: map['joinedDate'] ?? 'Jan 2026',
       isSuspended: map['isSuspended'] ?? (map['status'] == 'SUSPENDED'),
+      suspensionReason: map['suspensionReason'] ?? map['suspension_reason'],
       studioName: map['studioName'] ?? map['studio_name'] ?? artisanMap?['studio_name'],
       ssmNumber: map['ssmNumber'] ?? map['ssm_number'] ?? artisanMap?['ssm_number'],
       craftCategory: map['craftCategory'] ?? map['craft_category'] ?? artisanMap?['craft_category'],
