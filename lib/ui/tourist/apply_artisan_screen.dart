@@ -656,6 +656,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                       ),
                       filled: true,
                       fillColor: const Color(0xFFF8F9FA),
+                      errorMaxLines: 2,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
                         borderSide: BorderSide.none,
@@ -663,7 +664,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                     ),
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) {
-                        return 'Please enter SSM or Kraftangan registration number';
+                        return 'Please enter SSM or Kraftangan number';
                       }
                       final clean = v.trim();
                       final lower = clean.toLowerCase();
@@ -671,14 +672,14 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                         'none', 'na', 'n/a', 'nil', 'null', 'test', 'testing', 'dummy', 'asdf', '1234', '12345', '123456', 'no', 'tiada'
                       };
                       if (disallowedPlaceholders.contains(lower)) {
-                        return 'Please provide an official SSM number or Kraftangan certificate ID';
+                        return 'Please provide a valid SSM or Kraftangan ID';
                       }
                       if (clean.length < 6 || clean.length > 30) {
-                        return 'Registration number must be between 6 and 30 characters';
+                        return 'Must be between 6 and 30 characters';
                       }
                       final validCharsRegex = RegExp(r'^[a-zA-Z0-9\s\/\.\-]+$');
                       if (!validCharsRegex.hasMatch(clean)) {
-                        return 'Can only contain letters, numbers, hyphens, and slashes';
+                        return 'Letters, numbers, hyphens, and slashes only';
                       }
                       if (!RegExp(r'\d').hasMatch(clean)) {
                         return 'Registration number must contain digits';
@@ -702,7 +703,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                           generalTradeLicenseRegex.hasMatch(normalized);
 
                       if (!isValidFormat) {
-                        return 'Invalid format. Use 12-digit SSM (e.g. 202601004821), old SSM (e.g. 123456-A), or Kraftangan ID (e.g. KT/2026/0491)';
+                        return 'Invalid format (e.g. 202601004821 or KT/2026/0491)';
                       }
                       return null;
                     },
@@ -723,6 +724,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                       ),
                       filled: true,
                       fillColor: const Color(0xFFF8F9FA),
+                      errorMaxLines: 2,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
                         borderSide: BorderSide.none,
