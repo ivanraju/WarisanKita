@@ -2774,54 +2774,92 @@ class SupabaseService {
   Future<List<Map<String, dynamic>>> fetchForumReportQueue() async {
     final Map<String, Map<String, dynamic>> groupedReports = {};
 
-    // 1. Add all from _localReportQueue (excluding dismissed & deleted)
+    // =====================================================
+    // 1. Add reports already stored in local report queue
+    // =====================================================
     for (final item in _localReportQueue) {
       final String? postId =
-          (item['postId'] ?? (item['type'] == 'post' ? item['id'] : null))
-              ?.toString();
+      (item['postId'] ??
+          (item['type'] == 'post' ? item['id'] : null))
+          ?.toString();
+
       final String? replyId =
-          (item['replyId'] ?? (item['type'] == 'reply' ? item['id'] : null))
-              ?.toString();
+      (item['replyId'] ??
+          (item['type'] == 'reply' ? item['id'] : null))
+          ?.toString();
+
       if (postId != null &&
           (_deletedPostIds.contains(postId) ||
-              _dismissedReportPostIds.contains(postId)))
+              _dismissedReportPostIds.contains(postId))) {
         continue;
-      if (replyId != null && _dismissedReportReplyIds.contains(replyId))
-        continue;
-      if (_forumStore.isNotEmpty) {
-        if (postId != null && !_forumStore.any((t) => t.id == postId)) continue;
-        if (replyId != null &&
-            !_forumStore.any((t) => t.replies.any((r) => r.id == replyId)))
-          continue;
       }
-      final String key = postId != null ? 'post_$postId' : 'reply_$replyId';
-      groupedReports[key] = Map<String, dynamic>.from(item);
+
+      if (replyId != null &&
+          _dismissedReportReplyIds.contains(replyId)) {
+        continue;
+      }
+
+      if (_forumStore.isNotEmpty) {
+        if (postId != null &&
+            !_forumStore.any((t) => t.id == postId)) {
+          continue;
+        }
+
+        if (replyId != null &&
+            !_forumStore.any(
+                  (t) => t.replies.any((r) => r.id == replyId),
+            )) {
+          continue;
+        }
+      }
+
+      final String key =
+      postId != null
+          ? 'post_$postId'
+          : 'reply_$replyId';
+
+      groupedReports[key] =
+      Map<String, dynamic>.from(item);
     }
 
-    // 2. Add reported items from _forumStore (excluding dismissed)
+    // =====================================================
+    // 2. Add reported posts/replies from forum store
+    // =====================================================
     for (final thread in _forumStore) {
+      // -------------------------
+      // Reported post
+      // -------------------------
       if (thread.isReported &&
           !_deletedPostIds.contains(thread.id) &&
           !_dismissedReportPostIds.contains(thread.id)) {
-        final key = 'post_${thread.id}';
+        final String key = 'post_${thread.id}';
+
         if (!groupedReports.containsKey(key)) {
           groupedReports[key] = {
             'type': 'post',
             'postId': thread.id,
             'reports': [
               {
-                'reason': thread.reportReason ?? 'Inappropriate Content',
+                'reason':
+                thread.reportReason ??
+                    'Inappropriate Content',
                 'notes': thread.reportNotes ?? '',
                 'created_at': thread.timestamp,
-              },
+              }
             ],
             'reportsCount': 1,
           };
         }
       }
+
+      // -------------------------
+      // Reported replies
+      // -------------------------
       for (final reply in thread.replies) {
-        if (reply.isReported && !_dismissedReportReplyIds.contains(reply.id)) {
-          final key = 'reply_${reply.id}';
+        if (reply.isReported &&
+            !_dismissedReportReplyIds.contains(reply.id)) {
+          final String key = 'reply_${reply.id}';
+
           if (!groupedReports.containsKey(key)) {
             groupedReports[key] = {
               'type': 'reply',
@@ -2829,10 +2867,12 @@ class SupabaseService {
               'replyId': reply.id,
               'reports': [
                 {
-                  'reason': reply.reportReason ?? 'Inappropriate Content',
+                  'reason':
+                  reply.reportReason ??
+                      'Inappropriate Content',
                   'notes': reply.reportNotes ?? '',
                   'created_at': reply.timestamp,
-                },
+                }
               ],
               'reportsCount': 1,
             };
@@ -2841,8 +2881,11 @@ class SupabaseService {
       }
     }
 
-    // 3. Query Supabase if client is available
+    // =====================================================
+    // 3. Load REAL reports from Supabase
+    // =====================================================
     final client = _client;
+
     if (client != null) {
       try {
         final response = await client
@@ -2851,24 +2894,48 @@ class SupabaseService {
             .eq('status', 'pending')
             .order('created_at', ascending: false);
 
-        final reports = List<Map<String, dynamic>>.from(response);
+        final List<Map<String, dynamic>> reports =
+        List<Map<String, dynamic>>.from(response);
+
         for (final report in reports) {
-          final postId = report['post_id']?.toString();
-          final replyId = report['reply_id']?.toString();
+          final String? postId =
+          report['post_id']?.toString();
+
+          final String? replyId =
+          report['reply_id']?.toString();
+
+          // Skip deleted/dismissed posts
           if (postId != null &&
               (_deletedPostIds.contains(postId) ||
-                  _dismissedReportPostIds.contains(postId)))
+                  _dismissedReportPostIds.contains(postId))) {
             continue;
-          if (replyId != null && _dismissedReportReplyIds.contains(replyId))
-            continue;
-          if (_forumStore.isNotEmpty) {
-            if (postId != null && !_forumStore.any((t) => t.id == postId))
-              continue;
-            if (replyId != null &&
-                !_forumStore.any((t) => t.replies.any((r) => r.id == replyId)))
-              continue;
           }
+
+          // Skip dismissed replies
+          if (replyId != null &&
+              _dismissedReportReplyIds.contains(replyId)) {
+            continue;
+          }
+
+          // Make sure target still exists
+          if (_forumStore.isNotEmpty) {
+            if (postId != null &&
+                !_forumStore.any((t) => t.id == postId)) {
+              continue;
+            }
+
+            if (replyId != null &&
+                !_forumStore.any(
+                      (t) =>
+                      t.replies.any((r) => r.id == replyId),
+                )) {
+              continue;
+            }
+          }
+
+          // Determine grouping key
           final String key;
+
           if (postId != null) {
             key = 'post_$postId';
           } else if (replyId != null) {
@@ -2877,40 +2944,69 @@ class SupabaseService {
             continue;
           }
 
+          // Create group if it does not exist
           if (!groupedReports.containsKey(key)) {
             groupedReports[key] = {
-              'type': postId != null ? 'post' : 'reply',
+              'type':
+              postId != null ? 'post' : 'reply',
               'postId': postId,
               'replyId': replyId,
               'reports': <Map<String, dynamic>>[],
+              'reportsCount': 0,
             };
           }
 
-          final reportList = List<Map<String, dynamic>>.from(
+          final List<Map<String, dynamic>> reportList =
+          List<Map<String, dynamic>>.from(
             groupedReports[key]!['reports'] ?? [],
           );
 
-          final String? repId = report['id']?.toString();
-          final String repReason = report['reason']?.toString() ?? '';
-          final String repNotes = report['notes']?.toString() ?? '';
+          final String? realReportId =
+          report['id']?.toString();
 
-          final bool isDuplicate = reportList.any((r) {
-            final String? existingId = r['id']?.toString();
-            if (repId != null && existingId != null && repId == existingId) {
-              return true;
-            }
-            return (r['reason']?.toString() ?? '') == repReason &&
-                (r['notes']?.toString() ?? '') == repNotes;
+          // =================================================
+          // Remove temporary/local placeholder reports.
+          //
+          // Real Supabase reports contain database "id".
+          // Local placeholders do not.
+          // =================================================
+          reportList.removeWhere((existingReport) {
+            final String? existingId =
+            existingReport['id']?.toString();
+
+            return existingId == null ||
+                existingId.isEmpty ||
+                existingId == 'null';
           });
 
-          if (!isDuplicate) {
-            reportList.add(report);
-            groupedReports[key]!['reports'] = reportList;
-            groupedReports[key]!['reportsCount'] = reportList.length;
+          // =================================================
+          // Prevent duplicate REAL reports using DB report id
+          // =================================================
+          final bool alreadyExists =
+          reportList.any((existingReport) {
+            return existingReport['id']?.toString() ==
+                realReportId;
+          });
+
+          if (!alreadyExists) {
+            // IMPORTANT:
+            // "report" comes directly from Supabase .select(),
+            // therefore reporter_id is preserved here.
+            reportList.add(
+              Map<String, dynamic>.from(report),
+            );
           }
+
+          groupedReports[key]!['reports'] =
+              reportList;
+
+          groupedReports[key]!['reportsCount'] =
+              reportList.length;
         }
       } catch (e) {
-        debugPrint('fetchForumReportQueue Supabase note: $e');
+        debugPrint(
+          'fetchForumReportQueue Supabase note: $e',
+        );
       }
     }
 
@@ -3548,12 +3644,42 @@ class SupabaseService {
     String deletionReason, [
     String? adminUsername,
   ]) async {
-    // 1. Capture post metadata BEFORE removing from local store
     final foundThread = _forumStore.where((t) => t.id == postId).firstOrNull;
-    final authorEmail = foundThread?.authorEmail ?? '';
-    final authorName = foundThread?.authorName ?? '';
-    final postTitle = foundThread?.title ?? 'Post';
-    final modName = adminUsername ?? 'Admin';
+
+    final String authorEmail = foundThread?.authorEmail ?? '';
+    String authorName = '';
+    final String postTitle = foundThread?.title ?? 'Post';
+    final String modName = adminUsername ?? 'Admin';
+
+    final client = _client;
+
+// Always use username for moderation history
+    if (client != null && authorEmail.trim().isNotEmpty) {
+      try {
+        final userRow = await client
+            .from('users')
+            .select('username')
+            .ilike('email', authorEmail.trim())
+            .maybeSingle();
+
+        if (userRow != null) {
+          final String username =
+          (userRow['username'] ?? '').toString().trim();
+
+          if (username.isNotEmpty) {
+            authorName = username;
+          }
+        }
+      } catch (e) {
+        debugPrint(
+          'adminDeleteForumPost author lookup note: $e',
+        );
+      }
+    }
+
+    if (authorName.trim().isEmpty) {
+      authorName = 'Unknown User';
+    }
 
     // 2. Immediately update local state (admin sees deletion instantly)
     _forumStore.removeWhere((thread) => thread.id == postId);
@@ -3592,7 +3718,6 @@ class SupabaseService {
       'resolved_at': DateTime.now().toIso8601String(),
     });
 
-    final client = _client;
     if (client == null) return 'Supabase client not initialized';
 
     String deleteError = '';
@@ -3714,12 +3839,47 @@ class SupabaseService {
     final modName = adminUsername ?? 'Admin';
     for (final t in _forumStore) {
       final r = t.replies.where((rep) => rep.id == replyId).firstOrNull;
+
       if (r != null) {
         authorEmail = r.authorEmail;
         authorName = r.sender;
         replyText = r.text;
         break;
       }
+    }
+
+// =====================================================
+// Resolve the REAL author name from public.users
+// instead of relying only on reply.sender
+// =====================================================
+    final client = _client;
+
+    if (client != null && authorEmail.trim().isNotEmpty) {
+      try {
+        final userRow = await client
+            .from('users')
+            .select('username')
+            .ilike('email', authorEmail.trim())
+            .maybeSingle();
+
+        if (userRow != null) {
+          final String username =
+          (userRow['username'] ?? '').toString().trim();
+
+          if (username.isNotEmpty) {
+            authorName = username;
+          }
+        }
+      } catch (e) {
+        debugPrint(
+          'adminDeleteForumReply author lookup note: $e',
+        );
+      }
+    }
+
+    if (authorName.trim().isEmpty ||
+        authorName.trim().toLowerCase() == 'community member') {
+      authorName = 'Unknown User';
     }
 
     // 2. Immediately update local state
@@ -3761,7 +3921,6 @@ class SupabaseService {
       'resolved_at': DateTime.now().toIso8601String(),
     });
 
-    final client = _client;
     if (client == null) return 'Supabase client not initialized';
 
     String deleteError = '';
