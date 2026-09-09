@@ -218,6 +218,14 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
       final authVM = context.read<AuthViewModel>();
       await authVM.cancelRelocationRequest();
       if (mounted) {
+        setState(() {});
+        final verifiedPin = _selectedWorkshopPin ??
+            (authVM.currentUser?.latitude != null && authVM.currentUser?.longitude != null
+                ? LatLng(authVM.currentUser!.latitude!, authVM.currentUser!.longitude!)
+                : _selectedStateCenter);
+        _workshopMapController?.animateCamera(
+          CameraUpdate.newLatLngZoom(verifiedPin, 15),
+        );
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Relocation request withdrawn successfully.'),
@@ -322,6 +330,9 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                                 proposedPin = result.position;
                                 proposedAddress = result.displayName;
                                 proposedState = result.malaysiaState;
+                                if (reasonController.text.trim().isEmpty) {
+                                  reasonController.text = 'Premise relocation to ${result.displayName}';
+                                }
                               });
                             }
                           },
@@ -396,7 +407,9 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                       return;
                     }
 
-                    final reason = reasonController.text.trim();
+                    final reason = reasonController.text.trim().isNotEmpty
+                        ? reasonController.text.trim()
+                        : 'Premise relocation to $proposedAddress';
                     await authVM.submitRelocationRequest(
                       address: proposedAddress!,
                       state: proposedState ?? currentUser.state ?? 'Melaka',
@@ -431,6 +444,13 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                           ),
                         );
                       } catch (_) {}
+
+                      setState(() {});
+                      if (_workshopMapController != null && proposedPin != null) {
+                        _workshopMapController!.animateCamera(
+                          CameraUpdate.newLatLngZoom(proposedPin!, 15),
+                        );
+                      }
 
                       Navigator.pop(dialogCtx);
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -1084,26 +1104,52 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                           final pin = _selectedWorkshopPin ?? _selectedStateCenter;
                           controller.animateCamera(CameraUpdate.newLatLngZoom(pin, 15));
                         },
-                        markers: (_selectedWorkshopPin != null || currentUser?.latitude != null)
-                            ? {
-                                Marker(
-                                  markerId: const MarkerId('workshop-location'),
-                                  position: _selectedWorkshopPin ??
-                                      (currentUser?.latitude != null && currentUser?.longitude != null
-                                          ? LatLng(currentUser!.latitude!, currentUser!.longitude!)
-                                          : _selectedStateCenter),
-                                  icon: BitmapDescriptor.defaultMarkerWithHue(
-                                    BitmapDescriptor.hueGreen,
-                                  ),
-                                  infoWindow: InfoWindow(
-                                    title: _studioNameController.text.trim().isNotEmpty
-                                        ? _studioNameController.text.trim()
-                                        : (currentUser?.studioName ?? 'Verified Workshop'),
-                                    snippet: _workshopAddress ?? currentUser?.address ?? 'Accredited Workshop Premise',
-                                  ),
+                        markers: () {
+                          final user = currentUser;
+                          final set = <Marker>{};
+                          if (_selectedWorkshopPin != null || (user != null && user.latitude != null)) {
+                            set.add(
+                              Marker(
+                                markerId: const MarkerId('workshop-location'),
+                                position: _selectedWorkshopPin ??
+                                    (user != null && user.latitude != null && user.longitude != null
+                                        ? LatLng(user.latitude!, user.longitude!)
+                                        : _selectedStateCenter),
+                                icon: BitmapDescriptor.defaultMarkerWithHue(
+                                  BitmapDescriptor.hueGreen,
                                 ),
-                              }
-                            : const <Marker>{},
+                                infoWindow: InfoWindow(
+                                  title: _studioNameController.text.trim().isNotEmpty
+                                      ? _studioNameController.text.trim()
+                                      : (user?.studioName ?? 'Verified Workshop'),
+                                  snippet: _workshopAddress ?? user?.address ?? 'Accredited Workshop Premise',
+                                ),
+                              ),
+                            );
+                          }
+                          if (user != null &&
+                              user.hasPendingRelocation &&
+                              user.pendingRelocationLatitude != null &&
+                              user.pendingRelocationLongitude != null) {
+                            set.add(
+                              Marker(
+                                markerId: const MarkerId('proposed-relocation-pin'),
+                                position: LatLng(
+                                  user.pendingRelocationLatitude!,
+                                  user.pendingRelocationLongitude!,
+                                ),
+                                icon: BitmapDescriptor.defaultMarkerWithHue(
+                                  BitmapDescriptor.hueOrange,
+                                ),
+                                infoWindow: InfoWindow(
+                                  title: 'Proposed Premise (Pending Review)',
+                                  snippet: user.pendingRelocationAddress ?? '',
+                                ),
+                              ),
+                            );
+                          }
+                          return set;
+                        }(),
                         myLocationButtonEnabled: false,
                         myLocationEnabled: false,
                         mapToolbarEnabled: false,
@@ -1223,6 +1269,31 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                           ),
                         ),
                         const SizedBox(width: 8),
+                        if (currentUser != null &&
+                            currentUser.pendingRelocationLatitude != null &&
+                            currentUser.pendingRelocationLongitude != null) ...[
+                          OutlinedButton.icon(
+                            onPressed: () {
+                              final pLat = currentUser.pendingRelocationLatitude;
+                              final pLng = currentUser.pendingRelocationLongitude;
+                              if (pLat != null && pLng != null) {
+                                _workshopMapController?.animateCamera(
+                                  CameraUpdate.newLatLngZoom(
+                                    LatLng(pLat, pLng),
+                                    15,
+                                  ),
+                                );
+                              }
+                            },
+                            icon: const Icon(Icons.pin_drop_rounded, size: 14, color: Color(0xFFD97706)),
+                            label: const Text('View on Map', style: TextStyle(fontSize: 11, color: Color(0xFF92400E))),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Color(0xFFF59E0B)),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                        ],
                         OutlinedButton(
                           onPressed: _handleCancelRelocation,
                           style: OutlinedButton.styleFrom(

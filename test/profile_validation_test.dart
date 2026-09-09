@@ -327,6 +327,55 @@ void main() {
       await modVM.approveArtisan('reloc_test_1');
       expect(modVM.pendingArtisans.any((p) => p.id == 'reloc_test_1'), isFalse);
     });
+
+    test('Pending relocation persists across AuthViewModel.refreshCurrentUser and getAllUsers', () async {
+      const email = 'persist.artisan@warisankita.my';
+      final authVM = AuthViewModel(repository: repository);
+      authVM.setCurrentUserForTesting(
+        const UserModel(
+          id: 'u_persist_artisan',
+          email: email,
+          displayName: 'Mak Cik Kiah',
+          role: 'Artisan',
+          address: 'Original Workshop, Pasir Mas',
+          state: 'Kelantan',
+          latitude: 6.04,
+          longitude: 102.14,
+        ),
+      );
+
+      // Submit relocation
+      await authVM.submitRelocationRequest(
+        address: 'New Craft Hub, Kota Bharu',
+        state: 'Kelantan',
+        latitude: 6.13,
+        longitude: 102.25,
+        reason: 'Relocating to tourist accessible hub',
+      );
+
+      expect(authVM.currentUser?.hasPendingRelocation, isTrue);
+      expect(authVM.currentUser?.pendingRelocationAddress, 'New Craft Hub, Kota Bharu');
+
+      // Simulate periodic background polling (which previously wiped out pending state)
+      await authVM.refreshCurrentUser();
+      expect(authVM.currentUser?.hasPendingRelocation, isTrue);
+      expect(authVM.currentUser?.pendingRelocationAddress, 'New Craft Hub, Kota Bharu');
+
+      // Verify admin getAllUsers also sees the pending relocation
+      final users = await repository.getAllUsers();
+      final artisanInList = users.firstWhere((u) => u.email.toLowerCase() == email);
+      expect(artisanInList.hasPendingRelocation, isTrue);
+      expect(artisanInList.pendingRelocationAddress, 'New Craft Hub, Kota Bharu');
+
+      // Cancel relocation
+      await authVM.cancelRelocationRequest();
+      expect(authVM.currentUser?.hasPendingRelocation, isFalse);
+      expect(authVM.currentUser?.pendingRelocationAddress, isNull);
+
+      // Refresh again
+      await authVM.refreshCurrentUser();
+      expect(authVM.currentUser?.hasPendingRelocation, isFalse);
+    });
   });
 
   group('Widget Tests for Verified Location Lock and Review', () {
