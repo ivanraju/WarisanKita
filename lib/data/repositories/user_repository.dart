@@ -158,6 +158,36 @@ class UserRepository {
     );
   }
 
+  Future<UserModel> submitRelocationRequest({
+    required String email,
+    required String address,
+    required String state,
+    required double latitude,
+    required double longitude,
+    required String reason,
+  }) {
+    return _service.submitRelocationRequest(
+      email: email,
+      address: address,
+      state: state,
+      latitude: latitude,
+      longitude: longitude,
+      reason: reason,
+    );
+  }
+
+  Future<UserModel> cancelRelocationRequest({required String email}) {
+    return _service.cancelRelocationRequest(email: email);
+  }
+
+  Future<UserModel> approveRelocationRequest({required String email}) {
+    return _service.approveRelocationRequest(email: email);
+  }
+
+  Future<UserModel> rejectRelocationRequest({required String email, String? feedback}) {
+    return _service.rejectRelocationRequest(email: email, feedback: feedback);
+  }
+
   Future<String?> uploadUserAvatar(String userIdOrEmail, PlatformFile file) {
     return _service.uploadUserAvatar(userIdOrEmail, file);
   }

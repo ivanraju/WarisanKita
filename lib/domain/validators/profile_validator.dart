@@ -303,4 +303,12 @@ class ProfileValidator {
 
     return null;
   }
+
+  /// Validates that a string is not empty or whitespace only.
+  static String? validateNotEmpty(String? value, [String fieldName = 'Field']) {
+    if (value == null || value.trim().isEmpty) {
+      return '$fieldName cannot be empty';
+    }
+    return null;
+  }
 }

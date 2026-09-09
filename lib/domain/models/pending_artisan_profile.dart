@@ -16,6 +16,13 @@ class PendingArtisanProfile {
   final List<String> photos;
   final String? bio;
   final bool isUpgradeFromTourist;
+  final bool isRelocationRequest;
+  final String? currentAddress;
+  final String? proposedAddress;
+  final double? proposedLatitude;
+  final double? proposedLongitude;
+  final String? proposedState;
+  final String? relocationReason;
 
   const PendingArtisanProfile({
     required this.id,
@@ -35,6 +42,13 @@ class PendingArtisanProfile {
     this.photos = const [],
     this.bio,
     this.isUpgradeFromTourist = false,
+    this.isRelocationRequest = false,
+    this.currentAddress,
+    this.proposedAddress,
+    this.proposedLatitude,
+    this.proposedLongitude,
+    this.proposedState,
+    this.relocationReason,
   });
 }
 
