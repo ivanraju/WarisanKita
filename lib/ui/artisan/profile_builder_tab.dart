@@ -42,25 +42,84 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
   String? _workshopAddress;
 
   static const Map<String, LatLng> _stateCenters = {
-    'Johor': LatLng(2.0301, 103.3185),
+    'Johor': LatLng(1.4927, 103.7414),
     'Kedah': LatLng(6.1184, 100.3685),
-    'Kelantan': LatLng(5.3117, 102.2381),
+    'Kelantan': LatLng(6.1254, 102.2381),
     'Melaka': LatLng(2.1896, 102.2501),
     'Negeri Sembilan': LatLng(2.7258, 101.9424),
-    'Pahang': LatLng(3.8126, 103.3256),
+    'Pahang': LatLng(3.8077, 103.3260),
     'Penang': LatLng(5.4141, 100.3288),
-    'Perak': LatLng(4.5921, 101.0901),
-    'Perlis': LatLng(6.4449, 100.2048),
-    'Sabah': LatLng(5.9788, 116.0753),
+    'Perak': LatLng(4.5975, 101.0901),
+    'Perlis': LatLng(6.4414, 100.1986),
+    'Sabah': LatLng(5.9804, 116.0735),
     'Sarawak': LatLng(1.5533, 110.3592),
     'Selangor': LatLng(3.0738, 101.5183),
-    'Terengganu': LatLng(5.3117, 103.1324),
+    'Terengganu': LatLng(5.3296, 103.1370),
     'Kuala Lumpur': LatLng(3.1390, 101.6869),
   };
 
+  static LatLng _resolveStateCenter(String? stateName) {
+    if (stateName == null || stateName.trim().isEmpty) {
+      return const LatLng(2.1896, 102.2501); // Melaka Cultural Heritage Center
+    }
+    final lower = stateName.trim().toLowerCase();
+    for (final entry in _stateCenters.entries) {
+      if (lower.contains(entry.key.toLowerCase()) || entry.key.toLowerCase().contains(lower)) {
+        return entry.value;
+      }
+    }
+    if (lower.contains('malacca')) return const LatLng(2.1896, 102.2501);
+    if (lower.contains('kl') || lower.contains('lumpur')) return const LatLng(3.1390, 101.6869);
+    if (lower.contains('penang') || lower.contains('pulau pinang')) return const LatLng(5.4141, 100.3288);
+    return const LatLng(2.1896, 102.2501);
+  }
+
+  static const List<Map<String, dynamic>> _heritageLandmarks = [
+    {
+      'name': 'Kampung Morten Heritage Village',
+      'category': 'Living Cultural Heritage',
+      'position': LatLng(2.2023, 102.2509),
+    },
+    {
+      'name': 'Jonker Street Craft Quarter',
+      'category': 'Historic Artisan Guilds',
+      'position': LatLng(2.1953, 102.2475),
+    },
+    {
+      'name': 'Kompleks Kraf Kuala Lumpur',
+      'category': 'National Craft Complex',
+      'position': LatLng(3.1492, 101.7176),
+    },
+    {
+      'name': 'Central Market (Pasar Seni)',
+      'category': 'Art & Heritage Center',
+      'position': LatLng(3.1453, 101.6958),
+    },
+    {
+      'name': 'George Town Heritage Crafts Guild',
+      'category': 'Traditional Crafts District',
+      'position': LatLng(5.4164, 100.3370),
+    },
+    {
+      'name': 'Pasar Payang Cultural Bazaar',
+      'category': 'Terengganu Songket & Batik',
+      'position': LatLng(5.3376, 103.1342),
+    },
+    {
+      'name': 'Sarawak Cultural Village',
+      'category': 'Indigenous Craft Guild',
+      'position': LatLng(1.7505, 110.3175),
+    },
+    {
+      'name': 'Kota Kinabalu Handicraft Center',
+      'category': 'Borneo Heritage Craft',
+      'position': LatLng(5.9798, 116.0706),
+    },
+  ];
+
   LatLng get _selectedStateCenter {
     final state = _stateController.text.trim();
-    return _stateCenters[state] ?? const LatLng(4.2105, 101.9758); // Default Malaysia center
+    return _resolveStateCenter(state);
   }
 
   bool _isOpenForDemos = true;
@@ -91,9 +150,11 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
       text: user?.craftCategory ?? '',
     );
     _stateController = TextEditingController(text: user?.state ?? '');
-    _workshopAddress = user?.address;
-    if (user != null && user.latitude != null && user.longitude != null) {
+    _workshopAddress = user?.address ?? 'Kampung Morten, Melaka';
+    if (user != null && user.latitude != null && user.longitude != null && user.latitude != 0.0) {
       _selectedWorkshopPin = LatLng(user.latitude!, user.longitude!);
+    } else {
+      _selectedWorkshopPin = _resolveStateCenter(user?.state);
     }
     _experienceController = TextEditingController(text: '');
     _phoneController = TextEditingController(text: user?.phone ?? '');
@@ -323,12 +384,16 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                         const SizedBox(height: 8),
                         OutlinedButton.icon(
                           onPressed: () async {
+                            final effectivePin = _selectedWorkshopPin ?? _selectedStateCenter;
+                            final effectiveAddr = _workshopAddress ?? currentUser.address ?? 'Kampung Morten, Melaka';
+                            final effectiveState = (currentUser.state?.isNotEmpty == true) ? currentUser.state! : 'Melaka';
+
                             final result = await Navigator.of(context).push<WorkshopPlaceResult>(
                               MaterialPageRoute(
                                 builder: (_) => WorkshopMapPickerPage(
-                                  initialState: proposedState ?? currentUser.state ?? 'Melaka',
-                                  initialLocation: proposedPin ?? _selectedWorkshopPin,
-                                  initialAddress: proposedAddress ?? currentUser.address,
+                                  initialState: proposedState ?? effectiveState,
+                                  initialLocation: proposedPin ?? effectivePin,
+                                  initialAddress: proposedAddress ?? effectiveAddr,
                                   stateCenters: _stateCenters,
                                 ),
                               ),
@@ -1091,22 +1156,38 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                       child: GoogleMap(
                         initialCameraPosition: CameraPosition(
                           target: _selectedWorkshopPin ?? _selectedStateCenter,
-                          zoom: 14,
+                          zoom: 15,
                         ),
                         onMapCreated: (controller) {
                           _workshopMapController = controller;
+                          final pin = _selectedWorkshopPin ?? _selectedStateCenter;
+                          controller.animateCamera(CameraUpdate.newLatLngZoom(pin, 15));
                         },
-                        markers: _selectedWorkshopPin == null
-                            ? const <Marker>{}
-                            : {
-                                Marker(
-                                  markerId: const MarkerId('workshop-location'),
-                                  position: _selectedWorkshopPin!,
-                                  icon: BitmapDescriptor.defaultMarkerWithHue(
-                                    BitmapDescriptor.hueGreen,
-                                  ),
-                                ),
-                              },
+                        markers: {
+                          Marker(
+                            markerId: const MarkerId('workshop-location'),
+                            position: _selectedWorkshopPin ?? _selectedStateCenter,
+                            icon: BitmapDescriptor.defaultMarkerWithHue(
+                              BitmapDescriptor.hueGreen,
+                            ),
+                            infoWindow: InfoWindow(
+                              title: _studioNameController.text.trim().isNotEmpty
+                                  ? _studioNameController.text.trim()
+                                  : (currentUser?.studioName ?? 'Verified Workshop'),
+                              snippet: _workshopAddress ?? currentUser?.address ?? 'Accredited Workshop Premise',
+                            ),
+                          ),
+                          for (final lm in _heritageLandmarks)
+                            Marker(
+                              markerId: MarkerId('lm_${lm['name']}'),
+                              position: lm['position'] as LatLng,
+                              icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueCyan),
+                              infoWindow: InfoWindow(
+                                title: lm['name'] as String,
+                                snippet: '${lm['category']} • Heritage Landmark',
+                              ),
+                            ),
+                        },
                         myLocationButtonEnabled: false,
                         myLocationEnabled: false,
                         mapToolbarEnabled: false,
