@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:warisan_kita/data/repositories/user_repository.dart';
 import 'package:warisan_kita/data/services/supabase_service.dart';
 import 'package:warisan_kita/domain/models/pending_artisan_profile.dart';
@@ -104,6 +105,7 @@ class _MockHttpClientResponse extends Stream<List<int>> implements HttpClientRes
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   HttpOverrides.global = _MockHttpOverrides();
+  SharedPreferences.setMockInitialValues({});
 
   group('ProfileValidator Domain Tests', () {
     test('validateUsername accepts valid handles and rejects invalid ones', () {
@@ -526,6 +528,80 @@ void main() {
       expect(users.any((u) => u.email == 'pending.artisan@warisankita.my'), isFalse);
       expect(users.any((u) => u.email == 'suspended@warisankita.my'), isFalse);
       expect(users.any((u) => u.email == 'artisan.sarah@warisankita.my'), isFalse);
+    });
+  });
+
+  group('Account Deletion, Cache & Re-Registration Lifecycle Tests', () {
+    test('Deleting an account frees username, email and excludes user from getAllUsers & getCurrentUser', () async {
+      final service = SupabaseService();
+      final repo = UserRepository(service: service);
+
+      const testEmail = 'deletetest@example.com';
+      const testUsername = 'deletetestuser';
+      const testPassword = 'Password123!';
+
+      // 1. Sign up user
+      final signupUser = await service.signUp(
+        email: testEmail,
+        password: testPassword,
+        role: 'Tourist',
+        username: testUsername,
+        displayName: 'Delete Test User',
+      );
+      expect(signupUser.email, testEmail);
+
+      // Verify username is taken
+      final availableBefore = await service.isUsernameAvailable(testUsername);
+      expect(availableBefore, isFalse);
+
+      // Verify email exists
+      final checkBefore = await service.checkExistingAccount(testEmail);
+      expect(checkBefore.exists, isTrue);
+
+      // Verify user appears in all users
+      final usersBefore = await service.getAllUsers();
+      expect(usersBefore.any((u) => u.email == testEmail), isTrue);
+
+      // 2. Delete account
+      await repo.deleteAccount(
+        userId: signupUser.id,
+        email: testEmail,
+        username: testUsername,
+      );
+
+      // 3. Verify username is FREED immediately without restarting app
+      final availableAfter = await service.isUsernameAvailable(testUsername);
+      expect(availableAfter, isTrue);
+
+      // 4. Verify checkExistingAccount reports exists: false
+      final checkAfter = await service.checkExistingAccount(testEmail);
+      expect(checkAfter.exists, isFalse);
+
+      // 5. Verify user is EXCLUDED from getAllUsers
+      final usersAfter = await service.getAllUsers();
+      expect(usersAfter.any((u) => u.email == testEmail), isFalse);
+
+      // 6. Verify getCurrentUser returns null and does not restore deleted account
+      final current = await service.getCurrentUser();
+      expect(current, isNull);
+
+      // 7. Verify user can re-register immediately with the same email and username without app restart
+      final reRegisteredUser = await service.signUp(
+        email: testEmail,
+        password: testPassword,
+        role: 'Tourist',
+        username: testUsername,
+        displayName: 'Re-Registered User',
+      );
+      expect(reRegisteredUser.email, testEmail);
+      expect(reRegisteredUser.status, 'ACTIVE');
+
+      // Clean up after test
+      await repo.deleteAccount(
+        userId: reRegisteredUser.id,
+        email: testEmail,
+        username: testUsername,
+      );
     });
   });
 }

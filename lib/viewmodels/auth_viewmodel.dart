@@ -899,7 +899,12 @@ class AuthViewModel extends ChangeNotifier {
     try {
       final userId = _currentUser!.id;
       final email = _currentUser!.email;
-      await _repository.deleteAccount(userId: userId, email: email);
+      final username = _currentUser!.username;
+      await _repository.deleteAccount(
+        userId: userId,
+        email: email,
+        username: username,
+      );
 
       _currentUser = null;
       _activeRole = null;

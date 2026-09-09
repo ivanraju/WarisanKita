@@ -222,6 +222,14 @@ class UserRepository {
 
   Future<void> signOut() => _service.signOut();
 
-  Future<void> deleteAccount({required String userId, required String email}) =>
-      _service.deleteAccount(userId: userId, email: email);
+  Future<void> deleteAccount({
+    required String userId,
+    required String email,
+    String? username,
+  }) =>
+      _service.deleteAccount(
+        userId: userId,
+        email: email,
+        username: username,
+      );
 }

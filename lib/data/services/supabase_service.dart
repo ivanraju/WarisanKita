@@ -19,7 +19,19 @@ class SupabaseService {
   static const String _keyAuthEmail = 'wk_last_auth_email';
   static const String _keyActiveRole = 'wk_last_active_role';
   static const String _keyDeletedAccounts = 'wk_deleted_accounts';
+  static const String _keyDeletedUsernames = 'wk_deleted_usernames';
   static final Set<String> _deletedAccounts = {};
+  static final Set<String> _deletedUsernames = {};
+
+  static String _cleanUsernameKey(String username) {
+    return username
+        .trim()
+        .toLowerCase()
+        .replaceAll('@', '')
+        .replaceAll(' ', '')
+        .replaceAll('_', '')
+        .replaceAll('-', '');
+  }
 
   static Future<void> _recordDeletedAccount(String email) async {
     final clean = email.trim().toLowerCase();
@@ -49,12 +61,56 @@ class SupabaseService {
 
   static Future<bool> _isAccountDeleted(String email) async {
     final clean = email.trim().toLowerCase();
+    if (clean.isEmpty) return false;
     if (_deletedAccounts.contains(clean)) return true;
     try {
       final prefs = await SharedPreferences.getInstance();
       final list = prefs.getStringList(_keyDeletedAccounts) ?? [];
       if (list.contains(clean)) {
         _deletedAccounts.add(clean);
+        return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  static Future<void> _recordDeletedUsername(String username) async {
+    final clean = _cleanUsernameKey(username);
+    if (clean.isEmpty) return;
+    _deletedUsernames.add(clean);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final list = prefs.getStringList(_keyDeletedUsernames) ?? [];
+      if (!list.contains(clean)) {
+        list.add(clean);
+        await prefs.setStringList(_keyDeletedUsernames, list);
+      }
+    } catch (_) {}
+  }
+
+  static Future<void> _unrecordDeletedUsername(String username) async {
+    final clean = _cleanUsernameKey(username);
+    if (clean.isEmpty) return;
+    _deletedUsernames.remove(clean);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final list = prefs.getStringList(_keyDeletedUsernames) ?? [];
+      if (list.contains(clean)) {
+        list.remove(clean);
+        await prefs.setStringList(_keyDeletedUsernames, list);
+      }
+    } catch (_) {}
+  }
+
+  static Future<bool> _isUsernameDeleted(String username) async {
+    final clean = _cleanUsernameKey(username);
+    if (clean.isEmpty) return false;
+    if (_deletedUsernames.contains(clean)) return true;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final list = prefs.getStringList(_keyDeletedUsernames) ?? [];
+      if (list.contains(clean)) {
+        _deletedUsernames.add(clean);
         return true;
       }
     } catch (_) {}
@@ -145,6 +201,11 @@ class SupabaseService {
         .replaceAll('-', '');
     if (cleanUsername.isEmpty) return false;
 
+    // Check if recorded in local deleted usernames store
+    if (await _isUsernameDeleted(cleanUsername)) {
+      return true;
+    }
+
     // 1. Check local in-memory store for unique username/handle
     for (final entry in _userStore.entries) {
       if (excludeEmail != null &&
@@ -152,6 +213,16 @@ class SupabaseService {
         continue;
       }
       final u = entry.value;
+      final status = (u['status'] ?? '').toString().toUpperCase();
+      final isSuspended = u['isSuspended'] == true;
+      final reason = (u['suspensionReason'] ?? '').toString();
+      if (status == 'DELETED' || (isSuspended && reason == 'ACCOUNT_DELETED')) {
+        continue;
+      }
+      if (_deletedAccounts.contains(entry.key.toLowerCase())) {
+        continue;
+      }
+
       final existingUsername = (u['username'] as String?)
           ?.toLowerCase()
           .replaceAll('@', '')
@@ -171,14 +242,25 @@ class SupabaseService {
       try {
         final res = await client
             .from('users')
-            .select('id, email')
+            .select('id, email, status, is_suspended, suspension_reason')
             .ilike('username', cleanUsername)
             .maybeSingle();
 
         if (res != null) {
+          final resEmail = (res['email'] as String?)?.toLowerCase() ?? '';
           if (excludeEmail != null &&
-              (res['email'] as String?)?.toLowerCase() ==
-                  excludeEmail.toLowerCase()) {
+              resEmail == excludeEmail.toLowerCase()) {
+            return true;
+          }
+
+          final status = (res['status'] ?? '').toString().toUpperCase();
+          final isSuspended = res['is_suspended'] == true;
+          final reason = (res['suspension_reason'] ?? '').toString();
+          if (status == 'DELETED' ||
+              (isSuspended && reason == 'ACCOUNT_DELETED')) {
+            return true;
+          }
+          if (resEmail.isNotEmpty && await _isAccountDeleted(resEmail)) {
             return true;
           }
           return false;
@@ -738,6 +820,13 @@ class SupabaseService {
       final authUser = client.auth.currentUser;
       if (session != null && authUser != null) {
         final email = authUser.email?.toLowerCase();
+        if (email != null && await _isAccountDeleted(email)) {
+          await client.auth.signOut();
+          await _clearAuthSession();
+          _userStore.remove(email);
+          return null;
+        }
+
         try {
           final profileData = await client
               .from('users')
@@ -745,6 +834,20 @@ class SupabaseService {
               .eq('id', authUser.id)
               .maybeSingle();
           if (profileData != null) {
+            final profileStatus =
+                (profileData['status'] ?? '').toString().toUpperCase();
+            final isSuspended = profileData['is_suspended'] == true;
+            final reason = (profileData['suspension_reason'] ?? '').toString();
+
+            if (profileStatus == 'DELETED' ||
+                (isSuspended && reason == 'ACCOUNT_DELETED') ||
+                (email != null && await _isAccountDeleted(email))) {
+              await client.auth.signOut();
+              await _clearAuthSession();
+              if (email != null) _userStore.remove(email);
+              return null;
+            }
+
             if (email != null) {
               _userStore[email] = profileData;
             }
@@ -762,6 +865,16 @@ class SupabaseService {
             ? List<String>.from(meta['roles'])
             : [role];
         final status = (meta['status'] as String?) ?? 'ACTIVE';
+        final isDeleted = meta['is_deleted'] == true ||
+            status.toUpperCase() == 'DELETED' ||
+            (email != null && await _isAccountDeleted(email));
+
+        if (isDeleted) {
+          await client.auth.signOut();
+          await _clearAuthSession();
+          if (email != null) _userStore.remove(email);
+          return null;
+        }
 
         final u = UserModel(
           id: authUser.id,
@@ -791,8 +904,24 @@ class SupabaseService {
         final map = jsonDecode(rawUser) as Map<String, dynamic>;
         final user = UserModel.fromMap(map);
         final email = user.email.toLowerCase();
+        if (user.status.toUpperCase() == 'DELETED' ||
+            await _isAccountDeleted(email)) {
+          await _clearAuthSession();
+          _userStore.remove(email);
+          return null;
+        }
         if (_userStore.containsKey(email)) {
           final storeData = _userStore[email]!;
+          final storeStatus =
+              (storeData['status'] ?? '').toString().toUpperCase();
+          final isSuspended = storeData['isSuspended'] == true;
+          final reason = (storeData['suspensionReason'] ?? '').toString();
+          if (storeStatus == 'DELETED' ||
+              (isSuspended && reason == 'ACCOUNT_DELETED')) {
+            await _clearAuthSession();
+            _userStore.remove(email);
+            return null;
+          }
           return UserModel.fromMap(storeData);
         }
         return user;
@@ -819,13 +948,24 @@ class SupabaseService {
   }) async {
     final cleanEmail = email.trim().toLowerCase();
     await _unrecordDeletedAccount(cleanEmail);
-    await Future.delayed(const Duration(milliseconds: 600));
+    if (username != null && username.trim().isNotEmpty) {
+      await _unrecordDeletedUsername(username);
+    }
+    await Future.delayed(const Duration(milliseconds: 300));
 
     // Account already exists check:
     if (_userStore.containsKey(cleanEmail)) {
-      throw Exception(
-        'ACCOUNT ALREADY REGISTERED: An account is already registered with email "$email". Please sign in instead.',
-      );
+      final u = _userStore[cleanEmail]!;
+      final status = (u['status'] ?? '').toString().toUpperCase();
+      final isSuspended = u['isSuspended'] == true;
+      final reason = (u['suspensionReason'] ?? '').toString();
+      if (status == 'DELETED' || (isSuspended && reason == 'ACCOUNT_DELETED')) {
+        _userStore.remove(cleanEmail);
+      } else {
+        throw Exception(
+          'ACCOUNT ALREADY REGISTERED: An account is already registered with email "$email". Please sign in instead.',
+        );
+      }
     }
 
     final client = _client;
@@ -833,13 +973,21 @@ class SupabaseService {
       try {
         final existingOnline = await client
             .from('users')
-            .select('id')
+            .select('id, status, is_suspended, suspension_reason')
             .eq('email', cleanEmail)
             .maybeSingle();
         if (existingOnline != null) {
-          throw Exception(
-            'ACCOUNT ALREADY REGISTERED: An account is already registered with email "$email". Please sign in instead.',
-          );
+          final onlineStatus =
+              (existingOnline['status'] ?? '').toString().toUpperCase();
+          final isSuspended = existingOnline['is_suspended'] == true;
+          final reason =
+              (existingOnline['suspension_reason'] ?? '').toString();
+          if (onlineStatus != 'DELETED' &&
+              !(isSuspended && reason == 'ACCOUNT_DELETED')) {
+            throw Exception(
+              'ACCOUNT ALREADY REGISTERED: An account is already registered with email "$email". Please sign in instead.',
+            );
+          }
         }
       } catch (e) {
         if (e.toString().contains('ACCOUNT ALREADY REGISTERED')) rethrow;
@@ -1107,7 +1255,81 @@ class SupabaseService {
                   'ssmNumber': ssmNumber,
                 };
                 _userStore[cleanEmail] = upgraded;
-                return UserModel.fromMap(upgraded);
+              } else {
+                final existingStatus =
+                    (existingRow?['status'] ?? '').toString().toUpperCase();
+                final isSuspended = existingRow?['is_suspended'] == true;
+                final reason =
+                    (existingRow?['suspension_reason'] ?? '').toString();
+                final isAccountDeleted = existingStatus == 'DELETED' ||
+                    (isSuspended && reason == 'ACCOUNT_DELETED');
+
+                if (isAccountDeleted ||
+                    currentRole.isEmpty ||
+                    currentRole == role.toLowerCase()) {
+                  final String? effectiveUid =
+                      existingRow?['id']?.toString() ?? loginRes.user?.id;
+                  if (effectiveUid != null && effectiveUid.isNotEmpty) {
+                    try {
+                      await client.from('users').upsert({
+                        'id': effectiveUid,
+                        'email': cleanEmail,
+                        'username': resolvedUsername,
+                        'full_name': resolvedDisplayName,
+                        'display_name': resolvedDisplayName,
+                        'role': finalRole,
+                        'roles': finalRoles,
+                        'status': initialStatus,
+                        'is_suspended': false,
+                        'suspension_reason': null,
+                        'studio_name': studioName,
+                        'craft_category': craftCategory,
+                        'ssm_number': ssmNumber,
+                        'updated_at': DateTime.now().toIso8601String(),
+                      });
+                    } catch (dbErr) {
+                      debugPrint('Reactivating deleted user in users table: $dbErr');
+                    }
+
+                    try {
+                      await client.auth.updateUser(
+                        UserAttributes(
+                          password: password,
+                          data: {
+                            'status': initialStatus,
+                            'role': finalRole,
+                            'roles': finalRoles,
+                            'username': resolvedUsername,
+                            'display_name': resolvedDisplayName,
+                            'full_name': resolvedDisplayName,
+                            'is_deleted': false,
+                          },
+                        ),
+                      );
+                    } catch (_) {}
+
+                    final revived = <String, dynamic>{
+                      'id': effectiveUid,
+                      'email': cleanEmail,
+                      'username': resolvedUsername,
+                      'displayName': resolvedDisplayName,
+                      'full_name': resolvedDisplayName,
+                      'role': finalRole,
+                      'roles': finalRoles,
+                      'status': initialStatus,
+                      'isSuspended': false,
+                      'joinedDate': _formatMonthYear(DateTime.now()),
+                      'created_at': DateTime.now().toIso8601String(),
+                      'studioName': studioName,
+                      'craftCategory': craftCategory,
+                      'ssmNumber': ssmNumber,
+                    };
+                    _userStore[cleanEmail] = revived;
+                    final revivedUser = UserModel.fromMap(revived);
+                    await _saveAuthSession(revivedUser);
+                    return revivedUser;
+                  }
+                }
               }
             }
           } catch (authErr) {
@@ -2240,28 +2462,34 @@ class SupabaseService {
               .from('users')
               .select('*, artisan_profiles!artisan_profiles_user_id_fkey(*)')
               .ilike('role', '%Artisan%')
-              .neq('status', 'PENDING_APPROVAL');
+              .neq('status', 'PENDING_APPROVAL')
+              .neq('status', 'DELETED');
         } catch (_) {
           try {
             res = await client
                 .from('users')
                 .select('*, artisan_profiles(*)')
                 .ilike('role', '%Artisan%')
-                .neq('status', 'PENDING_APPROVAL');
+                .neq('status', 'PENDING_APPROVAL')
+                .neq('status', 'DELETED');
           } catch (_) {
             res = await client
                 .from('users')
                 .select()
                 .ilike('role', '%Artisan%')
-                .neq('status', 'PENDING_APPROVAL');
+                .neq('status', 'PENDING_APPROVAL')
+                .neq('status', 'DELETED');
           }
         }
 
         if (res is List && res.isNotEmpty) {
           for (final row in res) {
-            results.add(
-              ActiveArtisanMaster.fromMap(Map<String, dynamic>.from(row)),
-            );
+            final rowStatus = (row['status'] ?? '').toString().toUpperCase();
+            if (rowStatus == 'DELETED') continue;
+            final a = ActiveArtisanMaster.fromMap(Map<String, dynamic>.from(row));
+            if (a.email.toLowerCase().startsWith('deleted_')) continue;
+            if (_deletedAccounts.contains(a.email.toLowerCase())) continue;
+            results.add(a);
           }
         }
       } catch (e) {
@@ -2274,8 +2502,16 @@ class SupabaseService {
       final user = entry.value;
       final role = (user['role'] ?? '').toString();
       final status = (user['status'] ?? '').toString().toUpperCase();
+      final isSuspended = user['isSuspended'] == true;
+      final reason = (user['suspensionReason'] ?? '').toString();
+      if (status == 'DELETED' || (isSuspended && reason == 'ACCOUNT_DELETED')) {
+        continue;
+      }
+      final email = (user['email'] ?? entry.key).toString().toLowerCase();
+      if (_deletedAccounts.contains(email) || email.startsWith('deleted_')) {
+        continue;
+      }
       if (role.contains('Artisan') && !status.contains('PENDING')) {
-        final email = (user['email'] ?? entry.key).toString().toLowerCase();
         if (!results.any((a) => a.email.toLowerCase() == email)) {
           results.add(
             ActiveArtisanMaster.fromMap(Map<String, dynamic>.from(user)),
@@ -2297,24 +2533,31 @@ class SupabaseService {
           res = await client
               .from('users')
               .select('*, artisan_profiles!artisan_profiles_user_id_fkey(*)')
+              .neq('status', 'DELETED')
               .order('created_at', ascending: false);
         } catch (_) {
           try {
             res = await client
                 .from('users')
                 .select('*, artisan_profiles(*)')
+                .neq('status', 'DELETED')
                 .order('created_at', ascending: false);
           } catch (_) {
             res = await client
                 .from('users')
                 .select()
+                .neq('status', 'DELETED')
                 .order('created_at', ascending: false);
           }
         }
 
         if (res is List && res.isNotEmpty) {
           for (final row in res) {
-            results.add(UserModel.fromMap(Map<String, dynamic>.from(row)));
+            final u = UserModel.fromMap(Map<String, dynamic>.from(row));
+            if (u.status.toUpperCase() == 'DELETED') continue;
+            if (u.email.toLowerCase().startsWith('deleted_')) continue;
+            if (_deletedAccounts.contains(u.email.toLowerCase())) continue;
+            results.add(u);
           }
         }
       } catch (e) {
@@ -2325,7 +2568,16 @@ class SupabaseService {
     // Merge in-memory users
     for (final entry in _userStore.entries) {
       final user = entry.value;
+      final status = (user['status'] ?? '').toString().toUpperCase();
+      final isSuspended = user['isSuspended'] == true;
+      final reason = (user['suspensionReason'] ?? '').toString();
+      if (status == 'DELETED' || (isSuspended && reason == 'ACCOUNT_DELETED')) {
+        continue;
+      }
       final email = (user['email'] ?? entry.key).toString().toLowerCase();
+      if (_deletedAccounts.contains(email) || email.startsWith('deleted_')) {
+        continue;
+      }
       if (!results.any((u) => u.email.toLowerCase() == email)) {
         results.add(UserModel.fromMap(Map<String, dynamic>.from(user)));
       }
@@ -2622,12 +2874,21 @@ class SupabaseService {
   Future<void> deleteAccount({
     required String userId,
     required String email,
+    String? username,
   }) async {
     await Future.delayed(const Duration(milliseconds: 200));
     final cleanEmail = email.trim().toLowerCase();
 
-    // 1. Record in persistent deleted accounts store
+    // 1. Record in persistent deleted accounts and usernames store
     await _recordDeletedAccount(cleanEmail);
+    if (username != null && username.trim().isNotEmpty) {
+      await _recordDeletedUsername(username);
+    }
+    final inMemoryUsername =
+        (_userStore[cleanEmail]?['username'] as String?)?.trim();
+    if (inMemoryUsername != null && inMemoryUsername.isNotEmpty) {
+      await _recordDeletedUsername(inMemoryUsername);
+    }
 
     // 2. Remove user from local in-memory store
     _userStore.remove(cleanEmail);
@@ -2655,6 +2916,21 @@ class SupabaseService {
           : (client.auth.currentUser?.id ?? '');
 
       try {
+        // Query username from database if not known
+        if (username == null || username.trim().isEmpty) {
+          try {
+            final row = await client
+                .from('users')
+                .select('username')
+                .eq('id', effectiveUserId)
+                .maybeSingle();
+            final dbUname = (row?['username'] as String?)?.trim();
+            if (dbUname != null && dbUname.isNotEmpty) {
+              await _recordDeletedUsername(dbUname);
+            }
+          } catch (_) {}
+        }
+
         // A. Try admin_update_user_status RPC (SECURITY DEFINER, updates users & auth.users metadata)
         try {
           await client.rpc('admin_update_user_status', params: {
@@ -2666,12 +2942,16 @@ class SupabaseService {
         }
 
         // B. Try delete_user_account RPC if present
+        bool rpcDeleted = false;
         if (effectiveUserId.isNotEmpty) {
           try {
-            await client.rpc(
+            final rpcRes = await client.rpc(
               'delete_user_account',
               params: {'p_user_id': effectiveUserId},
             );
+            if (rpcRes is Map && rpcRes['success'] == true) {
+              rpcDeleted = true;
+            }
           } catch (rpcErr) {
             debugPrint('delete_user_account RPC note: $rpcErr');
           }
@@ -2689,28 +2969,55 @@ class SupabaseService {
           }
         }
 
-        // D. Update public.users status to DELETED (using only existing columns)
-        try {
-          final updateData = {
-            'status': 'DELETED',
-            'updated_at': DateTime.now().toIso8601String(),
-          };
-          if (effectiveUserId.isNotEmpty) {
+        // D. Try direct DELETE on public.users table
+        bool usersDeleted = false;
+        if (!rpcDeleted && effectiveUserId.isNotEmpty) {
+          try {
             await client
                 .from('users')
-                .update(updateData)
+                .delete()
                 .eq('id', effectiveUserId);
-          } else if (cleanEmail.isNotEmpty) {
-            await client
-                .from('users')
-                .update(updateData)
-                .ilike('email', cleanEmail);
+            usersDeleted = true;
+            debugPrint('deleteAccount direct users delete succeeded');
+          } catch (delErr) {
+            debugPrint('deleteAccount direct users delete note: $delErr');
           }
-        } catch (updateErr) {
-          debugPrint('deleteAccount direct users update note: $updateErr');
         }
 
-        // E. Update Supabase Auth user metadata so it flags as DELETED
+        // E. Fallback: If row could not be deleted, update & anonymize to free original email and username
+        if (!rpcDeleted && !usersDeleted) {
+          try {
+            final ts = DateTime.now().millisecondsSinceEpoch;
+            final anonEmail =
+                'deleted_${effectiveUserId.isNotEmpty ? effectiveUserId : cleanEmail}_$ts@deleted.local';
+            final anonUsername =
+                'deleted_${effectiveUserId.isNotEmpty ? effectiveUserId : cleanEmail}_$ts';
+
+            final updateData = {
+              'status': 'DELETED',
+              'email': anonEmail,
+              'username': anonUsername,
+              'is_suspended': true,
+              'suspension_reason': 'ACCOUNT_DELETED',
+              'updated_at': DateTime.now().toIso8601String(),
+            };
+            if (effectiveUserId.isNotEmpty) {
+              await client
+                  .from('users')
+                  .update(updateData)
+                  .eq('id', effectiveUserId);
+            } else if (cleanEmail.isNotEmpty) {
+              await client
+                  .from('users')
+                  .update(updateData)
+                  .ilike('email', cleanEmail);
+            }
+          } catch (updateErr) {
+            debugPrint('deleteAccount direct users update note: $updateErr');
+          }
+        }
+
+        // F. Update Supabase Auth user metadata so it flags as DELETED
         try {
           await client.auth.updateUser(
             UserAttributes(
@@ -2724,7 +3031,7 @@ class SupabaseService {
           debugPrint('deleteAccount auth.updateUser note: $metaErr');
         }
 
-        // F. Sign out Supabase auth session
+        // G. Sign out Supabase auth session
         try {
           await client.auth.signOut();
         } catch (e) {
