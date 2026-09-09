@@ -324,12 +324,14 @@ class UserManagementTable extends StatelessWidget {
                   icon: const Icon(Icons.block_rounded, size: 14),
                   label: const Text('Suspend', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                 ),
-              const SizedBox(width: 8),
-              IconButton(
-                icon: const Icon(Icons.lock_reset_rounded, size: 18, color: Color(0xFF64748B)),
-                tooltip: 'Send Password Reset Email',
-                onPressed: onResetPassword != null ? () => onResetPassword!(user) : null,
-              ),
+              if (!isAdmin) ...[
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.lock_reset_rounded, size: 18, color: Color(0xFF64748B)),
+                  tooltip: 'Send Password Reset Email',
+                  onPressed: onResetPassword != null ? () => onResetPassword!(user) : null,
+                ),
+              ],
             ],
           ),
         ),

@@ -178,6 +178,27 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
   }
 
   void _handleResetPassword(BuildContext context, UserModel user) {
+    if (user.role.toLowerCase().contains('admin')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.shield_outlined, color: Colors.white, size: 20),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text('ADMIN SECURITY RESTRICTION: Administrator credentials cannot be reset via moderation console.'),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          width: 560,
+        ),
+      );
+      return;
+    }
+
     final vm = context.read<ModerationViewModel>();
     vm.sendPasswordResetEmail(user.email);
 
