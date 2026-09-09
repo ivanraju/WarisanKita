@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:warisan_kita/data/repositories/user_repository.dart';
 import 'package:warisan_kita/data/services/supabase_service.dart';
 import 'package:warisan_kita/domain/models/active_artisan_master.dart';
@@ -10,6 +11,7 @@ class ModerationViewModel extends ChangeNotifier {
 
   ModerationViewModel({UserRepository? repository, SupabaseService? service})
       : _repository = repository ?? UserRepository(service: service) {
+    _loadTodayStats();
     refreshAllData();
   }
 
@@ -186,6 +188,119 @@ class ModerationViewModel extends ChangeNotifier {
   List<PendingArtisanProfile> get pendingArtisans => List.unmodifiable(_pendingArtisans);
   int get totalPendingCount => _pendingArtisans.length;
 
+  int _sessionApprovedToday = 0;
+  final List<Duration> _reviewDurations = [];
+
+  Future<void> _loadTodayStats() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final now = DateTime.now();
+      final todayKey = 'wk_admin_approved_${now.year}_${now.month}_${now.day}';
+      final savedCount = prefs.getInt(todayKey) ?? 0;
+      if (savedCount > _sessionApprovedToday) {
+        _sessionApprovedToday = savedCount;
+        notifyListeners();
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _recordApproval(DateTime? submittedDate) async {
+    _sessionApprovedToday++;
+    if (submittedDate != null) {
+      final diff = DateTime.now().difference(submittedDate);
+      _reviewDurations.add(diff.isNegative ? const Duration(minutes: 30) : diff);
+    } else {
+      _reviewDurations.add(const Duration(minutes: 45));
+    }
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final now = DateTime.now();
+      final todayKey = 'wk_admin_approved_${now.year}_${now.month}_${now.day}';
+      await prefs.setInt(todayKey, _sessionApprovedToday);
+    } catch (_) {}
+  }
+
+  DateTime? _parseSubmissionDate(String raw) {
+    if (raw.trim().isEmpty) return null;
+    final parsed = DateTime.tryParse(raw);
+    if (parsed != null) return parsed;
+    if (raw.toLowerCase().contains('today') || raw.toLowerCase().contains('just')) {
+      return DateTime.now();
+    }
+    final parts = raw.trim().split(RegExp(r'\s+'));
+    if (parts.length == 3) {
+      final day = int.tryParse(parts[0]);
+      const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+      final monthIdx = months.indexOf(parts[1].toLowerCase());
+      final year = int.tryParse(parts[2]);
+      if (day != null && monthIdx != -1 && year != null) {
+        return DateTime(year, monthIdx + 1, day);
+      }
+    }
+    return null;
+  }
+
+  int get approvedTodayCount {
+    final now = DateTime.now();
+    final todayIso = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final activeToday = _activeArtisanMasters.where((a) {
+      final vd = a.verifiedDate.toLowerCase();
+      return vd.contains(todayIso) || vd.contains('today') || vd.contains('just approved');
+    }).length;
+    return activeToday > _sessionApprovedToday ? activeToday : _sessionApprovedToday;
+  }
+
+  String get approvedTodaySubtitle {
+    final count = approvedTodayCount;
+    if (count == 0) {
+      return 'No reviews completed today';
+    } else if (count == 1) {
+      return '1 studio approved today';
+    } else {
+      return '$count studios approved today';
+    }
+  }
+
+  String get averageReviewTime {
+    final List<Duration> durations = List.from(_reviewDurations);
+
+    // If there are pending applications waiting, factor in their turnaround/wait time
+    for (final pending in _pendingArtisans) {
+      final submitted = _parseSubmissionDate(pending.dateSubmitted);
+      if (submitted != null) {
+        final diff = DateTime.now().difference(submitted);
+        if (!diff.isNegative) {
+          durations.add(diff);
+        }
+      }
+    }
+
+    if (durations.isEmpty) {
+      return '< 1 day';
+    }
+
+    final totalMinutes = durations.fold<int>(0, (sum, d) => sum + d.inMinutes);
+    final avgMinutes = totalMinutes / durations.length;
+    final avgHours = avgMinutes / 60.0;
+
+    if (avgHours < 1) {
+      return '< 1 hr';
+    } else if (avgHours < 24) {
+      return '${avgHours.toStringAsFixed(1)} hrs';
+    } else {
+      final avgDays = avgHours / 24.0;
+      return '${avgDays.toStringAsFixed(1)} days';
+    }
+  }
+
+  String get averageReviewTimeSubtitle {
+    if (_pendingArtisans.isEmpty && approvedTodayCount == 0) {
+      return 'Target: < 2.0 days • Queue clear';
+    }
+    return 'Target: < 2.0 days';
+  }
+
   void setActiveTab(String tab) {
     _activeTab = tab;
     notifyListeners();
@@ -330,6 +445,8 @@ class ModerationViewModel extends ChangeNotifier {
     if (idx != -1) {
       final artisan = _pendingArtisans[idx];
       _pendingArtisans.removeAt(idx);
+      final submittedDate = _parseSubmissionDate(artisan.dateSubmitted);
+      _recordApproval(submittedDate);
 
       if (artisan.isRelocationRequest) {
         await _repository.approveRelocationRequest(email: artisan.email);
@@ -497,6 +614,11 @@ class ModerationViewModel extends ChangeNotifier {
     if (idx != -1) {
       final artisan = _pendingArtisans[idx];
       _pendingArtisans.removeAt(idx);
+      final submittedDate = _parseSubmissionDate(artisan.dateSubmitted);
+      if (submittedDate != null) {
+        final diff = DateTime.now().difference(submittedDate);
+        _reviewDurations.add(diff.isNegative ? const Duration(minutes: 30) : diff);
+      }
 
       if (artisan.isRelocationRequest) {
         await _repository.rejectRelocationRequest(email: artisan.email);

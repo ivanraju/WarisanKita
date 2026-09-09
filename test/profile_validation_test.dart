@@ -604,4 +604,35 @@ void main() {
       );
     });
   });
+
+  group('Admin Dashboard Dynamic Metrics Tests', () {
+    test('approvedTodayCount and averageReviewTime update dynamically on artisan approval', () async {
+      final service = SupabaseService();
+      final repo = UserRepository(service: service);
+      final vm = ModerationViewModel(repository: repo, service: service);
+
+      final initialApproved = vm.approvedTodayCount;
+      final testArtisan = PendingArtisanProfile(
+        id: 'test_artisan_metric_1',
+        name: 'Pak Din Wayang',
+        craftCategory: 'Puppetry',
+        state: 'Kelantan',
+        dateSubmitted: DateTime.now().subtract(const Duration(hours: 6)).toIso8601String(),
+        imageUrl: 'https://example.com/artisan.jpg',
+        email: 'pakdin_metric@test.my',
+        experience: '20 Years',
+        phone: '+60 12-345 6789',
+      );
+
+      vm.addPendingArtisan(testArtisan);
+      expect(vm.totalPendingCount, greaterThan(0));
+
+      await vm.approveArtisan(testArtisan.id);
+
+      expect(vm.approvedTodayCount, initialApproved + 1);
+      expect(vm.approvedTodaySubtitle, contains('approved today'));
+      expect(vm.averageReviewTime, isNotEmpty);
+      expect(vm.averageReviewTime, isNot(equals('1.4 days')));
+    });
+  });
 }
