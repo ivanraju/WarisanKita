@@ -44,7 +44,7 @@ class UserModel {
     this.status = 'ACTIVE',
     this.displayName,
     this.avatarUrl,
-    this.joinedDate = 'Jan 2026',
+    this.joinedDate = '',
     this.isSuspended = false,
     this.suspensionReason,
     this.studioName,
@@ -258,6 +258,7 @@ class UserModel {
       'displayName': displayName,
       'avatarUrl': avatarUrl,
       'joinedDate': joinedDate,
+      'joined_date': joinedDate,
       'isSuspended': isSuspended,
       'suspensionReason': suspensionReason,
       'suspension_reason': suspensionReason,
@@ -311,6 +312,32 @@ class UserModel {
     final pLonRaw = artisanMap?['pending_relocation_lng'] ?? map['pending_relocation_lng'] ?? map['pendingRelocationLongitude'];
     final double? pLon = pLonRaw is num ? pLonRaw.toDouble() : (pLonRaw != null ? double.tryParse(pLonRaw.toString()) : null);
 
+    final rawJoined = map['created_at'] ?? map['createdAt'] ?? map['joined_date'] ?? map['joinedDate'];
+    String resolvedJoinedDate = '';
+    if (rawJoined != null) {
+      final str = rawJoined.toString().trim();
+      if (str.isNotEmpty) {
+        final parsed = DateTime.tryParse(str);
+        if (parsed != null) {
+          const months = [
+            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+          ];
+          resolvedJoinedDate = '${months[parsed.month - 1]} ${parsed.year}';
+        } else {
+          resolvedJoinedDate = str;
+        }
+      }
+    }
+    if (resolvedJoinedDate.isEmpty) {
+      const months = [
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      ];
+      final now = DateTime.now();
+      resolvedJoinedDate = '${months[now.month - 1]} ${now.year}';
+    }
+
     return UserModel(
       id: map['id'] ?? '',
       email: map['email'] ?? '',
@@ -320,7 +347,7 @@ class UserModel {
       status: map['status'] ?? 'ACTIVE',
       displayName: map['displayName'] ?? map['display_name'] ?? map['full_name'],
       avatarUrl: map['avatarUrl'] ?? map['avatar_url'],
-      joinedDate: map['joinedDate'] ?? 'Jan 2026',
+      joinedDate: resolvedJoinedDate,
       isSuspended: map['isSuspended'] ?? (map['status'] == 'SUSPENDED'),
       suspensionReason: map['suspensionReason'] ?? map['suspension_reason'],
       studioName: map['studioName'] ?? map['studio_name'] ?? artisanMap?['studio_name'],

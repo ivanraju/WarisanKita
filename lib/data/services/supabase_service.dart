@@ -103,6 +103,14 @@ class SupabaseService {
     }
   }
 
+  static String _formatMonthYear(DateTime dt) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    return '${months[dt.month - 1]} ${dt.year}';
+  }
+
   // In-memory Database Store for verified offline/prototype and test accounts
   static final Map<String, Map<String, dynamic>> _userStore = {
     'admin@warisankita.my': {
@@ -905,8 +913,8 @@ class SupabaseService {
       'password': password,
       'role': finalRole,
       'roles': finalRoles,
-      'status': initialStatus,
-      'joinedDate': 'Feb 2026',
+      'joinedDate': _formatMonthYear(DateTime.now()),
+      'created_at': DateTime.now().toIso8601String(),
       'isSuspended': false,
       'studioName': studioName,
       'craftCategory': craftCategory,
@@ -1457,8 +1465,8 @@ class SupabaseService {
         'status': 'PENDING_APPROVAL',
         'studioName': studioName,
         'craftCategory': craftCategory,
-        'ssmNumber': ssmNumber,
-        'joinedDate': 'Feb 2026',
+        'joinedDate': _formatMonthYear(DateTime.now()),
+        'created_at': DateTime.now().toIso8601String(),
         'isSuspended': false,
       };
       _userStore[cleanEmail] = userRecord;
