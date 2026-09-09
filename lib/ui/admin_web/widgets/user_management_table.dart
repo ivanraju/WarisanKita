@@ -153,8 +153,12 @@ class UserManagementTable extends StatelessWidget {
                   ),
                   Text(
                     user.username != null && user.username!.isNotEmpty
-                        ? '@${user.username} • Joined ${user.joinedDate}'
-                        : 'Joined ${user.joinedDate}',
+                        ? (user.joinedDate.isNotEmpty
+                            ? '@${user.username} • Joined ${user.joinedDate}'
+                            : '@${user.username}')
+                        : (user.joinedDate.isNotEmpty
+                            ? 'Joined ${user.joinedDate}'
+                            : ''),
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 10,
                       color: const Color(0xFF94A3B8),

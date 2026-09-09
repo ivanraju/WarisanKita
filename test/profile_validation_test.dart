@@ -220,6 +220,34 @@ void main() {
       expect(cleared.hasPendingRelocation, isFalse);
       expect(cleared.pendingRelocationAddress, isNull);
     });
+
+    test('UserModel dynamically resolves joinedDate from created_at and formats to Mmm yyyy', () {
+      final userWithTimestamp = UserModel.fromMap({
+        'id': 'u456',
+        'email': 'tourist@example.com',
+        'created_at': '2025-08-15T14:22:10.000Z',
+      });
+      expect(userWithTimestamp.joinedDate, 'Aug 2025');
+
+      final userWithJoinedDate = UserModel.fromMap({
+        'id': 'u789',
+        'email': 'artisan@example.com',
+        'joined_date': 'Mar 2024',
+      });
+      expect(userWithJoinedDate.joinedDate, 'Mar 2024');
+
+      final userDefault = UserModel.fromMap({
+        'id': 'u999',
+        'email': 'newuser@example.com',
+      });
+      final now = DateTime.now();
+      const months = [
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      ];
+      final expectedCurrentMonthYear = '${months[now.month - 1]} ${now.year}';
+      expect(userDefault.joinedDate, expectedCurrentMonthYear);
+    });
   });
 
   group('Relocation Service and Repository Lifecycle', () {
@@ -457,6 +485,7 @@ void main() {
       await tester.tap(find.text('Approve Relocation & Update Map'));
       await tester.pump();
       expect(approved, isTrue);
+      expect(rejected, isFalse);
     });
   });
 
