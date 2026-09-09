@@ -635,4 +635,56 @@ void main() {
       expect(vm.averageReviewTime, isNot(equals('1.4 days')));
     });
   });
+
+  group('Password Reset Security Policy Tests', () {
+    test('resetPasswordWithToken rejects reusing the same old password', () async {
+      final service = SupabaseService();
+      final repo = UserRepository(service: service);
+      final authVM = AuthViewModel(repository: repo);
+
+      const testEmail = 'resetpolicy@test.com';
+      const initialPassword = 'OriginalPassword123!';
+
+      // 1. Create account
+      await service.signUp(
+        email: testEmail,
+        password: initialPassword,
+        role: 'Tourist',
+        username: 'resetpolicyuser',
+      );
+
+      // 2. Request reset link
+      await authVM.sendPasswordReset(testEmail);
+
+      // 3. Attempt to reset using the EXACT same old password
+      final resetResult = await authVM.confirmPasswordReset(
+        email: testEmail,
+        token: 'DUMMY-TOKEN',
+        newPassword: initialPassword,
+        confirmPassword: initialPassword,
+      );
+
+      expect(resetResult.success, isFalse);
+      expect(
+        resetResult.message?.toUpperCase(),
+        contains('NEW PASSWORD CANNOT BE THE SAME AS YOUR CURRENT PASSWORD'),
+      );
+
+      // 4. Attempt to reset using a NEW password
+      const newPassword = 'BrandNewPassword456!';
+      final validReset = await authVM.confirmPasswordReset(
+        email: testEmail,
+        token: 'DUMMY-TOKEN',
+        newPassword: newPassword,
+        confirmPassword: newPassword,
+      );
+
+      expect(validReset.success, isTrue);
+
+      // Clean up
+      final users = await service.getAllUsers();
+      final user = users.firstWhere((u) => u.email == testEmail);
+      await repo.deleteAccount(userId: user.id, email: testEmail, username: 'resetpolicyuser');
+    });
+  });
 }

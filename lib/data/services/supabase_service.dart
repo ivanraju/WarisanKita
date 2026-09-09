@@ -1478,6 +1478,16 @@ class SupabaseService {
       throw Exception('EMAIL NOT FOUND: Account does not exist.');
     }
 
+    // Security Constraint: New password cannot be the same as current password
+    if (existsLocally) {
+      final oldPassword = _userStore[cleanEmail]?['password'];
+      if (oldPassword != null && oldPassword.toString() == newPassword) {
+        throw Exception(
+          'NEW PASSWORD CANNOT BE THE SAME AS YOUR CURRENT PASSWORD: Please choose a different password.',
+        );
+      }
+    }
+
     if (!existsLocally) {
       _userStore[cleanEmail] = {
         'id': 'usr-${DateTime.now().millisecondsSinceEpoch}',
@@ -1514,6 +1524,15 @@ class SupabaseService {
         await client.auth.updateUser(UserAttributes(password: newPassword));
       } catch (e) {
         debugPrint('Supabase updateUser password note: $e');
+        final errStr = e.toString().toLowerCase();
+        if (errStr.contains('should be different') ||
+            errStr.contains('same as old') ||
+            errStr.contains('cannot be the same') ||
+            errStr.contains('same password')) {
+          throw Exception(
+            'NEW PASSWORD CANNOT BE THE SAME AS YOUR CURRENT PASSWORD: Please choose a different password.',
+          );
+        }
       }
     }
   }
