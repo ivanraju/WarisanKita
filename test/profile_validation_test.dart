@@ -190,7 +190,7 @@ void main() {
 
   group('UserModel & Relocation Request Serialization', () {
     test('UserModel serialization preserves pending relocation fields', () {
-      final user = UserModel(
+      const user = UserModel(
         id: 'u123',
         email: 'artisan@warisankita.my',
         displayName: 'Pak Mat',
@@ -262,7 +262,7 @@ void main() {
     });
 
     test('Artisan submits, cancels, and admin approves/rejects relocation', () async {
-      final email = 'reloc.artisan@warisankita.my';
+      const email = 'reloc.artisan@warisankita.my';
 
       // Submit
       final submitted = await repository.submitRelocationRequest(
@@ -667,10 +667,24 @@ void main() {
       expect(resetResult.success, isFalse);
       expect(
         resetResult.message?.toUpperCase(),
-        contains('NEW PASSWORD CANNOT BE THE SAME AS YOUR CURRENT PASSWORD'),
+        contains('NEW PASSWORD IS TOO SIMILAR TO YOUR CURRENT PASSWORD'),
       );
 
-      // 4. Attempt to reset using a NEW password
+      // 4. Attempt to reset using a trivial casing difference (lowercase only)
+      final caseDiffReset = await authVM.confirmPasswordReset(
+        email: testEmail,
+        token: 'DUMMY-TOKEN',
+        newPassword: 'originalpassword123!',
+        confirmPassword: 'originalpassword123!',
+      );
+
+      expect(caseDiffReset.success, isFalse);
+      expect(
+        caseDiffReset.message?.toUpperCase(),
+        contains('NEW PASSWORD IS TOO SIMILAR TO YOUR CURRENT PASSWORD'),
+      );
+
+      // 5. Attempt to reset using a genuinely NEW password
       const newPassword = 'BrandNewPassword456!';
       final validReset = await authVM.confirmPasswordReset(
         email: testEmail,
