@@ -328,6 +328,40 @@ void main() {
       expect(modVM.pendingArtisans.any((p) => p.id == 'reloc_test_1'), isFalse);
     });
 
+    test('ModerationViewModel filters between all, new profiles, and relocations', () {
+      final modVM = ModerationViewModel(repository: repository);
+      const relocProfile = PendingArtisanProfile(
+        id: 'reloc_filter_1',
+        name: 'Relocating Weaver',
+        craftCategory: 'Songket Weaving',
+        state: 'Terengganu',
+        dateSubmitted: 'Today',
+        imageUrl: 'https://example.com/artisan.jpg',
+        email: 'weaver.reloc@example.com',
+        experience: 'Accredited Studio',
+        phone: '+60 12-345 6789',
+        isUpgradeFromTourist: false,
+        isRelocationRequest: true,
+      );
+
+      modVM.addRelocationRequest(relocProfile);
+
+      expect(modVM.pendingRelocationCount, greaterThanOrEqualTo(1));
+
+      // When filter is 'All'
+      modVM.setApplicationTypeFilter('All');
+      expect(modVM.filteredArtisans.any((p) => p.id == 'reloc_filter_1'), isTrue);
+
+      // When filter is 'Relocations'
+      modVM.setApplicationTypeFilter('Relocations');
+      expect(modVM.filteredArtisans.every((p) => p.isRelocationRequest), isTrue);
+      expect(modVM.filteredArtisans.any((p) => p.id == 'reloc_filter_1'), isTrue);
+
+      // When filter is 'New Profiles'
+      modVM.setApplicationTypeFilter('New Profiles');
+      expect(modVM.filteredArtisans.any((p) => p.id == 'reloc_filter_1'), isFalse);
+    });
+
     test('Pending relocation persists across AuthViewModel.refreshCurrentUser and getAllUsers', () async {
       const email = 'persist.artisan@warisankita.my';
       final authVM = AuthViewModel(repository: repository);

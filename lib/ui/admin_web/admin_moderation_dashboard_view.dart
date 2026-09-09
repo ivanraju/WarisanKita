@@ -319,7 +319,7 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
                                     children: [
                                       // Title & Subtitle Header
                                       Text(
-                                        isUserManagementTab ? 'Registered User Management' : 'Pending Artisan Profiles',
+                                        isUserManagementTab ? 'Registered User Management' : 'Pending Artisan Profiles & Relocations',
                                         style: GoogleFonts.dmSerifDisplay(
                                           fontSize: isMobile ? 24 : 32,
                                           fontWeight: FontWeight.bold,
@@ -330,7 +330,7 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
                                       Text(
                                         isUserManagementTab
                                             ? 'Manage, monitor, and suspend active tourist and artisan accounts.'
-                                            : 'Review, verify, and approve traditional Malaysian artisan profile submissions.',
+                                            : 'Review, verify, and approve traditional Malaysian artisan profile submissions and workshop premise relocations.',
                                         style: GoogleFonts.plusJakartaSans(
                                           fontSize: isMobile ? 12 : 14,
                                           color: const Color(0xFF64748B),
@@ -537,7 +537,9 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
             _buildMetricCard(
               title: 'Pending Applications',
               value: viewModel.totalPendingCount.toString(),
-              subtitle: 'Requires admin review',
+              subtitle: viewModel.pendingRelocationCount > 0
+                  ? '${viewModel.pendingNewProfilesCount} new • ${viewModel.pendingRelocationCount} relocations'
+                  : 'Requires admin review',
               icon: Icons.pending_actions_rounded,
               accentColor: const Color(0xFFF59E0B),
             ),
@@ -652,6 +654,33 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
   Widget _buildFilterControlsRow(BuildContext context, ModerationViewModel viewModel) {
     final isMobile = MediaQuery.of(context).size.width < 768;
 
+    final typeFilterPills = Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        _buildTypeFilterChip(
+          label: 'All Requests',
+          count: viewModel.pendingArtisans.length,
+          isSelected: viewModel.applicationTypeFilter == 'All',
+          onTap: () => viewModel.setApplicationTypeFilter('All'),
+        ),
+        _buildTypeFilterChip(
+          label: 'New Profiles',
+          count: viewModel.pendingNewProfilesCount,
+          isSelected: viewModel.applicationTypeFilter == 'New Profiles',
+          onTap: () => viewModel.setApplicationTypeFilter('New Profiles'),
+        ),
+        _buildTypeFilterChip(
+          label: 'Premise Relocations',
+          count: viewModel.pendingRelocationCount,
+          isSelected: viewModel.applicationTypeFilter == 'Relocations',
+          highlightColor: const Color(0xFFF59E0B),
+          icon: Icons.swap_horiz_rounded,
+          onTap: () => viewModel.setApplicationTypeFilter('Relocations'),
+        ),
+      ],
+    );
+
     final searchInput = SizedBox(
       height: 44,
       child: TextField(
@@ -726,8 +755,13 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
-      child: isMobile
-          ? Column(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          typeFilterPills,
+          const SizedBox(height: 14),
+          if (isMobile)
+            Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 searchInput,
@@ -735,13 +769,83 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
                 categoryDropdown,
               ],
             )
-          : Row(
+          else
+            Row(
               children: [
                 Expanded(child: searchInput),
                 const SizedBox(width: 16),
                 categoryDropdown,
               ],
             ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTypeFilterChip({
+    required String label,
+    required int count,
+    required bool isSelected,
+    required VoidCallback onTap,
+    Color highlightColor = const Color(0xFF10B981),
+    IconData? icon,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? highlightColor.withValues(alpha: 0.12) : const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? highlightColor : const Color(0xFFE2E8F0),
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(
+                icon,
+                size: 16,
+                color: isSelected ? highlightColor : const Color(0xFF64748B),
+              ),
+              const SizedBox(width: 6),
+            ],
+            Text(
+              label,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                color: isSelected
+                    ? (highlightColor == const Color(0xFFF59E0B)
+                        ? const Color(0xFFB45309)
+                        : highlightColor)
+                    : const Color(0xFF475569),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: isSelected ? highlightColor : const Color(0xFFE2E8F0),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                count.toString(),
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: isSelected ? Colors.white : const Color(0xFF64748B),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
