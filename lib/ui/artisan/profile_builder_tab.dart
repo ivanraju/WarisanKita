@@ -60,7 +60,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
 
   static LatLng _resolveStateCenter(String? stateName) {
     if (stateName == null || stateName.trim().isEmpty) {
-      return const LatLng(2.1896, 102.2501); // Melaka Cultural Heritage Center
+      return const LatLng(3.1390, 101.6869);
     }
     final lower = stateName.trim().toLowerCase();
     for (final entry in _stateCenters.entries) {
@@ -68,54 +68,8 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
         return entry.value;
       }
     }
-    if (lower.contains('malacca')) return const LatLng(2.1896, 102.2501);
-    if (lower.contains('kl') || lower.contains('lumpur')) return const LatLng(3.1390, 101.6869);
-    if (lower.contains('penang') || lower.contains('pulau pinang')) return const LatLng(5.4141, 100.3288);
-    return const LatLng(2.1896, 102.2501);
+    return const LatLng(3.1390, 101.6869);
   }
-
-  static const List<Map<String, dynamic>> _heritageLandmarks = [
-    {
-      'name': 'Kampung Morten Heritage Village',
-      'category': 'Living Cultural Heritage',
-      'position': LatLng(2.2023, 102.2509),
-    },
-    {
-      'name': 'Jonker Street Craft Quarter',
-      'category': 'Historic Artisan Guilds',
-      'position': LatLng(2.1953, 102.2475),
-    },
-    {
-      'name': 'Kompleks Kraf Kuala Lumpur',
-      'category': 'National Craft Complex',
-      'position': LatLng(3.1492, 101.7176),
-    },
-    {
-      'name': 'Central Market (Pasar Seni)',
-      'category': 'Art & Heritage Center',
-      'position': LatLng(3.1453, 101.6958),
-    },
-    {
-      'name': 'George Town Heritage Crafts Guild',
-      'category': 'Traditional Crafts District',
-      'position': LatLng(5.4164, 100.3370),
-    },
-    {
-      'name': 'Pasar Payang Cultural Bazaar',
-      'category': 'Terengganu Songket & Batik',
-      'position': LatLng(5.3376, 103.1342),
-    },
-    {
-      'name': 'Sarawak Cultural Village',
-      'category': 'Indigenous Craft Guild',
-      'position': LatLng(1.7505, 110.3175),
-    },
-    {
-      'name': 'Kota Kinabalu Handicraft Center',
-      'category': 'Borneo Heritage Craft',
-      'position': LatLng(5.9798, 116.0706),
-    },
-  ];
 
   LatLng get _selectedStateCenter {
     final state = _stateController.text.trim();
@@ -124,12 +78,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
 
   bool _isOpenForDemos = true;
 
-  List<String> _toolsAndMaterials = [
-    'Kampung Morten River Clay',
-    'Paddy Husk Kiln Ash',
-    'Organic Indigo Dyes',
-    'Hand-spun Wooden Wheel',
-  ];
+  List<String> _toolsAndMaterials = [];
 
   List<String> _portfolioImages = [];
   Map<String, String> _documents = {};
@@ -150,11 +99,11 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
       text: user?.craftCategory ?? '',
     );
     _stateController = TextEditingController(text: user?.state ?? '');
-    _workshopAddress = user?.address ?? 'Kampung Morten, Melaka';
+    _workshopAddress = user?.address;
     if (user != null && user.latitude != null && user.longitude != null && user.latitude != 0.0) {
       _selectedWorkshopPin = LatLng(user.latitude!, user.longitude!);
-    } else {
-      _selectedWorkshopPin = _resolveStateCenter(user?.state);
+    } else if (user?.state != null && user!.state!.isNotEmpty) {
+      _selectedWorkshopPin = _resolveStateCenter(user.state);
     }
     _experienceController = TextEditingController(text: '');
     _phoneController = TextEditingController(text: user?.phone ?? '');
@@ -178,14 +127,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
         _toolsAndMaterials = List<String>.from(user.tags);
       }
     }
-    
-    if (_portfolioImages.isEmpty) {
-      _portfolioImages = [
-        'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&auto=format&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=600&auto=format&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80',
-      ];
-    }
+
   }
 
   void _onUsernameChanged() {
@@ -253,33 +195,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     super.dispose();
   }
 
-  Future<void> _openWorkshopMapPicker() async {
-    final result = await Navigator.of(context).push<WorkshopPlaceResult>(
-      MaterialPageRoute(
-        builder: (_) => WorkshopMapPickerPage(
-          initialState: _stateController.text.trim().isEmpty
-              ? 'Melaka'
-              : _stateController.text.trim(),
-          initialLocation: _selectedWorkshopPin,
-          initialAddress: _workshopAddress,
-          stateCenters: _stateCenters,
-        ),
-      ),
-    );
 
-    if (result != null && mounted) {
-      setState(() {
-        _selectedWorkshopPin = result.position;
-        _workshopAddress = result.displayName;
-        if (result.malaysiaState != null) {
-          _stateController.text = result.malaysiaState!;
-        }
-      });
-      await _workshopMapController?.animateCamera(
-        CameraUpdate.newLatLngZoom(result.position, 17),
-      );
-    }
-  }
 
   Future<void> _handleCancelRelocation() async {
     final confirmed = await showDialog<bool>(
@@ -384,9 +300,12 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                         const SizedBox(height: 8),
                         OutlinedButton.icon(
                           onPressed: () async {
-                            final effectivePin = _selectedWorkshopPin ?? _selectedStateCenter;
-                            final effectiveAddr = _workshopAddress ?? currentUser.address ?? 'Kampung Morten, Melaka';
-                            final effectiveState = (currentUser.state?.isNotEmpty == true) ? currentUser.state! : 'Melaka';
+                            final effectivePin = _selectedWorkshopPin ??
+                                (currentUser.latitude != null && currentUser.longitude != null && currentUser.latitude != 0.0
+                                    ? LatLng(currentUser.latitude!, currentUser.longitude!)
+                                    : (currentUser.state != null ? _resolveStateCenter(currentUser.state) : null));
+                            final effectiveAddr = _workshopAddress ?? currentUser.address ?? '';
+                            final effectiveState = currentUser.state ?? '';
 
                             final result = await Navigator.of(context).push<WorkshopPlaceResult>(
                               MaterialPageRoute(
@@ -493,14 +412,14 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                             id: 'reloc_${currentUser.id}',
                             name: currentUser.studioName ?? currentUser.displayName ?? 'Artisan Studio',
                             craftCategory: currentUser.craftCategory ?? 'Handicraft & Heritage',
-                            state: currentUser.state ?? 'Melaka',
+                            state: currentUser.state ?? _stateController.text.trim(),
                             dateSubmitted: 'Today',
-                            imageUrl: currentUser.avatarUrl ?? 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600',
+                            imageUrl: currentUser.avatarUrl ?? '',
                             email: currentUser.email,
-                            experience: 'Accredited Studio',
-                            phone: currentUser.phone ?? '+60 12-345 6789',
-                            ssmNumber: currentUser.ssmNumber ?? 'Verified Studio',
-                            bio: currentUser.bio,
+                            experience: _experienceController.text.trim(),
+                            phone: currentUser.phone ?? _phoneController.text.trim(),
+                            ssmNumber: currentUser.ssmNumber,
+                            bio: currentUser.bio ?? _bioController.text.trim(),
                             isUpgradeFromTourist: false,
                             isRelocationRequest: true,
                             currentAddress: currentUser.address,
@@ -650,7 +569,9 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
           state: _stateController.text.trim().isEmpty ? 'Malaysia' : _stateController.text.trim(),
           bio: _bioController.text.trim(),
           experience: _experienceController.text.trim(),
-          imageUrl: _portfolioImages.firstWhere((img) => img.isNotEmpty, orElse: () => 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&auto=format&fit=crop&q=80'),
+          imageUrl: _portfolioImages.isNotEmpty
+              ? _portfolioImages.first
+              : (context.read<AuthViewModel>().currentUser?.avatarUrl ?? ''),
           tags: _toolsAndMaterials,
           address: _workshopAddress,
           latitude: _selectedWorkshopPin?.latitude,
@@ -1163,31 +1084,26 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                           final pin = _selectedWorkshopPin ?? _selectedStateCenter;
                           controller.animateCamera(CameraUpdate.newLatLngZoom(pin, 15));
                         },
-                        markers: {
-                          Marker(
-                            markerId: const MarkerId('workshop-location'),
-                            position: _selectedWorkshopPin ?? _selectedStateCenter,
-                            icon: BitmapDescriptor.defaultMarkerWithHue(
-                              BitmapDescriptor.hueGreen,
-                            ),
-                            infoWindow: InfoWindow(
-                              title: _studioNameController.text.trim().isNotEmpty
-                                  ? _studioNameController.text.trim()
-                                  : (currentUser?.studioName ?? 'Verified Workshop'),
-                              snippet: _workshopAddress ?? currentUser?.address ?? 'Accredited Workshop Premise',
-                            ),
-                          ),
-                          for (final lm in _heritageLandmarks)
-                            Marker(
-                              markerId: MarkerId('lm_${lm['name']}'),
-                              position: lm['position'] as LatLng,
-                              icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueCyan),
-                              infoWindow: InfoWindow(
-                                title: lm['name'] as String,
-                                snippet: '${lm['category']} • Heritage Landmark',
-                              ),
-                            ),
-                        },
+                        markers: (_selectedWorkshopPin != null || currentUser?.latitude != null)
+                            ? {
+                                Marker(
+                                  markerId: const MarkerId('workshop-location'),
+                                  position: _selectedWorkshopPin ??
+                                      (currentUser?.latitude != null && currentUser?.longitude != null
+                                          ? LatLng(currentUser!.latitude!, currentUser!.longitude!)
+                                          : _selectedStateCenter),
+                                  icon: BitmapDescriptor.defaultMarkerWithHue(
+                                    BitmapDescriptor.hueGreen,
+                                  ),
+                                  infoWindow: InfoWindow(
+                                    title: _studioNameController.text.trim().isNotEmpty
+                                        ? _studioNameController.text.trim()
+                                        : (currentUser?.studioName ?? 'Verified Workshop'),
+                                    snippet: _workshopAddress ?? currentUser?.address ?? 'Accredited Workshop Premise',
+                                  ),
+                                ),
+                              }
+                            : const <Marker>{},
                         myLocationButtonEnabled: false,
                         myLocationEnabled: false,
                         mapToolbarEnabled: false,

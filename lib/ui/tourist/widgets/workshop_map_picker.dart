@@ -282,71 +282,22 @@ class _WorkshopMapPickerPageState extends State<WorkshopMapPickerPage> {
   MapType _mapType = MapType.normal;
   String? _error;
 
-  static const List<Map<String, dynamic>> _heritageLandmarks = [
-    {
-      'name': 'Kampung Morten Heritage Village',
-      'category': 'Living Cultural Heritage',
-      'position': LatLng(2.2023, 102.2509),
-    },
-    {
-      'name': 'Jonker Street Craft Quarter',
-      'category': 'Historic Artisan Guilds',
-      'position': LatLng(2.1953, 102.2475),
-    },
-    {
-      'name': 'Kompleks Kraf Kuala Lumpur',
-      'category': 'National Craft Complex',
-      'position': LatLng(3.1492, 101.7176),
-    },
-    {
-      'name': 'Central Market (Pasar Seni)',
-      'category': 'Art & Heritage Center',
-      'position': LatLng(3.1453, 101.6958),
-    },
-    {
-      'name': 'George Town Heritage Crafts Guild',
-      'category': 'Traditional Crafts District',
-      'position': LatLng(5.4164, 100.3370),
-    },
-    {
-      'name': 'Pasar Payang Cultural Bazaar',
-      'category': 'Terengganu Songket & Batik',
-      'position': LatLng(5.3376, 103.1342),
-    },
-    {
-      'name': 'Sarawak Cultural Village',
-      'category': 'Indigenous Craft Guild',
-      'position': LatLng(1.7505, 110.3175),
-    },
-    {
-      'name': 'Kota Kinabalu Handicraft Center',
-      'category': 'Borneo Heritage Craft',
-      'position': LatLng(5.9798, 116.0706),
-    },
-  ];
-
   @override
   void initState() {
     super.initState();
     _detectedState = widget.initialState;
-    
-    // Resolve initial target location
-    final initialPos = widget.initialLocation ??
-        widget.stateCenters[_detectedState] ??
-        widget.stateCenters['Melaka'] ??
-        const LatLng(2.1896, 102.2501);
-
-    final initialAddr = (widget.initialAddress != null && widget.initialAddress!.trim().isNotEmpty)
-        ? widget.initialAddress!.trim()
-        : 'Accredited Workshop Premise (${widget.initialState.isNotEmpty ? widget.initialState : "Melaka"})';
-
-    _selection = WorkshopPlaceResult(
-      displayName: initialAddr,
-      position: initialPos,
-      countryCode: 'my',
-      malaysiaState: widget.initialState.isNotEmpty ? widget.initialState : 'Melaka',
-    );
-    _searchController.text = initialAddr;
+    if (widget.initialLocation != null) {
+      final initialAddr = widget.initialAddress?.trim() ?? '';
+      _selection = WorkshopPlaceResult(
+        displayName: initialAddr,
+        position: widget.initialLocation!,
+        countryCode: 'my',
+        malaysiaState: widget.initialState,
+      );
+      if (initialAddr.isNotEmpty) {
+        _searchController.text = initialAddr;
+      }
+    }
   }
 
   @override
@@ -561,9 +512,9 @@ class _WorkshopMapPickerPageState extends State<WorkshopMapPickerPage> {
     final markerPosition = _pendingPosition ?? selected?.position;
     final initialTarget =
         selected?.position ??
+        widget.initialLocation ??
         widget.stateCenters[_detectedState] ??
-        widget.stateCenters['Melaka'] ??
-        const LatLng(2.1896, 102.2501);
+        const LatLng(3.1390, 101.6869);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F5EF),
@@ -596,32 +547,19 @@ class _WorkshopMapPickerPageState extends State<WorkshopMapPickerPage> {
               onMapCreated: (controller) => _mapController = controller,
               onTap: _isLoading ? null : _pin,
               onLongPress: _isLoading ? null : _pin,
-              markers: {
-                if (markerPosition != null)
-                  Marker(
-                    markerId: const MarkerId('large-workshop-pin'),
-                    position: markerPosition,
-                    draggable: !_isLoading,
-                    onDragEnd: _pin,
-                    icon: BitmapDescriptor.defaultMarkerWithHue(
-                      BitmapDescriptor.hueOrange,
-                    ),
-                    infoWindow: InfoWindow(
-                      title: _selection?.displayName ?? 'Proposed Workshop Premise',
-                      snippet: 'Drag to adjust premise location',
-                    ),
-                  ),
-                for (final lm in _heritageLandmarks)
-                  Marker(
-                    markerId: MarkerId('lm_${lm['name']}'),
-                    position: lm['position'] as LatLng,
-                    icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueCyan),
-                    infoWindow: InfoWindow(
-                      title: lm['name'] as String,
-                      snippet: '${lm['category']} • Heritage Landmark',
-                    ),
-                  ),
-              },
+              markers: markerPosition == null
+                  ? const <Marker>{}
+                  : {
+                      Marker(
+                        markerId: const MarkerId('large-workshop-pin'),
+                        position: markerPosition,
+                        draggable: !_isLoading,
+                        onDragEnd: _pin,
+                        icon: BitmapDescriptor.defaultMarkerWithHue(
+                          BitmapDescriptor.hueOrange,
+                        ),
+                      ),
+                    },
               myLocationButtonEnabled: false,
               myLocationEnabled: _hasLocationPermission,
               mapToolbarEnabled: false,
