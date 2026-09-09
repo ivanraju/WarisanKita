@@ -279,6 +279,7 @@ class _WorkshopMapPickerPageState extends State<WorkshopMapPickerPage> {
   bool _isLoading = false;
   bool _isLocating = false;
   bool _hasLocationPermission = false;
+  MapType _mapType = MapType.normal;
   String? _error;
 
   @override
@@ -536,8 +537,9 @@ class _WorkshopMapPickerPageState extends State<WorkshopMapPickerPage> {
             child: GoogleMap(
               initialCameraPosition: CameraPosition(
                 target: initialTarget,
-                zoom: selected == null ? 12 : 17,
+                zoom: selected == null ? 15 : 17,
               ),
+              mapType: _mapType,
               onMapCreated: (controller) => _mapController = controller,
               onTap: _isLoading ? null : _pin,
               onLongPress: _isLoading ? null : _pin,
@@ -571,6 +573,22 @@ class _WorkshopMapPickerPageState extends State<WorkshopMapPickerPage> {
                     icon: Icons.my_location_rounded,
                     tooltip: 'Go to my location',
                     onPressed: _isLocating ? null : _moveToCurrentLocation,
+                  ),
+                  const SizedBox(height: 12),
+                  _mapControlButton(
+                    icon: _mapType == MapType.normal
+                        ? Icons.satellite_alt_rounded
+                        : Icons.map_rounded,
+                    tooltip: _mapType == MapType.normal
+                        ? 'Switch to Satellite View'
+                        : 'Switch to Standard Map',
+                    onPressed: () {
+                      setState(() {
+                        _mapType = _mapType == MapType.normal
+                            ? MapType.hybrid
+                            : MapType.normal;
+                      });
+                    },
                   ),
                   const SizedBox(height: 12),
                   ClipRRect(
