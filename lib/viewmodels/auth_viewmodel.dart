@@ -90,13 +90,24 @@ class AuthViewModel extends ChangeNotifier {
     try {
       final user = await _repository.getCurrentUser();
       if (user != null) {
-        _currentUser = user;
-        if (user.isArtisanStudioSuspended &&
+        if (_currentUser?.hasPendingRelocation == true && !user.hasPendingRelocation) {
+          _currentUser = user.copyWith(
+            pendingRelocationAddress: _currentUser!.pendingRelocationAddress,
+            pendingRelocationState: _currentUser!.pendingRelocationState,
+            pendingRelocationLatitude: _currentUser!.pendingRelocationLatitude,
+            pendingRelocationLongitude: _currentUser!.pendingRelocationLongitude,
+            pendingRelocationReason: _currentUser!.pendingRelocationReason,
+            pendingRelocationDate: _currentUser!.pendingRelocationDate,
+          );
+        } else {
+          _currentUser = user;
+        }
+        if (_currentUser!.isArtisanStudioSuspended &&
             (_activeRole == 'Artisan' || _activeRole == 'Master Artisan')) {
           _activeRole = 'Cultural Tourist';
         }
         notifyListeners();
-        return user;
+        return _currentUser;
       }
     } catch (e) {
       debugPrint('refreshCurrentUser note: $e');
@@ -218,7 +229,18 @@ class AuthViewModel extends ChangeNotifier {
         longitude: longitude,
         reason: reason,
       );
-      _currentUser = updated;
+      if (_currentUser != null) {
+        _currentUser = _currentUser!.copyWith(
+          pendingRelocationAddress: address.trim(),
+          pendingRelocationState: state.trim(),
+          pendingRelocationLatitude: latitude,
+          pendingRelocationLongitude: longitude,
+          pendingRelocationReason: reason.trim(),
+          pendingRelocationDate: updated.pendingRelocationDate ?? DateTime.now().toIso8601String(),
+        );
+      } else {
+        _currentUser = updated;
+      }
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -231,8 +253,12 @@ class AuthViewModel extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final updated = await _repository.cancelRelocationRequest(email: email);
-      _currentUser = updated;
+      await _repository.cancelRelocationRequest(email: email);
+      if (_currentUser != null) {
+        _currentUser = _currentUser!.copyWith(
+          clearPendingRelocation: true,
+        );
+      }
     } finally {
       _isLoading = false;
       notifyListeners();

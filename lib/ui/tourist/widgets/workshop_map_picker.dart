@@ -279,20 +279,24 @@ class _WorkshopMapPickerPageState extends State<WorkshopMapPickerPage> {
   bool _isLoading = false;
   bool _isLocating = false;
   bool _hasLocationPermission = false;
+  MapType _mapType = MapType.normal;
   String? _error;
 
   @override
   void initState() {
     super.initState();
     _detectedState = widget.initialState;
-    if (widget.initialLocation != null && widget.initialAddress != null) {
+    if (widget.initialLocation != null) {
+      final initialAddr = widget.initialAddress?.trim() ?? '';
       _selection = WorkshopPlaceResult(
-        displayName: widget.initialAddress!,
+        displayName: initialAddr,
         position: widget.initialLocation!,
         countryCode: 'my',
         malaysiaState: widget.initialState,
       );
-      _searchController.text = widget.initialAddress!;
+      if (initialAddr.isNotEmpty) {
+        _searchController.text = initialAddr;
+      }
     }
   }
 
@@ -508,8 +512,9 @@ class _WorkshopMapPickerPageState extends State<WorkshopMapPickerPage> {
     final markerPosition = _pendingPosition ?? selected?.position;
     final initialTarget =
         selected?.position ??
+        widget.initialLocation ??
         widget.stateCenters[_detectedState] ??
-        const LatLng(4.2105, 101.9758);
+        const LatLng(3.1390, 101.6869);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F5EF),
@@ -536,8 +541,9 @@ class _WorkshopMapPickerPageState extends State<WorkshopMapPickerPage> {
             child: GoogleMap(
               initialCameraPosition: CameraPosition(
                 target: initialTarget,
-                zoom: selected == null ? 12 : 17,
+                zoom: selected == null ? 15 : 17,
               ),
+              mapType: _mapType,
               onMapCreated: (controller) => _mapController = controller,
               onTap: _isLoading ? null : _pin,
               onLongPress: _isLoading ? null : _pin,
@@ -571,6 +577,22 @@ class _WorkshopMapPickerPageState extends State<WorkshopMapPickerPage> {
                     icon: Icons.my_location_rounded,
                     tooltip: 'Go to my location',
                     onPressed: _isLocating ? null : _moveToCurrentLocation,
+                  ),
+                  const SizedBox(height: 12),
+                  _mapControlButton(
+                    icon: _mapType == MapType.normal
+                        ? Icons.satellite_alt_rounded
+                        : Icons.map_rounded,
+                    tooltip: _mapType == MapType.normal
+                        ? 'Switch to Satellite View'
+                        : 'Switch to Standard Map',
+                    onPressed: () {
+                      setState(() {
+                        _mapType = _mapType == MapType.normal
+                            ? MapType.hybrid
+                            : MapType.normal;
+                      });
+                    },
                   ),
                   const SizedBox(height: 12),
                   ClipRRect(

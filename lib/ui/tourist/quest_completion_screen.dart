@@ -9,9 +9,9 @@ class QuestCompletionScreen extends StatefulWidget {
 
   const QuestCompletionScreen({
     super.key,
-    this.workshopName = 'Pak Mat Pottery Studio',
-    this.craftCategory = 'Clay Labu Sayong Kilning',
-    this.locationName = 'Kampung Morten, Melaka',
+    this.workshopName = 'Artisan Workshop',
+    this.craftCategory = 'Heritage Craft',
+    this.locationName = 'Malaysia',
     this.distanceMeters = 35.0,
   });
 

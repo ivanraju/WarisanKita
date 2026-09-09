@@ -1116,8 +1116,9 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                           Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (_) => QuestCompletionScreen(
-                                workshopName: artisan['name'],
-                                craftCategory: artisan['category'],
+                                workshopName: artisan['name'] ?? 'Artisan Workshop',
+                                craftCategory: artisan['category'] ?? 'Heritage Craft',
+                                locationName: artisan['address'] ?? artisan['state'] ?? 'Malaysia',
                               ),
                             ),
                           );
