@@ -123,10 +123,19 @@ class ModerationViewModel extends ChangeNotifier {
     'Suspended',
   ];
 
-  List<UserModel> get registeredUsers => _registeredUsers;
+  List<UserModel> get registeredUsers => _registeredUsers
+      .where((u) =>
+          u.status.toUpperCase() != 'DELETED' &&
+          !u.email.toLowerCase().startsWith('deleted_'))
+      .toList();
 
   List<UserModel> get filteredUsers {
     return _registeredUsers.where((user) {
+      if (user.status.toUpperCase() == 'DELETED' ||
+          user.email.toLowerCase().startsWith('deleted_')) {
+        return false;
+      }
+
       final matchesSearch = _userSearchQuery.isEmpty ||
           (user.displayName ?? '').toLowerCase().contains(_userSearchQuery.toLowerCase()) ||
           (user.username ?? '').toLowerCase().contains(_userSearchQuery.toLowerCase()) ||
@@ -144,6 +153,19 @@ class ModerationViewModel extends ChangeNotifier {
 
       return matchesSearch && matchesRole && matchesStatus;
     }).toList();
+  }
+
+  void removeUserByEmailOrId({String? email, String? id}) {
+    _registeredUsers.removeWhere((u) =>
+        (email != null && u.email.toLowerCase() == email.toLowerCase()) ||
+        (id != null && u.id == id));
+    _activeArtisanMasters.removeWhere((a) =>
+        (email != null && a.email.toLowerCase() == email.toLowerCase()) ||
+        (id != null && a.id == id));
+    _pendingArtisans.removeWhere((p) =>
+        (email != null && p.email.toLowerCase() == email.toLowerCase()) ||
+        (id != null && p.id == id));
+    notifyListeners();
   }
 
   List<PendingArtisanProfile> get filteredArtisans {
