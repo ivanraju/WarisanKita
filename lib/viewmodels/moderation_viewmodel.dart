@@ -21,6 +21,9 @@ class ModerationViewModel extends ChangeNotifier {
   String _searchQuery = '';
   String get searchQuery => _searchQuery;
 
+  String _applicationTypeFilter = 'All'; // 'All', 'New Profiles', 'Relocations'
+  String get applicationTypeFilter => _applicationTypeFilter;
+
   String _selectedCategory = 'All Categories';
   String get selectedCategory => _selectedCategory;
 
@@ -181,12 +184,18 @@ class ModerationViewModel extends ChangeNotifier {
       final matchesCategory = _selectedCategory == 'All Categories' ||
           artisan.craftCategory == _selectedCategory;
 
-      return matchesSearch && matchesCategory;
+      final matchesType = _applicationTypeFilter == 'All' ||
+          (_applicationTypeFilter == 'New Profiles' && !artisan.isRelocationRequest) ||
+          (_applicationTypeFilter == 'Relocations' && artisan.isRelocationRequest);
+
+      return matchesSearch && matchesCategory && matchesType;
     }).toList();
   }
 
   List<PendingArtisanProfile> get pendingArtisans => List.unmodifiable(_pendingArtisans);
   int get totalPendingCount => _pendingArtisans.length;
+  int get pendingRelocationCount => _pendingArtisans.where((p) => p.isRelocationRequest).length;
+  int get pendingNewProfilesCount => _pendingArtisans.where((p) => !p.isRelocationRequest).length;
 
   int _sessionApprovedToday = 0;
   final List<Duration> _reviewDurations = [];
@@ -308,6 +317,11 @@ class ModerationViewModel extends ChangeNotifier {
 
   void setSearchQuery(String query) {
     _searchQuery = query;
+    notifyListeners();
+  }
+
+  void setApplicationTypeFilter(String filter) {
+    _applicationTypeFilter = filter;
     notifyListeners();
   }
 
