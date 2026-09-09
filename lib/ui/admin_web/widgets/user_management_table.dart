@@ -174,8 +174,8 @@ class UserManagementTable extends StatelessWidget {
         DataCell(
           Builder(
             builder: (context) {
+              final bool isAdmin = user.isAdmin;
               final r = user.role.toLowerCase();
-              final bool isAdmin = r.contains('admin');
               final bool isDual = user.isDualRole || r.contains('&') || (r.contains('artisan') && r.contains('tourist'));
               final bool isArt = !isDual && (r.contains('artisan') || user.isArtisan);
 
@@ -219,7 +219,7 @@ class UserManagementTable extends StatelessWidget {
                     Icon(roleIcon, size: 12, color: textColor),
                     const SizedBox(width: 5),
                     Text(
-                      user.role,
+                      isAdmin ? 'Admin' : user.role,
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
@@ -274,7 +274,7 @@ class UserManagementTable extends StatelessWidget {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (user.role.toLowerCase().contains('admin') || user.isAdmin)
+              if (user.isAdmin)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
@@ -324,12 +324,14 @@ class UserManagementTable extends StatelessWidget {
                   icon: const Icon(Icons.block_rounded, size: 14),
                   label: const Text('Suspend', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                 ),
-              const SizedBox(width: 8),
-              IconButton(
-                icon: const Icon(Icons.lock_reset_rounded, size: 18, color: Color(0xFF64748B)),
-                tooltip: 'Send Password Reset Email',
-                onPressed: onResetPassword != null ? () => onResetPassword!(user) : null,
-              ),
+              if (!user.isAdmin) ...[
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.lock_reset_rounded, size: 18, color: Color(0xFF64748B)),
+                  tooltip: 'Send Password Reset Email',
+                  onPressed: onResetPassword != null ? () => onResetPassword!(user) : null,
+                ),
+              ],
             ],
           ),
         ),
