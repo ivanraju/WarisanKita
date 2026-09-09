@@ -1478,12 +1478,13 @@ class SupabaseService {
       throw Exception('EMAIL NOT FOUND: Account does not exist.');
     }
 
-    // Security Constraint: New password cannot be the same as current password
+    // Security Constraint: New password cannot be the same as current password (case-insensitive check to prevent trivial variations)
     if (existsLocally) {
       final oldPassword = _userStore[cleanEmail]?['password'];
-      if (oldPassword != null && oldPassword.toString() == newPassword) {
+      if (oldPassword != null &&
+          oldPassword.toString().trim().toLowerCase() == newPassword.trim().toLowerCase()) {
         throw Exception(
-          'NEW PASSWORD CANNOT BE THE SAME AS YOUR CURRENT PASSWORD: Please choose a different password.',
+          'NEW PASSWORD IS TOO SIMILAR TO YOUR CURRENT PASSWORD: Please choose a completely new password, not just a change in uppercase or lowercase.',
         );
       }
     }
