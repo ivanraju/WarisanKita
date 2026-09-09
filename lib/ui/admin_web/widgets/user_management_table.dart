@@ -19,6 +19,7 @@ class UserManagementTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      width: double.infinity,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -33,11 +34,15 @@ class UserManagementTable extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: 880),
-            child: DataTable(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minWidth: constraints.maxWidth > 960 ? constraints.maxWidth : 960,
+                ),
+                child: DataTable(
               headingRowHeight: 52,
               dataRowMinHeight: 68,
               dataRowMaxHeight: 68,
@@ -102,8 +107,10 @@ class UserManagementTable extends StatelessWidget {
                 ),
               ],
               rows: users.map((user) => _buildRow(user)).toList(),
-            ),
-          ),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
@@ -117,6 +124,7 @@ class UserManagementTable extends StatelessWidget {
         // User Name Cell
         DataCell(
           Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               CircleAvatar(
                 radius: 18,

@@ -26,10 +26,29 @@ class PendingArtisansTable extends StatelessWidget {
     );
   }
 
+  String _formatDate(String raw) {
+    if (raw.isEmpty) return 'Today';
+    try {
+      final parsed = DateTime.tryParse(raw);
+      if (parsed != null) {
+        const months = [
+          'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+        ];
+        return '${parsed.day} ${months[parsed.month - 1]} ${parsed.year}';
+      }
+    } catch (_) {}
+    if (raw.length > 20 && raw.contains('T')) {
+      return raw.split('T').first;
+    }
+    return raw;
+  }
+
   @override
   Widget build(BuildContext context) {
     if (artisans.isEmpty) {
       return Container(
+        width: double.infinity,
         padding: const EdgeInsets.all(48),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -75,6 +94,7 @@ class PendingArtisansTable extends StatelessWidget {
     }
 
     return Container(
+      width: double.infinity,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -89,66 +109,72 @@ class PendingArtisansTable extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: 840),
-            child: DataTable(
-              headingRowHeight: 52,
-              dataRowMinHeight: 72,
-              dataRowMaxHeight: 72,
-              horizontalMargin: 24,
-              columnSpacing: 24,
-              headingRowColor: MaterialStateProperty.all(const Color(0xFFF8FAFC)),
-              columns: [
-                DataColumn(
-                  label: Text(
-                    'ARTISAN NAME',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: const Color(0xFF64748B),
-                      letterSpacing: 0.8,
-                    ),
-                  ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minWidth: constraints.maxWidth > 960 ? constraints.maxWidth : 960,
                 ),
-                DataColumn(
-                  label: Text(
-                    'CRAFT CATEGORY',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: const Color(0xFF64748B),
-                      letterSpacing: 0.8,
+                child: DataTable(
+                  headingRowHeight: 52,
+                  dataRowMinHeight: 72,
+                  dataRowMaxHeight: 72,
+                  horizontalMargin: 24,
+                  columnSpacing: 28,
+                  headingRowColor: MaterialStateProperty.all(const Color(0xFFF8FAFC)),
+                  columns: [
+                    DataColumn(
+                      label: Text(
+                        'ARTISAN NAME',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF64748B),
+                          letterSpacing: 0.8,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'DATE SUBMITTED',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: const Color(0xFF64748B),
-                      letterSpacing: 0.8,
+                    DataColumn(
+                      label: Text(
+                        'CRAFT CATEGORY',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF64748B),
+                          letterSpacing: 0.8,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'ACTIONS',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: const Color(0xFF64748B),
-                      letterSpacing: 0.8,
+                    DataColumn(
+                      label: Text(
+                        'DATE SUBMITTED',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF64748B),
+                          letterSpacing: 0.8,
+                        ),
+                      ),
                     ),
-                  ),
+                    DataColumn(
+                      label: Text(
+                        'ACTIONS',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF64748B),
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                    ),
+                  ],
+                  rows: artisans.map((artisan) => _buildRow(context, artisan)).toList(),
                 ),
-              ],
-              rows: artisans.map((artisan) => _buildRow(context, artisan)).toList(),
-            ),
-          ),
+              ),
+            );
+          },
         ),
       ),
     );
@@ -162,6 +188,7 @@ class PendingArtisansTable extends StatelessWidget {
           InkWell(
             onTap: () => _openReviewDialog(context, artisan),
             child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(10),
@@ -182,6 +209,7 @@ class PendingArtisansTable extends StatelessWidget {
                 Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       artisan.name,
@@ -193,6 +221,7 @@ class PendingArtisansTable extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
                           artisan.state,
@@ -201,14 +230,16 @@ class PendingArtisansTable extends StatelessWidget {
                             color: const Color(0xFF64748B),
                           ),
                         ),
-                        const SizedBox(width: 6),
-                        Text(
-                          '• ${artisan.experience}',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 11,
-                            color: const Color(0xFF94A3B8),
+                        if (artisan.experience.isNotEmpty) ...[
+                          const SizedBox(width: 6),
+                          Text(
+                            '• ${artisan.experience}',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11,
+                              color: const Color(0xFF94A3B8),
+                            ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   ],
@@ -241,6 +272,7 @@ class PendingArtisansTable extends StatelessWidget {
         // Date Submitted Cell
         DataCell(
           Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               const Icon(
                 Icons.calendar_today_outlined,
@@ -249,7 +281,7 @@ class PendingArtisansTable extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                artisan.dateSubmitted,
+                _formatDate(artisan.dateSubmitted),
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
@@ -270,8 +302,10 @@ class PendingArtisansTable extends StatelessWidget {
                 icon: const Icon(Icons.remove_red_eye_outlined, color: Color(0xFF2563EB), size: 18),
                 onPressed: () => _openReviewDialog(context, artisan),
                 tooltip: 'Review Full Profile & Portfolio Modal',
+                padding: const EdgeInsets.all(6),
+                constraints: const BoxConstraints(),
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: 8),
 
               // Green Approve Button
               ElevatedButton.icon(
@@ -279,7 +313,7 @@ class PendingArtisansTable extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF10B981),
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                   minimumSize: const Size(0, 34),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -304,7 +338,7 @@ class PendingArtisansTable extends StatelessWidget {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: const Color(0xFFEF4444),
                   side: const BorderSide(color: Color(0xFFEF4444), width: 1.5),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                   minimumSize: const Size(0, 34),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
