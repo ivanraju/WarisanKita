@@ -274,7 +274,7 @@ class UserManagementTable extends StatelessWidget {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (user.role.toLowerCase().contains('admin') || user.isAdmin)
+              if (user.isAdmin)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
@@ -324,7 +324,7 @@ class UserManagementTable extends StatelessWidget {
                   icon: const Icon(Icons.block_rounded, size: 14),
                   label: const Text('Suspend', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                 ),
-              if (!isAdmin) ...[
+              if (!user.isAdmin) ...[
                 const SizedBox(width: 8),
                 IconButton(
                   icon: const Icon(Icons.lock_reset_rounded, size: 18, color: Color(0xFF64748B)),
