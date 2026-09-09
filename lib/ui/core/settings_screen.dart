@@ -128,9 +128,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final isQuizCompleted = matchmakerVM.isQuizCompleted;
     final personality = matchmakerVM.currentPersonality;
     final user = authVM.currentUser;
-    final username = user?.effectiveUsername ?? 'Aiman Haziq';
-    final initials = user?.initials ?? 'AH';
-    final email = user?.email ?? 'tourist@warisankita.my';
+    final username = user?.effectiveUsername ?? 'Guest User';
+    final initials = user?.initials ?? 'G';
+    final email = user?.email ?? '';
     final role = user?.role ?? 'Tourist';
 
     return Scaffold(

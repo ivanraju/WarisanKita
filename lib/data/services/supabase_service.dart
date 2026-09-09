@@ -105,76 +105,6 @@ class SupabaseService {
 
   // In-memory Database Store for verified offline/prototype and test accounts
   static final Map<String, Map<String, dynamic>> _userStore = {
-    'tourist@warisankita.my': {
-      'id': 'usr-tourist-001',
-      'email': 'tourist@warisankita.my',
-      'username': 'Aiman Haziq',
-      'displayName': 'Aiman Haziq',
-      'password': 'password123',
-      'role': 'Tourist',
-      'roles': ['Tourist'],
-      'status': 'ACTIVE',
-      'joinedDate': 'Jan 2026',
-      'isSuspended': false,
-    },
-    'user@warisankita.my': {
-      'id': 'usr-tourist-002',
-      'email': 'user@warisankita.my',
-      'username': 'Siti Explorer',
-      'displayName': 'Siti Explorer',
-      'password': 'password123',
-      'role': 'Tourist',
-      'roles': ['Tourist'],
-      'status': 'ACTIVE',
-      'joinedDate': 'Jan 2026',
-      'isSuspended': false,
-    },
-    'artisan@warisankita.my': {
-      'id': 'usr-artisan-001',
-      'email': 'artisan@warisankita.my',
-      'username': 'Pak Mat',
-      'displayName': 'Master Pak Mat',
-      'password': 'password123',
-      'role': 'Artisan',
-      'roles': ['Artisan'],
-      'status': 'APPROVED',
-      'studioName': 'Pak Mat Pottery Studio',
-      'craftCategory': 'Pottery & Ceramics',
-      'ssmNumber': 'SSM-TRG-2024-0981',
-      'bio':
-          'Master Pak Mat has been hand-crafting traditional clay labu sayong and ceramic vessels for over 25 years in Kampung Morten.',
-      'joinedDate': 'Nov 2025',
-      'isSuspended': false,
-    },
-    'pending.artisan@warisankita.my': {
-      'id': 'usr-artisan-pending-002',
-      'email': 'pending.artisan@warisankita.my',
-      'username': 'Tok Wan Songket',
-      'displayName': 'Tok Wan Songket',
-      'password': 'password123',
-      'role': 'Artisan',
-      'roles': ['Artisan'],
-      'status': 'PENDING_APPROVAL',
-      'studioName': 'KELANTAN SONGKET ATELIER',
-      'craftCategory': 'Songket & Weaving',
-      'ssmNumber': 'SSM-KLT-2026-1102',
-      'bio': 'Master weaver applying for verification.',
-      'joinedDate': 'Feb 2026',
-      'isSuspended': false,
-    },
-    'suspended@warisankita.my': {
-      'id': 'usr-suspended-001',
-      'email': 'suspended@warisankita.my',
-      'username': 'Suspended Account',
-      'displayName': 'Suspended Account',
-      'password': 'password123',
-      'role': 'Tourist',
-      'roles': ['Tourist'],
-      'status': 'SUSPENDED',
-      'joinedDate': 'Dec 2025',
-      'isSuspended': true,
-      'suspensionReason': 'Violation of community guidelines',
-    },
     'admin@warisankita.my': {
       'id': 'a0000000-0000-0000-0000-000000000001',
       'email': 'admin@warisankita.my',
@@ -185,21 +115,6 @@ class SupabaseService {
       'roles': ['Admin'],
       'status': 'ACTIVE',
       'joinedDate': 'Jan 2025',
-      'isSuspended': false,
-    },
-    'artisan.sarah@warisankita.my': {
-      'id': 'usr-artisan-002',
-      'email': 'artisan.sarah@warisankita.my',
-      'username': 'Sarah Chen',
-      'displayName': 'Sarah Chen (Master Artisan)',
-      'password': 'password123',
-      'role': 'Artisan',
-      'roles': ['Artisan'],
-      'status': 'ACTIVE',
-      'studioName': 'WARISAN CERAMICS & BATIK',
-      'craftCategory': 'Pottery & Ceramics',
-      'ssmNumber': 'SSM-PRK-2025-4421',
-      'joinedDate': 'Aug 2025',
       'isSuspended': false,
     },
   };
@@ -1506,7 +1421,7 @@ class SupabaseService {
       cleanEmail = client.auth.currentUser!.email?.toLowerCase() ?? '';
     }
     if (cleanEmail.isEmpty) {
-      cleanEmail = 'tourist@warisankita.my';
+      throw Exception('User email is required to submit artisan application.');
     }
 
     await Future.delayed(const Duration(milliseconds: 300));

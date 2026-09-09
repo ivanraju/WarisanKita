@@ -80,25 +80,25 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     super.initState();
     final authVM = context.read<AuthViewModel>();
     final user = authVM.currentUser;
-    final initialHandle = (user?.username ?? user?.effectiveUsername ?? 'Pak Mat').replaceAll('@', '');
+    final initialHandle = (user?.username ?? user?.effectiveUsername ?? '').replaceAll('@', '');
     _initialUsername = initialHandle;
     _usernameController = TextEditingController(text: initialHandle);
     _usernameController.addListener(_onUsernameChanged);
     _studioNameController = TextEditingController(
-      text: user?.studioName ?? user?.displayName ?? 'Pak Mat Pottery Studio',
+      text: user?.studioName ?? user?.displayName ?? '',
     );
     _craftCategoryController = TextEditingController(
-      text: user?.craftCategory ?? 'Pottery & Ceramics',
+      text: user?.craftCategory ?? '',
     );
-    _stateController = TextEditingController(text: user?.state ?? 'Melaka');
+    _stateController = TextEditingController(text: user?.state ?? '');
     _workshopAddress = user?.address;
     if (user != null && user.latitude != null && user.longitude != null) {
       _selectedWorkshopPin = LatLng(user.latitude!, user.longitude!);
     }
-    _experienceController = TextEditingController(text: '25+ Years Experience');
-    _phoneController = TextEditingController(text: user?.phone ?? '+60 12-345 6789');
+    _experienceController = TextEditingController(text: '');
+    _phoneController = TextEditingController(text: user?.phone ?? '');
     _bioController = TextEditingController(
-      text: user?.bio ?? 'Master Pak Mat has been hand-crafting traditional clay labu sayong and ceramic vessels for over 25 years in Kampung Morten. Each piece is hand-spun and natural clay kilned.',
+      text: user?.bio ?? '',
     );
     
     if (user != null) {
@@ -580,11 +580,11 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => ArtisanDetailScreen(
-          artisanName: _studioNameController.text.trim().isEmpty ? 'Pak Mat Pottery Studio' : _studioNameController.text.trim(),
-          craftCategory: _craftCategoryController.text.trim().isEmpty ? 'Pottery & Ceramics' : _craftCategoryController.text.trim(),
-          state: _stateController.text.trim().isEmpty ? 'Melaka' : _stateController.text.trim(),
-          bio: _bioController.text.trim().isEmpty ? 'Master Pak Mat has been hand-crafting traditional clay labu sayong...' : _bioController.text.trim(),
-          experience: _experienceController.text.trim().isEmpty ? '25+ Years Experience' : _experienceController.text.trim(),
+          artisanName: _studioNameController.text.trim().isEmpty ? 'Artisan Studio' : _studioNameController.text.trim(),
+          craftCategory: _craftCategoryController.text.trim().isEmpty ? 'Heritage Craft' : _craftCategoryController.text.trim(),
+          state: _stateController.text.trim().isEmpty ? 'Malaysia' : _stateController.text.trim(),
+          bio: _bioController.text.trim(),
+          experience: _experienceController.text.trim(),
           imageUrl: _portfolioImages.firstWhere((img) => img.isNotEmpty, orElse: () => 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&auto=format&fit=crop&q=80'),
           tags: _toolsAndMaterials,
           address: _workshopAddress,

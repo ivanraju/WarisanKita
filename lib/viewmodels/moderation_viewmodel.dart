@@ -31,194 +31,11 @@ class ModerationViewModel extends ChangeNotifier {
     'Pewter Craft',
   ];
 
-  final List<PendingArtisanProfile> _pendingArtisans = [
-    const PendingArtisanProfile(
-      id: 'p1',
-      name: 'Ahmad Razak Ceramic',
-      craftCategory: 'Pottery & Ceramics',
-      state: 'Melaka',
-      dateSubmitted: 'Aug 4, 2026',
-      imageUrl: 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&auto=format&fit=crop&q=80',
-      email: 'ahmad.razak@example.com',
-      experience: '12 Years',
-      phone: '+60 12-345 6789',
-      ssmNumber: '202601004821 (SSM Verified)',
-      ssmFileName: 'SSM_Registration_Cert_Melaka.pdf',
-      certFileName: 'Kraftangan_Master_Ceramics_Cert.pdf',
-      photos: [
-        'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600',
-        'https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=600',
-      ],
-      bio: 'Master ceramicist with 12 years preserving traditional Melaka pottery techniques.',
-      isUpgradeFromTourist: false,
-    ),
-    const PendingArtisanProfile(
-      id: 'p2',
-      name: 'Siti Nurhaliza Batik Studio',
-      craftCategory: 'Batik Weaving',
-      state: 'Terengganu',
-      dateSubmitted: 'Aug 3, 2026',
-      imageUrl: 'https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=600&auto=format&fit=crop&q=80',
-      email: 'siti.batik@example.com',
-      experience: '8 Years',
-      phone: '+60 19-876 5432',
-      ssmNumber: 'KT-TRG-99482',
-      ssmFileName: 'SSM_Terengganu_Batik.pdf',
-      certFileName: 'Kraftangan_National_Award_Batik.pdf',
-      photos: [
-        'https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=600',
-        'https://images.unsplash.com/photo-1528459801416-a9e53bbf4e17?w=600',
-      ],
-      bio: 'Award-winning hand-drawn batik block printing master from Kuala Terengganu.',
-      isUpgradeFromTourist: false,
-    ),
-    const PendingArtisanProfile(
-      id: 'p3',
-      name: 'Master Wong Woodcraft',
-      craftCategory: 'Wood Carving',
-      state: 'Perak',
-      dateSubmitted: 'Aug 2, 2026',
-      imageUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80',
-      email: 'wong.wood@example.com',
-      experience: '25 Years',
-      phone: '+60 17-234 5678',
-      ssmNumber: 'PRK-WOOD-8831',
-      ssmFileName: 'SSM_Woodcarving_Perak.pdf',
-      certFileName: 'Kraftangan_Master_Woodcarver.pdf',
-      photos: [
-        'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600',
-      ],
-      bio: 'Heritage Malay-Nyonya floral and relief architectural woodcarver with 25 years of mastery.',
-      isUpgradeFromTourist: false,
-    ),
-    const PendingArtisanProfile(
-      id: 'p4',
-      name: 'Che Minah Heritage Songket',
-      craftCategory: 'Songket Weaving',
-      state: 'Kelantan',
-      dateSubmitted: 'Aug 1, 2026',
-      imageUrl: 'https://images.unsplash.com/photo-1528459801416-a9e53bbf4e17?w=600&auto=format&fit=crop&q=80',
-      email: 'minah.songket@example.com',
-      experience: '15 Years',
-      phone: '+60 13-456 7890',
-      ssmNumber: 'KT-KEL-19948',
-      ssmFileName: 'SSM_Songket_Kelantan.pdf',
-      certFileName: 'Kraftangan_Gold_Songket_Certificate.pdf',
-      photos: [
-        'https://images.unsplash.com/photo-1528459801416-a9e53bbf4e17?w=600',
-      ],
-      bio: 'Traditional Kelantanese gold-thread songket weaver keeping Royal Court patterns alive.',
-      isUpgradeFromTourist: false,
-    ),
-    const PendingArtisanProfile(
-      id: 'p5',
-      name: 'Aiman Haziq Woodcraft Studio',
-      craftCategory: 'Wood Carving',
-      state: 'Terengganu',
-      dateSubmitted: 'Aug 16, 2026',
-      imageUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80',
-      email: 'tourist@warisankita.my',
-      experience: '5 Years',
-      phone: '+60 11-2345 6789',
-      ssmNumber: '202601004821 (SSM Verified)',
-      ssmFileName: 'SSM_Registration_Cert_2026.pdf',
-      certFileName: 'Kraftangan_Master_Certificate.pdf',
-      photos: [
-        'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600',
-      ],
-      bio: 'Existing Cultural Explorer applying for studio registration in ukiran kayu warisan.',
-      isUpgradeFromTourist: true,
-    ),
-  ];
+  // Pending Artisan Approvals State
+  final List<PendingArtisanProfile> _pendingArtisans = [];
 
   // Active Verified Master Artisans State
-  final List<ActiveArtisanMaster> _activeArtisanMasters = [
-    const ActiveArtisanMaster(
-      id: 'a1',
-      name: 'Pak Mat Pottery Studio',
-      email: 'pakmat.clay@example.com',
-      category: 'Pottery & Ceramics',
-      state: 'Melaka',
-      experience: '25+ Years',
-      plaques: 28,
-      isLiveOpen: true,
-      licenseNo: 'KFG-2024-889',
-      verifiedDate: 'Jan 10, 2024',
-      imageUrl: 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&auto=format&fit=crop&q=80',
-      bio: 'Renowned ceramic master specializing in traditional Melaka clay vessels and porcelain glazes.',
-      phone: '+60 12-345 6789',
-      isDualRole: false,
-      isSuspended: false,
-    ),
-    const ActiveArtisanMaster(
-      id: 'a2',
-      name: 'Tok Guru Crafts',
-      email: 'tokguru.wood@example.com',
-      category: 'Wood Carving',
-      state: 'Kelantan',
-      experience: '30+ Years',
-      plaques: 42,
-      isLiveOpen: false,
-      licenseNo: 'KFG-2023-112',
-      verifiedDate: 'Mar 15, 2023',
-      imageUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80',
-      bio: 'National heritage wood carver preserving Kelantanese architectural wood reliefs.',
-      phone: '+60 19-876 5432',
-      isDualRole: false,
-      isSuspended: false,
-    ),
-    const ActiveArtisanMaster(
-      id: 'a3',
-      name: 'Kak Lina Silk Batik',
-      email: 'kaklina.silk@example.com',
-      category: 'Batik Weaving',
-      state: 'Terengganu',
-      experience: '18 Years',
-      plaques: 19,
-      isLiveOpen: true,
-      licenseNo: 'KFG-2024-405',
-      verifiedDate: 'Feb 20, 2024',
-      imageUrl: 'https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=600&auto=format&fit=crop&q=80',
-      bio: 'East Coast silk batik artisan creating hand-painted floral canting masterpieces.',
-      phone: '+60 17-234 5678',
-      isDualRole: true,
-      isSuspended: false,
-    ),
-    const ActiveArtisanMaster(
-      id: 'a4',
-      name: 'Sayong Black Clay Master',
-      email: 'sayong.black@example.com',
-      category: 'Pottery & Ceramics',
-      state: 'Perak',
-      experience: '22 Years',
-      plaques: 35,
-      isLiveOpen: true,
-      licenseNo: 'KFG-2023-774',
-      verifiedDate: 'Nov 12, 2023',
-      imageUrl: 'https://images.unsplash.com/photo-1528459801416-a9e53bbf4e17?w=600&auto=format&fit=crop&q=80',
-      bio: 'Kuala Kangsar master of authentic Labu Sayong pit-firing and natural black finishes.',
-      phone: '+60 13-987 6543',
-      isDualRole: false,
-      isSuspended: false,
-    ),
-    const ActiveArtisanMaster(
-      id: 'a5',
-      name: 'Mah Meri Heritage Woodcraft',
-      email: 'mahmeri.wood@example.com',
-      category: 'Wood Carving',
-      state: 'Selangor',
-      experience: '20 Years',
-      plaques: 24,
-      isLiveOpen: true,
-      licenseNo: 'KFG-2024-512',
-      verifiedDate: 'May 05, 2024',
-      imageUrl: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=600&auto=format&fit=crop&q=80',
-      bio: 'Indigenous Mah Meri master carver preserving spiritual masks and Nyireh Batu timber figurines.',
-      phone: '+60 11-3456 7890',
-      isDualRole: false,
-      isSuspended: false,
-    ),
-  ];
+  final List<ActiveArtisanMaster> _activeArtisanMasters = [];
 
   List<ActiveArtisanMaster> get activeArtisanMasters => _activeArtisanMasters;
 
@@ -239,40 +56,8 @@ class ModerationViewModel extends ChangeNotifier {
   }
 
   // User Management State
-  final List<UserModel> _registeredUsers = [
-    const UserModel(
-      id: 'u1',
-      email: 'aiman.haziq@example.com',
-      displayName: 'Aiman Haziq',
-      role: 'Tourist',
-      joinedDate: 'Jan 15, 2026',
-      isSuspended: false,
-    ),
-    const UserModel(
-      id: 'u2',
-      email: 'pakmat.clay@example.com',
-      displayName: 'Pak Mat Ceramic Studio',
-      role: 'Artisan',
-      joinedDate: 'Feb 02, 2026',
-      isSuspended: false,
-    ),
-    const UserModel(
-      id: 'u3',
-      email: 'mei.ling@example.com',
-      displayName: 'Tan Mei Ling',
-      role: 'Tourist',
-      joinedDate: 'Mar 20, 2026',
-      isSuspended: true,
-    ),
-    const UserModel(
-      id: 'u4',
-      email: 'kaklina.silk@example.com',
-      displayName: 'Kak Lina Silk Batik',
-      role: 'Artisan',
-      joinedDate: 'Apr 10, 2026',
-      isSuspended: false,
-    ),
-  ];
+  final List<UserModel> _registeredUsers = [];
+
 
   void updateUserProfileInState({
     required String email,
@@ -413,6 +198,8 @@ class ModerationViewModel extends ChangeNotifier {
     try {
       final List<Map<String, dynamic>> dbPending = await _repository.getPendingArtisans();
 
+      final List<PendingArtisanProfile> fetched = [];
+
       for (final raw in dbPending) {
         final email = (raw['email'] ?? '').toString();
         if (email.isEmpty) continue;
@@ -424,8 +211,6 @@ class ModerationViewModel extends ChangeNotifier {
         final role = (raw['role'] ?? '').toString();
         final isUpgrade = role.contains('Tourist') || role.contains('Both');
 
-        final existingIdx = _pendingArtisans.indexWhere((p) => p.email.toLowerCase() == email.toLowerCase());
-        
         // Resolve the avatar/image URL from the DB row
         final resolvedImageUrl = (raw['imageUrl'] ?? raw['avatar_url'] ?? 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600').toString();
         
@@ -443,7 +228,7 @@ class ModerationViewModel extends ChangeNotifier {
           name: name,
           craftCategory: craft,
           state: state,
-          dateSubmitted: 'Today',
+          dateSubmitted: raw['dateSubmitted']?.toString() ?? raw['created_at']?.toString() ?? 'Today',
           imageUrl: resolvedImageUrl,
           email: email,
           experience: (raw['experience'] ?? 'Verified Studio').toString(),
@@ -458,10 +243,16 @@ class ModerationViewModel extends ChangeNotifier {
           isUpgradeFromTourist: isUpgrade,
         );
 
-        if (existingIdx == -1) {
-          _pendingArtisans.insert(0, newProfile);
-        } else {
-          _pendingArtisans[existingIdx] = newProfile;
+        fetched.add(newProfile);
+      }
+
+      // Preserve any pending relocation requests added in this session
+      final localRelocations = _pendingArtisans.where((p) => p.isRelocationRequest).toList();
+      _pendingArtisans.clear();
+      _pendingArtisans.addAll(fetched);
+      for (final rel in localRelocations) {
+        if (!_pendingArtisans.any((p) => p.email.toLowerCase() == rel.email.toLowerCase() && p.isRelocationRequest)) {
+          _pendingArtisans.insert(0, rel);
         }
       }
       notifyListeners();
@@ -473,21 +264,9 @@ class ModerationViewModel extends ChangeNotifier {
   Future<void> fetchActiveArtisans() async {
     try {
       final dbArtisans = await _repository.getActiveArtisans();
-      if (dbArtisans.isNotEmpty) {
-        for (final art in dbArtisans) {
-          final idx = _activeArtisanMasters.indexWhere(
-            (a) => a.email.toLowerCase() == art.email.toLowerCase() ||
-                   a.id == art.id ||
-                   a.name.toLowerCase() == art.name.toLowerCase(),
-          );
-          if (idx == -1) {
-            _activeArtisanMasters.insert(0, art);
-          } else {
-            _activeArtisanMasters[idx] = art;
-          }
-        }
-        notifyListeners();
-      }
+      _activeArtisanMasters.clear();
+      _activeArtisanMasters.addAll(dbArtisans);
+      notifyListeners();
     } catch (e) {
       debugPrint('Error fetching active artisans: $e');
     }
@@ -496,20 +275,9 @@ class ModerationViewModel extends ChangeNotifier {
   Future<void> fetchAllUsers() async {
     try {
       final dbUsers = await _repository.getAllUsers();
-      if (dbUsers.isNotEmpty) {
-        for (final u in dbUsers) {
-          final idx = _registeredUsers.indexWhere(
-            (existing) => existing.email.toLowerCase() == u.email.toLowerCase() ||
-                          existing.id == u.id,
-          );
-          if (idx == -1) {
-            _registeredUsers.insert(0, u);
-          } else {
-            _registeredUsers[idx] = u;
-          }
-        }
-        notifyListeners();
-      }
+      _registeredUsers.clear();
+      _registeredUsers.addAll(dbUsers);
+      notifyListeners();
     } catch (e) {
       debugPrint('Error fetching all users: $e');
     }

@@ -459,4 +459,44 @@ void main() {
       expect(approved, isTrue);
     });
   });
+
+  group('Hardcoded Profile Elimination Tests', () {
+    test('ModerationViewModel state contains no hardcoded mock profiles', () {
+      final service = SupabaseService();
+      final repository = UserRepository(service: service);
+      final modVM = ModerationViewModel(repository: repository);
+
+      // Verify no hardcoded mock profiles exist in pending list
+      expect(modVM.pendingArtisans.any((p) => p.name == 'Ahmad Razak Ceramic'), isFalse);
+      expect(modVM.pendingArtisans.any((p) => p.name == 'Siti Nurhaliza Batik Studio'), isFalse);
+      expect(modVM.pendingArtisans.any((p) => p.name == 'Master Wong Woodcraft'), isFalse);
+      expect(modVM.pendingArtisans.any((p) => p.name == 'Che Minah Heritage Songket'), isFalse);
+      expect(modVM.pendingArtisans.any((p) => p.name == 'Aiman Haziq Woodcraft Studio'), isFalse);
+
+      // Verify no hardcoded active master profiles exist
+      expect(modVM.activeArtisanMasters.any((a) => a.name == 'Pak Mat Pottery Studio'), isFalse);
+      expect(modVM.activeArtisanMasters.any((a) => a.name == 'Tok Guru Crafts'), isFalse);
+      expect(modVM.activeArtisanMasters.any((a) => a.name == 'Kak Lina Silk Batik'), isFalse);
+      expect(modVM.activeArtisanMasters.any((a) => a.name == 'Sayong Black Clay Master'), isFalse);
+      expect(modVM.activeArtisanMasters.any((a) => a.name == 'Mah Meri Heritage Woodcraft'), isFalse);
+
+      // Verify no hardcoded registered users exist
+      expect(modVM.registeredUsers.any((u) => u.email == 'aiman.haziq@example.com'), isFalse);
+      expect(modVM.registeredUsers.any((u) => u.email == 'pakmat.clay@example.com'), isFalse);
+      expect(modVM.registeredUsers.any((u) => u.email == 'mei.ling@example.com'), isFalse);
+      expect(modVM.registeredUsers.any((u) => u.email == 'kaklina.silk@example.com'), isFalse);
+    });
+
+    test('SupabaseService does not provide default mock seed profiles in user list', () async {
+      final service = SupabaseService();
+      final users = await service.getAllUsers();
+
+      expect(users.any((u) => u.email == 'tourist@warisankita.my'), isFalse);
+      expect(users.any((u) => u.email == 'user@warisankita.my'), isFalse);
+      expect(users.any((u) => u.email == 'artisan@warisankita.my'), isFalse);
+      expect(users.any((u) => u.email == 'pending.artisan@warisankita.my'), isFalse);
+      expect(users.any((u) => u.email == 'suspended@warisankita.my'), isFalse);
+      expect(users.any((u) => u.email == 'artisan.sarah@warisankita.my'), isFalse);
+    });
+  });
 }

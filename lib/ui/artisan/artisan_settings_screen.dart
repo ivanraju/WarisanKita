@@ -19,7 +19,7 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
   void _handleLogout() {
     final nav = Navigator.of(context, rootNavigator: true);
     final authVM = context.read<AuthViewModel>();
-    final studio = authVM.currentUser?.studioName ?? 'Pak Mat Pottery Studio';
+    final studio = authVM.currentUser?.studioName ?? 'Artisan Studio';
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     showDialog(
@@ -112,10 +112,10 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
     final isDark = context.watch<ThemeViewModel>().isDarkMode;
     final authVM = context.watch<AuthViewModel>();
     final user = authVM.currentUser;
-    final studioName = user?.studioName ?? user?.displayName ?? 'Pak Mat Pottery Studio';
-    final handle = user?.handle ?? 'pakmat';
-    final initials = user?.initials ?? 'PM';
-    final craft = user?.craftCategory ?? 'Pottery & Ceramics';
+    final studioName = user?.studioName ?? user?.displayName ?? 'Artisan Studio';
+    final handle = user?.handle ?? (user?.effectiveUsername ?? '');
+    final initials = user?.initials ?? 'AS';
+    final craft = user?.craftCategory ?? 'Heritage Craft';
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),

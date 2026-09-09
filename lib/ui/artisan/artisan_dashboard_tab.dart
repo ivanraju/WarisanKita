@@ -48,10 +48,10 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final authVM = context.watch<AuthViewModel>();
     final user = authVM.currentUser;
-    final studioName = user?.studioName ?? user?.displayName ?? 'Pak Mat Pottery Studio';
-    final handle = user?.handle ?? 'pakmat';
-    final craft = user?.craftCategory ?? 'Pottery & Ceramics';
-    final initials = user?.initials ?? 'PM';
+    final studioName = user?.studioName ?? user?.displayName ?? 'Artisan Studio';
+    final handle = user?.handle ?? (user?.effectiveUsername ?? '');
+    final craft = user?.craftCategory ?? 'Heritage Craft';
+    final initials = user?.initials ?? 'AS';
 
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),

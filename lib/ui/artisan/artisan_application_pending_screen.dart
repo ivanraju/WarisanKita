@@ -10,9 +10,9 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
 
   const ArtisanApplicationPendingScreen({
     super.key,
-    this.studioName = 'Pak Mat Pottery Studio',
-    this.craftCategory = 'Pottery & Ceramics',
-    this.ssmNumber = '202601004821 (SSM Verified)',
+    this.studioName = '',
+    this.craftCategory = '',
+    this.ssmNumber = '',
   });
 
   @override
