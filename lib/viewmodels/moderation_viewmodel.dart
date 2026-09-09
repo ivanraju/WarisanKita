@@ -383,6 +383,41 @@ class ModerationViewModel extends ChangeNotifier {
         fetched.add(newProfile);
       }
 
+      // Also query users with pending relocation from repository
+      try {
+        final allUsers = await _repository.getAllUsers();
+        for (final u in allUsers) {
+          if (u.hasPendingRelocation) {
+            final relocId = 'reloc_${u.id}';
+            if (!fetched.any((p) => p.email.toLowerCase() == u.email.toLowerCase() && p.isRelocationRequest)) {
+              fetched.insert(0, PendingArtisanProfile(
+                id: relocId,
+                name: u.studioName ?? u.displayName ?? 'Artisan Studio',
+                craftCategory: u.craftCategory ?? 'Handicraft & Heritage',
+                state: u.state ?? 'Melaka',
+                dateSubmitted: u.pendingRelocationDate ?? 'Recent',
+                imageUrl: u.avatarUrl ?? 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600',
+                email: u.email,
+                experience: 'Accredited Studio',
+                phone: u.phone ?? '+60 12-345 6789',
+                ssmNumber: u.ssmNumber ?? 'Verified Studio',
+                bio: u.bio,
+                isUpgradeFromTourist: false,
+                isRelocationRequest: true,
+                currentAddress: u.address,
+                proposedAddress: u.pendingRelocationAddress,
+                proposedLatitude: u.pendingRelocationLatitude,
+                proposedLongitude: u.pendingRelocationLongitude,
+                proposedState: u.pendingRelocationState,
+                relocationReason: u.pendingRelocationReason,
+              ));
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('Error fetching relocation requests: $e');
+      }
+
       // Preserve any pending relocation requests added in this session
       final localRelocations = _pendingArtisans.where((p) => p.isRelocationRequest).toList();
       _pendingArtisans.clear();

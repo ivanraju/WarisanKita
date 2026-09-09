@@ -211,13 +211,45 @@ class PendingArtisansTable extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      artisan.name,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF1E293B),
-                      ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          artisan.name,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF1E293B),
+                          ),
+                        ),
+                        if (artisan.isRelocationRequest) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFEF3C7),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: const Color(0xFFF59E0B)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.swap_horiz_rounded, size: 12, color: Color(0xFFB45309)),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'RELOCATION',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    color: const Color(0xFFB45309),
+                                    letterSpacing: 0.3,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 2),
                     Row(
@@ -301,17 +333,17 @@ class PendingArtisansTable extends StatelessWidget {
               IconButton(
                 icon: const Icon(Icons.remove_red_eye_outlined, color: Color(0xFF2563EB), size: 18),
                 onPressed: () => _openReviewDialog(context, artisan),
-                tooltip: 'Review Full Profile & Portfolio Modal',
+                tooltip: artisan.isRelocationRequest ? 'Review Workshop Relocation Premise Details' : 'Review Full Profile & Portfolio Modal',
                 padding: const EdgeInsets.all(6),
                 constraints: const BoxConstraints(),
               ),
               const SizedBox(width: 8),
 
-              // Green Approve Button
+              // Approve Button
               ElevatedButton.icon(
                 onPressed: () => onApprove(artisan),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF10B981),
+                  backgroundColor: artisan.isRelocationRequest ? const Color(0xFFD97706) : const Color(0xFF10B981),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                   minimumSize: const Size(0, 34),
@@ -320,9 +352,9 @@ class PendingArtisansTable extends StatelessWidget {
                   ),
                   elevation: 0,
                 ),
-                icon: const Icon(Icons.check_rounded, size: 15),
+                icon: Icon(artisan.isRelocationRequest ? Icons.pin_drop_rounded : Icons.check_rounded, size: 15),
                 label: Text(
-                  'Approve',
+                  artisan.isRelocationRequest ? 'Approve Relocation' : 'Approve',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
