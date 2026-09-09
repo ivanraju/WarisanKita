@@ -2367,6 +2367,17 @@ class SupabaseService {
           } catch (e) {
             debugPrint('Supabase submitRelocationRequest table note: $e');
           }
+          try {
+            await client.from('users').update({
+              'pending_relocation_address': address.trim(),
+              'pending_relocation_state': state.trim(),
+              'pending_relocation_lat': latitude,
+              'pending_relocation_lng': longitude,
+              'pending_relocation_reason': reason.trim(),
+              'pending_relocation_date': relocData['pending_relocation_date'],
+              'updated_at': DateTime.now().toIso8601String(),
+            }).eq('id', userId);
+          } catch (_) {}
         }
       } catch (e) {
         debugPrint('Supabase submitRelocationRequest note: $e');
