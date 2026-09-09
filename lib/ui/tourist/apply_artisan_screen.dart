@@ -424,7 +424,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
     final effectiveEmail =
         (user?.email != null && user!.email.trim().isNotEmpty)
         ? user.email.trim()
-        : 'tourist@warisankita.my';
+        : '';
 
     final result = await authVM.linkArtisanToExistingTourist(
       email: effectiveEmail,

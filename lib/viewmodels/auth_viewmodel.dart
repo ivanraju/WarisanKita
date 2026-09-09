@@ -145,7 +145,8 @@ class AuthViewModel extends ChangeNotifier {
     List<String>? toolsAndMaterials,
     String? avatarUrl,
   }) async {
-    final email = _currentUser?.email ?? 'tourist@warisankita.my';
+    final email = _currentUser?.email ?? '';
+    if (email.isEmpty) return;
     final cleanUsername = username?.trim().replaceAll('@', '');
     final newUsername = (cleanUsername != null && cleanUsername.isNotEmpty)
         ? cleanUsername
@@ -204,7 +205,8 @@ class AuthViewModel extends ChangeNotifier {
     required double longitude,
     required String reason,
   }) async {
-    final email = _currentUser?.email ?? 'artisan@warisankita.my';
+    final email = _currentUser?.email ?? '';
+    if (email.isEmpty) return;
     _isLoading = true;
     notifyListeners();
     try {
@@ -224,7 +226,8 @@ class AuthViewModel extends ChangeNotifier {
   }
 
   Future<void> cancelRelocationRequest() async {
-    final email = _currentUser?.email ?? 'artisan@warisankita.my';
+    final email = _currentUser?.email ?? '';
+    if (email.isEmpty) return;
     _isLoading = true;
     notifyListeners();
     try {
@@ -237,8 +240,10 @@ class AuthViewModel extends ChangeNotifier {
   }
 
   Future<String?> uploadAvatar(PlatformFile file) async {
-    final email = _currentUser?.email ?? 'tourist@warisankita.my';
-    final userId = _currentUser?.id ?? email;
+    final user = _currentUser;
+    if (user == null) return null;
+    final userId = user.id;
+    final email = user.email;
     _isLoading = true;
     notifyListeners();
 
