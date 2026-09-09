@@ -86,22 +86,33 @@ class AuthViewModel extends ChangeNotifier {
     return null;
   }
 
+  String? _relocationResolutionNotice;
+  String? get relocationResolutionNotice => _relocationResolutionNotice;
+
+  void clearRelocationResolutionNotice() {
+    _relocationResolutionNotice = null;
+    notifyListeners();
+  }
+
   Future<UserModel?> refreshCurrentUser() async {
     try {
       final user = await _repository.getCurrentUser();
       if (user != null) {
-        if (_currentUser?.hasPendingRelocation == true && !user.hasPendingRelocation) {
-          _currentUser = user.copyWith(
-            pendingRelocationAddress: _currentUser!.pendingRelocationAddress,
-            pendingRelocationState: _currentUser!.pendingRelocationState,
-            pendingRelocationLatitude: _currentUser!.pendingRelocationLatitude,
-            pendingRelocationLongitude: _currentUser!.pendingRelocationLongitude,
-            pendingRelocationReason: _currentUser!.pendingRelocationReason,
-            pendingRelocationDate: _currentUser!.pendingRelocationDate,
-          );
-        } else {
-          _currentUser = user;
+        if (_currentUser != null &&
+            _currentUser!.id != user.id &&
+            _currentUser!.email.isNotEmpty &&
+            user.email.isNotEmpty &&
+            _currentUser!.email.toLowerCase() != user.email.toLowerCase()) {
+          return _currentUser;
         }
+        if (_currentUser?.hasPendingRelocation == true && !user.hasPendingRelocation) {
+          if (user.address == _currentUser?.pendingRelocationAddress) {
+            _relocationResolutionNotice = 'APPROVED';
+          } else {
+            _relocationResolutionNotice = 'REJECTED';
+          }
+        }
+        _currentUser = user;
         if (_currentUser!.isArtisanStudioSuspended &&
             (_activeRole == 'Artisan' || _activeRole == 'Master Artisan')) {
           _activeRole = 'Cultural Tourist';

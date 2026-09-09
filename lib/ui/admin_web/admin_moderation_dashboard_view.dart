@@ -284,7 +284,7 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
                 // Left side: Persistent sidebar on Desktop
                 if (isDesktop)
                   SizedBox(
-                    width: 240,
+                    width: 260,
                     child: AdminSidebar(
                       activeTab: viewModel.activeTab,
                       onTabSelected: (tab) => viewModel.setActiveTab(tab),

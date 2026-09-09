@@ -32,7 +32,6 @@ class AdminSidebar extends StatelessWidget {
     final email = user?.email ?? 'admin@warisankita.my';
     final initials = user?.initials ?? 'AD';
     final pendingCount = modVM?.totalPendingCount ?? 0;
-    final relocCount = modVM?.pendingRelocationCount ?? 0;
 
     return Container(
       width: double.infinity,
@@ -102,9 +101,7 @@ class AdminSidebar extends StatelessWidget {
                     icon: Icons.verified_user_rounded,
                     tabId: 'Pending Approvals',
                     label: 'Artisan Verification',
-                    badgeText: pendingCount > 0
-                        ? (relocCount > 0 ? '$pendingCount PENDING ($relocCount RELOC)' : '$pendingCount PENDING')
-                        : 'CLEAR',
+                    badgeText: pendingCount > 0 ? '$pendingCount' : 'CLEAR',
                   ),
                   const SizedBox(height: 4),
                   _buildNavItem(
@@ -127,7 +124,7 @@ class AdminSidebar extends StatelessWidget {
                     tabId: 'Quest Approvals',
                     label: 'Quest Moderation',
                     badgeText: (gamificationModVM?.totalCount ?? 0) > 0
-                        ? '${gamificationModVM!.totalCount} PENDING'
+                        ? '${gamificationModVM!.totalCount}'
                         : 'CLEAR',
                   ),
                   const SizedBox(height: 4),
@@ -280,6 +277,8 @@ class AdminSidebar extends StatelessWidget {
                 Expanded(
                   child: Text(
                     label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 13,
                       fontWeight: isSelected
