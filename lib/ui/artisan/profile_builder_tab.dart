@@ -40,6 +40,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
   GoogleMapController? _workshopMapController;
   LatLng? _selectedWorkshopPin;
   String? _workshopAddress;
+  LatLng? _lastAnimatedPin;
 
   static const Map<String, LatLng> _stateCenters = {
     'Johor': LatLng(1.4927, 103.7414),
@@ -128,6 +129,11 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
       }
     }
 
+    Future.microtask(() {
+      if (mounted) {
+        context.read<AuthViewModel>().refreshCurrentUser();
+      }
+    });
   }
 
   void _onUsernameChanged() {
@@ -707,7 +713,8 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final currentUser = context.watch<AuthViewModel>().currentUser;
+    final authVM = context.watch<AuthViewModel>();
+    final currentUser = authVM.currentUser;
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
@@ -746,11 +753,16 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
           ),
         ],
       ),
-      body: Form(
-        key: _formKey,
-        autovalidateMode: AutovalidateMode.onUserInteraction,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await context.read<AuthViewModel>().refreshCurrentUser();
+        },
+        child: Form(
+          key: _formKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(24.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1096,37 +1108,60 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                     child: IgnorePointer(
                       child: GoogleMap(
                         initialCameraPosition: CameraPosition(
-                          target: _selectedWorkshopPin ?? _selectedStateCenter,
+                          target: (currentUser != null &&
+                                  currentUser.latitude != null &&
+                                  currentUser.longitude != null &&
+                                  currentUser.latitude != 0.0)
+                              ? LatLng(currentUser.latitude!, currentUser.longitude!)
+                              : (_selectedWorkshopPin ?? _selectedStateCenter),
                           zoom: 15,
                         ),
                         onMapCreated: (controller) {
                           _workshopMapController = controller;
-                          final pin = _selectedWorkshopPin ?? _selectedStateCenter;
+                          final pin = (currentUser != null &&
+                                  currentUser.latitude != null &&
+                                  currentUser.longitude != null &&
+                                  currentUser.latitude != 0.0)
+                              ? LatLng(currentUser.latitude!, currentUser.longitude!)
+                              : (_selectedWorkshopPin ?? _selectedStateCenter);
                           controller.animateCamera(CameraUpdate.newLatLngZoom(pin, 15));
                         },
                         markers: () {
                           final user = currentUser;
                           final set = <Marker>{};
-                          if (_selectedWorkshopPin != null || (user != null && user.latitude != null)) {
-                            set.add(
-                              Marker(
-                                markerId: const MarkerId('workshop-location'),
-                                position: _selectedWorkshopPin ??
-                                    (user != null && user.latitude != null && user.longitude != null
-                                        ? LatLng(user.latitude!, user.longitude!)
-                                        : _selectedStateCenter),
-                                icon: BitmapDescriptor.defaultMarkerWithHue(
-                                  BitmapDescriptor.hueGreen,
-                                ),
-                                infoWindow: InfoWindow(
-                                  title: _studioNameController.text.trim().isNotEmpty
-                                      ? _studioNameController.text.trim()
-                                      : (user?.studioName ?? 'Verified Workshop'),
-                                  snippet: _workshopAddress ?? user?.address ?? 'Accredited Workshop Premise',
-                                ),
-                              ),
-                            );
+                          final currentPremisePin = (user != null &&
+                                  user.latitude != null &&
+                                  user.longitude != null &&
+                                  user.latitude != 0.0)
+                              ? LatLng(user.latitude!, user.longitude!)
+                              : (_selectedWorkshopPin ?? _selectedStateCenter);
+
+                          if (_workshopMapController != null && currentPremisePin != _lastAnimatedPin) {
+                            _lastAnimatedPin = currentPremisePin;
+                            Future.microtask(() {
+                              _workshopMapController?.animateCamera(
+                                CameraUpdate.newLatLngZoom(currentPremisePin, 15),
+                              );
+                            });
                           }
+
+                          set.add(
+                            Marker(
+                              markerId: const MarkerId('workshop-location'),
+                              position: currentPremisePin,
+                              icon: BitmapDescriptor.defaultMarkerWithHue(
+                                BitmapDescriptor.hueGreen,
+                              ),
+                              infoWindow: InfoWindow(
+                                title: _studioNameController.text.trim().isNotEmpty
+                                    ? _studioNameController.text.trim()
+                                    : (user?.studioName ?? 'Verified Workshop'),
+                                snippet: (user?.address != null && user!.address!.trim().isNotEmpty)
+                                    ? user.address!
+                                    : (_workshopAddress ?? 'Accredited Workshop Premise'),
+                              ),
+                            ),
+                          );
                           if (user != null &&
                               user.hasPendingRelocation &&
                               user.pendingRelocationLatitude != null &&
@@ -1199,7 +1234,9 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    _workshopAddress ?? currentUser?.address ?? 'Accredited Heritage Workshop Premise',
+                    (currentUser?.address != null && currentUser!.address!.trim().isNotEmpty)
+                        ? currentUser.address!
+                        : (_workshopAddress ?? 'Accredited Heritage Workshop Premise'),
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
@@ -1210,6 +1247,98 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
               ],
             ),
             const SizedBox(height: 12),
+            if (authVM.relocationResolutionNotice == 'APPROVED') ...[
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFECFDF5),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF10B981)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.check_circle_rounded, color: Color(0xFF059669), size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Workshop Relocation Approved & Active!',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF065F46),
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, size: 16, color: Color(0xFF065F46)),
+                          onPressed: () => authVM.clearRelocationResolutionNotice(),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Your accredited workshop location is now officially updated to ${currentUser?.address ?? ""}. Tourist maps and discovery directions now lead to your new workshop premise.',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        color: const Color(0xFF047857),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+            if (authVM.relocationResolutionNotice == 'REJECTED') ...[
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFEF4444)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.cancel_outlined, color: Color(0xFFDC2626), size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Relocation Request Not Approved',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF991B1B),
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, size: 16, color: Color(0xFF991B1B)),
+                          onPressed: () => authVM.clearRelocationResolutionNotice(),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Your proposed relocation premise was not approved by administration. Your workshop location remains at your current accredited address. You may submit a new relocation request anytime.',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        color: const Color(0xFFB91C1C),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
             if (currentUser?.hasPendingRelocation == true) ...[
               Container(
                 padding: const EdgeInsets.all(14),
@@ -1742,6 +1871,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
           ],
         ),
       ),
+    ),
     ),
     );
   }

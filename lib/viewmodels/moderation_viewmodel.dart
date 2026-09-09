@@ -432,15 +432,8 @@ class ModerationViewModel extends ChangeNotifier {
         debugPrint('Error fetching relocation requests: $e');
       }
 
-      // Preserve any pending relocation requests added in this session
-      final localRelocations = _pendingArtisans.where((p) => p.isRelocationRequest).toList();
       _pendingArtisans.clear();
       _pendingArtisans.addAll(fetched);
-      for (final rel in localRelocations) {
-        if (!_pendingArtisans.any((p) => p.email.toLowerCase() == rel.email.toLowerCase() && p.isRelocationRequest)) {
-          _pendingArtisans.insert(0, rel);
-        }
-      }
       notifyListeners();
     } catch (e) {
       debugPrint('Error fetching pending artisans: $e');
@@ -498,7 +491,16 @@ class ModerationViewModel extends ChangeNotifier {
       _recordApproval(submittedDate);
 
       if (artisan.isRelocationRequest) {
-        await _repository.approveRelocationRequest(email: artisan.email);
+        await _repository.approveRelocationRequest(
+          email: artisan.email,
+          newAddress: artisan.proposedAddress,
+          newState: artisan.proposedState,
+          newLat: artisan.proposedLatitude,
+          newLng: artisan.proposedLongitude,
+        );
+        _pendingArtisans.removeWhere(
+          (p) => p.email.toLowerCase() == artisan.email.toLowerCase() && p.isRelocationRequest,
+        );
         final userIdx = _registeredUsers.indexWhere((u) => u.email.toLowerCase() == artisan.email.toLowerCase());
         if (userIdx != -1) {
           final u = _registeredUsers[userIdx];
@@ -671,6 +673,9 @@ class ModerationViewModel extends ChangeNotifier {
 
       if (artisan.isRelocationRequest) {
         await _repository.rejectRelocationRequest(email: artisan.email);
+        _pendingArtisans.removeWhere(
+          (p) => p.email.toLowerCase() == artisan.email.toLowerCase() && p.isRelocationRequest,
+        );
         final userIdx = _registeredUsers.indexWhere((u) => u.email.toLowerCase() == artisan.email.toLowerCase());
         if (userIdx != -1) {
           _registeredUsers[userIdx] = _registeredUsers[userIdx].copyWith(

@@ -235,16 +235,28 @@ class SupabaseService {
     if (email.isEmpty) return user;
     final reloc = await _getPendingRelocation(email);
     if (reloc != null) {
+      final proposedAddress = (reloc['pending_relocation_address'] ?? reloc['address'])?.toString();
+      // If the user's verified address in the database has already been updated to the proposed address,
+      // the relocation has been officially approved! Clear the local pending relocation cache.
+      if (proposedAddress != null && proposedAddress.isNotEmpty && user.address == proposedAddress) {
+        await _clearPendingRelocation(email);
+        return user.copyWith(clearPendingRelocation: true);
+      }
       final pLat = reloc['pending_relocation_lat'] ?? reloc['latitude'];
       final pLng = reloc['pending_relocation_lng'] ?? reloc['longitude'];
       return user.copyWith(
-        pendingRelocationAddress: (reloc['pending_relocation_address'] ?? reloc['address'])?.toString(),
+        pendingRelocationAddress: proposedAddress,
         pendingRelocationState: (reloc['pending_relocation_state'] ?? reloc['state'])?.toString(),
         pendingRelocationLatitude: pLat is num ? pLat.toDouble() : (pLat != null ? double.tryParse(pLat.toString()) : null),
         pendingRelocationLongitude: pLng is num ? pLng.toDouble() : (pLng != null ? double.tryParse(pLng.toString()) : null),
         pendingRelocationReason: (reloc['pending_relocation_reason'] ?? reloc['reason'])?.toString(),
         pendingRelocationDate: (reloc['pending_relocation_date'] ?? reloc['date'])?.toString(),
       );
+    } else if (user.hasPendingRelocation &&
+        user.address != null &&
+        user.pendingRelocationAddress != null &&
+        user.pendingRelocationAddress!.trim().toLowerCase() == user.address!.trim().toLowerCase()) {
+      return user.copyWith(clearPendingRelocation: true);
     }
     return user;
   }
@@ -614,6 +626,12 @@ class SupabaseService {
       if (password == 'admin123' ||
           password == 'password123' ||
           password == _userStore['admin@warisankita.my']?['password']) {
+        final client = _client;
+        if (client != null && client.auth.currentSession != null) {
+          try {
+            await client.auth.signOut();
+          } catch (_) {}
+        }
         final adminData =
             _userStore['admin@warisankita.my'] ??
             {
@@ -877,6 +895,34 @@ class SupabaseService {
 
   // --- Session & Current User Retrieval ---
   Future<UserModel?> getCurrentUser() async {
+    // 1. Explicit Admin Session Check from SharedPreferences:
+    // When an administrator signs in via the admin credentials/dashboard, the session is saved in SharedPreferences.
+    // On web page reload, client.auth.currentSession may hold a previous non-admin session or be empty.
+    // If the saved session role is Admin or email is admin@warisankita.my, restore the admin session immediately.
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final lastEmail = prefs.getString(_keyAuthEmail)?.toLowerCase();
+      final lastRole = prefs.getString(_keyActiveRole);
+      if (lastEmail == 'admin@warisankita.my' || lastRole == 'Admin') {
+        final rawUser = prefs.getString(_keyAuthUser);
+        if (rawUser != null && rawUser.isNotEmpty) {
+          final map = jsonDecode(rawUser) as Map<String, dynamic>;
+          final adminUser = UserModel.fromMap(map);
+          if (adminUser.isAdmin) {
+            return adminUser;
+          }
+        }
+        final adminData = _userStore['admin@warisankita.my'];
+        if (adminData != null) {
+          final adminUser = UserModel.fromMap(adminData);
+          await _saveAuthSession(adminUser);
+          return adminUser;
+        }
+      }
+    } catch (e) {
+      debugPrint('getCurrentUser admin session check note: $e');
+    }
+
     final client = _client;
     if (client != null) {
       final session = client.auth.currentSession;
@@ -2301,16 +2347,26 @@ class SupabaseService {
     final client = _client;
     if (client != null) {
       try {
-        final userId = userRecord['id'];
+        final uRow = await client
+            .from('users')
+            .select('id')
+            .ilike('email', cleanEmail)
+            .maybeSingle();
+        final userId = uRow?['id']?.toString() ?? userRecord['id']?.toString();
         if (userId != null) {
-          await client.from('artisan_profiles').update({
-            'pending_relocation_address': address.trim(),
-            'pending_relocation_state': state.trim(),
-            'pending_relocation_lat': latitude,
-            'pending_relocation_lng': longitude,
-            'pending_relocation_reason': reason.trim(),
-            'updated_at': DateTime.now().toIso8601String(),
-          }).eq('user_id', userId);
+          try {
+            await client.from('artisan_profiles').update({
+              'pending_relocation_address': address.trim(),
+              'pending_relocation_state': state.trim(),
+              'pending_relocation_lat': latitude,
+              'pending_relocation_lng': longitude,
+              'pending_relocation_reason': reason.trim(),
+              'pending_relocation_date': relocData['pending_relocation_date'],
+              'updated_at': DateTime.now().toIso8601String(),
+            }).eq('user_id', userId);
+          } catch (e) {
+            debugPrint('Supabase submitRelocationRequest table note: $e');
+          }
         }
       } catch (e) {
         debugPrint('Supabase submitRelocationRequest note: $e');
@@ -2354,16 +2410,37 @@ class SupabaseService {
     final client = _client;
     if (client != null) {
       try {
-        final userId = userRecord['id'];
+        final uRow = await client
+            .from('users')
+            .select('id')
+            .ilike('email', cleanEmail)
+            .maybeSingle();
+        final userId = uRow?['id']?.toString() ?? userRecord['id']?.toString();
         if (userId != null) {
-          await client.from('artisan_profiles').update({
-            'pending_relocation_address': null,
-            'pending_relocation_state': null,
-            'pending_relocation_lat': null,
-            'pending_relocation_lng': null,
-            'pending_relocation_reason': null,
-            'updated_at': DateTime.now().toIso8601String(),
-          }).eq('user_id', userId);
+          try {
+            await client.from('artisan_profiles').update({
+              'pending_relocation_address': null,
+              'pending_relocation_state': null,
+              'pending_relocation_lat': null,
+              'pending_relocation_lng': null,
+              'pending_relocation_reason': null,
+              'pending_relocation_date': null,
+              'updated_at': DateTime.now().toIso8601String(),
+            }).eq('user_id', userId);
+          } catch (e) {
+            debugPrint('Supabase cancelRelocationRequest table note: $e');
+          }
+          try {
+            await client.from('users').update({
+              'pending_relocation_address': null,
+              'pending_relocation_state': null,
+              'pending_relocation_lat': null,
+              'pending_relocation_lng': null,
+              'pending_relocation_reason': null,
+              'pending_relocation_date': null,
+              'updated_at': DateTime.now().toIso8601String(),
+            }).eq('id', userId);
+          } catch (_) {}
         }
       } catch (e) {
         debugPrint('Supabase cancelRelocationRequest note: $e');
@@ -2377,16 +2454,51 @@ class SupabaseService {
     return updatedModel;
   }
 
-  Future<UserModel> approveRelocationRequest({required String email}) async {
+  Future<UserModel> approveRelocationRequest({
+    required String email,
+    String? proposedAddress,
+    String? proposedState,
+    double? proposedLat,
+    double? proposedLng,
+  }) async {
     final cleanEmail = email.trim().toLowerCase();
     await Future.delayed(const Duration(milliseconds: 200));
 
     final relocData = await _getPendingRelocation(cleanEmail);
     final userRecord = _userStore[cleanEmail] ?? <String, dynamic>{'email': cleanEmail};
-    final newAddress = relocData?['pending_relocation_address'] ?? userRecord['pending_relocation_address'] ?? userRecord['pendingRelocationAddress'];
-    final newState = relocData?['pending_relocation_state'] ?? userRecord['pending_relocation_state'] ?? userRecord['pendingRelocationState'];
-    final newLat = relocData?['pending_relocation_lat'] ?? userRecord['pending_relocation_lat'] ?? userRecord['pendingRelocationLatitude'];
-    final newLng = relocData?['pending_relocation_lng'] ?? userRecord['pending_relocation_lng'] ?? userRecord['pendingRelocationLongitude'];
+    String? newAddress = proposedAddress ?? relocData?['pending_relocation_address'] ?? userRecord['pending_relocation_address'] ?? userRecord['pendingRelocationAddress'];
+    String? newState = proposedState ?? relocData?['pending_relocation_state'] ?? userRecord['pending_relocation_state'] ?? userRecord['pendingRelocationState'];
+    dynamic newLat = proposedLat ?? relocData?['pending_relocation_lat'] ?? userRecord['pending_relocation_lat'] ?? userRecord['pendingRelocationLatitude'];
+    dynamic newLng = proposedLng ?? relocData?['pending_relocation_lng'] ?? userRecord['pending_relocation_lng'] ?? userRecord['pendingRelocationLongitude'];
+
+    final client = _client;
+    String? resolvedUserId = userRecord['id']?.toString();
+
+    // If newAddress is still null or userId not resolved, look up in Supabase directly
+    if (client != null && (newAddress == null || resolvedUserId == null)) {
+      try {
+        final profileRes = await client
+            .from('users')
+            .select('id, address, state, artisan_profiles(*)')
+            .ilike('email', cleanEmail)
+            .maybeSingle();
+        if (profileRes != null) {
+          resolvedUserId ??= profileRes['id']?.toString();
+          Map<String, dynamic>? ap;
+          if (profileRes['artisan_profiles'] is Map) {
+            ap = Map<String, dynamic>.from(profileRes['artisan_profiles']);
+          } else if (profileRes['artisan_profiles'] is List && (profileRes['artisan_profiles'] as List).isNotEmpty) {
+            ap = Map<String, dynamic>.from((profileRes['artisan_profiles'] as List).first);
+          }
+          newAddress ??= ap?['pending_relocation_address']?.toString() ?? profileRes['pending_relocation_address']?.toString();
+          newState ??= ap?['pending_relocation_state']?.toString() ?? profileRes['pending_relocation_state']?.toString();
+          newLat ??= ap?['pending_relocation_lat'] ?? profileRes['pending_relocation_lat'];
+          newLng ??= ap?['pending_relocation_lng'] ?? profileRes['pending_relocation_lng'];
+        }
+      } catch (e) {
+        debugPrint('Supabase pending relocation lookup note: $e');
+      }
+    }
 
     if (newAddress != null) userRecord['address'] = newAddress;
     if (newState != null) userRecord['state'] = newState;
@@ -2410,24 +2522,68 @@ class SupabaseService {
 
     _userStore[cleanEmail] = userRecord;
 
-    final client = _client;
     if (client != null) {
       try {
-        final userId = userRecord['id'];
-        if (userId != null) {
-          final updates = <String, dynamic>{
+        if (resolvedUserId == null) {
+          final uRow = await client
+              .from('users')
+              .select('id')
+              .ilike('email', cleanEmail)
+              .maybeSingle();
+          resolvedUserId = uRow?['id']?.toString();
+        }
+        if (resolvedUserId != null) {
+          final artisanUpdates = <String, dynamic>{
             if (newAddress != null) 'address': newAddress,
             if (newState != null) 'state': newState,
-            if (newLat != null) 'latitude': newLat,
-            if (newLng != null) 'longitude': newLng,
+            if (newLat != null) 'latitude': newLat is num ? newLat : double.tryParse(newLat.toString()),
+            if (newLng != null) 'longitude': newLng is num ? newLng : double.tryParse(newLng.toString()),
             'pending_relocation_address': null,
             'pending_relocation_state': null,
             'pending_relocation_lat': null,
             'pending_relocation_lng': null,
             'pending_relocation_reason': null,
+            'pending_relocation_date': null,
             'updated_at': DateTime.now().toIso8601String(),
           };
-          await client.from('artisan_profiles').update(updates).eq('user_id', userId);
+          try {
+            await client.from('artisan_profiles').update(artisanUpdates).eq('user_id', resolvedUserId);
+          } catch (e) {
+            debugPrint('artisan_profiles update note: $e');
+            try {
+              await client.from('artisan_profiles').update({
+                if (newAddress != null) 'address': newAddress,
+                if (newState != null) 'state': newState,
+                if (newLat != null) 'latitude': newLat is num ? newLat : double.tryParse(newLat.toString()),
+                if (newLng != null) 'longitude': newLng is num ? newLng : double.tryParse(newLng.toString()),
+                'updated_at': DateTime.now().toIso8601String(),
+              }).eq('user_id', resolvedUserId);
+            } catch (_) {}
+          }
+
+          // Also update public.users table
+          final userUpdates = <String, dynamic>{
+            if (newAddress != null) 'address': newAddress,
+            if (newState != null) 'state': newState,
+            'pending_relocation_address': null,
+            'pending_relocation_state': null,
+            'pending_relocation_lat': null,
+            'pending_relocation_lng': null,
+            'pending_relocation_reason': null,
+            'pending_relocation_date': null,
+            'updated_at': DateTime.now().toIso8601String(),
+          };
+          try {
+            await client.from('users').update(userUpdates).eq('id', resolvedUserId);
+          } catch (e) {
+            try {
+              await client.from('users').update({
+                if (newAddress != null) 'address': newAddress,
+                if (newState != null) 'state': newState,
+                'updated_at': DateTime.now().toIso8601String(),
+              }).eq('id', resolvedUserId);
+            } catch (_) {}
+          }
         }
       } catch (e) {
         debugPrint('Supabase approveRelocationRequest note: $e');
