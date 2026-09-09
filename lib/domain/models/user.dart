@@ -94,7 +94,9 @@ class UserModel {
 
   bool get isAdmin =>
       role.toLowerCase().contains('admin') ||
-      roles.any((r) => r.toLowerCase().contains('admin'));
+      roles.any((r) => r.toLowerCase().contains('admin')) ||
+      email.toLowerCase().trim() == 'admin@warisankita.my' ||
+      username?.toLowerCase().trim() == 'admin';
 
   bool get hasMultipleRoles =>
       isDualRole ||
@@ -283,9 +285,21 @@ class UserModel {
   }
 
   factory UserModel.fromMap(Map<String, dynamic> map) {
+    final rawEmail = (map['email'] ?? '').toString().trim().toLowerCase();
+    final rawUsername = (map['username'] ?? map['user_name'] ?? '').toString().trim().toLowerCase();
+    final bool isDedicatedAdmin = rawEmail == 'admin@warisankita.my' ||
+        rawUsername == 'admin' ||
+        (map['role'] != null && (map['role'] as String).toLowerCase().contains('admin')) ||
+        (map['roles'] is List && (map['roles'] as List).any((r) => r.toString().toLowerCase().contains('admin')));
+
     final List<String> roleList = map['roles'] != null
         ? List<String>.from(map['roles'])
-        : (map['role'] != null ? [map['role'] as String] : ['Tourist']);
+        : (map['role'] != null
+            ? [map['role'] as String]
+            : (isDedicatedAdmin ? ['Admin'] : ['Tourist']));
+    if (isDedicatedAdmin && !roleList.any((r) => r.toLowerCase().contains('admin'))) {
+      roleList.add('Admin');
+    }
 
     Map<String, dynamic>? artisanMap;
     List<Map<String, dynamic>> docs = [];
@@ -342,7 +356,11 @@ class UserModel {
       id: map['id'] ?? '',
       email: map['email'] ?? '',
       username: map['username'] ?? map['user_name'],
-      role: map['role'] ?? 'Tourist',
+      role: isDedicatedAdmin
+          ? (map['role'] != null && (map['role'] as String).toLowerCase().contains('admin')
+              ? map['role'] as String
+              : 'Admin')
+          : (map['role'] ?? 'Tourist'),
       roles: roleList,
       status: map['status'] ?? 'ACTIVE',
       displayName: map['displayName'] ?? map['display_name'] ?? map['full_name'],

@@ -174,8 +174,8 @@ class UserManagementTable extends StatelessWidget {
         DataCell(
           Builder(
             builder: (context) {
+              final bool isAdmin = user.isAdmin;
               final r = user.role.toLowerCase();
-              final bool isAdmin = r.contains('admin');
               final bool isDual = user.isDualRole || r.contains('&') || (r.contains('artisan') && r.contains('tourist'));
               final bool isArt = !isDual && (r.contains('artisan') || user.isArtisan);
 
@@ -219,7 +219,7 @@ class UserManagementTable extends StatelessWidget {
                     Icon(roleIcon, size: 12, color: textColor),
                     const SizedBox(width: 5),
                     Text(
-                      user.role,
+                      isAdmin ? 'Admin' : user.role,
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,

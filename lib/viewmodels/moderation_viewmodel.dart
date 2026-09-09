@@ -531,7 +531,10 @@ class ModerationViewModel extends ChangeNotifier {
     final idx = _registeredUsers.indexWhere((u) => u.id == id);
     if (idx != -1) {
       final user = _registeredUsers[idx];
-      if (user.role.toLowerCase().contains('admin') || user.isAdmin) {
+      if (user.isAdmin ||
+          user.role.toLowerCase().contains('admin') ||
+          user.email.toLowerCase() == 'admin@warisankita.my' ||
+          user.username?.toLowerCase() == 'admin') {
         debugPrint('Cannot suspend an Administrator account.');
         return;
       }
