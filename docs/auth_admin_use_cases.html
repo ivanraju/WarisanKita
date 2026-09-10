@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Warisan Kita - Auth & Admin Use Case Specifications</title>
+<style>
+  @page {
+    size: A4 portrait;
+    margin: 12mm 12mm 12mm 12mm;
+  }
+  body {
+    font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+    color: #000;
+    line-height: 1.3;
+    font-size: 9.5pt;
+    margin: 0;
+    padding: 0;
+    background-color: #fff;
+  }
+  .use-case-wrapper {
+    page-break-after: always;
+    margin-bottom: 24px;
+  }
+  .use-case-wrapper:last-child {
+    page-break-after: auto;
+  }
+  .use-case-title-outside {
+    font-weight: bold;
+    font-size: 11pt;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+  }
+  table.main-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1.5px solid #000;
+    margin-bottom: 8px;
+  }
+  table.main-table th, table.main-table td {
+    border: 1px solid #000;
+    padding: 5px 8px;
+    vertical-align: middle;
+    font-size: 9pt;
+  }
+  .header-basic-flow {
+    text-align: center;
+    font-weight: bold;
+    background-color: #E2E8F0;
+    font-size: 10pt;
+    letter-spacing: 0.5px;
+    padding: 6px 0;
+  }
+  .actor-col-header {
+    width: 50%;
+    text-align: center;
+    font-weight: bold;
+    background-color: #F1F5F9;
+    font-size: 9.5pt;
+    padding: 5px 0;
+  }
+  .system-col-header {
+    width: 50%;
+    text-align: center;
+    font-weight: bold;
+    background-color: #F1F5F9;
+    font-size: 9.5pt;
+    padding: 5px 0;
+  }
+  .section-banner {
+    text-align: center;
+    font-weight: bold;
+    background-color: #E2E8F0;
+    font-size: 9.5pt;
+    letter-spacing: 0.5px;
+    padding: 5px 0;
+  }
+  .content-cell {
+    padding: 6px 10px;
+    font-size: 9pt;
+  }
+  
+  .tag-m { color: #0284C7; font-weight: bold; }
+  .tag-fr { color: #16A34A; font-weight: bold; }
+  .tag-c { color: #D97706; font-weight: bold; }
+  .tag-a { color: #DC2626; font-weight: bold; }
+
+  p.sub-flow {
+    margin: 0 0 5px 0;
+  }
+  p.sub-flow:last-child {
+    margin-bottom: 0;
+  }
+  
+  table.fr-subtable {
+    width: 100%;
+    border-collapse: collapse;
+    border: none;
+    margin: 0;
+  }
+  table.fr-subtable td {
+    border: none;
+    border-bottom: 1px solid #E2E8F0;
+    padding: 4px 8px;
+    font-size: 8.5pt;
+    vertical-align: top;
+  }
+  table.fr-subtable tr:last-child td {
+    border-bottom: none;
+  }
+  .fr-id {
+    font-weight: bold;
+    color: #16A34A;
+    width: 18%;
+    white-space: nowrap;
+  }
+  .fr-desc {
+    width: 82%;
+  }
+</style>
+</head>
+<body>
+
+<!-- ========================================================================= -->
+<!-- 1. USE CASE : UC001_USER_LOGIN -->
+<!-- ========================================================================= -->
+<div class="use-case-wrapper">
+  <div class="use-case-title-outside">USE CASE : UC001_USER_LOGIN</div>
+  <table class="main-table">
+    <tr>
+      <th colspan="2" class="header-basic-flow">BASIC FLOW</th>
+    </tr>
+    <tr>
+      <th class="actor-col-header">USER</th>
+      <th class="system-col-header">SYSTEM</th>
+    </tr>
+    <tr>
+      <td></td>
+      <td>1. Use case begins when system prompt user to enter login credentials <span class="tag-m">[M1: Enter credentials]</span> <span class="tag-fr">[FR001_1]</span></td>
+    </tr>
+    <tr>
+      <td>2. User enter username/handle or email, and password <span class="tag-a">[A6: Forgot password]</span></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>3. System perform real-time form validation (non-empty fields, email/handle format, password min 8 characters) <span class="tag-c">[C1: Password length]</span> <span class="tag-a">[A1: Invalid format]</span> <span class="tag-fr">[FR001_2]</span></td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>4. System resolve username to registered email if handle provided, query DB, authenticate credentials, and verify Role-Based Access Control (RBAC) <span class="tag-a">[A2: Authentication failed]</span> <span class="tag-a">[A3: Account suspended]</span> <span class="tag-a">[A8: Unconfirmed email account]</span> <span class="tag-fr">[FR001_3]</span></td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>5. System verify user role and active mode options <span class="tag-m">[M2: Login successful]</span> <span class="tag-a">[A4: Artisan pending approval]</span> <span class="tag-a">[A5: Artisan active mode selection]</span> <span class="tag-a">[A7: Admin account detected on mobile]</span></td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>6. System display designated user dashboard (Artisan Studio Dashboard or Tourist Exploration Dashboard)</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>7. Use case ends</td>
+    </tr>
+
+    <!-- ALTERNATE FLOW -->
+    <tr>
+      <td colspan="2" class="section-banner">ALTERNATE FLOW</td>
+    </tr>
+    <tr>
+      <td colspan="2" class="content-cell">
+        <p class="sub-flow"><strong>A1: Invalid format</strong><br>
+        A1.1 System prompt inline validation error <span class="tag-m">[M3: Password must be at least 8 characters / Please enter valid handle or email]</span><br>
+        A1.2 Return to Step 2</p>
+
+        <p class="sub-flow" style="margin-top: 6px;"><strong>A2: Authentication failed</strong><br>
+        A2.1 System prompt error message <span class="tag-m">[M4: Invalid credentials]</span><br>
+        A2.2 Return to Step 2</p>
+
+        <p class="sub-flow" style="margin-top: 6px;"><strong>A3: Account suspended</strong><br>
+        A3.1 System detect status == 'SUSPENDED'<br>
+        A3.2 System prompt error message <span class="tag-m">[M5: Account suspended by administrator]</span><br>
+        A3.3 Return to Step 2</p>
+
+        <p class="sub-flow" style="margin-top: 6px;"><strong>A4: Artisan pending approval</strong><br>
+        A4.1 System detects artisan account status is 'PENDING_APPROVAL' or 'PENDING'<br>
+        A4.2 System route artisan to Application Status Screen <span class="tag-m">[M6: Pending admin review]</span><br>
+        A4.3 System display 3-stage review timeline and lock studio editing controls<br>
+        A4.4 User can click "Explore as Cultural Tourist while waiting" to browse crafts<br>
+        A4.5 Use case ends</p>
+
+        <p class="sub-flow" style="margin-top: 6px;"><strong>A5: Artisan active mode selection (Master Artisan vs Cultural Tourist)</strong><br>
+        A5.1 System detects account has Artisan privileges (or dual role)<br>
+        A5.2 System display Role Selection Dialog <span class="tag-m">[M7: Select active session mode]</span> <span class="tag-fr">[FR001_4]</span><br>
+        A5.3 User selects desired active session mode:<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&bull; If <strong>Master Artisan</strong> selected &amp; status is <strong>'APPROVED'</strong>: System set active session and route user to Artisan Studio Dashboard [Return to Step 6]<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&bull; If <strong>Master Artisan</strong> selected &amp; status is <strong>'PENDING_APPROVAL'</strong>: System route user directly to Application Status Screen [A4]<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&bull; If <strong>Cultural Tourist</strong> selected: System set active session and route user to Tourist Exploration Dashboard [Return to Step 6]<br>
+        A5.4 Use case ends</p>
+
+        <p class="sub-flow" style="margin-top: 6px;"><strong>A6: Forgot password</strong><br>
+        A6.1 User select "Forgot Password" on mobile login screen<br>
+        A6.2 System initiate Password Recovery Flow (Refer to <strong>UC003_RESET_PASSWORD</strong>)<br>
+        A6.3 Use case ends</p>
+
+        <p class="sub-flow" style="margin-top: 6px;"><strong>A7: Administrator account detected on mobile</strong><br>
+        A7.1 System detect administrator login attempt on Mobile Native App<br>
+        A7.2 System display modal dialog: "Admin Web Portal Only &mdash; Administrator moderation console is hosted exclusively on Desktop Web"<br>
+        A7.3 System provide direct 1-tap "OPEN WEB PORTAL" button launching <code>https://warisan-kita.vercel.app</code> (Refer to <strong>UC102_ADMIN_PORTAL_LOGIN</strong>)<br>
+        A7.4 Use case ends</p>
+
+        <p class="sub-flow" style="margin-top: 6px;"><strong>A8: Unconfirmed / Unverified email account</strong><br>
+        A8.1 System detect authentication attempt on account with unconfirmed email address (<code>email_confirmed_at == NULL</code>)<br>
+        A8.2 System display Email Verification Modal dialog: "Email Verification Required &mdash; Please verify your email with the 6-digit code sent to your inbox"<br>
+        A8.3 System provide direct "VERIFY EMAIL NOW" button routing user to Email Verification Screen (<code>/verify-email</code>) <span class="tag-fr">[FR001_6]</span><br>
+        A8.4 User completes 6-digit OTP verification (Refer to <strong>UC002_USER_REGISTRATION</strong>)<br>
+        A8.5 Use case ends</p>
+      </td>
+    </tr>
+
+    <!-- MESSAGE -->
+    <tr>
+      <td colspan="2" class="section-banner">MESSAGE</td>
+    </tr>
+    <tr>
+      <td colspan="2" class="content-cell">
+        M1 : "PLEASE ENTER LOGIN CREDENTIALS"<br>
+        M2 : "LOGIN SUCCESSFUL"<br>
+        M3 : "PASSWORD MUST BE AT LEAST 8 CHARACTERS"<br>
+        M4 : "INVALID CREDENTIALS"<br>
+        M5 : "ACCOUNT SUSPENDED BY ADMINISTRATOR: CONTACT SUPPORT"<br>
+        M6 : "ARTISAN APPLICATION SUBMITTED: PENDING ADMIN APPROVAL"<br>
+        M7 : "ARTISAN ACCOUNT DETECTED: PLEASE SELECT YOUR ACTIVE SESSION MODE"<br>
+        M8 : "ADMIN WEB PORTAL ONLY: PLEASE ACCESS VIA WEB BROWSER"<br>
+        M9 : "EMAIL NOT CONFIRMED: PLEASE VERIFY YOUR EMAIL ADDRESS WITH THE 6-DIGIT CODE SENT TO YOUR INBOX"
+      </td>
+    </tr>
+
+    <!-- CONSTRAINTS -->
+    <tr>
+      <td colspan="2" class="section-banner">CONSTRAINTS</td>
+    </tr>
+    <tr>
+      <td colspan="2" class="content-cell">
+        C1 : Password length &ge; 8 characters<br>
+        C2 : Unapproved Artisan roles (status == 'PENDING_APPROVAL' or 'PENDING') MUST route to the Application Status Screen when Master Artisan mode is selected<br>
+        C3 : User status == 'SUSPENDED' MUST strictly block authentication<br>
+        C4 : Accounts with Artisan privileges MUST be offered session mode selection (Artisan Studio vs Tourist Explorer) upon login<br>
+        C5 : Administrator accounts attempting authentication on mobile MUST be blocked from mobile entry and directed to the Web Portal<br>
+        C6 : Unconfirmed email accounts MUST strictly complete 6-digit OTP verification before login access is granted
+      </td>
+    </tr>
+
+    <!-- FUNCTIONAL REQUIREMENTS -->
+    <tr>
+      <td colspan="2" class="section-banner">FUNCTIONAL REQUIREMENTS</td>
+    </tr>
+    <tr>
+      <td colspan="2" style="padding: 0;">
+        <table class="fr-subtable">
+          <tr>
+            <td class="fr-id">FR001_1</td>
+            <td class="fr-desc">System prompt user to enter login credentials (supporting both username/handle and email) on mobile app</td>
+          </tr>
+          <tr>
+            <td class="fr-id">FR001_2</td>
+            <td class="fr-desc">System validate form fields in real-time, enforce min 8 character password constraint, and resolve handle identifiers to account email</td>
+          </tr>
+          <tr>
+            <td class="fr-id">FR001_3</td>
+            <td class="fr-desc">System verify RBAC role and account approval status, routing user to the designated UI</td>
+          </tr>
+          <tr>
+            <td class="fr-id">FR001_4</td>
+            <td class="fr-desc">System allow artisans to choose between Master Artisan Studio Mode and Cultural Tourist Exploration Mode</td>
+          </tr>
+          <tr>
+            <td class="fr-id">FR001_5</td>
+            <td class="fr-desc">System detect administrator accounts attempting login on mobile devices and provide direct redirection to the live Web Portal (Refer to UC102_ADMIN_PORTAL_LOGIN)</td>
+          </tr>
+          <tr>
+            <td class="fr-id">FR001_6</td>
+            <td class="fr-desc">System enforce email verification guard during login, preventing unconfirmed accounts from authenticating and providing a direct shortcut to OTP verification</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<!-- ========================================================================= -->
+<!-- 2. USE CASE : UC002_USER_REGISTRATION -->
+<!-- ========================================================================= -->
+<div class="use-case-wrapper">
+  <div class="use-case-title-outside">USE CASE : UC002_USER_REGISTRATION</div>
+  <table class="main-table">
+    <tr>
+      <th colspan="2" class="header-basic-flow">BASIC FLOW</th>
+    </tr>
+    <tr>
+      <th class="actor-col-header">USER</th>
+      <th class="system-col-header">SYSTEM</th>
+    </tr>
+    <tr>
+      <td>1. User select "Register / Join Us" on login screen (or authenticated tourist selects "Apply for Master Artisan" in Profile / Role Switcher) <span class="tag-a">[A5: Apply for Master Artisan studio]</span></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>2. System display Single-Page Tourist Registration form with real-time feedback <span class="tag-m">[M1: Enter registration details]</span> <span class="tag-fr">[FR002_1]</span></td>
+    </tr>
+    <tr>
+      <td>3. User enter Full Name, Unique Username/Handle (@handle), Email, Password, and Confirm Password</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>4. System evaluate password in real-time using Password Strength Meter &amp; Live Checklist (Weak/Fair/Good/Strong, 8+ chars, Upper/Lower, Numbers, Symbols) <span class="tag-c">[C1: Password strength &amp; length]</span> <span class="tag-a">[A1: Invalid password]</span> <span class="tag-fr">[FR002_2]</span></td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>5. System perform debounced live check for unique username availability with visual status badges <span class="tag-c">[C4: Unique username handle]</span> <span class="tag-a">[A4: Duplicate username]</span></td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>6. System perform live email format check and duplicate account detection with direct Sign In shortcut <span class="tag-a">[A3: Account already exists]</span></td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>7. System validate matching password confirmation <span class="tag-c">[C2: Passwords match]</span> <span class="tag-a">[A2: Mismatched passwords]</span> <span class="tag-fr">[FR002_3]</span></td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>8. System initiate registration in Supabase Auth, dispatch a 6-digit OTP verification code to the user's email via Gmail SMTP mailer, and transition user to the <strong>Email Verification Screen (<code>/verify-email</code>)</strong> <span class="tag-m">[M10: Verification code sent]</span> <span class="tag-fr">[FR002_7]</span></td>
+    </tr>
+    <tr>
+      <td>9. User enter 6-digit numeric OTP code (or paste code) <span class="tag-a">[A6: Invalid OTP code]</span> <span class="tag-a">[A7: Resend OTP code]</span></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>10. System verify 6-digit OTP token against Supabase Auth (<code>verifyOTP</code>), mark email as confirmed (<code>email_confirmed_at = NOW()</code>), activate user session, and initialize Tourist account in DB (<code>users</code> table) with role 'Tourist' and status 'ACTIVE' <span class="tag-m">[M2: Registration successful]</span> <span class="tag-fr">[FR002_4]</span></td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>11. System redirect user to Tourist Exploration Dashboard (where user can browse crafts or apply for Master Artisan studio verification) <span class="tag-a">[A5: Apply for Master Artisan studio]</span></td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>12. Use case ends</td>
+    </tr>
+
+    <!-- ALTERNATE FLOW -->
+    <tr>
+      <td colspan="2" class="section-banner">ALTERNATE FLOW</td>
+    </tr>
+    <tr>
+      <td colspan="2" class="content-cell">
+        <p class="sub-flow"><strong>A1: Invalid password</strong><br>
+        A1.1 System prompt error message <span class="tag-m">[M3: Password must be at least 8 characters]</span><br>
+        A1.2 Return to Step 3</p>
+
+        <p class="sub-flow" style="margin-top: 6px;"><strong>A2: Mismatched passwords</strong><br>
+        A2.1 System prompt error message <span class="tag-m">[M4: Passwords do not match]</span><br>
+        A2.2 Return to Step 3</p>
+
+        <p class="sub-flow" style="margin-top: 6px;"><strong>A3: Account already exists</strong><br>
+        A3.1 System detect email is already registered in DB and display inline warning banner with 1-tap "Sign In" button<br>
+        A3.2 System prompt error message <span class="tag-m">[M5: Account already registered: Please sign in instead]</span><br>
+        A3.3 Return to Step 3</p>
+
+        <p class="sub-flow" style="margin-top: 6px;"><strong>A4: Duplicate username handle</strong><br>
+        A4.1 System detect chosen username handle is already taken by another registered user and display &#10060; status badge<br>
+        A4.2 System prompt error message <span class="tag-m">[M6: Username already taken]</span><br>
+        A4.3 Return to Step 3</p>
+
+        <p class="sub-flow" style="margin-top: 6px;"><strong>A5: Apply for Master Artisan Studio (In-App Onboarding Flow)</strong><br>
+        A5.1 Authenticated tourist navigates to Tourist Profile (or Role Switcher) and selects "Apply for Master Artisan" <span class="tag-fr">[FR002_5]</span><br>
+        A5.2 System display Artisan Studio Application Form prompting studio details, interactive Google Map location picker, and document attachments<br>
+        A5.3 User enters Studio Name, Craft Category, SSM Reg No., State, Bio, selects physical studio coordinates via Interactive Google Map (lat/lng), and optionally uploads verification proofs (SSM PDF, Kraftangan Master Certificate PDF, workshop photos) <span class="tag-a">[A5-1: Missing studio details]</span> <span class="tag-fr">[FR002_6]</span> <span class="tag-fr">[FR002_8]</span><br>
+        A5.4 System validate inputs, enforce unique username handle, and save artisan studio profile in normalized <code>artisan_profiles</code> table with status 'PENDING_APPROVAL' in DB <span class="tag-c">[C3: Pending default]</span><br>
+        A5.5 System route user to Application Status Screen <span class="tag-m">[M7: Application submitted]</span><br>
+        A5.6 <em>[Upon Admin Approval in UC100]</em>: System upgrades user role to 'Artisan' with status 'ACTIVE' in DB<br>
+        A5.7 Use case ends</p>
+
+        <p class="sub-flow" style="margin-top: 6px;"><strong>A5-1: Missing studio registration details</strong><br>
+        A5-1.1 System detect required studio name, SSM / Kraftangan license number, or map location is missing<br>
+        A5-1.2 System prompt error message <span class="tag-m">[M8: Please provide required studio registration details]</span><br>
+        A5-1.3 Return to Step A5.3</p>
+
+        <p class="sub-flow" style="margin-top: 6px;"><strong>A6: Invalid or Expired Verification OTP Code</strong><br>
+        A6.1 System detect entered 6-digit OTP code is incorrect, invalid, or expired (&gt; 15 minutes)<br>
+        A6.2 System display error message <span class="tag-m">[M11: Invalid or expired verification code]</span><br>
+        A6.3 Return to Step 9</p>
+
+        <p class="sub-flow" style="margin-top: 6px;"><strong>A7: Resend Verification Code with Cooldown Timer</strong><br>
+        A7.1 User selects "Resend Code" on the verification screen<br>
+        A7.2 If cooldown timer &gt; 0s, action is disabled; once cooldown reaches 0s, system triggers <code>resendVerificationOtp()</code><br>
+        A7.3 System dispatch a fresh 6-digit OTP via Gmail SMTP mailer, restart 60-second cooldown timer, and display confirmation <span class="tag-m">[M12: Verification code resent]</span><br>
+        A7.4 Return to Step 9</p>
+      </td>
+    </tr>
+
+    <!-- MESSAGE -->
+    <tr>
+      <td colspan="2" class="section-banner">MESSAGE</td>
+    </tr>
+    <tr>
+      <td colspan="2" class="content-cell">
+        M1 : "PLEASE ENTER REGISTRATION DETAILS"<br>
+        M2 : "REGISTRATION SUCCESSFUL: WELCOME CULTURAL EXPLORER"<br>
+        M3 : "PASSWORD MUST BE AT LEAST 8 CHARACTERS"<br>
+        M4 : "PASSWORDS DO NOT MATCH"<br>
+        M5 : "ACCOUNT ALREADY REGISTERED: PLEASE SIGN IN INSTEAD"<br>
+        M6 : "USERNAME ALREADY TAKEN: PLEASE CHOOSE A UNIQUE USERNAME"<br>
+        M7 : "ARTISAN APPLICATION SUBMITTED: PENDING ADMIN APPROVAL"<br>
+        M8 : "PLEASE PROVIDE REQUIRED STUDIO REGISTRATION DETAILS"<br>
+        M9 : "INVALID FILE FORMAT: PLEASE UPLOAD A PDF, PNG, OR JPG DOCUMENT"<br>
+        M10 : "VERIFICATION CODE SENT: PLEASE CHECK YOUR EMAIL INBOX"<br>
+        M11 : "INVALID OR EXPIRED VERIFICATION CODE: PLEASE TRY AGAIN"<br>
+        M12 : "A FRESH 6-DIGIT VERIFICATION CODE HAS BEEN SENT TO YOUR EMAIL"
+      </td>
+    </tr>
+
+    <!-- CONSTRAINTS -->
+    <tr>
+      <td colspan="2" class="section-banner">CONSTRAINTS</td>
+    </tr>
+    <tr>
+      <td colspan="2" class="content-cell">
+        C1 : Password length &ge; 8 characters with live 4-level strength meter (Weak, Fair, Good, Strong) and security requirement checklist<br>
+        C2 : Password input string == Confirm Password input string<br>
+        C3 : Artisan account application status MUST initialize strictly as "PENDING_APPROVAL" in DB<br>
+        C4 : Username handles (@handle) MUST be 3&ndash;20 alphanumeric characters / underscores and strictly unique across all accounts in DB<br>
+        C5 : Supporting document uploads MUST be in PDF, PNG, or JPG formats<br>
+        C6 : Registration requires successful validation of a 6-digit numeric OTP token dispatched via SMTP (Gmail) before the user session is activated<br>
+        C7 : Resend OTP action MUST enforce an active 60-second client-side cooldown timer<br>
+        C8 : Artisan studio location registration MUST capture geographic coordinates (latitude, longitude) via interactive Google Map pin dropping
+      </td>
+    </tr>
+
+    <!-- FUNCTIONAL REQUIREMENTS -->
+    <tr>
+      <td colspan="2" class="section-banner">FUNCTIONAL REQUIREMENTS</td>
+    </tr>
+    <tr>
+      <td colspan="2" style="padding: 0;">
+        <table class="fr-subtable">
+          <tr>
+            <td class="fr-id">FR002_1</td>
+            <td class="fr-desc">System provide clean single-page registration interface for all onboarding users as Cultural Tourists with live feedback</td>
+          </tr>
+          <tr>
+            <td class="fr-id">FR002_2</td>
+            <td class="fr-desc">System evaluate password strength in real-time and provide interactive security requirement checklist chips</td>
+          </tr>
+          <tr>
+            <td class="fr-id">FR002_3</td>
+            <td class="fr-desc">System validate matching password confirmation states in real-time during registration</td>
+          </tr>
+          <tr>
+            <td class="fr-id">FR002_4</td>
+            <td class="fr-desc">System perform debounced live check for unique username handles and assign initial RBAC role ('Tourist') with status 'ACTIVE'</td>
+          </tr>
+          <tr>
+            <td class="fr-id">FR002_5</td>
+            <td class="fr-desc">System provide dedicated in-app Master Artisan studio application flow for registered tourists</td>
+          </tr>
+          <tr>
+            <td class="fr-id">FR002_6</td>
+            <td class="fr-desc">System provide document attachment pipeline supporting optional SSM certificates, Kraftangan accreditations, and workshop photos</td>
+          </tr>
+          <tr>
+            <td class="fr-id">FR002_7</td>
+            <td class="fr-desc">System dispatch 6-digit OTP verification code upon registration and provide a dedicated verification screen with auto-advancing PIN input and 60-second cooldown timer</td>
+          </tr>
+          <tr>
+            <td class="fr-id">FR002_8</td>
+            <td class="fr-desc">System provide interactive Google Maps widget for artisan studio registration with geocoding and coordinate capture</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<!-- ========================================================================= -->
+<!-- 3. USE CASE : UC003_RESET_PASSWORD -->
+<!-- ========================================================================= -->
+<div class="use-case-wrapper">
+  <div class="use-case-title-outside">USE CASE : UC003_RESET_PASSWORD</div>
+  <table class="main-table">
+    <tr>
+      <th colspan="2" class="header-basic-flow">BASIC FLOW</th>
+    </tr>
+    <tr>
+      <th class="actor-col-header">USER</th>
+      <th class="system-col-header">SYSTEM</th>
+    </tr>
+    <tr>
+      <td></td>
+      <td>1. Use case begins when user select "Forgot Password" on mobile login screen <span class="tag-fr">[FR003_1]</span></td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>2. System prompt user to enter registered email address <span class="tag-m">[M1: Enter registered email]</span></td>
+    </tr>
+    <tr>
+      <td>3. User enter registered email address or username handle and submit <span class="tag-a">[A5: Administrator reset restriction]</span></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>4. System validate email format and query DB for existing account <span class="tag-a">[A1: Email not found]</span> <span class="tag-fr">[FR003_2]</span></td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>5. System generate secure single-use password reset token with expiration timestamp <span class="tag-c">[C1: Token validity 15 mins]</span></td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>6. System dispatch password reset link to user's email <span class="tag-m">[M2: Reset link sent]</span> <span class="tag-fr">[FR003_3]</span></td>
+    </tr>
+    <tr>
+      <td>7. User open reset link from email</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>8. System validate token authenticity and display Reset Password form</td>
+    </tr>
+    <tr>
+      <td>9. User enter new password and confirm password with live Password Strength Meter assistance</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>10. System validate password complexity (min 8 chars) and matching confirmation <span class="tag-c">[C2: Password length &amp; strength]</span> <span class="tag-c">[C3: Passwords match]</span> <span class="tag-a">[A2: Invalid format]</span> <span class="tag-a">[A3: Mismatched passwords]</span> <span class="tag-fr">[FR003_4]</span></td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>11. System update encrypted password in DB and invalidate reset token <span class="tag-c">[C4: Token single-use]</span></td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>12. System prompt success message <span class="tag-m">[M3: Password reset successful]</span></td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>13. System redirect user to Login Screen</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>14. Use case ends</td>
+    </tr>
+
+    <!-- ALTERNATE FLOW -->
+    <tr>
+      <td colspan="2" class="section-banner">ALTERNATE FLOW</td>
+    </tr>
+    <tr>
+      <td colspan="2" class="content-cell">
+        <p class="sub-flow"><strong>A1: Email not found</strong><br>
+        A1.1 System prompt error message <span class="tag-m">[M4: Email not registered]</span><br>
+        A1.2 Return to Step 2</p>
+
+        <p class="sub-flow" style="margin-top: 6px;"><strong>A2: Invalid format</strong><br>
+        A2.1 System prompt error message <span class="tag-m">[M5: Password must be at least 8 characters]</span><br>
+        A2.2 Return to Step 9</p>
+
+        <p class="sub-flow" style="margin-top: 6px;"><strong>A3: Mismatched passwords</strong><br>
+        A3.1 System prompt error message <span class="tag-m">[M6: Passwords do not match]</span><br>
+        A3.2 Return to Step 9</p>
+
+        <p class="sub-flow" style="margin-top: 6px;"><strong>A4: Expired or invalid token</strong><br>
+        A4.1 System detect token is expired (&gt; 15 mins) or already consumed<br>
+        A4.2 System prompt error message <span class="tag-m">[M7: Reset link expired]</span><br>
+        A4.3 System redirect to Step 2</p>
+
+        <p class="sub-flow" style="margin-top: 6px;"><strong>A5: Administrator account protection (Self-Service Reset Blocked)</strong><br>
+        A5.1 System detect entered email, handle, or resolved user record belongs to an Administrator account (role == 'Admin' or known administrator email/identifier)<br>
+        A5.2 System strictly block self-service password reset, display high-priority security alert banner <span class="tag-m">[M8: Administrator account protected]</span>, and log security event<br>
+        A5.3 Return to Step 2</p>
+      </td>
+    </tr>
+
+    <!-- MESSAGE -->
+    <tr>
+      <td colspan="2" class="section-banner">MESSAGE</td>
+    </tr>
+    <tr>
+      <td colspan="2" class="content-cell">
+        M1 : "PLEASE ENTER YOUR REGISTERED EMAIL ADDRESS"<br>
+        M2 : "PASSWORD RESET LINK HAS BEEN SENT TO YOUR EMAIL"<br>
+        M3 : "PASSWORD RESET SUCCESSFUL: YOU MAY NOW LOGIN"<br>
+        M4 : "EMAIL ADDRESS NOT FOUND IN SYSTEM"<br>
+        M5 : "PASSWORD MUST BE AT LEAST 8 CHARACTERS"<br>
+        M6 : "PASSWORDS DO NOT MATCH"<br>
+        M7 : "PASSWORD RESET LINK IS EXPIRED OR INVALID: PLEASE REQUEST A NEW ONE"<br>
+        M8 : "ADMINISTRATOR ACCOUNT PROTECTED: ADMINISTRATOR CREDENTIALS CANNOT BE RESET VIA SELF-SERVICE. CONTACT SUPPORT."
+      </td>
+    </tr>
+
+    <!-- CONSTRAINTS -->
+    <tr>
+      <td colspan="2" class="section-banner">CONSTRAINTS</td>
+    </tr>
+    <tr>
+      <td colspan="2" class="content-cell">
+        C1 : Password reset tokens must expire after 15 minutes<br>
+        C2 : Password length &ge; 8 characters evaluated with live strength meter<br>
+        C3 : Password input string == Confirm Password input string<br>
+        C4 : Tokens must be strictly single-use and invalidated immediately upon password update<br>
+        C5 : All administrator accounts (including admin emails, usernames, and administrative roles) are strictly prohibited from resetting passwords via public self-service across mobile and web entry points
+      </td>
+    </tr>
+
+    <!-- FUNCTIONAL REQUIREMENTS -->
+    <tr>
+      <td colspan="2" class="section-banner">FUNCTIONAL REQUIREMENTS</td>
+    </tr>
+    <tr>
+      <td colspan="2" style="padding: 0;">
+        <table class="fr-subtable">
+          <tr>
+            <td class="fr-id">FR003_1</td>
+            <td class="fr-desc">System provide a password recovery entry point on the consumer mobile authentication screen</td>
+          </tr>
+          <tr>
+            <td class="fr-id">FR003_2</td>
+            <td class="fr-desc">System verify existence of registered email in DB</td>
+          </tr>
+          <tr>
+            <td class="fr-id">FR003_3</td>
+            <td class="fr-desc">System generate cryptographic tokens and dispatch recovery emails</td>
+          </tr>
+          <tr>
+            <td class="fr-id">FR003_4</td>
+            <td class="fr-desc">System validate new password complexity with Password Strength Meter and update hashed credentials in DB</td>
+          </tr>
+          <tr>
+            <td class="fr-id">FR003_5</td>
+            <td class="fr-desc">System enforce security restriction blocking self-service password resets for all Administrator accounts across mobile and web entry points</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<!-- ========================================================================= -->
+<!-- 4. USE CASE : UC100_MODERATE_ARTISAN_PROFILE -->
+<!-- ========================================================================= -->
+<div class="use-case-wrapper">
+  <div class="use-case-title-outside">USE CASE : UC100_MODERATE_ARTISAN_PROFILE</div>
+  <table class="main-table">
+    <tr>
+      <th colspan="2" class="header-basic-flow">BASIC FLOW</th>
+    </tr>
+    <tr>
+      <th class="actor-col-header">ADMINISTRATOR</th>
+      <th class="system-col-header">SYSTEM</th>
+    </tr>
+    <tr>
+      <td></td>
+      <td>1. Use case begins when system dynamically retrieves and displays pending artisan profile applications from Cloud DB (<code>users</code> + <code>artisan_profiles</code>) <span class="tag-fr">[FR100_1]</span></td>
+    </tr>
+    <tr>
+      <td>2. Administrator select an artisan application to review in the moderation queue <span class="tag-a">[A3: Auto-Refresh Moderation Queues]</span> <span class="tag-a">[A4: Moderate Workshop Relocation Requests]</span></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>3. System display artisan profile details, SSM business registration number &amp; optional PDF, Kraftangan Master Certificate, studio workshop photos, and mapped geographic coordinates</td>
+    </tr>
+    <tr>
+      <td>4. Administrator select "Approve" menu <span class="tag-a">[A1: Reject profile]</span> <span class="tag-a">[A2: View Active Verified Artisans]</span> <span class="tag-a">[A4: Moderate Workshop Relocation Requests]</span></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>5. System validate approval action</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>6. System update artisan profile status to 'APPROVED' in <code>artisan_profiles</code> table and upgrade user role to 'Artisan' with status 'ACTIVE' in <code>users</code> table <span class="tag-c">[C1: DB Update Success]</span> <span class="tag-fr">[FR100_2]</span></td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>7. System prompt success message <span class="tag-m">[M1: Profile approved]</span> and refresh queues</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>8. System return to pending profiles list</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>9. Use case ends</td>
+    </tr>
+
+    <!-- ALTERNATE FLOW -->
+    <tr>
+      <td colspan="2" class="section-banner">ALTERNATE FLOW</td>
+    </tr>
+    <tr>
+      <td colspan="2" class="content-cell">
+        <p class="sub-flow"><strong>A1: Reject profile</strong><br>
+        A1.1 Administrator select "Reject" menu and input rejection reasons<br>
+        A1.2 System update profile status to 'REJECTED' in <code>artisan_profiles</code> and <code>users</code> table in DB<br>
+        A1.3 System prompt success message <span class="tag-m">[M2: Profile rejected]</span><br>
+        A1.4 Return to Step 1</p>
+
+        <p class="sub-flow" style="margin-top: 6px;"><strong>A2: View &amp; Moderate Active Verified Artisans</strong><br>
+        A2.1 Administrator navigates to "Active Artisans" tab<br>
+        A2.2 System dynamically query verified artisan masters from DB joined with <code>artisan_profiles</code><br>
+        A2.3 Administrator can inspect active studio credentials, verify SSM numbers, and live-toggle operational status (Active / Suspended)<br>
+        A2.4 Use case ends</p>
+
+        <p class="sub-flow" style="margin-top: 6px;"><strong>A3: Auto-Refresh Moderation Queues</strong><br>
+        A3.1 Administrator clicks "Refresh" button on header bar<br>
+        A3.2 System concurrently fetches latest Pending Artisans, Active Artisans, and Registered Users via <code>refreshAllData()</code><br>
+        A3.3 System update UI and display toast notification <span class="tag-m">[M4: All moderation data refreshed]</span><br>
+        A3.4 Return to Step 1</p>
+
+        <p class="sub-flow" style="margin-top: 6px;"><strong>A4: Moderate Workshop Relocation Requests (Relocation Moderation Queue)</strong><br>
+        A4.1 Administrator navigates to "Relocation Requests" queue / tab<br>
+        A4.2 System display pending relocation submissions side-by-side with current studio premise address and proposed coordinates (latitude, longitude) &amp; relocation justification reason <span class="tag-fr">[FR100_4]</span><br>
+        A4.3 Administrator reviews submitted details, inspects physical premises on interactive map, and selects either "Approve" or "Reject"<br>
+        A4.4 If Approved: System updates artisan studio address and coordinates in <code>artisan_profiles</code> table, updates relocation status to 'APPROVED' in DB, and prompts success <span class="tag-m">[M5: Relocation approved]</span><br>
+        A4.5 If Rejected: System updates relocation status to 'REJECTED', retains original workshop premise address, and prompts success <span class="tag-m">[M6: Relocation rejected]</span><br>
+        A4.6 Return to Step 1</p>
+      </td>
+    </tr>
+
+    <!-- MESSAGE -->
+    <tr>
+      <td colspan="2" class="section-banner">MESSAGE</td>
+    </tr>
+    <tr>
+      <td colspan="2" class="content-cell">
+        M1 : "PROFILE APPROVED SUCCESSFULLY: ARTISAN ROLE ACTIVATED"<br>
+        M2 : "PROFILE REJECTED"<br>
+        M3 : "USER ACCOUNT SUSPENDED BY ADMINISTRATOR"<br>
+        M4 : "ALL ARTISAN, USER, AND MODERATION DATA REFRESHED"<br>
+        M5 : "WORKSHOP RELOCATION APPROVED: STUDIO PREMISE LOCATION UPDATED"<br>
+        M6 : "WORKSHOP RELOCATION REJECTED: ORIGINAL PREMISE RETAINED"
+      </td>
+    </tr>
+
+    <!-- CONSTRAINTS -->
+    <tr>
+      <td colspan="2" class="section-banner">CONSTRAINTS</td>
+    </tr>
+    <tr>
+      <td colspan="2" class="content-cell">
+        C1 : Profile status column in DB must be explicitly updated to 'APPROVED', 'REJECTED', or 'SUSPENDED'<br>
+        C2 : Active artisans list must synchronize live with database records joined via foreign key <code>artisan_profiles.user_id</code><br>
+        C3 : Workshop premise addresses and coordinates can only be modified through administrative relocation approval workflow
+      </td>
+    </tr>
+
+    <!-- FUNCTIONAL REQUIREMENTS -->
+    <tr>
+      <td colspan="2" class="section-banner">FUNCTIONAL REQUIREMENTS</td>
+    </tr>
+    <tr>
+      <td colspan="2" style="padding: 0;">
+        <table class="fr-subtable">
+          <tr>
+            <td class="fr-id">FR100_1</td>
+            <td class="fr-desc">System dynamically retrieve and display live pending artisan profiles and verification documents from Cloud DB</td>
+          </tr>
+          <tr>
+            <td class="fr-id">FR100_2</td>
+            <td class="fr-desc">System perform verification, CRUD, and status moderation operations on artisan profiles and user roles</td>
+          </tr>
+          <tr>
+            <td class="fr-id">FR100_3</td>
+            <td class="fr-desc">System provide dedicated Active Artisans directory tab with real-time operational status toggling</td>
+          </tr>
+          <tr>
+            <td class="fr-id">FR100_4</td>
+            <td class="fr-desc">System provide dedicated workshop relocation moderation queue supporting side-by-side comparison of current and proposed premise coordinates with approve/reject workflow</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<!-- ========================================================================= -->
+<!-- 5. USE CASE : UC101_ADMIN_USER_MANAGEMENT -->
+<!-- ========================================================================= -->
+<div class="use-case-wrapper">
+  <div class="use-case-title-outside">USE CASE : UC101_ADMIN_USER_MANAGEMENT</div>
+  <table class="main-table">
+    <tr>
+      <th colspan="2" class="header-basic-flow">BASIC FLOW</th>
+    </tr>
+    <tr>
+      <th class="actor-col-header">ADMINISTRATOR</th>
+      <th class="system-col-header">SYSTEM</th>
+    </tr>
+    <tr>
+      <td></td>
+      <td>1. Use case begins when system retrieves and displays registered users table (Administrators, Artisans, Tourists) from DB joined with <code>artisan_profiles</code> <span class="tag-fr">[FR101_1]</span></td>
+    </tr>
+    <tr>
+      <td>2. Administrator search and filter users by 3 core platform roles (All Roles, Tourist, Artisan, Admin) or status (All Statuses, Active, Suspended) <span class="tag-a">[A4: Role-Based Filtering]</span></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>3. System display filtered user records with distinct role badges (Admin [Protected], Artisan, Tourist, Dual Role) and live account statuses</td>
+    </tr>
+    <tr>
+      <td>4. Administrator select a non-admin user and click "Suspend Account" <span class="tag-a">[A1: Reactivate account]</span> <span class="tag-a">[A2: Reset credentials]</span> <span class="tag-a">[A2-1: Admin credential protection]</span> <span class="tag-a">[A3: Admin suspension attempt blocked]</span></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>5. System prompt confirmation dialog and reason input</td>
+    </tr>
+    <tr>
+      <td>6. Administrator confirm suspension action</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>7. System update user status to 'SUSPENDED' in DB and revoke active session tokens <span class="tag-c">[C1: Immediate Session Revocation]</span> <span class="tag-fr">[FR101_2]</span></td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>8. System prompt success message <span class="tag-m">[M1: User suspended]</span> and refresh user list</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>9. Use case ends</td>
+    </tr>
+
+    <!-- ALTERNATE FLOW -->
+    <tr>
+      <td colspan="2" class="section-banner">ALTERNATE FLOW</td>
+    </tr>
+    <tr>
+      <td colspan="2" class="content-cell">
+        <p class="sub-flow"><strong>A1: Reactivate account</strong><br>
+        A1.1 Administrator select suspended user and click "Reactivate Account"<br>
+        A1.2 System update user status to 'ACTIVE' (or 'APPROVED') in DB<br>
+        A1.3 System prompt success message <span class="tag-m">[M2: Account reactivated]</span><br>
+        A1.4 Return to Step 3</p>
+
+        <p class="sub-flow" style="margin-top: 6px;"><strong>A2: Reset user credentials</strong><br>
+        A2.1 Administrator select user and click "Reset Password"<br>
+        A2.2 System dispatch secure password reset token email to user's registered address<br>
+        A2.3 System prompt success message <span class="tag-m">[M3: Reset link sent]</span><br>
+        A2.4 Return to Step 3</p>
+
+        <p class="sub-flow" style="margin-top: 6px;"><strong>A2-1: Admin credential protection (Credential Tamper Protection)</strong><br>
+        A2-1.1 Administrator attempts to trigger password reset on an account with role 'Admin'<br>
+        A2-1.2 System detect target account has administrative privileges, disable credential reset action, and display security restriction <span class="tag-m">[M5: Admin credential reset blocked]</span> <span class="tag-c">[C4: Admin Credential Protection]</span><br>
+        A2-1.3 System reject reset request to prevent administrative takeover<br>
+        A2-1.4 Return to Step 3</p>
+
+        <p class="sub-flow" style="margin-top: 6px;"><strong>A3: Admin suspension attempt blocked (Admin Protection)</strong><br>
+        A3.1 Administrator attempts to suspend an account with role 'Admin'<br>
+        A3.2 System detect administrator role, disable suspend action, and render <code>Admin (Protected)</code> shield badge <span class="tag-c">[C2: Admin Protection]</span><br>
+        A3.3 System reject suspension action and prevent privilege tampering<br>
+        A3.4 Use case ends</p>
+
+        <p class="sub-flow" style="margin-top: 6px;"><strong>A4: Role-Based Filtering</strong><br>
+        A4.1 Administrator selects role filter dropdown (<code>All Roles</code>, <code>Tourist</code>, <code>Artisan</code>, <code>Admin</code>)<br>
+        A4.2 System dynamically filter registered users and update metric counter cards in real-time<br>
+        A4.3 Return to Step 3</p>
+      </td>
+    </tr>
+
+    <!-- MESSAGE -->
+    <tr>
+      <td colspan="2" class="section-banner">MESSAGE</td>
+    </tr>
+    <tr>
+      <td colspan="2" class="content-cell">
+        M1 : "USER ACCOUNT SUSPENDED: Login access revoked"<br>
+        M2 : "USER ACCOUNT REACTIVATED SUCCESSFULLY"<br>
+        M3 : "PASSWORD RESET EMAIL SENT TO USER"<br>
+        M4 : "ADMIN SECURITY RESTRICTION: ADMINISTRATOR ACCOUNTS ARE PROTECTED AND CANNOT BE SUSPENDED"<br>
+        M5 : "ADMIN SECURITY RESTRICTION: ADMINISTRATOR CREDENTIALS CANNOT BE RESET THROUGH USER MANAGEMENT"
+      </td>
+    </tr>
+
+    <!-- CONSTRAINTS -->
+    <tr>
+      <td colspan="2" class="section-banner">CONSTRAINTS</td>
+    </tr>
+    <tr>
+      <td colspan="2" class="content-cell">
+        C1 : Suspending an account MUST immediately block authentication and invalidate active tokens<br>
+        C2 : Administrator accounts are strictly protected from suspension by any administrator in the UI<br>
+        C3 : Role filter dropdown strictly reflects the 3 core platform roles (Tourist, Artisan, Admin)<br>
+        C4 : Administrator credentials cannot be reset or modified via the user management console
+      </td>
+    </tr>
+
+    <!-- FUNCTIONAL REQUIREMENTS -->
+    <tr>
+      <td colspan="2" class="section-banner">FUNCTIONAL REQUIREMENTS</td>
+    </tr>
+    <tr>
+      <td colspan="2" style="padding: 0;">
+        <table class="fr-subtable">
+          <tr>
+            <td class="fr-id">FR101_1</td>
+            <td class="fr-desc">System retrieve, search, and filter all registered users by the 3 core roles (Tourist, Artisan, Admin) and status</td>
+          </tr>
+          <tr>
+            <td class="fr-id">FR101_2</td>
+            <td class="fr-desc">System allow administrators to suspend, reactivate, and manage user security states in DB</td>
+          </tr>
+          <tr>
+            <td class="fr-id">FR101_3</td>
+            <td class="fr-desc">System enforce Admin Account Protection preventing administrative accounts from being suspended</td>
+          </tr>
+          <tr>
+            <td class="fr-id">FR101_4</td>
+            <td class="fr-desc">System enforce administrative credential protection blocking password resets on any administrator account from the user management console</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<!-- ========================================================================= -->
+<!-- 6. USE CASE : UC102_ADMIN_PORTAL_LOGIN -->
+<!-- ========================================================================= -->
+<div class="use-case-wrapper">
+  <div class="use-case-title-outside">USE CASE : UC102_ADMIN_PORTAL_LOGIN</div>
+  <table class="main-table">
+    <tr>
+      <th colspan="2" class="header-basic-flow">BASIC FLOW</th>
+    </tr>
+    <tr>
+      <th class="actor-col-header">ADMINISTRATOR</th>
+      <th class="system-col-header">SYSTEM</th>
+    </tr>
+    <tr>
+      <td></td>
+      <td>1. Use case begins when administrator accesses Web Moderation Console (<code>https://warisan-kita.vercel.app</code> or <code>/admin</code>) and system prompts for Administrator Credentials <span class="tag-m">[M1: Enter admin credentials]</span> <span class="tag-fr">[FR102_1]</span></td>
+    </tr>
+    <tr>
+      <td>2. Administrator enter Admin Username / Email and Master Password</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>3. System perform real-time field validation (non-empty fields, password min 8 characters) <span class="tag-c">[C1: Password length]</span> <span class="tag-a">[A1: Invalid format]</span> <span class="tag-fr">[FR102_2]</span></td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>4. System query database, verify administrator cryptographic credentials, and enforce Administrator RBAC role <span class="tag-a">[A2: Authentication failed]</span> <span class="tag-a">[A3: Non-admin account rejected]</span> <span class="tag-fr">[FR102_3]</span></td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>5. System establish secure administrator session token, persist session in storage, and route administrator to Moderation Dashboard (Overview, Artisan Verification Queue, Active Artisans, User Management, Workshop Relocation Requests, Quest Approvals, Forum Moderation, System Settings) <span class="tag-m">[M2: Admin login successful]</span> <span class="tag-fr">[FR102_4]</span></td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>6. System display Admin Moderation Center with real-time statistics and pending verification counts</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>7. Use case ends</td>
+    </tr>
+
+    <!-- ALTERNATE FLOW -->
+    <tr>
+      <td colspan="2" class="section-banner">ALTERNATE FLOW</td>
+    </tr>
+    <tr>
+      <td colspan="2" class="content-cell">
+        <p class="sub-flow"><strong>A1: Invalid format</strong><br>
+        A1.1 System prompt inline validation error <span class="tag-m">[M3: Password must be at least 8 characters / Please enter admin username]</span><br>
+        A1.2 Return to Step 2</p>
+
+        <p class="sub-flow" style="margin-top: 6px;"><strong>A2: Authentication failed</strong><br>
+        A2.1 System detect invalid credentials or incorrect master password<br>
+        A2.2 System prompt error message <span class="tag-m">[M4: Invalid administrator credentials: Access denied]</span><br>
+        A2.3 Return to Step 2</p>
+
+        <p class="sub-flow" style="margin-top: 6px;"><strong>A3: Non-admin account rejected</strong><br>
+        A3.1 System detect authenticated account does not possess 'Admin' role (e.g. Tourist or Artisan account)<br>
+        A3.2 System display modal dialog: "Mobile App Required &mdash; Tourist and Artisan features require the Warisan Kita Mobile App"<br>
+        A3.3 System deny web console access and return to Step 2</p>
+
+        <p class="sub-flow" style="margin-top: 6px;"><strong>A4: Automatic Session Restoration on Browser Refresh</strong><br>
+        A4.1 Administrator reloads or refreshes browser while on <code>/admin</code><br>
+        A4.2 System verify active session token in Supabase / LocalStorage asynchronously<br>
+        A4.3 System restore administrative session and refresh live data without kicking administrator to login screen <span class="tag-c">[C5: Session Persistence]</span> <span class="tag-fr">[FR102_5]</span><br>
+        A4.4 Use case ends</p>
+
+        <p class="sub-flow" style="margin-top: 6px;"><strong>A5: Administrative Governance &amp; Provisioning</strong><br>
+        A5.1 System enforces root-level administrative governance; creation of administrator accounts is restricted from frontend client UI and managed directly via Supabase Console / DB seeds <span class="tag-c">[C6: Admin Governance]</span><br>
+        A5.2 Use case ends</p>
+      </td>
+    </tr>
+
+    <!-- MESSAGE -->
+    <tr>
+      <td colspan="2" class="section-banner">MESSAGE</td>
+    </tr>
+    <tr>
+      <td colspan="2" class="content-cell">
+        M1 : "MALAYSIAN HERITAGE MODERATION CONSOLE: PLEASE ENTER ADMIN CREDENTIALS"<br>
+        M2 : "LOGIN SUCCESSFUL: AUTHENTICATED AS SYSTEM ADMINISTRATOR"<br>
+        M3 : "PASSWORD MUST BE AT LEAST 8 CHARACTERS"<br>
+        M4 : "INVALID ADMINISTRATOR CREDENTIALS: ACCESS DENIED"<br>
+        M5 : "MOBILE APP REQUIRED: TOURIST AND ARTISAN FEATURES REQUIRE THE WARISAN KITA MOBILE APP"
+      </td>
+    </tr>
+
+    <!-- CONSTRAINTS -->
+    <tr>
+      <td colspan="2" class="section-banner">CONSTRAINTS</td>
+    </tr>
+    <tr>
+      <td colspan="2" class="content-cell">
+        C1 : Password length &ge; 8 characters<br>
+        C2 : Login access to the Moderation Web Portal is strictly restricted to accounts with role 'Admin'<br>
+        C3 : Self-service password recovery is strictly disabled on the administrative web console<br>
+        C4 : Non-admin users attempting web access MUST be blocked and directed to the mobile native application<br>
+        C5 : Active administrative sessions MUST persist across browser page reloads and refreshes<br>
+        C6 : Administrator accounts must be provisioned via database governance rather than client UI
+      </td>
+    </tr>
+
+    <!-- FUNCTIONAL REQUIREMENTS -->
+    <tr>
+      <td colspan="2" class="section-banner">FUNCTIONAL REQUIREMENTS</td>
+    </tr>
+    <tr>
+      <td colspan="2" style="padding: 0;">
+        <table class="fr-subtable">
+          <tr>
+            <td class="fr-id">FR102_1</td>
+            <td class="fr-desc">System provide dedicated desktop web authentication interface for System Administrators with enterprise security branding</td>
+          </tr>
+          <tr>
+            <td class="fr-id">FR102_2</td>
+            <td class="fr-desc">System validate administrative credentials in real-time and enforce role-based access control (RBAC)</td>
+          </tr>
+          <tr>
+            <td class="fr-id">FR102_3</td>
+            <td class="fr-desc">System restrict portal access strictly to authorized administrator roles and reject consumer accounts</td>
+          </tr>
+          <tr>
+            <td class="fr-id">FR102_4</td>
+            <td class="fr-desc">System initialize administrative session and render the multi-tab Moderation Dashboard</td>
+          </tr>
+          <tr>
+            <td class="fr-id">FR102_5</td>
+            <td class="fr-desc">System automatically restore authenticated administrative sessions upon browser reload or navigation</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</div>
+
+</body>
+</html>

@@ -363,9 +363,6 @@ class SupabaseService {
         user.suspensionReason == 'ACCOUNT_DELETED') {
       throw const AuthException('ACCOUNT DELETED: Please contact support.');
     }
-    if (user.status.toUpperCase() == 'SUSPENDED' || user.isSuspended) {
-      throw const AuthException('ACCOUNT SUSPENDED BY ADMINISTRATOR: Contact support.');
-    }
     // Load professional details independently of the core identity query.
     // Always attempt to fetch artisan_profiles and attached documents so portfolio pictures
     // and bio are never dropped even if users.role is not yet synced.
@@ -514,7 +511,12 @@ class SupabaseService {
       if (response.session == null) {
         throw const AuthException('Sign in did not create a valid session.');
       }
-      return await _loadAuthenticatedProfile();
+      final profile = await _loadAuthenticatedProfile();
+      if (profile.status.toUpperCase() == 'SUSPENDED' || profile.isSuspended) {
+        await signOut();
+        throw const AuthException('ACCOUNT SUSPENDED BY ADMINISTRATOR: Contact support.');
+      }
+      return profile;
     } catch (error) {
       await signOut();
       if (error is AuthException &&

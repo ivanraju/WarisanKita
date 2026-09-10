@@ -40,7 +40,10 @@ class _ArtisanMainScaffoldState extends State<ArtisanMainScaffold> {
     if (widget.enableLivePolling) {
       _statusPollTimer = Timer.periodic(const Duration(seconds: 4), (_) {
         if (mounted) {
-          context.read<AuthViewModel>().refreshCurrentUser();
+          final auth = context.read<AuthViewModel>();
+          if (auth.currentUser != null && !auth.currentUser!.isSuspended) {
+            auth.refreshCurrentUser();
+          }
         }
       });
     }
@@ -91,6 +94,21 @@ class _ArtisanMainScaffoldState extends State<ArtisanMainScaffold> {
     // Security Guard 1: Account-level suspension blocks entire account (Artisan & Tourist)
     if (user != null && (user.isSuspended || user.status == 'SUSPENDED')) {
       return const AccountSuspendedScreen();
+    }
+
+    if (user == null) {
+      if (!authVM.isLoading) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted &&
+              ModalRoute.of(context)?.isCurrent == true &&
+              context.read<AuthViewModel>().currentUser == null) {
+            Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil('/login', (route) => false);
+          }
+        });
+      }
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
     }
 
     // Security Guard 2: If Artisan Studio is suspended, immediately eject from artisan tabs

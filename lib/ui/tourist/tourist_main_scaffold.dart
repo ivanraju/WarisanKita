@@ -31,7 +31,10 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
     if (widget.enableLivePolling) {
       _statusPollTimer = Timer.periodic(const Duration(seconds: 4), (_) {
         if (mounted) {
-          context.read<AuthViewModel>().refreshCurrentUser();
+          final auth = context.read<AuthViewModel>();
+          if (auth.currentUser != null && !auth.currentUser!.isSuspended) {
+            auth.refreshCurrentUser();
+          }
         }
       });
     }
