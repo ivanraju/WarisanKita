@@ -67,16 +67,35 @@ class DirectoryViewModel extends ChangeNotifier {
   }
 
   void _applyFilters() {
+    final q = _searchQuery.toLowerCase().trim();
+    final craftQ = _selectedCraft.toLowerCase().trim();
+    final stateQ = _selectedState.toLowerCase().trim();
+
     _filteredArtisans = _allArtisans.where((artisan) {
-      final matchesSearch = artisan.name.toLowerCase().contains(_searchQuery.toLowerCase()) || 
-                           artisan.craftType.toLowerCase().contains(_searchQuery.toLowerCase());
-      
-      final matchesCraft = _selectedCraft == 'All Crafts' || artisan.craftType == _selectedCraft;
-      final matchesState = _selectedState == 'All States' || artisan.state == _selectedState;
-      
+      final name = artisan.name.toLowerCase();
+      final craft = artisan.craftType.toLowerCase();
+      final desc = artisan.description.toLowerCase();
+      final state = artisan.state.toLowerCase();
+      final tags = artisan.tags.map((t) => t.toLowerCase()).toList();
+
+      final matchesSearch = q.isEmpty ||
+          name.contains(q) ||
+          craft.contains(q) ||
+          desc.contains(q) ||
+          state.contains(q) ||
+          tags.any((t) => t.contains(q));
+
+      final matchesCraft = craftQ == 'all crafts' ||
+          craft == craftQ ||
+          craft.contains(craftQ) ||
+          craftQ.contains(craft) ||
+          tags.any((t) => t.contains(craftQ) || craftQ.contains(t));
+
+      final matchesState = stateQ == 'all states' || state == stateQ;
+
       return matchesSearch && matchesCraft && matchesState;
     }).toList();
-    
+
     // Premium UI Tip: Sort by rating to ensure masters appear first
     _filteredArtisans.sort((a, b) => b.rating.compareTo(a.rating));
     

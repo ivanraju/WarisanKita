@@ -24,6 +24,7 @@ class UserModel {
   final double? latitude;
   final double? longitude;
   final String? phone;
+  final String? experience;
   final String? artisanProfileId;
   final String? artisanStatus;
   final List<Map<String, dynamic>> artisanDocuments;
@@ -56,6 +57,7 @@ class UserModel {
     this.latitude,
     this.longitude,
     this.phone,
+    this.experience,
     this.artisanProfileId,
     this.artisanStatus,
     this.artisanDocuments = const [],
@@ -197,6 +199,7 @@ class UserModel {
     double? latitude,
     double? longitude,
     String? phone,
+    String? experience,
     String? artisanProfileId,
     String? artisanStatus,
     List<Map<String, dynamic>>? artisanDocuments,
@@ -232,6 +235,7 @@ class UserModel {
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       phone: phone ?? this.phone,
+      experience: experience ?? this.experience,
       artisanProfileId: artisanProfileId ?? this.artisanProfileId,
       artisanStatus: artisanStatus ?? this.artisanStatus,
       artisanDocuments: artisanDocuments ?? this.artisanDocuments,
@@ -267,10 +271,14 @@ class UserModel {
       'address': address,
       'state': state,
       'phone': phone,
+      'experience': experience,
       'artisanProfileId': artisanProfileId,
       'artisanStatus': artisanStatus,
       'latitude': latitude,
       'longitude': longitude,
+      'artisan_documents': artisanDocuments,
+      'artisanDocuments': artisanDocuments,
+      'tags': tags,
       'pending_relocation_address': pendingRelocationAddress,
       'pending_relocation_state': pendingRelocationState,
       'pending_relocation_lat': pendingRelocationLatitude,
@@ -306,8 +314,23 @@ class UserModel {
     }
     
     if (artisanMap != null && artisanMap['artisan_documents'] != null) {
-      docs = List<Map<String, dynamic>>.from(artisanMap['artisan_documents']);
+      docs = (artisanMap['artisan_documents'] as List)
+          .map((d) => Map<String, dynamic>.from(d as Map))
+          .toList();
+    } else if (map['artisan_documents'] != null) {
+      docs = (map['artisan_documents'] as List)
+          .map((d) => Map<String, dynamic>.from(d as Map))
+          .toList();
+    } else if (map['artisanDocuments'] != null) {
+      docs = (map['artisanDocuments'] as List)
+          .map((d) => Map<String, dynamic>.from(d as Map))
+          .toList();
     }
+
+    final rawTags = artisanMap?['tags'] ?? map['tags'];
+    final tagsList = rawTags is List
+        ? List<String>.from(rawTags.map((t) => t.toString()))
+        : const <String>[];
 
     // Parse lat/lon
     final latRaw = artisanMap?['latitude'] ?? map['latitude'];
@@ -373,10 +396,17 @@ class UserModel {
       latitude: lat,
       longitude: lon,
       phone: map['phone'] ?? map['phone_number'] ?? artisanMap?['phone'],
+      experience: (map['experience'] != null && map['experience'].toString().trim().isNotEmpty)
+          ? map['experience'].toString().trim()
+          : ((artisanMap?['experience'] != null && artisanMap!['experience'].toString().trim().isNotEmpty)
+              ? artisanMap!['experience'].toString().trim()
+              : (artisanMap?['years_experience'] != null && (artisanMap!['years_experience'] as num) > 1
+                  ? '${artisanMap!['years_experience']} Years'
+                  : null)),
       artisanProfileId: artisanMap?['id'],
       artisanStatus: artisanMap?['status'] ?? map['artisanStatus'] ?? map['artisan_status'],
       artisanDocuments: docs,
-      tags: artisanMap?['tags'] != null ? List<String>.from(artisanMap!['tags']) : const [],
+      tags: tagsList,
       pendingRelocationAddress: map['pending_relocation_address'] ?? map['pendingRelocationAddress'] ?? artisanMap?['pending_relocation_address'],
       pendingRelocationState: map['pending_relocation_state'] ?? map['pendingRelocationState'] ?? artisanMap?['pending_relocation_state'],
       pendingRelocationLatitude: pLat,

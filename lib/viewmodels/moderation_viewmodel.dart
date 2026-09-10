@@ -73,6 +73,7 @@ class ModerationViewModel extends ChangeNotifier {
     String? state,
     String? phone,
     String? bio,
+    String? experience,
   }) {
     final cleanEmail = email.trim().toLowerCase();
     final targetName = studioName ?? displayName ?? username;
@@ -88,6 +89,7 @@ class ModerationViewModel extends ChangeNotifier {
         state: state ?? user.state,
         phone: phone ?? user.phone,
         bio: bio ?? user.bio,
+        experience: experience ?? user.experience,
       );
     }
 
@@ -100,6 +102,7 @@ class ModerationViewModel extends ChangeNotifier {
         state: state ?? artisan.state,
         phone: phone ?? artisan.phone,
         bio: bio ?? artisan.bio,
+        experience: experience ?? artisan.experience,
       );
     }
 
@@ -385,10 +388,10 @@ class ModerationViewModel extends ChangeNotifier {
           experience: (raw['experience'] ?? 'Verified Studio').toString(),
           phone: (raw['phone'] ?? raw['phone_number'] ?? '+60 12-345 6789').toString(),
           ssmNumber: (raw['ssm_number'] ?? raw['ssmNumber'] ?? '202601004821 (SSM Verified)').toString(),
-          ssmFileName: (raw['ssm_file'] ?? raw['ssm_file_name'] ?? raw['ssmFileName'] ?? 'SSM_Registration_Cert.pdf').toString(),
-          ssmFileUrl: raw['ssm_file_url']?.toString() ?? 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-          certFileName: (raw['cert_file'] ?? raw['cert_file_name'] ?? raw['certFileName'] ?? 'Kraftangan_Master_Cert.pdf').toString(),
-          certFileUrl: raw['cert_file_url']?.toString() ?? 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+          ssmFileName: (raw['ssm_file'] ?? raw['ssm_file_name'] ?? raw['ssmFileName'])?.toString(),
+          ssmFileUrl: raw['ssm_file_url']?.toString(),
+          certFileName: (raw['cert_file'] ?? raw['cert_file_name'] ?? raw['certFileName'])?.toString(),
+          certFileUrl: raw['cert_file_url']?.toString(),
           photos: resolvedPhotos,
           bio: raw['bio']?.toString(),
           isUpgradeFromTourist: isUpgrade,
@@ -412,7 +415,7 @@ class ModerationViewModel extends ChangeNotifier {
                 dateSubmitted: u.pendingRelocationDate ?? 'Recent',
                 imageUrl: u.avatarUrl ?? 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600',
                 email: u.email,
-                experience: 'Accredited Studio',
+                experience: (u.experience != null && u.experience!.trim().isNotEmpty) ? u.experience! : 'Accredited Studio',
                 phone: u.phone ?? '+60 12-345 6789',
                 ssmNumber: u.ssmNumber ?? 'Verified Studio',
                 bio: u.bio,
@@ -537,6 +540,7 @@ class ModerationViewModel extends ChangeNotifier {
             studioName: artisan.name,
             craftCategory: artisan.craftCategory,
             ssmNumber: artisan.ssmNumber,
+            experience: artisan.experience,
           );
         } else {
           _registeredUsers.add(UserModel(
@@ -550,6 +554,7 @@ class ModerationViewModel extends ChangeNotifier {
             craftCategory: artisan.craftCategory,
             ssmNumber: artisan.ssmNumber,
             state: artisan.state,
+            experience: artisan.experience,
           ));
         }
       } else {
@@ -565,6 +570,7 @@ class ModerationViewModel extends ChangeNotifier {
           craftCategory: artisan.craftCategory,
           ssmNumber: artisan.ssmNumber,
           state: artisan.state,
+          experience: artisan.experience,
         ));
       }
 

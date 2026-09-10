@@ -86,7 +86,9 @@ class ArtisanModel {
       description: map['bio'] ?? '',
       imageUrl: extractedImageUrl,
       rating: 4.8, // Default rating for now
-      experience: '${map['years_experience'] ?? 1} Years',
+      experience: (map['experience'] != null && map['experience'].toString().trim().isNotEmpty)
+          ? map['experience'].toString().trim()
+          : '${map['years_experience'] ?? 1} Years',
       workshopCount: 0,
       tags: map['tags'] != null ? List<String>.from(map['tags']) : [map['craft_category'] ?? 'Heritage'],
       images: allImages,
