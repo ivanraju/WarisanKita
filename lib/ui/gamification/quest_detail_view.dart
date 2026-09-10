@@ -9,7 +9,9 @@ import 'package:warisan_kita/domain/models/quest.dart';
 import 'package:warisan_kita/domain/models/workshop_location.dart';
 import 'package:warisan_kita/viewmodels/map_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/gamification_viewmodel.dart';
+import 'package:warisan_kita/ui/gamification/active_quest_conflict_dialog.dart';
 import 'package:warisan_kita/ui/gamification/qr_scanner_view.dart';
+import 'package:warisan_kita/ui/gamification/quest_view.dart';
 
 class QuestDetailView extends StatefulWidget {
   final Quest quest;
@@ -88,29 +90,72 @@ class _QuestDetailViewState extends State<QuestDetailView>
     _scheduleQuestCompletionDialog(gamificationVM);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: _pageBackground,
       appBar: AppBar(
-        title: const Text('Cultural Quest'),
-        backgroundColor: const Color(0xFF004D40),
-        foregroundColor: Colors.white,
+        title: Text(
+          'Cultural Quest',
+          style: GoogleFonts.dmSerifDisplay(fontSize: 23),
+        ),
+        backgroundColor: _isDark
+            ? const Color(0xFF071613)
+            : const Color(0xFFF7F2E8),
+        foregroundColor: _isDark
+            ? const Color(0xFFFFF8E1)
+            : const Color(0xFF004D40),
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
-        children: [
-          _buildQuestHeader(),
-          const SizedBox(height: 20),
-          _buildLocationSection(distance),
-          const SizedBox(height: 20),
-          _buildActivitiesSection(tasks, gamificationVM),
-          const SizedBox(height: 20),
-          _buildXpSummary(gamificationVM.totalPotentialXp),
-          const SizedBox(height: 20),
-          _buildStampPreview(gamificationVM),
-        ],
+      body: DecoratedBox(
+        decoration: BoxDecoration(
+          color: _pageBackground,
+          image: DecorationImage(
+            image: ResizeImage(
+              AssetImage(
+                _isDark
+                    ? 'assets/images/heritage_batik_background.png'
+                    : 'assets/images/cultural_quest_journey_background.png',
+              ),
+              width: 768,
+            ),
+            fit: _isDark ? BoxFit.fitWidth : BoxFit.fill,
+            alignment: Alignment.center,
+            repeat: _isDark ? ImageRepeat.repeatY : ImageRepeat.noRepeat,
+            opacity: _isDark ? 0.035 : 0.82,
+          ),
+        ),
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 40),
+          children: [
+            _buildQuestHeader(gamificationVM),
+            const SizedBox(height: 16),
+            _buildLocationSection(distance),
+            const SizedBox(height: 16),
+            _buildActivitiesSection(tasks, gamificationVM),
+            const SizedBox(height: 16),
+            _buildStampPreview(gamificationVM),
+          ],
+        ),
       ),
       bottomNavigationBar: _buildStartBar(context, gamificationVM, distance),
     );
   }
+
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+
+  Color get _pageBackground =>
+      _isDark ? const Color(0xFF071613) : const Color(0xFFF7F2E8);
+
+  Color get _cardSurface =>
+      _isDark ? const Color(0xFF102824) : const Color(0xFFFFFCF5);
+
+  Color get _primaryText =>
+      _isDark ? const Color(0xFFFFF8E1) : const Color(0xFF172B27);
+
+  Color get _secondaryText =>
+      _isDark ? const Color(0xFFB8C9C4) : const Color(0xFF64748B);
+
+  Color get _cardBorder =>
+      _isDark ? const Color(0xFF28483F) : const Color(0xFFE7DDCB);
 
   void _reportProximityAfterBuild(
     GamificationViewModel viewModel,
@@ -147,21 +192,26 @@ class _QuestDetailViewState extends State<QuestDetailView>
     });
   }
 
-  Widget _buildQuestHeader() {
+  Widget _buildQuestHeader(GamificationViewModel viewModel) {
+    final requiredTasks = viewModel.effectiveRequiredHeritageTasks;
+    final completedRequired = viewModel.completedEffectiveRequiredTaskCount;
+    final isPermanentlyCompleted = viewModel.isQuestPermanentlyCompleted;
+    final progress = requiredTasks.isEmpty
+        ? (isPermanentlyCompleted ? 1.0 : 0.0)
+        : (completedRequired / requiredTasks.length).clamp(0.0, 1.0);
+    final requiredLabel =
+        '$completedRequired / ${requiredTasks.length} Required';
+
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF004D40), Color(0xFF00796B)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(28),
+        color: const Color(0xFF004D40),
+        borderRadius: BorderRadius.circular(26),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF004D40).withValues(alpha: 0.22),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+            color: const Color(0xFF004D40).withValues(alpha: 0.20),
+            blurRadius: 18,
+            offset: const Offset(0, 7),
           ),
         ],
       ),
@@ -169,55 +219,57 @@ class _QuestDetailViewState extends State<QuestDetailView>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'CULTURAL QUEST',
-            style: GoogleFonts.plusJakartaSans(
-              color: const Color(0xFFFFD54F),
-              fontSize: 11,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1.6,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            quest.title,
+            workshop.name,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: GoogleFonts.dmSerifDisplay(
               color: Colors.white,
-              fontSize: 30,
+              fontSize: 25,
               height: 1.1,
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            workshop.name,
-            style: GoogleFonts.plusJakartaSans(
-              color: Colors.white.withValues(alpha: 0.84),
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 14),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              quest.category,
-              style: GoogleFonts.plusJakartaSans(
-                color: Colors.white,
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
           const SizedBox(height: 18),
-          Text(
-            quest.description,
-            style: GoogleFonts.plusJakartaSans(
-              color: Colors.white.withValues(alpha: 0.88),
-              fontSize: 14,
-              height: 1.55,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: Text(
+                  '${viewModel.totalPotentialXp} Potential XP',
+                  style: GoogleFonts.plusJakartaSans(
+                    color: const Color(0xFFFFD54F),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Flexible(
+                child: Text(
+                  requiredLabel,
+                  textAlign: TextAlign.end,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.plusJakartaSans(
+                    color: Colors.white.withValues(alpha: 0.82),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 9),
+          Semantics(
+            label: 'Required quest progress: $requiredLabel',
+            value: '${(progress * 100).round()} percent',
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(999),
+              child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 8,
+                backgroundColor: Colors.white.withValues(alpha: 0.18),
+                color: const Color(0xFFFFD54F),
+              ),
             ),
           ),
         ],
@@ -228,75 +280,94 @@ class _QuestDetailViewState extends State<QuestDetailView>
   Widget _buildLocationSection(double? distance) {
     final isWithinRange =
         distance != null && distance <= quest.geofenceRadiusMeters;
+    final stateColor = distance == null
+        ? _secondaryText
+        : isWithinRange
+        ? const Color(0xFF087F5B)
+        : const Color(0xFFB45309);
+    final stateIcon = distance == null
+        ? Icons.location_searching_rounded
+        : isWithinRange
+        ? Icons.check_circle_rounded
+        : Icons.warning_amber_rounded;
+    final stateLabel = distance == null
+        ? 'Location required to confirm the quest zone'
+        : isWithinRange
+        ? 'Within quest zone'
+        : 'Outside quest zone';
+
     return _buildSectionCard(
       title: 'Quest Location',
       icon: Icons.location_on_rounded,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            workshop.name,
-            style: GoogleFonts.plusJakartaSans(
-              color: const Color(0xFF0F172A),
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            workshop.locationName,
-            style: GoogleFonts.plusJakartaSans(
-              color: const Color(0xFF64748B),
-              fontSize: 13,
-            ),
-          ),
-          const SizedBox(height: 14),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFF8E1),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: const Color(0xFFF59E0B).withValues(alpha: 0.35),
-              ),
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.radar_rounded,
-                  color: Color(0xFFD97706),
-                  size: 21,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Quest can be started within '
-                    '${quest.geofenceRadiusMeters} m of this artisan studio.',
-                    style: GoogleFonts.plusJakartaSans(
-                      color: const Color(0xFF92400E),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      height: 1.4,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.location_on_rounded, color: stateColor, size: 19),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      workshop.name,
+                      style: GoogleFonts.plusJakartaSans(
+                        color: _primaryText,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 3),
+                    Text(
+                      workshop.locationName,
+                      style: GoogleFonts.plusJakartaSans(
+                        color: _secondaryText,
+                        fontSize: 12,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 13),
           Text(
-            distance == null
-                ? 'Current location is required before starting this quest.'
-                : isWithinRange
-                ? 'You are ${distance.toStringAsFixed(0)} m away and can start this quest.'
-                : 'You are ${distance.toStringAsFixed(0)} m away. Move within ${quest.geofenceRadiusMeters} m to start.',
+            'Quest starts within ${quest.geofenceRadiusMeters} m',
             style: GoogleFonts.plusJakartaSans(
-              color: isWithinRange
-                  ? const Color(0xFF087F5B)
-                  : const Color(0xFFB45309),
+              color: _primaryText,
               fontSize: 11,
               fontWeight: FontWeight.w700,
             ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            distance == null
+                ? 'Live distance unavailable'
+                : 'You are ${distance.toStringAsFixed(0)} m away',
+            style: GoogleFonts.plusJakartaSans(
+              color: _secondaryText,
+              fontSize: 11,
+            ),
+          ),
+          const SizedBox(height: 9),
+          Row(
+            children: [
+              Icon(stateIcon, color: stateColor, size: 17),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  stateLabel,
+                  style: GoogleFonts.plusJakartaSans(
+                    color: stateColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -307,23 +378,68 @@ class _QuestDetailViewState extends State<QuestDetailView>
     List<HeritageTask> tasks,
     GamificationViewModel viewModel,
   ) {
+    final indexedTasks = tasks.indexed.toList(growable: false);
+    final journeyTasks = indexedTasks
+        .where((entry) => !viewModel.isBonusTask(entry.$2))
+        .toList(growable: false);
+    final bonusTasks = indexedTasks
+        .where((entry) => viewModel.isBonusTask(entry.$2))
+        .toList(growable: false);
     return _buildSectionCard(
-      title: 'Heritage Activities',
+      title: 'Heritage Journey',
       icon: Icons.auto_awesome_rounded,
       child: tasks.isEmpty
           ? Text(
               'No heritage activities have been published for this quest.',
               style: GoogleFonts.plusJakartaSans(
-                color: const Color(0xFF64748B),
+                color: _secondaryText,
                 fontSize: 13,
               ),
             )
           : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                for (var index = 0; index < tasks.length; index++) ...[
-                  _buildTaskRow(index + 1, tasks[index], viewModel),
-                  if (index != tasks.length - 1)
-                    const Divider(height: 24, color: Color(0xFFE2E8F0)),
+                for (var index = 0; index < journeyTasks.length; index++) ...[
+                  _buildTaskRow(
+                    journeyTasks[index].$1 + 1,
+                    journeyTasks[index].$2,
+                    viewModel,
+                  ),
+                  if (index != journeyTasks.length - 1)
+                    Divider(height: 24, color: _cardBorder),
+                ],
+                if (bonusTasks.isNotEmpty) ...[
+                  if (journeyTasks.isNotEmpty)
+                    Divider(height: 32, color: _cardBorder),
+                  Text(
+                    'BONUS ACTIVITIES',
+                    style: GoogleFonts.plusJakartaSans(
+                      color: const Color(0xFFD97706),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    'Optional additions that do not change your original journey progress.',
+                    style: GoogleFonts.plusJakartaSans(
+                      color: _secondaryText,
+                      fontSize: 10,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  for (var index = 0; index < bonusTasks.length; index++) ...[
+                    _buildTaskRow(
+                      bonusTasks[index].$1 + 1,
+                      bonusTasks[index].$2,
+                      viewModel,
+                      isBonus: true,
+                    ),
+                    if (index != bonusTasks.length - 1)
+                      Divider(height: 24, color: _cardBorder),
+                  ],
                 ],
               ],
             ),
@@ -333,13 +449,22 @@ class _QuestDetailViewState extends State<QuestDetailView>
   Widget _buildTaskRow(
     int number,
     HeritageTask task,
-    GamificationViewModel viewModel,
-  ) {
-    final badgeColor = task.isRequired
-        ? const Color(0xFF004D40)
-        : const Color(0xFF64748B);
+    GamificationViewModel viewModel, {
+    bool isBonus = false,
+  }) {
+    final badgeColor = isBonus
+        ? const Color(0xFFD97706)
+        : task.isRequired
+        ? (_isDark ? const Color(0xFF6EE7B7) : const Color(0xFF004D40))
+        : _secondaryText;
     final isCompleted = viewModel.isTaskCompleted(task);
     final isDwellTask = viewModel.isStayFifteenMinutesTask(task);
+    final taskState = _taskDisplayState(
+      task,
+      viewModel,
+      isCompleted: isCompleted,
+      isBonus: isBonus,
+    );
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -377,7 +502,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
               Text(
                 task.title,
                 style: GoogleFonts.plusJakartaSans(
-                  color: const Color(0xFF1E293B),
+                  color: _primaryText,
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
                   height: 1.4,
@@ -398,7 +523,11 @@ class _QuestDetailViewState extends State<QuestDetailView>
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      task.isRequired ? 'REQUIRED' : 'OPTIONAL',
+                      isBonus
+                          ? 'BONUS ACTIVITY'
+                          : task.isRequired
+                          ? 'REQUIRED'
+                          : 'OPTIONAL',
                       style: GoogleFonts.plusJakartaSans(
                         color: badgeColor,
                         fontSize: 9,
@@ -415,10 +544,22 @@ class _QuestDetailViewState extends State<QuestDetailView>
                       fontWeight: FontWeight.w900,
                     ),
                   ),
-                  if (isCompleted)
-                    _buildTaskStatusBadge('COMPLETED', const Color(0xFF087F5B)),
+                  _buildTaskStatusBadge(taskState.$1, taskState.$2),
                 ],
               ),
+              if (isBonus) ...[
+                const SizedBox(height: 6),
+                Text(
+                  'Added after you began this journey',
+                  style: GoogleFonts.plusJakartaSans(
+                    color: _isDark
+                        ? const Color(0xFFFFD98A)
+                        : const Color(0xFF92400E),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
               if (isDwellTask &&
                   !isCompleted &&
                   viewModel.questProgressStatus?.toUpperCase() ==
@@ -446,8 +587,12 @@ class _QuestDetailViewState extends State<QuestDetailView>
                       : 'Outside quest area • Timer paused',
                   style: GoogleFonts.plusJakartaSans(
                     color: viewModel.isInsideQuestGeofence
-                        ? const Color(0xFF087F5B)
-                        : const Color(0xFFB45309),
+                        ? (_isDark
+                              ? const Color(0xFF6EE7B7)
+                              : const Color(0xFF087F5B))
+                        : (_isDark
+                              ? const Color(0xFFFFD98A)
+                              : const Color(0xFFB45309)),
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                   ),
@@ -464,8 +609,14 @@ class _QuestDetailViewState extends State<QuestDetailView>
                     icon: const Icon(Icons.qr_code_scanner_rounded, size: 17),
                     label: Text(viewModel.qrVerificationLabel(task)),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF005B4F),
-                      side: const BorderSide(color: Color(0xFF005B4F)),
+                      foregroundColor: _isDark
+                          ? const Color(0xFF6EE7B7)
+                          : const Color(0xFF005B4F),
+                      side: BorderSide(
+                        color: _isDark
+                            ? const Color(0xFF3FAE91)
+                            : const Color(0xFF005B4F),
+                      ),
                       textStyle: GoogleFonts.plusJakartaSans(
                         fontSize: 11,
                         fontWeight: FontWeight.w800,
@@ -498,6 +649,37 @@ class _QuestDetailViewState extends State<QuestDetailView>
         ),
       ),
     );
+  }
+
+  (String, Color) _taskDisplayState(
+    HeritageTask task,
+    GamificationViewModel viewModel, {
+    required bool isCompleted,
+    required bool isBonus,
+  }) {
+    if (isCompleted) return ('COMPLETED', const Color(0xFF087F5B));
+    if (viewModel.requiresJourneyResume) {
+      return ('PAUSED', const Color(0xFFB45309));
+    }
+    if (isBonus) return ('BONUS', const Color(0xFFD97706));
+
+    final inProgress =
+        viewModel.questProgressStatus?.toUpperCase() == 'IN_PROGRESS';
+    if (!inProgress) return ('AVAILABLE', const Color(0xFF00695C));
+
+    if (viewModel.isStayFifteenMinutesTask(task)) {
+      if (!viewModel.isInsideQuestGeofence) {
+        return ('WAITING FOR ARRIVAL', const Color(0xFFB45309));
+      }
+      if (viewModel.isDwellTracking) {
+        return ('IN PROGRESS', const Color(0xFF00695C));
+      }
+      return ('PAUSED', const Color(0xFFB45309));
+    }
+    if (task.isSystemTask) {
+      return ('WAITING FOR ARRIVAL', const Color(0xFFB45309));
+    }
+    return ('QR REQUIRED', const Color(0xFF00695C));
   }
 
   String _formatDuration(int totalSeconds) {
@@ -555,7 +737,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
             ),
             const SizedBox(height: 8),
             Text(
-              'You completed every required activity for ${quest.title}.',
+              'You completed every required activity for this heritage journey.',
               textAlign: TextAlign.center,
               style: GoogleFonts.plusJakartaSans(
                 color: const Color(0xFF475569),
@@ -614,104 +796,122 @@ class _QuestDetailViewState extends State<QuestDetailView>
     );
   }
 
-  Widget _buildXpSummary(int totalXp) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF004D40),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.bolt_rounded, color: Color(0xFFFFD54F)),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Potential Task XP',
-              style: GoogleFonts.plusJakartaSans(
-                color: Colors.white,
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
+  Widget _buildStampPreview(GamificationViewModel viewModel) {
+    final isEarned = viewModel.isQuestBadgeEarned;
+    final stamp = ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: SizedBox(
+        width: 78,
+        height: 78,
+        child: quest.stampImageUrl.trim().isEmpty
+            ? _buildStampFallback()
+            : Image.network(
+                quest.stampImageUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _buildStampFallback(),
               ),
-            ),
+      ),
+    );
+
+    return _buildSectionCard(
+      title: 'Quest Reward',
+      icon: Icons.workspace_premium_rounded,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              isEarned
+                  ? stamp
+                  : Opacity(
+                      opacity: 0.48,
+                      child: ColorFiltered(
+                        colorFilter: const ColorFilter.matrix(<double>[
+                          0.33,
+                          0.33,
+                          0.33,
+                          0,
+                          0,
+                          0.33,
+                          0.33,
+                          0.33,
+                          0,
+                          0,
+                          0.33,
+                          0.33,
+                          0.33,
+                          0,
+                          0,
+                          0,
+                          0,
+                          0,
+                          1,
+                          0,
+                        ]),
+                        child: stamp,
+                      ),
+                    ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      quest.stampTitle,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.dmSerifDisplay(
+                        color: _primaryText,
+                        fontSize: 19,
+                        height: 1.15,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      '${workshop.name} passport stamp',
+                      style: GoogleFonts.plusJakartaSans(
+                        color: _secondaryText,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
+          const SizedBox(height: 15),
           Text(
-            '$totalXp XP',
+            'Total Quest XP: ${viewModel.totalPotentialXp} XP',
             style: GoogleFonts.plusJakartaSans(
-              color: const Color(0xFFFFD54F),
-              fontSize: 17,
+              color: const Color(0xFFD97706),
+              fontSize: 12,
               fontWeight: FontWeight.w900,
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStampPreview(GamificationViewModel viewModel) {
-    final isEarned = viewModel.isQuestBadgeEarned;
-    return _buildSectionCard(
-      title: isEarned ? 'Quest Reward' : 'Quest Reward Preview',
-      icon: Icons.workspace_premium_rounded,
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: SizedBox(
-              width: 78,
-              height: 78,
-              child: quest.stampImageUrl.isEmpty
-                  ? _buildStampFallback()
-                  : Image.network(
-                      quest.stampImageUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _buildStampFallback(),
-                    ),
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  quest.stampTitle,
-                  style: GoogleFonts.dmSerifDisplay(
-                    color: const Color(0xFF004D40),
-                    fontSize: 19,
+          const SizedBox(height: 7),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                isEarned ? Icons.verified_rounded : Icons.lock_outline_rounded,
+                color: isEarned ? const Color(0xFF087F5B) : _secondaryText,
+                size: 17,
+              ),
+              const SizedBox(width: 7),
+              Expanded(
+                child: Text(
+                  isEarned
+                      ? 'UNLOCKED · ADDED TO PASSPORT'
+                      : 'Complete all required activities to unlock',
+                  style: GoogleFonts.plusJakartaSans(
+                    color: isEarned ? const Color(0xFF087F5B) : _secondaryText,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    height: 1.4,
                   ),
                 ),
-                const SizedBox(height: 7),
-                if (isEarned)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 9,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE4F3EE),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      '✓ ACHIEVED • ADDED TO PASSPORT',
-                      style: GoogleFonts.plusJakartaSans(
-                        color: const Color(0xFF087F5B),
-                        fontSize: 9,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  )
-                else
-                  Text(
-                    'Preview only — this stamp has not been earned.',
-                    style: GoogleFonts.plusJakartaSans(
-                      color: const Color(0xFF64748B),
-                      fontSize: 11,
-                      height: 1.35,
-                    ),
-                  ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),
@@ -738,8 +938,17 @@ class _QuestDetailViewState extends State<QuestDetailView>
     final isCompleted =
         status == 'COMPLETED' || viewModel.areAllHeritageTasksCompleted;
     final isInProgress = status == 'IN_PROGRESS';
+    final isBlockedByAnotherQuest =
+        !isCompleted &&
+        viewModel.hasActiveQuest &&
+        !viewModel.isActiveQuest(quest.id);
     final isOutOfRange =
         isInProgress &&
+        !isCompleted &&
+        distance != null &&
+        distance > quest.geofenceRadiusMeters;
+    final isOutsideBeforeStart =
+        !isInProgress &&
         !isCompleted &&
         distance != null &&
         distance > quest.geofenceRadiusMeters;
@@ -748,10 +957,15 @@ class _QuestDetailViewState extends State<QuestDetailView>
         viewModel.heritageTasks.isNotEmpty &&
         !isCompleted &&
         !isInProgress &&
+        !isBlockedByAnotherQuest &&
+        !isOutsideBeforeStart &&
         !viewModel.isStartingQuest;
 
     return Container(
-      color: Colors.white,
+      decoration: BoxDecoration(
+        color: _isDark ? const Color(0xFF0B211D) : const Color(0xFFFFFCF5),
+        border: Border(top: BorderSide(color: _cardBorder)),
+      ),
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
       child: SafeArea(
         top: false,
@@ -770,10 +984,40 @@ class _QuestDetailViewState extends State<QuestDetailView>
               ),
               const SizedBox(height: 8),
             ],
+            if (isBlockedByAnotherQuest) ...[
+              Text(
+                viewModel.activeQuestConflictMessage(),
+                textAlign: TextAlign.center,
+                style: GoogleFonts.plusJakartaSans(
+                  color: _isDark
+                      ? const Color(0xFFFFD98A)
+                      : const Color(0xFF92400E),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+            if (viewModel.activeQuestWarning != null) ...[
+              Text(
+                viewModel.activeQuestWarning!,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.plusJakartaSans(
+                  color: const Color(0xFFB42318),
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
-                onPressed: canResume
+                onPressed: isBlockedByAnotherQuest
+                    ? () => _showActiveQuestConflict(context, viewModel)
+                    : canResume
                     ? () => _resumeQuest(context, viewModel)
                     : canStart
                     ? () => _startQuest(context, viewModel, distance)
@@ -782,7 +1026,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
                   backgroundColor: canResume
                       ? const Color(0xFF087F5B)
                       : const Color(0xFF004D40),
-                  disabledBackgroundColor: isOutOfRange
+                  disabledBackgroundColor: isOutOfRange || isOutsideBeforeStart
                       ? const Color(0xFFB45309)
                       : isCompleted || isInProgress
                       ? const Color(0xFF087F5B)
@@ -801,7 +1045,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
                     : Icon(
                         isCompleted
                             ? Icons.workspace_premium_rounded
-                            : isOutOfRange
+                            : isOutOfRange || isOutsideBeforeStart
                             ? Icons.location_off_rounded
                             : canResume
                             ? Icons.play_arrow_rounded
@@ -814,12 +1058,16 @@ class _QuestDetailViewState extends State<QuestDetailView>
                       ? 'Starting Quest...'
                       : isCompleted
                       ? 'Quest Completed'
+                      : isBlockedByAnotherQuest
+                      ? 'Another Journey Active'
                       : isOutOfRange
-                      ? 'Out of Range'
+                      ? 'Return to Quest Area'
                       : canResume
                       ? 'Resume Quest'
                       : isInProgress
-                      ? 'Quest In Progress'
+                      ? 'Continue Journey'
+                      : isOutsideBeforeStart
+                      ? 'Move Within Quest Zone'
                       : 'Start Quest',
                   style: GoogleFonts.plusJakartaSans(
                     fontWeight: FontWeight.w800,
@@ -853,6 +1101,10 @@ class _QuestDetailViewState extends State<QuestDetailView>
     GamificationViewModel viewModel,
     double? currentDistance,
   ) async {
+    if (!viewModel.canStartQuest(quest.id)) {
+      await _showActiveQuestConflict(context, viewModel);
+      return;
+    }
     var distance = currentDistance;
     final mapViewModel = context.read<MapViewModel>();
     if (distance == null) {
@@ -897,7 +1149,44 @@ class _QuestDetailViewState extends State<QuestDetailView>
           backgroundColor: Color(0xFF005B4F),
         ),
       );
+    } else if (!viewModel.canStartQuest(quest.id)) {
+      await _showActiveQuestConflict(context, viewModel);
     }
+  }
+
+  Future<void> _showActiveQuestConflict(
+    BuildContext context,
+    GamificationViewModel viewModel,
+  ) async {
+    final active = viewModel.activeQuest;
+    if (active == null) return;
+    final shouldContinue = await showActiveQuestConflictDialog(
+      context,
+      activeQuest: active,
+      integrityWarning: viewModel.activeQuestWarning,
+    );
+    if (!context.mounted || !shouldContinue) return;
+
+    final mapViewModel = context.read<MapViewModel>();
+    WorkshopLocation? activeWorkshop;
+    for (final candidate in mapViewModel.workshops) {
+      if (candidate.id == active.artisanId) {
+        activeWorkshop = candidate;
+        break;
+      }
+    }
+    if (activeWorkshop == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('The active workshop could not be opened right now.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    await Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => QuestView(workshop: activeWorkshop!)),
+    );
   }
 
   Widget _buildSectionCard({
@@ -908,9 +1197,9 @@ class _QuestDetailViewState extends State<QuestDetailView>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _cardSurface,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: _cardBorder),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -924,12 +1213,20 @@ class _QuestDetailViewState extends State<QuestDetailView>
         children: [
           Row(
             children: [
-              Icon(icon, color: const Color(0xFFD97706), size: 20),
+              Icon(
+                icon,
+                color: _isDark
+                    ? const Color(0xFFFFD54F)
+                    : const Color(0xFFD97706),
+                size: 20,
+              ),
               const SizedBox(width: 8),
               Text(
                 title.toUpperCase(),
                 style: GoogleFonts.plusJakartaSans(
-                  color: const Color(0xFF004D40),
+                  color: _isDark
+                      ? const Color(0xFFFFD54F)
+                      : const Color(0xFF004D40),
                   fontSize: 11,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 1,

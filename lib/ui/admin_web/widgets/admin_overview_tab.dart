@@ -55,22 +55,29 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
 
     // Live Metrics Calculations
     final activeArtisans = modVM.activeArtisanMasters;
-    final liveArtisansCount = activeArtisans.where((a) => !a.isSuspended).length;
+    final liveArtisansCount = activeArtisans
+        .where((a) => !a.isSuspended)
+        .length;
     final pendingArtisansCount = modVM.filteredArtisans.length;
 
     final allUsers = modVM.registeredUsers;
     final totalUsersCount = allUsers.length;
-    final touristCount = allUsers.where((u) => u.role.toLowerCase().contains('tourist') || u.isTourist).length;
-    final artisanUserCount = allUsers.where((u) => u.role.toLowerCase().contains('artisan') || u.isArtisan).length;
-    final suspendedUsersCount = allUsers.where((u) => u.isSuspended || u.status.toUpperCase() == 'SUSPENDED').length;
+    final touristCount = allUsers
+        .where((u) => u.role.toLowerCase().contains('tourist') || u.isTourist)
+        .length;
+    final artisanUserCount = allUsers
+        .where((u) => u.role.toLowerCase().contains('artisan') || u.isArtisan)
+        .length;
+    final suspendedUsersCount = allUsers
+        .where((u) => u.isSuspended || u.status.toUpperCase() == 'SUSPENDED')
+        .length;
     final activeUsersCount = totalUsersCount - suspendedUsersCount;
 
     final availableQuests = gameVM?.availableQuests ?? [];
-    final totalQuestsCount = availableQuests.isNotEmpty ? availableQuests.length : 3;
-    final int pendingFromVM = gameModVM != null
-        ? gameModVM.totalCount
-        : (gameVM?.myRequests.where((r) => r.status.toUpperCase() == 'PENDING').length ?? 0);
-    final int pendingQuestRequests = pendingFromVM > 0 ? pendingFromVM : (gameModVM != null ? 0 : 3);
+    final totalQuestsCount = availableQuests.isNotEmpty
+        ? availableQuests.length
+        : 3;
+    final int pendingTaskRequests = gameModVM?.totalCount ?? 0;
 
     final totalThreadsCount = forumVM.threads.length;
     final int pendingForumReportsCount = forumVM.reportQueue.where((item) {
@@ -79,14 +86,18 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
         final String postId = (item['postId'] ?? item['id'])?.toString() ?? '';
         return forumVM.threads.any((t) => t.id == postId);
       } else if (type == 'reply') {
-        final String replyId = (item['replyId'] ?? item['id'])?.toString() ?? '';
-        return forumVM.threads.any((t) => t.replies.any((r) => r.id == replyId));
+        final String replyId =
+            (item['replyId'] ?? item['id'])?.toString() ?? '';
+        return forumVM.threads.any(
+          (t) => t.replies.any((r) => r.id == replyId),
+        );
       }
       return false;
     }).length;
     final moderationHistory = forumVM.moderationHistory;
 
-    final totalActionsRequired = pendingArtisansCount + pendingQuestRequests + pendingForumReportsCount;
+    final totalActionsRequired =
+        pendingArtisansCount + pendingTaskRequests + pendingForumReportsCount;
 
     return SingleChildScrollView(
       padding: EdgeInsets.all(isMobile ? 16.0 : 32.0),
@@ -157,7 +168,9 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
             builder: (context, constraints) {
               final cardWidth = isMobile
                   ? constraints.maxWidth
-                  : (isTablet ? (constraints.maxWidth - 16) / 2 : (constraints.maxWidth - 48) / 4);
+                  : (isTablet
+                        ? (constraints.maxWidth - 16) / 2
+                        : (constraints.maxWidth - 48) / 4);
 
               return Wrap(
                 spacing: 16,
@@ -175,7 +188,9 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
                       color: const Color(0xFF10B981),
                       bgColor: const Color(0xFFECFDF5),
                       onTap: () => widget.onNavigateTab(
-                        pendingArtisansCount > 0 ? 'Pending Approvals' : 'Active Artisans',
+                        pendingArtisansCount > 0
+                            ? 'Pending Approvals'
+                            : 'Active Artisans',
                       ),
                     ),
                   ),
@@ -184,7 +199,8 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
                     child: _buildMetricCard(
                       title: 'Registered Users',
                       value: '$totalUsersCount Accounts',
-                      subtitle: '$touristCount Tourists • $artisanUserCount Artisans',
+                      subtitle:
+                          '$touristCount Tourists • $artisanUserCount Artisans',
                       icon: Icons.people_alt_rounded,
                       color: const Color(0xFF3B82F6),
                       bgColor: const Color(0xFFEFF6FF),
@@ -196,8 +212,8 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
                     child: _buildMetricCard(
                       title: 'Heritage Quests',
                       value: '$totalQuestsCount Active Quests',
-                      subtitle: pendingQuestRequests > 0
-                          ? '$pendingQuestRequests Awaiting Approval'
+                      subtitle: pendingTaskRequests > 0
+                          ? '$pendingTaskRequests Task Requests Awaiting Approval'
                           : 'All Quests Live',
                       icon: Icons.stars_rounded,
                       color: const Color(0xFFD97706),
@@ -231,7 +247,7 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
             isMobile: isMobile,
             totalActions: totalActionsRequired,
             pendingArtisans: pendingArtisansCount,
-            pendingQuests: pendingQuestRequests,
+            pendingTasks: pendingTaskRequests,
             pendingReports: pendingForumReportsCount,
           ),
 
@@ -241,11 +257,22 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
           if (isTablet)
             Column(
               children: [
-                _buildAuditFeedCard(moderationHistory, allUsers, activeArtisans),
+                _buildAuditFeedCard(
+                  moderationHistory,
+                  allUsers,
+                  activeArtisans,
+                ),
                 const SizedBox(height: 24),
                 _buildStateDistributionCard(activeArtisans),
                 const SizedBox(height: 24),
-                _buildCategoryAndUserAnalyticsCard(activeArtisans, allUsers, touristCount, artisanUserCount, activeUsersCount, suspendedUsersCount),
+                _buildCategoryAndUserAnalyticsCard(
+                  activeArtisans,
+                  allUsers,
+                  touristCount,
+                  artisanUserCount,
+                  activeUsersCount,
+                  suspendedUsersCount,
+                ),
               ],
             )
           else
@@ -256,9 +283,20 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
                   flex: 3,
                   child: Column(
                     children: [
-                      _buildAuditFeedCard(moderationHistory, allUsers, activeArtisans),
+                      _buildAuditFeedCard(
+                        moderationHistory,
+                        allUsers,
+                        activeArtisans,
+                      ),
                       const SizedBox(height: 24),
-                      _buildCategoryAndUserAnalyticsCard(activeArtisans, allUsers, touristCount, artisanUserCount, activeUsersCount, suspendedUsersCount),
+                      _buildCategoryAndUserAnalyticsCard(
+                        activeArtisans,
+                        allUsers,
+                        touristCount,
+                        artisanUserCount,
+                        activeUsersCount,
+                        suspendedUsersCount,
+                      ),
                     ],
                   ),
                 ),
@@ -280,7 +318,9 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
       decoration: BoxDecoration(
         color: const Color(0xFFECFDF5),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.4)),
+        border: Border.all(
+          color: const Color(0xFF10B981).withValues(alpha: 0.4),
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -311,7 +351,7 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
     required bool isMobile,
     required int totalActions,
     required int pendingArtisans,
-    required int pendingQuests,
+    required int pendingTasks,
     required int pendingReports,
   }) {
     if (totalActions == 0) {
@@ -320,7 +360,9 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
         decoration: BoxDecoration(
           color: const Color(0xFFECFDF5),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+          border: Border.all(
+            color: const Color(0xFF10B981).withValues(alpha: 0.3),
+          ),
         ),
         child: Row(
           children: [
@@ -330,7 +372,11 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
                 color: Color(0xFF10B981),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.check_circle_rounded, color: Colors.white, size: 24),
+              child: const Icon(
+                Icons.check_circle_rounded,
+                color: Colors.white,
+                size: 24,
+              ),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -347,7 +393,7 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'All artisan submissions, quest creations, and community forum discussions are verified and up to date.',
+                    'All artisan profiles, heritage task requests, and community forum discussions are verified and up to date.',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 12.5,
                       color: const Color(0xFF047857),
@@ -362,11 +408,24 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
     }
 
     final List<String> details = [];
-    if (pendingArtisans > 0) details.add('$pendingArtisans artisan profile${pendingArtisans > 1 ? 's' : ''}');
-    if (pendingQuests > 0) details.add('$pendingQuests quest${pendingQuests > 1 ? 's' : ''}');
-    if (pendingReports > 0) details.add('$pendingReports flagged forum post${pendingReports > 1 ? 's' : ''}');
+    if (pendingArtisans > 0) {
+      details.add(
+        '$pendingArtisans artisan profile${pendingArtisans > 1 ? 's' : ''}',
+      );
+    }
+    if (pendingTasks > 0) {
+      details.add(
+        '$pendingTasks heritage task request${pendingTasks > 1 ? 's' : ''}',
+      );
+    }
+    if (pendingReports > 0) {
+      details.add(
+        '$pendingReports flagged forum post${pendingReports > 1 ? 's' : ''}',
+      );
+    }
 
-    final String message = 'You have ${details.join(', ')} awaiting administrative verification.';
+    final String message =
+        'You have ${details.join(', ')} awaiting administrative verification.';
 
     return Container(
       padding: EdgeInsets.all(isMobile ? 16 : 24),
@@ -378,7 +437,7 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
             color: const Color(0xFF004D40).withValues(alpha: 0.2),
             blurRadius: 16,
             offset: const Offset(0, 4),
-          )
+          ),
         ],
       ),
       child: isMobile
@@ -393,13 +452,20 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
                         color: Color(0xFFFFD54F),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.bolt_rounded, color: Color(0xFF004D40), size: 22),
+                      child: const Icon(
+                        Icons.bolt_rounded,
+                        color: Color(0xFF004D40),
+                        size: 22,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         'Moderation Action Required ($totalActions)',
-                        style: GoogleFonts.dmSerifDisplay(fontSize: 18, color: Colors.white),
+                        style: GoogleFonts.dmSerifDisplay(
+                          fontSize: 18,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ],
@@ -407,7 +473,10 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
                 const SizedBox(height: 10),
                 Text(
                   message,
-                  style: GoogleFonts.plusJakartaSans(fontSize: 12, color: const Color(0xFFFFD54F)),
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    color: const Color(0xFFFFD54F),
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Wrap(
@@ -416,39 +485,78 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
                   children: [
                     if (pendingArtisans > 0)
                       FilledButton.icon(
-                        onPressed: () => widget.onNavigateTab('Pending Approvals'),
+                        onPressed: () =>
+                            widget.onNavigateTab('Pending Approvals'),
                         style: FilledButton.styleFrom(
                           backgroundColor: const Color(0xFFFFD54F),
                           foregroundColor: const Color(0xFF004D40),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                         icon: const Icon(Icons.rate_review_rounded, size: 16),
-                        label: Text('Artisans ($pendingArtisans)', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 12)),
+                        label: Text(
+                          'Artisans ($pendingArtisans)',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
                       ),
-                    if (pendingQuests > 0)
+                    if (pendingTasks > 0)
                       OutlinedButton.icon(
-                        onPressed: () => widget.onNavigateTab('Quest Approvals'),
+                        onPressed: () =>
+                            widget.onNavigateTab('Quest Approvals'),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.white,
-                          side: const BorderSide(color: Colors.white, width: 1.5),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          side: const BorderSide(
+                            color: Colors.white,
+                            width: 1.5,
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                         icon: const Icon(Icons.stars_rounded, size: 16),
-                        label: Text('Quests ($pendingQuests)', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 12)),
+                        label: Text(
+                          'Tasks ($pendingTasks)',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
                       ),
                     if (pendingReports > 0)
                       FilledButton.icon(
-                        onPressed: () => widget.onNavigateTab('Forum Moderation'),
+                        onPressed: () =>
+                            widget.onNavigateTab('Forum Moderation'),
                         style: FilledButton.styleFrom(
                           backgroundColor: const Color(0xFFEF4444),
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                         icon: const Icon(Icons.flag_rounded, size: 16),
-                        label: Text('Forum Flags ($pendingReports)', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 12)),
+                        label: Text(
+                          'Forum Flags ($pendingReports)',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
                       ),
                   ],
                 ),
@@ -462,7 +570,11 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
                     color: Color(0xFFFFD54F),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.bolt_rounded, color: Color(0xFF004D40), size: 30),
+                  child: const Icon(
+                    Icons.bolt_rounded,
+                    color: Color(0xFF004D40),
+                    size: 30,
+                  ),
                 ),
                 const SizedBox(width: 20),
                 Expanded(
@@ -471,12 +583,18 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
                     children: [
                       Text(
                         'Moderation Action Required ($totalActions Pending)',
-                        style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: Colors.white),
+                        style: GoogleFonts.dmSerifDisplay(
+                          fontSize: 20,
+                          color: Colors.white,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         message,
-                        style: GoogleFonts.plusJakartaSans(fontSize: 13, color: const Color(0xFFFFD54F)),
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 13,
+                          color: const Color(0xFFFFD54F),
+                        ),
                       ),
                     ],
                   ),
@@ -488,39 +606,75 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
                   children: [
                     if (pendingArtisans > 0)
                       FilledButton.icon(
-                        onPressed: () => widget.onNavigateTab('Pending Approvals'),
+                        onPressed: () =>
+                            widget.onNavigateTab('Pending Approvals'),
                         style: FilledButton.styleFrom(
                           backgroundColor: const Color(0xFFFFD54F),
                           foregroundColor: const Color(0xFF004D40),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
                         ),
                         icon: const Icon(Icons.rate_review_rounded, size: 18),
-                        label: Text('Artisans ($pendingArtisans)', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold)),
+                        label: Text(
+                          'Artisans ($pendingArtisans)',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
-                    if (pendingQuests > 0)
+                    if (pendingTasks > 0)
                       OutlinedButton.icon(
-                        onPressed: () => widget.onNavigateTab('Quest Approvals'),
+                        onPressed: () =>
+                            widget.onNavigateTab('Quest Approvals'),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.white,
-                          side: const BorderSide(color: Colors.white, width: 1.5),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          side: const BorderSide(
+                            color: Colors.white,
+                            width: 1.5,
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
                         ),
                         icon: const Icon(Icons.stars_rounded, size: 18),
-                        label: Text('Quests ($pendingQuests)', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold)),
+                        label: Text(
+                          'Tasks ($pendingTasks)',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     if (pendingReports > 0)
                       FilledButton.icon(
-                        onPressed: () => widget.onNavigateTab('Forum Moderation'),
+                        onPressed: () =>
+                            widget.onNavigateTab('Forum Moderation'),
                         style: FilledButton.styleFrom(
                           backgroundColor: const Color(0xFFEF4444),
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
                         ),
                         icon: const Icon(Icons.flag_rounded, size: 18),
-                        label: Text('Forum Flags ($pendingReports)', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold)),
+                        label: Text(
+                          'Forum Flags ($pendingReports)',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                   ],
                 ),
@@ -552,7 +706,7 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
               color: Colors.black.withValues(alpha: 0.02),
               blurRadius: 10,
               offset: const Offset(0, 4),
-            )
+            ),
           ],
         ),
         child: Column(
@@ -563,29 +717,48 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
               children: [
                 Container(
                   padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(12)),
+                  decoration: BoxDecoration(
+                    color: bgColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   child: Icon(icon, color: color, size: 20),
                 ),
                 if (onTap != null)
-                  Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Colors.grey[400]),
+                  Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 12,
+                    color: Colors.grey[400],
+                  ),
               ],
             ),
             const SizedBox(height: 16),
             Text(
               value,
-              style: GoogleFonts.dmSerifDisplay(fontSize: 24, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+              style: GoogleFonts.dmSerifDisplay(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF0F172A),
+              ),
             ),
             const SizedBox(height: 2),
             Text(
               title,
-              style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF64748B)),
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF64748B),
+              ),
             ),
             const SizedBox(height: 6),
             Text(
               subtitle,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.plusJakartaSans(fontSize: 11, color: color, fontWeight: FontWeight.w600),
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 11,
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
         ),
@@ -611,18 +784,23 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
       if (rawTime.isNotEmpty) {
         try {
           final dt = DateTime.parse(rawTime).toLocal();
-          formattedTime = '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')} (${dt.day}/${dt.month})';
+          formattedTime =
+              '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')} (${dt.day}/${dt.month})';
         } catch (_) {}
       }
 
       events.add({
-        'icon': isActioned ? Icons.delete_forever_rounded : Icons.check_circle_rounded,
+        'icon': isActioned
+            ? Icons.delete_forever_rounded
+            : Icons.check_circle_rounded,
         'color': isActioned ? const Color(0xFFEF4444) : const Color(0xFF10B981),
         'title': isActioned
             ? 'Post Deleted by Admin $modName'
             : 'Report Dismissed by Admin $modName',
         'time': formattedTime,
-        'subtitle': notes.isNotEmpty ? notes : (record['reason']?.toString() ?? 'Moderation action taken'),
+        'subtitle': notes.isNotEmpty
+            ? notes
+            : (record['reason']?.toString() ?? 'Moderation action taken'),
       });
     }
 
@@ -633,7 +811,8 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
         'color': const Color(0xFF10B981),
         'title': '${artisan.name} Studio Verified',
         'time': artisan.verifiedDate,
-        'subtitle': 'License ${artisan.licenseNo} • ${artisan.plaques} Digital Plaques Issued (${artisan.state})',
+        'subtitle':
+            'License ${artisan.licenseNo} • ${artisan.plaques} Digital Plaques Issued (${artisan.state})',
       });
     }
 
@@ -644,7 +823,8 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
         'color': const Color(0xFFEF4444),
         'title': 'User Account Suspended',
         'time': 'Active Enforcement',
-        'subtitle': 'Access revoked for ${user.displayName ?? user.email} (${user.role})',
+        'subtitle':
+            'Access revoked for ${user.displayName ?? user.email} (${user.role})',
       });
     }
 
@@ -663,7 +843,10 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
             children: [
               Text(
                 'Recent Unified Audit Log & Activity',
-                style: GoogleFonts.dmSerifDisplay(fontSize: 18, color: const Color(0xFF0F172A)),
+                style: GoogleFonts.dmSerifDisplay(
+                  fontSize: 18,
+                  color: const Color(0xFF0F172A),
+                ),
               ),
               TextButton.icon(
                 onPressed: () => widget.onNavigateTab('Forum Moderation'),
@@ -679,18 +862,25 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
               child: Center(
                 child: Text(
                   'No recent audit events recorded yet.',
-                  style: GoogleFonts.plusJakartaSans(color: Colors.grey[500], fontSize: 13),
+                  style: GoogleFonts.plusJakartaSans(
+                    color: Colors.grey[500],
+                    fontSize: 13,
+                  ),
                 ),
               ),
             )
           else
-            ...events.take(5).map((e) => _buildAuditTile(
-                  icon: e['icon'] as IconData,
-                  color: e['color'] as Color,
-                  title: e['title'] as String,
-                  time: e['time'] as String,
-                  subtitle: e['subtitle'] as String,
-                )),
+            ...events
+                .take(5)
+                .map(
+                  (e) => _buildAuditTile(
+                    icon: e['icon'] as IconData,
+                    color: e['color'] as Color,
+                    title: e['title'] as String,
+                    time: e['time'] as String,
+                    subtitle: e['subtitle'] as String,
+                  ),
+                ),
         ],
       ),
     );
@@ -733,7 +923,10 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
             children: [
               Text(
                 'Artisan State Distribution',
-                style: GoogleFonts.dmSerifDisplay(fontSize: 18, color: const Color(0xFF0F172A)),
+                style: GoogleFonts.dmSerifDisplay(
+                  fontSize: 18,
+                  color: const Color(0xFF0F172A),
+                ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -743,7 +936,11 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
                 ),
                 child: Text(
                   '${activeArtisans.length} Total Studios',
-                  style: GoogleFonts.plusJakartaSans(fontSize: 10.5, fontWeight: FontWeight.bold, color: const Color(0xFF475569)),
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF475569),
+                  ),
                 ),
               ),
             ],
@@ -751,7 +948,10 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
           const SizedBox(height: 6),
           Text(
             'Live geographic distribution of verified studios',
-            style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[600]),
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 11,
+              color: Colors.grey[600],
+            ),
           ),
           const SizedBox(height: 20),
           if (sortedEntries.isEmpty)
@@ -760,7 +960,10 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
               child: Center(
                 child: Text(
                   'No verified artisans found.',
-                  style: GoogleFonts.plusJakartaSans(color: Colors.grey[500], fontSize: 13),
+                  style: GoogleFonts.plusJakartaSans(
+                    color: Colors.grey[500],
+                    fontSize: 13,
+                  ),
                 ),
               ),
             )
@@ -812,19 +1015,29 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
         children: [
           Text(
             'Ecosystem Craft & Community Breakdown',
-            style: GoogleFonts.dmSerifDisplay(fontSize: 18, color: const Color(0xFF0F172A)),
+            style: GoogleFonts.dmSerifDisplay(
+              fontSize: 18,
+              color: const Color(0xFF0F172A),
+            ),
           ),
           const SizedBox(height: 6),
           Text(
             'Specialization distribution and account health analytics',
-            style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[600]),
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 11,
+              color: Colors.grey[600],
+            ),
           ),
           const SizedBox(height: 16),
 
           // Craft Category Chips
           Text(
             'Active Craft Disciplines',
-            style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF334155)),
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF334155),
+            ),
           ),
           const SizedBox(height: 8),
           Wrap(
@@ -832,20 +1045,33 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
             runSpacing: 8,
             children: craftCounts.entries.map((e) {
               return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFF004D40).withValues(alpha: 0.06),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFF004D40).withValues(alpha: 0.15)),
+                  border: Border.all(
+                    color: const Color(0xFF004D40).withValues(alpha: 0.15),
+                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.brush_rounded, size: 14, color: Color(0xFF004D40)),
+                    const Icon(
+                      Icons.brush_rounded,
+                      size: 14,
+                      color: Color(0xFF004D40),
+                    ),
                     const SizedBox(width: 6),
                     Text(
                       '${e.key}: ${e.value}',
-                      style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF004D40)),
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF004D40),
+                      ),
                     ),
                   ],
                 ),
@@ -860,7 +1086,11 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
           // User Breakdown Row
           Text(
             'Account Security & User Status',
-            style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF334155)),
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF334155),
+            ),
           ),
           const SizedBox(height: 12),
           Row(
@@ -875,9 +1105,21 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Active Accounts', style: GoogleFonts.plusJakartaSans(fontSize: 11, color: const Color(0xFF047857))),
+                      Text(
+                        'Active Accounts',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          color: const Color(0xFF047857),
+                        ),
+                      ),
                       const SizedBox(height: 4),
-                      Text('$activeUsersCount Users', style: GoogleFonts.dmSerifDisplay(fontSize: 18, color: const Color(0xFF065F46))),
+                      Text(
+                        '$activeUsersCount Users',
+                        style: GoogleFonts.dmSerifDisplay(
+                          fontSize: 18,
+                          color: const Color(0xFF065F46),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -887,15 +1129,33 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: suspendedUsersCount > 0 ? const Color(0xFFFEF2F2) : const Color(0xFFF8FAFC),
+                    color: suspendedUsersCount > 0
+                        ? const Color(0xFFFEF2F2)
+                        : const Color(0xFFF8FAFC),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Suspended Accounts', style: GoogleFonts.plusJakartaSans(fontSize: 11, color: suspendedUsersCount > 0 ? const Color(0xFFB91C1C) : Colors.grey[600])),
+                      Text(
+                        'Suspended Accounts',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          color: suspendedUsersCount > 0
+                              ? const Color(0xFFB91C1C)
+                              : Colors.grey[600],
+                        ),
+                      ),
                       const SizedBox(height: 4),
-                      Text('$suspendedUsersCount Accounts', style: GoogleFonts.dmSerifDisplay(fontSize: 18, color: suspendedUsersCount > 0 ? const Color(0xFF991B1B) : const Color(0xFF0F172A))),
+                      Text(
+                        '$suspendedUsersCount Accounts',
+                        style: GoogleFonts.dmSerifDisplay(
+                          fontSize: 18,
+                          color: suspendedUsersCount > 0
+                              ? const Color(0xFF991B1B)
+                              : const Color(0xFF0F172A),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -921,7 +1181,10 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
         children: [
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
             child: Icon(icon, color: color, size: 16),
           ),
           const SizedBox(width: 14),
@@ -937,13 +1200,20 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
                         title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF1E293B)),
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF1E293B),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Text(
                       time,
-                      style: GoogleFonts.plusJakartaSans(fontSize: 10, color: Colors.grey[500]),
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 10,
+                        color: Colors.grey[500],
+                      ),
                     ),
                   ],
                 ),
@@ -952,7 +1222,10 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
                   subtitle,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[600]),
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11,
+                    color: Colors.grey[600],
+                  ),
                 ),
               ],
             ),
@@ -962,7 +1235,12 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
     );
   }
 
-  Widget _buildStateRow(String label, double percentage, String countText, Color barColor) {
+  Widget _buildStateRow(
+    String label,
+    double percentage,
+    String countText,
+    Color barColor,
+  ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Column(
@@ -971,8 +1249,22 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(label, style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF334155))),
-              Text(countText, style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: barColor)),
+              Text(
+                label,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF334155),
+                ),
+              ),
+              Text(
+                countText,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: barColor,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 6),

@@ -2,13 +2,15 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:warisan_kita/data/repositories/gamification_repository.dart';
+import 'package:warisan_kita/domain/models/active_quest.dart';
 import 'package:warisan_kita/domain/models/artisan_task_request.dart';
 import 'package:warisan_kita/domain/models/badge.dart';
 import 'package:warisan_kita/domain/models/heritage_task.dart' as quest_domain;
 import 'package:warisan_kita/domain/models/heritage_task_change_request.dart';
 import 'package:warisan_kita/domain/models/quest.dart';
-import 'package:warisan_kita/domain/models/quest_change_request.dart';
+import 'package:warisan_kita/domain/models/quest_participation.dart';
 import 'package:warisan_kita/domain/models/task_progress.dart';
+import 'package:warisan_kita/domain/models/artisan_heritage_analytics.dart';
 
 class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
   final GamificationRepository _repository;
@@ -24,6 +26,17 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
 
   String? _questProgressStatus;
   String? get questProgressStatus => _questProgressStatus;
+  QuestParticipation? _questParticipation;
+  DateTime? get questStartedAt => _questParticipation?.startedAt;
+
+  ActiveQuestState _activeQuestState = const ActiveQuestState.empty();
+  ActiveQuestState get activeQuestState => _activeQuestState;
+  ActiveQuestSummary? get activeQuest => _activeQuestState.activeQuest;
+  bool get hasActiveQuest => _activeQuestState.hasActiveQuest;
+  String? get activeQuestWarning => _activeQuestState.warningMessage;
+  QuestStartDisposition? _lastQuestStartDisposition;
+  QuestStartDisposition? get lastQuestStartDisposition =>
+      _lastQuestStartDisposition;
 
   bool _isStartingQuest = false;
   bool get isStartingQuest => _isStartingQuest;
@@ -40,6 +53,11 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
   int _loadRequestId = 0;
 
   static const int dwellRequiredSeconds = 900;
+  static const int maxTaskXpReward = 500;
+  static const int maxTaskTitleLength = 80;
+  static final RegExp _unsupportedControlCharacters = RegExp(
+    r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]',
+  );
   Timer? _dwellTimer;
   quest_domain.HeritageTask? _goToWorkshopTask;
   quest_domain.HeritageTask? _stayFifteenMinutesTask;
@@ -54,6 +72,9 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
   bool _isProcessingProximity = false;
   bool? _pendingProximity;
   bool _requiresManualResume = false;
+  bool get requiresJourneyResume =>
+      _questProgressStatus?.toUpperCase() == 'IN_PROGRESS' &&
+      _requiresManualResume;
   bool _isQuestBadgeEarned = false;
   bool get isQuestBadgeEarned => _isQuestBadgeEarned;
   bool _hasPendingQuestCompletionCelebration = false;
@@ -61,25 +82,14 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
       _hasPendingQuestCompletionCelebration;
 
   bool get canResumeDwellTracking {
-    final dwellTask = _stayFifteenMinutesTask;
     return _questProgressStatus?.toUpperCase() == 'IN_PROGRESS' &&
         _isInsideQuestGeofence &&
         _requiresManualResume &&
-        !_isDwellTracking &&
-        dwellTask != null &&
-        !isTaskCompleted(dwellTask);
+        !_isDwellTracking;
   }
 
   Quest? _artisanQuest;
   Quest? get artisanQuest => _artisanQuest;
-
-  QuestChangeRequest? _pendingArtisanQuestChange;
-  QuestChangeRequest? get pendingArtisanQuestChange =>
-      _pendingArtisanQuestChange;
-
-  QuestChangeRequest? _rejectedArtisanQuestChange;
-  QuestChangeRequest? get rejectedArtisanQuestChange =>
-      _rejectedArtisanQuestChange;
 
   List<quest_domain.HeritageTask> _artisanTasks = [];
   List<quest_domain.HeritageTask> get artisanTasks =>
@@ -90,9 +100,6 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
 
   bool _isAddingTask = false;
   bool get isAddingTask => _isAddingTask;
-
-  bool _isUpdatingArtisanQuest = false;
-  bool get isUpdatingArtisanQuest => _isUpdatingArtisanQuest;
 
   List<HeritageTaskChangeRequest> _artisanTaskChangeRequests = [];
   List<HeritageTaskChangeRequest> get artisanTaskChangeRequests =>
@@ -129,6 +136,17 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
 
   String? _artisanTaskError;
   String? get artisanTaskError => _artisanTaskError;
+
+  ArtisanHeritageAnalytics? _artisanHeritageAnalytics;
+  ArtisanHeritageAnalytics? get artisanHeritageAnalytics =>
+      _artisanHeritageAnalytics;
+
+  bool _isLoadingArtisanHeritageAnalytics = false;
+  bool get isLoadingArtisanHeritageAnalytics =>
+      _isLoadingArtisanHeritageAnalytics;
+
+  String? _artisanHeritageAnalyticsError;
+  String? get artisanHeritageAnalyticsError => _artisanHeritageAnalyticsError;
 
   List<HeritageStamp> _stamps = [];
   List<HeritageStamp> get stamps => _stamps;
@@ -216,6 +234,50 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
         .fold(0, (total, task) => total + task.xpReward);
   }
 
+  bool canStartQuest(String questId) {
+    final current = activeQuest;
+    return current == null || current.questId == questId;
+  }
+
+  bool isActiveQuest(String questId) => activeQuest?.questId == questId;
+
+  String activeQuestConflictMessage() {
+    final current = activeQuest;
+    if (current == null) return 'Another journey is currently active.';
+    return 'You are currently exploring “${current.questTitle}” at '
+        '${current.studioName}. Complete that journey before starting a new one.';
+  }
+
+  Future<void> loadActiveQuestState() async {
+    try {
+      _activeQuestState = await _repository.getActiveQuestState();
+      notifyListeners();
+    } catch (error, stackTrace) {
+      debugPrint('GamificationViewModel load active quest error: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
+  }
+
+  Future<void> loadArtisanHeritageAnalytics() async {
+    if (_isLoadingArtisanHeritageAnalytics) return;
+    _isLoadingArtisanHeritageAnalytics = true;
+    _artisanHeritageAnalyticsError = null;
+    notifyListeners();
+    try {
+      _artisanHeritageAnalytics = await _repository
+          .getArtisanHeritageAnalytics();
+    } catch (error, stackTrace) {
+      debugPrint('GamificationViewModel artisan analytics error: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      _artisanHeritageAnalytics = null;
+      _artisanHeritageAnalyticsError =
+          'Heritage analytics are currently unavailable.';
+    } finally {
+      _isLoadingArtisanHeritageAnalytics = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> loadPassport() async {
     if (_isLoadingPassport) {
       _passportRefreshRequested = true;
@@ -287,9 +349,7 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
         return;
       }
 
-      final preserveRunningQuest =
-          runningQuestId != null &&
-          quests.any((quest) => quest.id == runningQuestId);
+      final preserveRunningQuest = runningQuestId != null;
       if (!preserveRunningQuest) {
         _selectedQuest = null;
         _heritageTasks = [];
@@ -340,15 +400,27 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
 
     try {
       final tasks = await _repository.getHeritageTasks(quest.id);
-      String? progressStatus;
+      QuestParticipation? participation;
       var badgeEarned = false;
+      ActiveQuestState? activeState;
       try {
-        progressStatus = await _repository.getCurrentQuestProgressStatus(
+        participation = await _repository.getCurrentQuestParticipation(
           quest.id,
         );
+      } catch (error, stackTrace) {
+        debugPrint('GamificationViewModel load quest participation: $error');
+        debugPrintStack(stackTrace: stackTrace);
+      }
+      try {
         badgeEarned = await _repository.hasEarnedQuestStamp(quest.id);
       } catch (error, stackTrace) {
-        debugPrint('GamificationViewModel load quest progress error: $error');
+        debugPrint('GamificationViewModel load quest stamp error: $error');
+        debugPrintStack(stackTrace: stackTrace);
+      }
+      try {
+        activeState = await _repository.getActiveQuestState();
+      } catch (error, stackTrace) {
+        debugPrint('GamificationViewModel refresh active quest: $error');
         debugPrintStack(stackTrace: stackTrace);
       }
 
@@ -357,8 +429,10 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
       }
 
       _heritageTasks = tasks;
-      _questProgressStatus = progressStatus;
-      _isQuestBadgeEarned = badgeEarned;
+      _questParticipation = participation;
+      _questProgressStatus = participation?.status;
+      _isQuestBadgeEarned = badgeEarned || participation?.isCompleted == true;
+      if (activeState != null) _activeQuestState = activeState;
       _identifySystemTasks();
 
       final progress = await _repository.getTaskProgress(
@@ -369,26 +443,12 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
         _taskProgress[item.taskId] = item;
       }
 
-      final dwellTask = _stayFifteenMinutesTask;
-      final dwellProgress = dwellTask == null
-          ? null
-          : _taskProgress[dwellTask.id];
-      if (dwellTask != null &&
-          dwellProgress != null &&
-          !dwellProgress.isCompleted &&
-          dwellProgress.trackingStartedAt != null) {
-        final paused = await _repository.pauseTimedTask(
-          taskId: dwellTask.id,
-          progressSeconds: dwellProgress.progressSeconds,
-        );
-        if (requestId != _loadRequestId) return;
-        _taskProgress[dwellTask.id] = paused;
-      }
       _syncDisplayedDwellProgress();
+      // A persisted journey is restored in a paused state. Location updates may
+      // make Resume available, but never restart activity tracking by themselves.
       _requiresManualResume =
-          progressStatus?.toUpperCase() == 'IN_PROGRESS' &&
-          dwellTask != null &&
-          !(dwellProgress?.isCompleted ?? false);
+          _questProgressStatus?.toUpperCase() == 'IN_PROGRESS' &&
+          !isQuestPermanentlyCompleted;
     } catch (error, stackTrace) {
       if (requestId != _loadRequestId) {
         return;
@@ -424,10 +484,12 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
     _startQuestError = null;
     notifyListeners();
     try {
-      _questProgressStatus = await _repository.startQuest(
-        questId: quest.id,
-        taskIds: _heritageTasks.map((task) => task.id).toList(growable: false),
-      );
+      _activeQuestState = await _repository.getActiveQuestState();
+      if (!canStartQuest(quest.id)) {
+        _lastQuestStartDisposition = QuestStartDisposition.blockedByOtherQuest;
+        _startQuestError = activeQuestConflictMessage();
+        return false;
+      }
       _identifySystemTasks();
       final arrivalTask = _goToWorkshopTask;
       final dwellTask = _stayFifteenMinutesTask;
@@ -435,6 +497,35 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
         throw StateError(
           'The two required system activities are not configured correctly.',
         );
+      }
+      final startResult = await _repository.startQuest(
+        questId: quest.id,
+        taskIds: _heritageTasks.map((task) => task.id).toList(growable: false),
+      );
+      _activeQuestState = startResult.activeState;
+      _lastQuestStartDisposition = startResult.disposition;
+      if (!startResult.isSuccessful) {
+        _startQuestError =
+            startResult.disposition ==
+                QuestStartDisposition.dataIntegrityConflict
+            ? _activeQuestState.warningMessage ??
+                  'Multiple active journeys were found. Please contact support.'
+            : activeQuestConflictMessage();
+        return false;
+      }
+      _questParticipation = startResult.participation;
+      _questProgressStatus = _questParticipation?.status;
+
+      if (startResult.wasResumed) {
+        final progress = await _repository.getTaskProgress(
+          _heritageTasks.map((task) => task.id).toList(growable: false),
+        );
+        for (final item in progress) {
+          _taskProgress[item.taskId] = item;
+        }
+        _syncDisplayedDwellProgress();
+        _requiresManualResume = true;
+        return true;
       }
 
       _isInsideQuestGeofence = true;
@@ -465,14 +556,36 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   bool get areAllHeritageTasksCompleted {
-    return _heritageTasks.isNotEmpty && _heritageTasks.every(isTaskCompleted);
+    if (isQuestPermanentlyCompleted) return true;
+    return areAllRequiredHeritageTasksCompleted;
   }
 
   bool get areAllRequiredHeritageTasksCompleted {
-    final requiredTasks = _heritageTasks
-        .where((task) => task.isRequired)
-        .toList(growable: false);
+    if (isQuestPermanentlyCompleted) return true;
+    final requiredTasks = effectiveRequiredHeritageTasks;
     return requiredTasks.isNotEmpty && requiredTasks.every(isTaskCompleted);
+  }
+
+  bool get isQuestPermanentlyCompleted =>
+      _questProgressStatus?.toUpperCase() == 'COMPLETED' || _isQuestBadgeEarned;
+
+  bool isBonusTask(quest_domain.HeritageTask task) {
+    return _questParticipation?.isBonusTask(task) ?? false;
+  }
+
+  List<quest_domain.HeritageTask> get effectiveRequiredHeritageTasks =>
+      _heritageTasks
+          .where(
+            (task) =>
+                task.isRequired &&
+                !(_questParticipation?.isBonusTask(task) ?? false),
+          )
+          .toList(growable: false);
+
+  int get completedEffectiveRequiredTaskCount {
+    final requiredTasks = effectiveRequiredHeritageTasks;
+    if (isQuestPermanentlyCompleted) return requiredTasks.length;
+    return requiredTasks.where(isTaskCompleted).length;
   }
 
   bool consumeQuestCompletionCelebration() {
@@ -490,6 +603,9 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
 
   void _markQuestFullyCompleted() {
     _questProgressStatus = 'COMPLETED';
+    if (activeQuest?.questId == _selectedQuest?.id) {
+      _activeQuestState = const ActiveQuestState.empty();
+    }
     _cancelDwellTimer();
   }
 
@@ -499,7 +615,13 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
 
   bool canVerifyTaskWithQr(quest_domain.HeritageTask task) {
     if (task.isSystemTask) return false;
-    if (_questProgressStatus?.toUpperCase() != 'IN_PROGRESS' ||
+    final canCompleteJourneyTask =
+        _questProgressStatus?.toUpperCase() == 'IN_PROGRESS' &&
+        !isQuestPermanentlyCompleted;
+    final canCompleteBonusTask =
+        isQuestPermanentlyCompleted && isBonusTask(task);
+    if (_requiresManualResume ||
+        (!canCompleteJourneyTask && !canCompleteBonusTask) ||
         isTaskCompleted(task)) {
       return false;
     }
@@ -511,9 +633,15 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
     if (task.isSystemTask) {
       return 'Completes Automatically';
     }
-    if (_questProgressStatus?.toUpperCase() != 'IN_PROGRESS') {
+    final canCompleteJourneyTask =
+        _questProgressStatus?.toUpperCase() == 'IN_PROGRESS' &&
+        !isQuestPermanentlyCompleted;
+    final canCompleteBonusTask =
+        isQuestPermanentlyCompleted && isBonusTask(task);
+    if (!canCompleteJourneyTask && !canCompleteBonusTask) {
       return 'Start Quest to Scan';
     }
+    if (_requiresManualResume) return 'Resume Quest to Scan';
     if (isStayFifteenMinutesTask(task) &&
         _displayedDwellSeconds < dwellRequiredSeconds) {
       return 'Complete 15 Minutes First';
@@ -531,6 +659,16 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
     _startQuestError = null;
     notifyListeners();
     try {
+      _activeQuestState = await _repository.getActiveQuestState();
+      final currentActiveQuest = activeQuest;
+      if (currentActiveQuest != null &&
+          currentActiveQuest.questId != quest.id) {
+        _startQuestError =
+            'Complete your active journey before attempting activities from '
+            'another quest.';
+        notifyListeners();
+        return false;
+      }
       _taskProgress[task.id] = await _repository.completeTaskWithArtisanQr(
         questId: quest.id,
         artisanId: quest.artisanId,
@@ -560,16 +698,20 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<bool> resumeSelectedQuest() async {
     if (!canResumeDwellTracking || _isStartingQuest) return false;
-    final dwellTask = _stayFifteenMinutesTask!;
 
     _isStartingQuest = true;
     _startQuestError = null;
     notifyListeners();
     try {
-      final progress = await _repository.startTimedTask(dwellTask.id);
-      _taskProgress[dwellTask.id] = progress;
-      _requiresManualResume = false;
-      _beginLocalDwellTimer(progress);
+      final dwellTask = _stayFifteenMinutesTask;
+      if (dwellTask != null && !isTaskCompleted(dwellTask)) {
+        final progress = await _repository.startTimedTask(dwellTask.id);
+        _taskProgress[dwellTask.id] = progress;
+        _requiresManualResume = false;
+        _beginLocalDwellTimer(progress);
+      } else {
+        _requiresManualResume = false;
+      }
       return true;
     } catch (error, stackTrace) {
       debugPrint('GamificationViewModel manual resume error: $error');
@@ -664,7 +806,11 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
   void _beginLocalDwellTimer(TaskProgress progress) {
     _cancelDwellTimer();
     _syncDisplayedDwellProgress();
-    if (progress.isCompleted || progress.trackingStartedAt == null) return;
+    if (_requiresManualResume ||
+        progress.isCompleted ||
+        progress.trackingStartedAt == null) {
+      return;
+    }
 
     _isDwellTracking = true;
     _dwellTimer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -687,7 +833,7 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
 
     var seconds = progress.progressSeconds;
     final startedAt = progress.trackingStartedAt;
-    if (!progress.isCompleted && _isDwellTracking && startedAt != null) {
+    if (!progress.isCompleted && startedAt != null) {
       final elapsed = DateTime.now().toUtc().difference(startedAt).inSeconds;
       seconds += elapsed < 0 ? 0 : elapsed;
     }
@@ -706,7 +852,12 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> _completeDwellTask() async {
     if (_isCompletingDwellTask) return;
     final dwellTask = _stayFifteenMinutesTask;
-    if (dwellTask == null || isTaskCompleted(dwellTask)) return;
+    if (dwellTask == null ||
+        isTaskCompleted(dwellTask) ||
+        !_isInsideQuestGeofence ||
+        _requiresManualResume) {
+      return;
+    }
 
     _isCompletingDwellTask = true;
     _cancelDwellTimer();
@@ -748,6 +899,7 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
     _cancelDwellTimer();
     _goToWorkshopTask = null;
     _stayFifteenMinutesTask = null;
+    _questParticipation = null;
     _taskProgress.clear();
     _isInsideQuestGeofence = false;
     _displayedDwellSeconds = 0;
@@ -791,8 +943,6 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
 
     _artisanQuest = null;
     _artisanTasks = [];
-    _pendingArtisanQuestChange = null;
-    _rejectedArtisanQuestChange = null;
     _artisanTaskChangeRequests = [];
     _artisanTaskError = null;
     _isLoadingArtisanQuest = true;
@@ -802,7 +952,6 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
       final quest = await _repository.getQuestForCurrentArtisan();
       _artisanQuest = quest;
       if (quest != null) {
-        await _loadArtisanQuestChangeRequest(quest.id);
         _artisanTasks = await _repository.getArtisanHeritageTasks(quest.id);
         await _loadArtisanTaskChangeRequests();
       }
@@ -838,6 +987,87 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  String _cleanSingleLine(String value) =>
+      value.trim().replaceAll(RegExp(r'\s+'), ' ');
+
+  String? _boundedTextError({
+    required String value,
+    required String label,
+    required int maxLength,
+  }) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) {
+      return '$label must not be empty.';
+    }
+    if (_unsupportedControlCharacters.hasMatch(trimmed)) {
+      return '$label contains unsupported control characters.';
+    }
+    if (trimmed.length > maxLength) {
+      return '$label must be $maxLength characters or fewer.';
+    }
+    return null;
+  }
+
+  String? _taskInputError({required String title, required int xpReward}) {
+    final titleError = _boundedTextError(
+      value: title,
+      label: 'Task title',
+      maxLength: maxTaskTitleLength,
+    );
+    if (titleError != null) {
+      return titleError;
+    }
+    if (xpReward < 0 || xpReward > maxTaskXpReward) {
+      return 'XP reward must be between 0 and $maxTaskXpReward.';
+    }
+    return null;
+  }
+
+  String _normalizedTaskTitle(String value) =>
+      _cleanSingleLine(value).toLowerCase();
+
+  bool _hasDuplicateTaskTitle(String title, {String? excludingTaskId}) {
+    final normalized = _normalizedTaskTitle(title);
+    final matchesTask = _artisanTasks.any(
+      (task) =>
+          task.id != excludingTaskId &&
+          !task.isArchived &&
+          task.status.toUpperCase() != 'REJECTED' &&
+          _normalizedTaskTitle(task.title) == normalized,
+    );
+    if (matchesTask) {
+      return true;
+    }
+
+    return _artisanTaskChangeRequests.any(
+      (request) =>
+          request.taskId != excludingTaskId &&
+          request.requestType.toUpperCase() == 'EDIT' &&
+          request.status.toUpperCase() == 'PENDING_APPROVAL' &&
+          request.proposedTitle != null &&
+          _normalizedTaskTitle(request.proposedTitle!) == normalized,
+    );
+  }
+
+  bool _validateTaskInput({
+    required String title,
+    required int xpReward,
+    String? excludingTaskId,
+  }) {
+    final inputError = _taskInputError(title: title, xpReward: xpReward);
+    if (inputError != null) {
+      _artisanTaskError = inputError;
+      notifyListeners();
+      return false;
+    }
+    if (_hasDuplicateTaskTitle(title, excludingTaskId: excludingTaskId)) {
+      _artisanTaskError = 'A task with this title already exists.';
+      notifyListeners();
+      return false;
+    }
+    return true;
+  }
+
   Future<bool> addHeritageTask({
     required String title,
     required bool isRequired,
@@ -845,17 +1075,10 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
   }) async {
     if (_isAddingTask) return false;
 
-    final cleanTitle = title.trim();
-    if (cleanTitle.isEmpty) {
-      _artisanTaskError = 'Task title must not be empty.';
-      notifyListeners();
+    if (!_validateTaskInput(title: title, xpReward: xpReward)) {
       return false;
     }
-    if (xpReward < 0) {
-      _artisanTaskError = 'XP reward must be 0 or more.';
-      notifyListeners();
-      return false;
-    }
+    final cleanTitle = _cleanSingleLine(title);
 
     final quest = _artisanQuest;
     if (quest == null) {
@@ -898,204 +1121,6 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
-  Future<bool> updateArtisanQuest({
-    required String title,
-    required String description,
-    required String category,
-  }) async {
-    if (_isUpdatingArtisanQuest) return false;
-
-    final quest = _artisanQuest;
-    if (quest == null) {
-      _artisanTaskError = 'No cultural quest is assigned to this artisan.';
-      notifyListeners();
-      return false;
-    }
-
-    final cleanTitle = title.trim();
-    final cleanDescription = description.trim();
-    final cleanCategory = category.trim();
-    if (cleanTitle.isEmpty ||
-        cleanDescription.isEmpty ||
-        cleanCategory.isEmpty) {
-      _artisanTaskError =
-          'Quest title, description, and category are required.';
-      notifyListeners();
-      return false;
-    }
-
-    _artisanTaskError = null;
-    _isUpdatingArtisanQuest = true;
-    notifyListeners();
-
-    try {
-      _pendingArtisanQuestChange = await _repository.requestQuestUpdate(
-        questId: quest.id,
-        proposedTitle: cleanTitle,
-        proposedDescription: cleanDescription,
-        proposedCategory: cleanCategory,
-      );
-      _rejectedArtisanQuestChange = null;
-      return true;
-    } catch (error, stackTrace) {
-      debugPrint('GamificationViewModel update artisan quest error: $error');
-      debugPrintStack(stackTrace: stackTrace);
-      _artisanTaskError = _friendlyArtisanTaskError(
-        error,
-        fallback: 'The cultural quest could not be updated. Please try again.',
-      );
-      return false;
-    } finally {
-      _isUpdatingArtisanQuest = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> _loadArtisanQuestChangeRequest(String questId) async {
-    final requests = await _repository.getQuestChangeRequests(questId);
-    final latestRequest = requests.firstOrNull;
-    _pendingArtisanQuestChange = latestRequest?.isPending == true
-        ? latestRequest
-        : null;
-    _rejectedArtisanQuestChange =
-        latestRequest?.status.toUpperCase() == 'REJECTED'
-        ? latestRequest
-        : null;
-  }
-
-  Future<bool> updatePendingQuestUpdate({
-    required QuestChangeRequest request,
-    required String title,
-    required String description,
-    required String category,
-  }) async {
-    if (_isUpdatingArtisanQuest || !request.isPending) return false;
-
-    final quest = _artisanQuest;
-    if (quest == null || request.questId != quest.id) return false;
-
-    final cleanTitle = title.trim();
-    final cleanDescription = description.trim();
-    final cleanCategory = category.trim();
-    if (cleanTitle.isEmpty ||
-        cleanDescription.isEmpty ||
-        cleanCategory.isEmpty) {
-      _artisanTaskError =
-          'Quest title, description, and category are required.';
-      notifyListeners();
-      return false;
-    }
-
-    _isUpdatingArtisanQuest = true;
-    _artisanTaskError = null;
-    notifyListeners();
-    try {
-      _pendingArtisanQuestChange = await _repository.updatePendingQuestUpdate(
-        requestId: request.id,
-        questId: quest.id,
-        proposedTitle: cleanTitle,
-        proposedDescription: cleanDescription,
-        proposedCategory: cleanCategory,
-      );
-      return true;
-    } catch (error, stackTrace) {
-      debugPrint('GamificationViewModel update pending quest: $error');
-      debugPrintStack(stackTrace: stackTrace);
-      await loadArtisanQuestAndTasks();
-      _artisanTaskError =
-          'This request may already have been reviewed. The latest quest status has been reloaded.';
-      return false;
-    } finally {
-      _isUpdatingArtisanQuest = false;
-      notifyListeners();
-    }
-  }
-
-  Future<bool> resubmitRejectedQuestUpdate({
-    required QuestChangeRequest request,
-    required String title,
-    required String description,
-    required String category,
-  }) async {
-    if (_isUpdatingArtisanQuest || request.status.toUpperCase() != 'REJECTED') {
-      return false;
-    }
-
-    final quest = _artisanQuest;
-    if (quest == null || request.questId != quest.id) return false;
-
-    final cleanTitle = title.trim();
-    final cleanDescription = description.trim();
-    final cleanCategory = category.trim();
-    if (cleanTitle.isEmpty ||
-        cleanDescription.isEmpty ||
-        cleanCategory.isEmpty) {
-      _artisanTaskError =
-          'Quest title, description, and category are required.';
-      notifyListeners();
-      return false;
-    }
-
-    _isUpdatingArtisanQuest = true;
-    _artisanTaskError = null;
-    notifyListeners();
-    try {
-      _pendingArtisanQuestChange = await _repository
-          .resubmitRejectedQuestUpdate(
-            requestId: request.id,
-            questId: quest.id,
-            proposedTitle: cleanTitle,
-            proposedDescription: cleanDescription,
-            proposedCategory: cleanCategory,
-          );
-      _rejectedArtisanQuestChange = null;
-      return true;
-    } catch (error, stackTrace) {
-      debugPrint('GamificationViewModel resubmit rejected quest: $error');
-      debugPrintStack(stackTrace: stackTrace);
-      _artisanTaskError = _friendlyArtisanTaskError(
-        error,
-        fallback: 'The rejected quest update could not be resubmitted.',
-      );
-      return false;
-    } finally {
-      _isUpdatingArtisanQuest = false;
-      notifyListeners();
-    }
-  }
-
-  Future<bool> dismissRejectedQuestUpdate(QuestChangeRequest request) async {
-    if (_isUpdatingArtisanQuest || request.status.toUpperCase() != 'REJECTED') {
-      return false;
-    }
-
-    final quest = _artisanQuest;
-    if (quest == null || request.questId != quest.id) return false;
-
-    _isUpdatingArtisanQuest = true;
-    _artisanTaskError = null;
-    notifyListeners();
-    try {
-      await _repository.deleteRejectedQuestUpdate(
-        requestId: request.id,
-        questId: quest.id,
-      );
-      _rejectedArtisanQuestChange = null;
-      return true;
-    } catch (error, stackTrace) {
-      debugPrint('GamificationViewModel dismiss rejected quest: $error');
-      debugPrintStack(stackTrace: stackTrace);
-      _artisanTaskError = _friendlyArtisanTaskError(
-        error,
-        fallback: 'The rejected quest update could not be dismissed.',
-      );
-      return false;
-    } finally {
-      _isUpdatingArtisanQuest = false;
-      notifyListeners();
-    }
-  }
-
   HeritageTaskChangeRequest? pendingChangeForTask(String taskId) {
     final latestRequest = _artisanTaskChangeRequests
         .where((request) => request.taskId == taskId)
@@ -1130,14 +1155,14 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
   }) async {
     if (_isUpdatingNewTask || !_isUnapprovedCustomTask(task)) return false;
 
-    final cleanTitle = title.trim();
-    if (cleanTitle.isEmpty || xpReward < 0) {
-      _artisanTaskError = cleanTitle.isEmpty
-          ? 'Task title must not be empty.'
-          : 'XP reward must be 0 or more.';
-      notifyListeners();
+    if (!_validateTaskInput(
+      title: title,
+      xpReward: xpReward,
+      excludingTaskId: task.id,
+    )) {
       return false;
     }
+    final cleanTitle = _cleanSingleLine(title);
 
     _isUpdatingNewTask = true;
     _artisanTaskError = null;
@@ -1237,17 +1262,14 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
     if (_isSubmittingTaskChange) return false;
     if (!_canRequestTaskChange(task)) return false;
 
-    final cleanTitle = title.trim();
-    if (cleanTitle.isEmpty) {
-      _artisanTaskError = 'Task title must not be empty.';
-      notifyListeners();
+    if (!_validateTaskInput(
+      title: title,
+      xpReward: xpReward,
+      excludingTaskId: task.id,
+    )) {
       return false;
     }
-    if (xpReward < 0) {
-      _artisanTaskError = 'XP reward must be 0 or more.';
-      notifyListeners();
-      return false;
-    }
+    final cleanTitle = _cleanSingleLine(title);
     if (_matchesApprovedTask(
       task,
       title: cleanTitle,
@@ -1303,14 +1325,14 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
       return false;
     }
 
-    final cleanTitle = title.trim();
-    if (cleanTitle.isEmpty || xpReward < 0) {
-      _artisanTaskError = cleanTitle.isEmpty
-          ? 'Task title must not be empty.'
-          : 'XP reward must be 0 or more.';
-      notifyListeners();
+    if (!_validateTaskInput(
+      title: title,
+      xpReward: xpReward,
+      excludingTaskId: task.id,
+    )) {
       return false;
     }
+    final cleanTitle = _cleanSingleLine(title);
 
     _isSubmittingTaskChange = true;
     _lastTaskEditReverted = false;
@@ -1425,14 +1447,14 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
       return false;
     }
 
-    final cleanTitle = title.trim();
-    if (cleanTitle.isEmpty || xpReward < 0) {
-      _artisanTaskError = cleanTitle.isEmpty
-          ? 'Task title must not be empty.'
-          : 'XP reward must be 0 or more.';
-      notifyListeners();
+    if (!_validateTaskInput(
+      title: title,
+      xpReward: xpReward,
+      excludingTaskId: task.id,
+    )) {
       return false;
     }
+    final cleanTitle = _cleanSingleLine(title);
 
     _isSubmittingTaskChange = true;
     _lastTaskEditReverted = false;

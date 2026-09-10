@@ -59,7 +59,7 @@ class _AdminQuestApprovalsTabState extends State<AdminQuestApprovalsTab> {
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             Text(
-              'Gamification Moderation',
+              'Quest Moderation',
               style: GoogleFonts.dmSerifDisplay(
                 fontSize: isMobile ? 24 : 30,
                 color: const Color(0xFF0F172A),
@@ -80,7 +80,7 @@ class _AdminQuestApprovalsTabState extends State<AdminQuestApprovalsTab> {
         ),
         const SizedBox(height: 6),
         Text(
-          'Review new tasks and proposed changes before they go live.',
+          'Review new heritage tasks and proposed task changes before they go live.',
           style: GoogleFonts.plusJakartaSans(
             fontSize: 13,
             color: const Color(0xFF64748B),
@@ -114,11 +114,6 @@ class _AdminQuestApprovalsTabState extends State<AdminQuestApprovalsTab> {
             viewModel,
             GamificationModerationFilter.deleteRequests,
             'Delete Requests ${viewModel.deleteRequestCount}',
-          ),
-          _filterChip(
-            viewModel,
-            GamificationModerationFilter.questChanges,
-            'Quest Changes ${viewModel.questChangeCount}',
           ),
         ],
       ),
@@ -208,11 +203,20 @@ class _AdminQuestApprovalsTabState extends State<AdminQuestApprovalsTab> {
             ),
             const SizedBox(height: 12),
             Text(
-              'No pending requests in this category.',
+              'No Task Requests Pending',
               textAlign: TextAlign.center,
               style: GoogleFonts.dmSerifDisplay(
                 fontSize: 21,
                 color: const Color(0xFF0F172A),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'New task submissions and proposed task changes will appear here.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                color: const Color(0xFF64748B),
               ),
             ),
           ],
@@ -236,8 +240,6 @@ class _AdminQuestApprovalsTabState extends State<AdminQuestApprovalsTab> {
             ),
             GamificationModerationRequestType.taskChange =>
               _buildTaskChangeCard(viewModel, request, isMobile),
-            GamificationModerationRequestType.questChange =>
-              _buildQuestChangeCard(viewModel, request, isMobile),
           };
         },
       ),
@@ -365,61 +367,6 @@ class _AdminQuestApprovalsTabState extends State<AdminQuestApprovalsTab> {
       title: task.title,
       request: request,
       body: isDelete ? _deleteWarning(task.title) : _changesPanel(changes),
-      actions: _reviewActions(viewModel, request),
-    );
-  }
-
-  Widget _buildQuestChangeCard(
-    GamificationModerationViewModel viewModel,
-    GamificationModerationRequest request,
-    bool isMobile,
-  ) {
-    final quest = request.quest;
-    final change = request.questChange!;
-    final changes = <Widget>[];
-
-    if (change.proposedTitle != quest.title) {
-      changes.add(
-        _comparisonRow('Quest title', quest.title, change.proposedTitle),
-      );
-    }
-    if (change.proposedCategory != quest.category) {
-      changes.add(
-        _comparisonRow('Category', quest.category, change.proposedCategory),
-      );
-    }
-    if (change.proposedDescription != quest.description) {
-      changes.add(
-        _comparisonRow(
-          'Description',
-          quest.description,
-          change.proposedDescription,
-        ),
-      );
-    }
-
-    return _requestCard(
-      isMobile: isMobile,
-      header: Wrap(
-        spacing: 8,
-        runSpacing: 7,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          _requestTypeBadge(
-            '✎  QUEST CHANGE',
-            const Color(0xFF9A3412),
-            const Color(0xFFFFEDD5),
-          ),
-          _pill(
-            'PENDING REVIEW',
-            background: const Color(0xFFFEF3C7),
-            foreground: const Color(0xFFB45309),
-          ),
-        ],
-      ),
-      title: quest.title,
-      request: request,
-      body: _changesPanel(changes),
       actions: _reviewActions(viewModel, request),
     );
   }
@@ -620,7 +567,6 @@ class _AdminQuestApprovalsTabState extends State<AdminQuestApprovalsTab> {
       GamificationModerationRequestType.newTask => 'Approve & Publish',
       GamificationModerationRequestType.taskChange =>
         request.isDeleteRequest ? 'Approve Removal' : 'Approve Changes',
-      GamificationModerationRequestType.questChange => 'Approve Changes',
     };
     final rejectLabel = request.isNewTask ? 'Reject' : 'Reject Changes';
 

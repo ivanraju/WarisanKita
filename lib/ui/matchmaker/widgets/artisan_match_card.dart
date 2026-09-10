@@ -39,10 +39,8 @@ class ArtisanMatchCard extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           color: isSelected
-              ? (isDark
-                    ? const Color(0xFF78350F).withValues(alpha: 0.32)
-                    : const Color(0xFFFFF8E1))
-              : (isDark ? const Color(0xFF1E293B) : Colors.white),
+              ? (isDark ? const Color(0xFF3B2C1B) : const Color(0xFFFFF8E1))
+              : (isDark ? const Color(0xFF17332E) : Colors.white),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
             color: isSelected
@@ -168,9 +166,11 @@ class ArtisanMatchCard extends StatelessWidget {
                                       vertical: 4,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: const Color(
-                                        0xFF0F3D3E,
-                                      ).withValues(alpha: 0.08),
+                                      color: isDark
+                                          ? const Color(0xFF294941)
+                                          : const Color(
+                                              0xFF0F3D3E,
+                                            ).withValues(alpha: 0.08),
                                       borderRadius: BorderRadius.circular(10),
                                     ),
                                     child: Text(
@@ -178,7 +178,9 @@ class ArtisanMatchCard extends StatelessWidget {
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: GoogleFonts.plusJakartaSans(
-                                        color: const Color(0xFF0F3D3E),
+                                        color: isDark
+                                            ? const Color(0xFFD9F2E8)
+                                            : const Color(0xFF0F3D3E),
                                         fontSize: 11,
                                         fontWeight: FontWeight.w700,
                                       ),
@@ -273,18 +275,22 @@ class ArtisanMatchCard extends StatelessWidget {
                                       vertical: 2,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: const Color(
-                                        0xFF004D40,
-                                      ).withValues(alpha: 0.08),
+                                      color: isDark
+                                          ? const Color(0xFF294941)
+                                          : const Color(
+                                              0xFF004D40,
+                                            ).withValues(alpha: 0.08),
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        const Icon(
+                                        Icon(
                                           Icons.directions_walk_rounded,
                                           size: 11,
-                                          color: Color(0xFF004D40),
+                                          color: isDark
+                                              ? const Color(0xFF6EE7B7)
+                                              : const Color(0xFF004D40),
                                         ),
                                         const SizedBox(width: 2),
                                         Text(
@@ -292,7 +298,9 @@ class ArtisanMatchCard extends StatelessWidget {
                                           style: GoogleFonts.plusJakartaSans(
                                             fontSize: 10,
                                             fontWeight: FontWeight.bold,
-                                            color: const Color(0xFF004D40),
+                                            color: isDark
+                                                ? const Color(0xFFD9F2E8)
+                                                : const Color(0xFF004D40),
                                           ),
                                         ),
                                       ],
@@ -371,7 +379,7 @@ class ArtisanMatchCard extends StatelessWidget {
                                           : const Color(0xFFFFD54F),
                                     ),
                                     label: Text(
-                                      journey?.actionLabel ?? 'VIEW STUDIO',
+                                      journey?.actionLabel ?? 'VIEW QUEST',
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: GoogleFonts.plusJakartaSans(
@@ -405,6 +413,7 @@ class ArtisanMatchCard extends StatelessWidget {
   Color _journeyColor(WorkshopQuestState? state) => switch (state) {
     WorkshopQuestState.available => const Color(0xFFFFD54F),
     WorkshopQuestState.inProgress => const Color(0xFFE67E00),
+    WorkshopQuestState.blockedByOtherQuest => const Color(0xFFB45309),
     WorkshopQuestState.completed => const Color(0xFF00695C),
     WorkshopQuestState.unavailable || null => const Color(0xFF004D40),
   };
@@ -412,6 +421,7 @@ class ArtisanMatchCard extends StatelessWidget {
   IconData _journeyIcon(WorkshopQuestState? state) => switch (state) {
     WorkshopQuestState.available => Icons.flag_rounded,
     WorkshopQuestState.inProgress => Icons.directions_walk_rounded,
+    WorkshopQuestState.blockedByOtherQuest => Icons.lock_clock_rounded,
     WorkshopQuestState.completed => Icons.workspace_premium_rounded,
     WorkshopQuestState.unavailable || null => Icons.storefront_rounded,
   };
@@ -430,6 +440,7 @@ class _JourneyPreview extends StatelessWidget {
         : switch (journey.state) {
             WorkshopQuestState.available => const Color(0xFFB45309),
             WorkshopQuestState.inProgress => const Color(0xFFE67E00),
+            WorkshopQuestState.blockedByOtherQuest => const Color(0xFFB45309),
             WorkshopQuestState.completed => const Color(0xFF00695C),
             WorkshopQuestState.unavailable => const Color(0xFF64748B),
           };

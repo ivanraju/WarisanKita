@@ -1,4 +1,5 @@
 import 'package:warisan_kita/data/services/supabase_service.dart';
+import 'package:warisan_kita/domain/models/active_quest.dart';
 import 'package:warisan_kita/domain/models/artisan_quest_profile.dart';
 import 'package:warisan_kita/domain/models/badge.dart'
     show CompletedPassportQuest, EarnedTaskXp, HeritageStamp, PassportSnapshot;
@@ -6,15 +7,97 @@ import 'package:warisan_kita/domain/models/gamification_moderation_request.dart'
 import 'package:warisan_kita/domain/models/heritage_task.dart';
 import 'package:warisan_kita/domain/models/heritage_task_change_request.dart';
 import 'package:warisan_kita/domain/models/quest.dart';
-import 'package:warisan_kita/domain/models/quest_change_request.dart';
+import 'package:warisan_kita/domain/models/quest_participation.dart';
 import 'package:warisan_kita/domain/models/task_progress.dart';
 import 'package:warisan_kita/domain/models/workshop_quest_journey.dart';
+import 'package:warisan_kita/domain/models/artisan_heritage_analytics.dart';
 
 class GamificationRepository {
   final SupabaseService _service;
 
   GamificationRepository({SupabaseService? service})
     : _service = service ?? SupabaseService();
+
+  Future<ArtisanHeritageAnalytics> getArtisanHeritageAnalytics({
+    DateTime? now,
+  }) async {
+    final localNow = (now ?? DateTime.now()).toLocal();
+    final today = DateTime(localNow.year, localNow.month, localNow.day);
+    final periodStart = today.subtract(const Duration(days: 6));
+    final periodEnd = today.add(const Duration(days: 1));
+    final data = await _service.fetchArtisanHeritageAnalytics(
+      startedAtUtc: periodStart.toUtc(),
+      endedAtUtcExclusive: periodEnd.toUtc(),
+    );
+
+    final visitorsByDay = <DateTime, Set<String>>{};
+    final visitorIds = <String>{};
+    for (final row in List<Map<String, dynamic>>.from(
+      data['visits'] as List? ?? const [],
+    )) {
+      final userId = row['user_id']?.toString().trim() ?? '';
+      final completedAtUtc = DateTime.tryParse(
+        row['completed_at']?.toString() ?? '',
+      );
+      if (userId.isEmpty || completedAtUtc == null) continue;
+      final completedAt = completedAtUtc.toLocal();
+      if (completedAt.isBefore(periodStart) ||
+          !completedAt.isBefore(periodEnd)) {
+        continue;
+      }
+      final day = DateTime(
+        completedAt.year,
+        completedAt.month,
+        completedAt.day,
+      );
+      visitorIds.add(userId);
+      visitorsByDay.putIfAbsent(day, () => <String>{}).add(userId);
+    }
+
+    final dailyVisitors = List.generate(7, (index) {
+      final date = periodStart.add(Duration(days: index));
+      return DailyVerifiedVisitors(
+        date: date,
+        count: visitorsByDay[date]?.length ?? 0,
+      );
+    });
+
+    int? stampCount;
+    if (data['stamps_available'] == true) {
+      final uniqueStamps = <String>{};
+      for (final row in List<Map<String, dynamic>>.from(
+        data['stamps'] as List? ?? const [],
+      )) {
+        final userId = row['user_id']?.toString().trim() ?? '';
+        final questId = row['quest_id']?.toString().trim() ?? '';
+        if (userId.isNotEmpty && questId.isNotEmpty) {
+          uniqueStamps.add('$userId|$questId');
+        }
+      }
+      stampCount = uniqueStamps.length;
+    }
+
+    int? completedTourists;
+    if (data['completions_available'] == true) {
+      completedTourists =
+          List<Map<String, dynamic>>.from(
+                data['completions'] as List? ?? const [],
+              )
+              .map((row) => row['user_id']?.toString().trim() ?? '')
+              .where((userId) => userId.isNotEmpty)
+              .toSet()
+              .length;
+    }
+
+    return ArtisanHeritageAnalytics(
+      totalUniqueVisitors: visitorIds.length,
+      dailyVisitors: dailyVisitors,
+      visitorSource: data['visitor_source']?.toString() ?? 'arrival_task',
+      passportStampsAwarded: stampCount,
+      completedTourists: completedTourists,
+      completionTarget: null,
+    );
+  }
 
   Future<PassportSnapshot> getPassportSnapshot() async {
     final data = await _service.fetchPassportData();
@@ -93,12 +176,31 @@ class GamificationRepository {
         .map((row) => row['task_id']?.toString() ?? '')
         .where((id) => id.isNotEmpty)
         .toSet();
-    final progressByQuest = {
+    final participationByQuest = {
       for (final row in questProgress)
         if ((row['quest_id']?.toString() ?? '').isNotEmpty)
-          row['quest_id'].toString():
-              row['status']?.toString().toUpperCase() ?? '',
+          row['quest_id'].toString(): QuestParticipation.fromMap(row),
     };
+    final questById = {
+      for (final quest in quests)
+        if ((quest['id']?.toString() ?? '').isNotEmpty)
+          quest['id'].toString(): quest,
+    };
+    final activeState = ActiveQuestState.fromRows(
+      questProgress
+          .where(
+            (row) => row['status']?.toString().toUpperCase() == 'IN_PROGRESS',
+          )
+          .map((row) {
+            final quest = questById[row['quest_id']?.toString() ?? ''];
+            return <String, dynamic>{
+              ...row,
+              'quest_title': quest?['title'],
+              'artisan_id': quest?['artisan_id'],
+            };
+          }),
+    );
+    final activeQuestId = activeState.activeQuest?.questId;
     final stampedQuestIds = stamps
         .map((row) => row['quest_id']?.toString() ?? '')
         .where((id) => id.isNotEmpty)
@@ -111,20 +213,40 @@ class GamificationRepository {
       if (questId.isEmpty || workshopId.isEmpty) continue;
 
       final questTasks = tasksByQuest[questId] ?? const [];
-      final completedCount = questTasks
-          .where((task) => completedTaskIds.contains(task['id']?.toString()))
-          .length;
+      final participation = participationByQuest[questId];
+      final effectiveRequiredTasks = questTasks
+          .where((task) {
+            if (task['is_required'] == false) return false;
+            return !QuestParticipation.isCreatedAfterStart(
+              taskCreatedAt: QuestParticipation.parseTimestamp(
+                task['created_at'],
+              ),
+              participantStartedAt: participation?.startedAt,
+            );
+          })
+          .toList(growable: false);
+      final isPermanentlyCompleted =
+          stampedQuestIds.contains(questId) ||
+          participation?.isCompleted == true;
+      final completedCount = isPermanentlyCompleted
+          ? effectiveRequiredTasks.length
+          : effectiveRequiredTasks
+                .where(
+                  (task) => completedTaskIds.contains(task['id']?.toString()),
+                )
+                .length;
       final xpReward = questTasks.fold<int>(0, (sum, task) {
         final value = task['xp_reward'];
         return sum +
             (value is num ? value.toInt() : int.tryParse('$value') ?? 0);
       });
-      final progressStatus = progressByQuest[questId];
-      final state =
-          stampedQuestIds.contains(questId) || progressStatus == 'COMPLETED'
+      final progressStatus = participation?.status.toUpperCase();
+      final state = isPermanentlyCompleted
           ? WorkshopQuestState.completed
-          : progressStatus == 'IN_PROGRESS'
+          : progressStatus == 'IN_PROGRESS' && questId == activeQuestId
           ? WorkshopQuestState.inProgress
+          : activeQuestId != null
+          ? WorkshopQuestState.blockedByOtherQuest
           : WorkshopQuestState.available;
 
       journeys.putIfAbsent(
@@ -138,7 +260,7 @@ class GamificationRepository {
           stampImageUrl: quest['stamp_image_url']?.toString().trim() ?? '',
           xpReward: xpReward,
           completedTaskCount: completedCount,
-          totalTaskCount: questTasks.length,
+          totalTaskCount: effectiveRequiredTasks.length,
           state: state,
         ),
       );
@@ -190,15 +312,28 @@ class GamificationRepository {
     return _service.fetchCurrentQuestProgressStatus(questId);
   }
 
+  Future<QuestParticipation?> getCurrentQuestParticipation(
+    String questId,
+  ) async {
+    final row = await _service.fetchCurrentQuestProgressSnapshot(questId);
+    return row == null ? null : QuestParticipation.fromMap(row);
+  }
+
+  Future<ActiveQuestState> getActiveQuestState() async {
+    final rows = await _service.fetchActiveQuestProgressRows();
+    return ActiveQuestState.fromRows(rows);
+  }
+
   Future<bool> hasEarnedQuestStamp(String questId) {
     return _service.hasEarnedQuestStamp(questId);
   }
 
-  Future<String> startQuest({
+  Future<QuestStartResult> startQuest({
     required String questId,
     required List<String> taskIds,
-  }) {
-    return _service.startQuest(questId: questId, taskIds: taskIds);
+  }) async {
+    final row = await _service.startQuest(questId: questId, taskIds: taskIds);
+    return QuestStartResult.fromMap(row);
   }
 
   Future<List<TaskProgress>> getTaskProgress(List<String> taskIds) async {
@@ -297,87 +432,6 @@ class GamificationRepository {
     }
 
     return quests.singleOrNull;
-  }
-
-  Future<List<QuestChangeRequest>> getQuestChangeRequests(
-    String questId,
-  ) async {
-    final rows = await _service.fetchQuestChangeRequests(questId);
-    return rows.map(QuestChangeRequest.fromMap).toList(growable: false);
-  }
-
-  Future<QuestChangeRequest> requestQuestUpdate({
-    required String questId,
-    required String proposedTitle,
-    required String proposedDescription,
-    required String proposedCategory,
-  }) async {
-    final row = await _service.insertQuestChangeRequest(
-      questId: questId,
-      proposedTitle: proposedTitle,
-      proposedDescription: proposedDescription,
-      proposedCategory: proposedCategory,
-    );
-    return QuestChangeRequest.fromMap(row);
-  }
-
-  Future<QuestChangeRequest> updatePendingQuestUpdate({
-    required String requestId,
-    required String questId,
-    required String proposedTitle,
-    required String proposedDescription,
-    required String proposedCategory,
-  }) async {
-    final row = await _service.updatePendingQuestChangeRequest(
-      requestId: requestId,
-      questId: questId,
-      proposedTitle: proposedTitle,
-      proposedDescription: proposedDescription,
-      proposedCategory: proposedCategory,
-    );
-    return QuestChangeRequest.fromMap(row);
-  }
-
-  Future<QuestChangeRequest> resubmitRejectedQuestUpdate({
-    required String requestId,
-    required String questId,
-    required String proposedTitle,
-    required String proposedDescription,
-    required String proposedCategory,
-  }) async {
-    final row = await _service.resubmitRejectedQuestChangeRequest(
-      requestId: requestId,
-      questId: questId,
-      proposedTitle: proposedTitle,
-      proposedDescription: proposedDescription,
-      proposedCategory: proposedCategory,
-    );
-    return QuestChangeRequest.fromMap(row);
-  }
-
-  Future<void> deleteRejectedQuestUpdate({
-    required String requestId,
-    required String questId,
-  }) {
-    return _service.deleteRejectedQuestChangeRequest(
-      requestId: requestId,
-      questId: questId,
-    );
-  }
-
-  Future<Quest> updateCurrentArtisanQuest({
-    required String questId,
-    required String title,
-    required String description,
-    required String category,
-  }) async {
-    final row = await _service.updateCurrentArtisanQuest(
-      questId: questId,
-      title: title,
-      description: description,
-      category: category,
-    );
-    return Quest.fromMap(row);
   }
 
   Future<HeritageTask> addHeritageTask({
@@ -529,15 +583,4 @@ class GamificationRepository {
     );
   }
 
-  Future<void> reviewQuestChange({
-    required String requestId,
-    required bool approve,
-    String? rejectionReason,
-  }) {
-    return _service.reviewQuestChange(
-      requestId: requestId,
-      approve: approve,
-      rejectionReason: rejectionReason,
-    );
-  }
 }

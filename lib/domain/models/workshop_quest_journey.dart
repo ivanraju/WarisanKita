@@ -1,4 +1,10 @@
-enum WorkshopQuestState { available, inProgress, completed, unavailable }
+enum WorkshopQuestState {
+  available,
+  inProgress,
+  blockedByOtherQuest,
+  completed,
+  unavailable,
+}
 
 class WorkshopQuestJourney {
   final String workshopId;
@@ -36,16 +42,12 @@ class WorkshopQuestJourney {
   String get stateLabel => switch (state) {
     WorkshopQuestState.available => 'NEW QUEST',
     WorkshopQuestState.inProgress => 'IN PROGRESS',
+    WorkshopQuestState.blockedByOtherQuest => 'ANOTHER JOURNEY ACTIVE',
     WorkshopQuestState.completed => 'STAMP COLLECTED',
     WorkshopQuestState.unavailable => 'UNAVAILABLE',
   };
 
-  String get actionLabel => switch (state) {
-    WorkshopQuestState.available => 'START JOURNEY',
-    WorkshopQuestState.inProgress => 'CONTINUE JOURNEY',
-    WorkshopQuestState.completed => 'VIEW STAMP',
-    WorkshopQuestState.unavailable => 'VIEW STUDIO',
-  };
+  String get actionLabel => 'VIEW QUEST';
 }
 
 class TouristJourneySnapshot {
