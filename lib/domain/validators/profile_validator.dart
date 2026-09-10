@@ -193,10 +193,10 @@ class ProfileValidator {
     return null;
   }
 
-  /// Validates years of experience or rank title.
+  /// Validates years of craft experience.
   static String? validateExperience(String? value, {bool isRequired = true}) {
     if (value == null || value.trim().isEmpty) {
-      return isRequired ? 'Please enter your craft experience or title' : null;
+      return isRequired ? 'Please enter your craft experience (e.g. 15 Years)' : null;
     }
 
     final clean = value.trim();

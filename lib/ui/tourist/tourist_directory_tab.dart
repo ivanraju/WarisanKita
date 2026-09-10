@@ -9,8 +9,84 @@ import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/directory_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/matchmaker_viewmodel.dart';
 
+class CraftCategoryFilterItem {
+  final String key;
+  final String englishName;
+  final IconData icon;
+  final List<String> matchKeywords;
+
+  const CraftCategoryFilterItem({
+    required this.key,
+    required this.englishName,
+    required this.icon,
+    required this.matchKeywords,
+  });
+
+  bool matches(String craftCategory, [List<dynamic>? tags]) {
+    if (key == 'ALL') return true;
+    final catLower = craftCategory.toLowerCase();
+    for (final kw in matchKeywords) {
+      if (catLower.contains(kw)) return true;
+    }
+    if (tags != null) {
+      for (final t in tags) {
+        final tagLower = t.toString().toLowerCase();
+        for (final kw in matchKeywords) {
+          if (tagLower.contains(kw)) return true;
+        }
+      }
+    }
+    return false;
+  }
+}
+
 class TouristDirectoryTab extends StatefulWidget {
   const TouristDirectoryTab({super.key});
+
+  static const List<CraftCategoryFilterItem> craftFilters = [
+    CraftCategoryFilterItem(
+      key: 'ALL',
+      englishName: 'All Crafts',
+      icon: Icons.grid_view_rounded,
+      matchKeywords: [],
+    ),
+    CraftCategoryFilterItem(
+      key: 'POTTERY',
+      englishName: 'Clay Pottery & Ceramics',
+      icon: Icons.water_drop_rounded,
+      matchKeywords: ['potter', 'ceramic', 'clay', 'tembikar', 'seramik', 'labu'],
+    ),
+    CraftCategoryFilterItem(
+      key: 'BATIK',
+      englishName: 'Batik Wax Painting',
+      icon: Icons.palette_rounded,
+      matchKeywords: ['batik', 'wax', 'textile', 'canting', 'kain'],
+    ),
+    CraftCategoryFilterItem(
+      key: 'SONGKET',
+      englishName: 'Songket Gold Weaving',
+      icon: Icons.auto_awesome_rounded,
+      matchKeywords: ['songket', 'weav', 'tenun', 'gold thread'],
+    ),
+    CraftCategoryFilterItem(
+      key: 'WOODWORK',
+      englishName: 'Traditional Woodcarving',
+      icon: Icons.handyman_rounded,
+      matchKeywords: ['wood', 'carv', 'ukir', 'kayu'],
+    ),
+    CraftCategoryFilterItem(
+      key: 'METALWORK',
+      englishName: 'Metalwork & Pewter',
+      icon: Icons.hardware_rounded,
+      matchKeywords: ['metal', 'pewter', 'keris', 'besi', 'tembaga', 'silver', 'perak'],
+    ),
+    CraftCategoryFilterItem(
+      key: 'RATTAN',
+      englishName: 'Rattan & Bamboo Craft',
+      icon: Icons.grass_rounded,
+      matchKeywords: ['rattan', 'bamboo', 'rotan', 'buluh', 'anyaman', 'mengkuang'],
+    ),
+  ];
 
   @override
   State<TouristDirectoryTab> createState() => _TouristDirectoryTabState();
@@ -20,19 +96,26 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
   final TextEditingController _searchController = TextEditingController();
 
   String _selectedState = 'All States';
-  String _selectedCategory = 'All Crafts';
+  String _selectedCategoryKey = 'ALL';
   bool _hasPreferences = true;
+
+  static List<CraftCategoryFilterItem> get craftFilters => TouristDirectoryTab.craftFilters;
+
+  String get _selectedCategory => craftFilters
+      .firstWhere((c) => c.key == _selectedCategoryKey,
+          orElse: () => craftFilters.first)
+      .englishName;
 
   bool get _isFilterActive =>
       _searchController.text.trim().isNotEmpty ||
       _selectedState != 'All States' ||
-      _selectedCategory != 'All Crafts';
+      _selectedCategoryKey != 'ALL';
 
   void _clearFilters() {
     setState(() {
       _searchController.clear();
       _selectedState = 'All States';
-      _selectedCategory = 'All Crafts';
+      _selectedCategoryKey = 'ALL';
     });
   }
 
@@ -59,13 +142,6 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
 
   void _showFilterBottomSheet(LanguageViewModel langVM) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final categories = [
-      langVM.translate('All Crafts'),
-      langVM.translate('Clay Pottery & Ceramics'),
-      langVM.translate('Batik Wax Painting'),
-      langVM.translate('Songket Gold Weaving'),
-      langVM.translate('Traditional Woodcarving'),
-    ];
 
     showModalBottomSheet(
       context: context,
@@ -156,14 +232,14 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: categories.map((cat) {
-                      final isSelected = _selectedCategory == cat;
+                    children: craftFilters.map((catItem) {
+                      final isSelected = _selectedCategoryKey == catItem.key;
                       return ChoiceChip(
-                        label: Text(cat),
+                        label: Text(langVM.translate(catItem.englishName)),
                         selected: isSelected,
                         onSelected: (selected) {
                           if (selected) {
-                            setState(() => _selectedCategory = cat);
+                            setState(() => _selectedCategoryKey = catItem.key);
                             setBottomSheetState(() {});
                           }
                         },
@@ -260,15 +336,27 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
     // Directory is 100% bound to real artisans from Supabase
     final artisans = realArtisans;
 
+    final selectedFilter = craftFilters.firstWhere(
+      (f) => f.key == _selectedCategoryKey,
+      orElse: () => craftFilters.first,
+    );
+
     final filtered = artisans.where((artisan) {
+      final tags = artisan['tags'];
+      final tagList = tags is List ? tags : (tags is String ? [tags] : null);
+      final bio = artisan['bio']?.toString().toLowerCase() ?? '';
+
       final matchesQuery = query.isEmpty ||
           artisan['name'].toString().toLowerCase().contains(query) ||
           artisan['category'].toString().toLowerCase().contains(query) ||
-          artisan['state'].toString().toLowerCase().contains(query);
+          artisan['state'].toString().toLowerCase().contains(query) ||
+          bio.contains(query) ||
+          (tagList != null && tagList.any((t) => t.toString().toLowerCase().contains(query)));
 
-      final matchesCategory = _selectedCategory == 'All Crafts' ||
-          artisan['category'] == _selectedCategory ||
-          _selectedCategory == langVM.translate('All Crafts');
+      final matchesCategory = selectedFilter.matches(
+        artisan['category']?.toString() ?? '',
+        tagList,
+      );
 
       final matchesState = _selectedState == 'All States' ||
           artisan['state'].toString().toLowerCase() == _selectedState.toLowerCase();
@@ -292,14 +380,6 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
     if (recommendedArtisans.isEmpty && artisans.isNotEmpty) {
       recommendedArtisans = artisans.take(4).toList();
     }
-
-    final categories = [
-      {'name': langVM.translate('All Crafts'), 'icon': Icons.grid_view_rounded},
-      {'name': langVM.translate('Clay Pottery & Ceramics'), 'icon': Icons.water_drop_rounded},
-      {'name': langVM.translate('Batik Wax Painting'), 'icon': Icons.palette_rounded},
-      {'name': langVM.translate('Songket Gold Weaving'), 'icon': Icons.auto_awesome_rounded},
-      {'name': langVM.translate('Traditional Woodcarving'), 'icon': Icons.handyman_rounded},
-    ];
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -556,15 +636,15 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                   height: 42,
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
-                    itemCount: categories.length,
+                    itemCount: craftFilters.length,
                     itemBuilder: (context, index) {
-                      final cat = categories[index];
-                      final name = cat['name'] as String;
-                      final icon = cat['icon'] as IconData;
-                      final isSelected = _selectedCategory == name || (_selectedCategory == 'All Crafts' && index == 0);
+                      final catItem = craftFilters[index];
+                      final name = langVM.translate(catItem.englishName);
+                      final icon = catItem.icon;
+                      final isSelected = _selectedCategoryKey == catItem.key;
 
                       return GestureDetector(
-                        onTap: () => setState(() => _selectedCategory = name),
+                        onTap: () => setState(() => _selectedCategoryKey = catItem.key),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
                           margin: const EdgeInsets.only(right: 10),

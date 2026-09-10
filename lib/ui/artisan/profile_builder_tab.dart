@@ -8,6 +8,7 @@ import 'package:file_picker/file_picker.dart' as fp;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:warisan_kita/data/services/supabase_service.dart';
 import 'package:warisan_kita/domain/models/pending_artisan_profile.dart';
+import 'package:warisan_kita/domain/models/user.dart';
 import 'package:warisan_kita/domain/validators/profile_validator.dart';
 import 'package:warisan_kita/ui/tourist/artisan_detail_screen.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
@@ -84,6 +85,17 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
   List<String> _portfolioImages = [];
   Map<String, String> _documents = {};
 
+  static bool _isDefaultOrEmptyExperience(String? exp) {
+    if (exp == null) return true;
+    final trimmed = exp.trim().toLowerCase();
+    if (trimmed.isEmpty) return true;
+    if (trimmed == 'master artisan applicant' ||
+        trimmed == 'craft artisan') {
+      return true;
+    }
+    return false;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -106,34 +118,104 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     } else if (user?.state != null && user!.state!.isNotEmpty) {
       _selectedWorkshopPin = _resolveStateCenter(user.state);
     }
-    _experienceController = TextEditingController(text: '');
+    _experienceController = TextEditingController(
+      text: _isDefaultOrEmptyExperience(user?.experience) ? '' : (user!.experience ?? ''),
+    );
     _phoneController = TextEditingController(text: user?.phone ?? '');
     _bioController = TextEditingController(
       text: user?.bio ?? '',
     );
     
-    if (user != null) {
-      for (var doc in user.artisanDocuments) {
-        final type = doc['doc_type'] as String?;
-        final url = doc['file_url'] as String?;
-        if (type != null && url != null) {
-          if (type == 'PORTFOLIO_IMAGE' || type == 'STUDIO_PHOTO') {
-            _portfolioImages.add(url);
-          } else {
-            _documents[type] = url;
-          }
-        }
-      }
-      if (user.tags.isNotEmpty) {
-        _toolsAndMaterials = List<String>.from(user.tags);
-      }
-    }
+    _syncFromUser(user, force: true);
 
     Future.microtask(() {
       if (mounted) {
         context.read<AuthViewModel>().refreshCurrentUser();
       }
     });
+  }
+
+  void _syncFromUser(UserModel? user, {bool force = false}) {
+    if (user == null) return;
+
+    if (force || _experienceController.text.isEmpty) {
+      if (!_isDefaultOrEmptyExperience(user.experience)) {
+        _experienceController.text = user.experience!;
+      } else if (force) {
+        _experienceController.text = '';
+      }
+    }
+
+    if (force || (_bioController.text.isEmpty && (user.bio?.isNotEmpty ?? false))) {
+      _bioController.text = user.bio ?? '';
+    }
+
+    if (force || (_studioNameController.text.isEmpty && ((user.studioName ?? user.displayName)?.isNotEmpty ?? false))) {
+      _studioNameController.text = user.studioName ?? user.displayName ?? '';
+    }
+
+    if (force || (_craftCategoryController.text.isEmpty && (user.craftCategory?.isNotEmpty ?? false))) {
+      _craftCategoryController.text = user.craftCategory ?? '';
+    }
+
+    if (force || (_stateController.text.isEmpty && (user.state?.isNotEmpty ?? false))) {
+      _stateController.text = user.state ?? '';
+    }
+
+    if (force || (_phoneController.text.isEmpty && (user.phone?.isNotEmpty ?? false))) {
+      _phoneController.text = user.phone ?? '';
+    }
+
+    if (force || _workshopAddress == null) {
+      if (user.address != null && user.address!.isNotEmpty) {
+        _workshopAddress = user.address;
+      }
+    }
+
+    if (force || _selectedWorkshopPin == null) {
+      if (user.latitude != null && user.longitude != null && user.latitude != 0.0) {
+        _selectedWorkshopPin = LatLng(user.latitude!, user.longitude!);
+      } else if (user.state != null && user.state!.isNotEmpty) {
+        _selectedWorkshopPin = _resolveStateCenter(user.state);
+      }
+    }
+
+    if (force || _portfolioImages.isEmpty) {
+      final newImages = <String>[];
+      final newDocs = <String, String>{};
+      for (var doc in user.artisanDocuments) {
+        final type = doc['doc_type'] as String?;
+        final url = doc['file_url'] as String?;
+        if (type != null && url != null) {
+          if (type == 'PORTFOLIO_IMAGE' || type == 'STUDIO_PHOTO') {
+            newImages.add(url);
+          } else {
+            newDocs[type] = url;
+          }
+        }
+      }
+      if (newImages.isNotEmpty) {
+        _portfolioImages = newImages;
+      }
+      if (newDocs.isNotEmpty) {
+        _documents = newDocs;
+      }
+    }
+
+    if (force || _toolsAndMaterials.isEmpty) {
+      if (user.tags.isNotEmpty) {
+        _toolsAndMaterials = List<String>.from(user.tags);
+      }
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final user = context.watch<AuthViewModel>().currentUser;
+    if (user != null) {
+      _syncFromUser(user);
+    }
   }
 
   void _onUsernameChanged() {
@@ -515,6 +597,8 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     final username = _usernameController.text.trim().replaceAll('@', '');
     final studio = _studioNameController.text.trim();
     final craft = _craftCategoryController.text.trim();
+    final rawExp = _experienceController.text.trim();
+    final experience = rawExp.isNotEmpty ? rawExp : null;
     final bio = _bioController.text.trim();
     final state = _stateController.text.trim();
     final phone = _phoneController.text.trim();
@@ -526,6 +610,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
         displayName: studio.isNotEmpty ? studio : username,
         studioName: studio,
         craftCategory: craft,
+        experience: experience,
         bio: bio,
         state: state,
         address: _workshopAddress,
@@ -542,6 +627,9 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
             _initialUsername = (updatedUser.username ?? updatedUser.effectiveUsername).replaceAll('@', '');
             _usernameController.text = _initialUsername!;
             _studioNameController.text = updatedUser.studioName ?? updatedUser.displayName ?? updatedUser.effectiveUsername;
+            _experienceController.text = _isDefaultOrEmptyExperience(updatedUser.experience)
+                ? ''
+                : (updatedUser.experience ?? '');
           });
         }
       }
@@ -554,6 +642,11 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
             email: email,
             username: username,
             studioName: studio,
+            craftCategory: craft,
+            state: state,
+            phone: phone,
+            bio: bio,
+            experience: experience,
           );
         }
       } catch (_) {}
@@ -632,6 +725,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
             _documents[docType] = uploadRes['url']!;
           }
         });
+        unawaited(context.read<AuthViewModel>().refreshCurrentUser());
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Document uploaded successfully!')));
       } else {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Upload failed.')));
@@ -653,6 +747,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
   InputDecoration _inputDecoration(
     bool isDark, {
     required String labelText,
+    String? hintText,
     IconData? prefixIcon,
     Widget? suffixIcon,
     String? helperText,
@@ -663,6 +758,11 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
       labelText: labelText,
       labelStyle: TextStyle(
         color: isDark ? Colors.white70 : const Color(0xFF475569),
+      ),
+      hintText: hintText,
+      hintStyle: TextStyle(
+        color: isDark ? Colors.white38 : const Color(0xFF94A3B8),
+        fontSize: 13,
       ),
       helperText: helperText,
       helperStyle: TextStyle(
@@ -755,7 +855,12 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          await context.read<AuthViewModel>().refreshCurrentUser();
+          final refreshed = await context.read<AuthViewModel>().refreshCurrentUser();
+          if (mounted && refreshed != null) {
+            setState(() {
+              _syncFromUser(refreshed, force: true);
+            });
+          }
         },
         child: Form(
           key: _formKey,
@@ -1463,13 +1568,14 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
             TextFormField(
               controller: _experienceController,
               autovalidateMode: AutovalidateMode.onUserInteraction,
-              validator: (v) => ProfileValidator.validateExperience(v, isRequired: true),
+              validator: (v) => ProfileValidator.validateExperience(v, isRequired: false),
               style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
               decoration: _inputDecoration(
                 isDark,
-                labelText: 'Years of Experience & Rank Title',
+                labelText: 'Years of Craft Experience',
+                hintText: 'e.g. 15 Years Experience or 10+ Years',
                 prefixIcon: Icons.workspace_premium_outlined,
-                helperText: 'e.g. 25+ Years Experience • Adiguru Kraf',
+                helperText: 'Optional: share your craft heritage experience (e.g. 15 Years)',
               ),
             ),
 

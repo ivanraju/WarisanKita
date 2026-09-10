@@ -233,13 +233,27 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
 
                     // 📜 SUBMITTED VERIFICATION DOCUMENTS FOR ADMIN VERIFICATION
                     Text(
-                      'Submitted Proof Documents (Verified)',
+                      'Submitted Proof Documents',
                       style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF334155)),
                     ),
-                    _buildAdminDocChip(Icons.article_rounded, widget.artisan.ssmFileName ?? 'SSM_Registration_License_2026.pdf (1.2 MB)', url: widget.artisan.ssmFileUrl),
-                    _buildAdminDocChip(Icons.workspace_premium_rounded, widget.artisan.certFileName ?? 'Kraftangan_Malaysia_Master_Cert.pdf (2.4 MB)', url: widget.artisan.certFileUrl),
+                    _buildAdminDocChip(
+                      Icons.article_rounded,
+                      widget.artisan.ssmFileName,
+                      url: widget.artisan.ssmFileUrl,
+                      missingLabel: '⚠️ SSM Registration Certificate Not Attached',
+                    ),
+                    _buildAdminDocChip(
+                      Icons.workspace_premium_rounded,
+                      widget.artisan.certFileName,
+                      url: widget.artisan.certFileUrl,
+                      missingLabel: '⚠️ Kraftangan Master Accreditation Cert Not Attached',
+                    ),
                     if (widget.artisan.photos.isNotEmpty)
-                      _buildAdminDocChip(Icons.photo_library_rounded, '${widget.artisan.photos.length} Studio & Workshop Photos Attached', url: widget.artisan.photos.first),
+                      _buildAdminDocChip(
+                        Icons.photo_library_rounded,
+                        '${widget.artisan.photos.length} Studio & Workshop Photos Attached',
+                        url: widget.artisan.photos.first,
+                      ),
 
                     const SizedBox(height: 18),
 
@@ -514,13 +528,50 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
     );
   }
 
-  Widget _buildAdminDocChip(IconData icon, String filename, {String? url}) {
+  Widget _buildAdminDocChip(
+    IconData icon,
+    String? filename, {
+    String? url,
+    String missingLabel = 'Document Not Attached',
+  }) {
+    final isMissing = (filename == null || filename.trim().isEmpty) &&
+        (url == null || url.trim().isEmpty);
+
+    if (isMissing) {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFEF3C7),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFFF59E0B)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, size: 14, color: Color(0xFFD97706)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                missingLabel,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFFB45309),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final displayName = (filename != null && filename.isNotEmpty)
+        ? filename
+        : (url != null ? url.split('/').last : 'Document');
+
     return InkWell(
       onTap: () {
         if (url != null && url.isNotEmpty) {
-           // use url_launcher or similar here if we want to add the package.
-           // Since we don't have time to re-import and add dependencies if missing,
-           // let's just use `import 'package:url_launcher/url_launcher.dart';`
            _launchURL(url);
         }
       },
@@ -538,7 +589,7 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                filename,
+                displayName,
                 style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
               ),
             ),
