@@ -365,11 +365,73 @@ class SupabaseService {
       throw const AuthException('ACCOUNT SUSPENDED BY ADMINISTRATOR: Contact support.');
     }
     // Load professional details independently of the core identity query.
-    // A failed lookup must not silently turn a pending studio into an approved one.
-    if (user.isArtisan || user.isPendingArtisan) {
-      final artisan = await client.from('artisan_profiles').select()
-          .eq('user_id', authUser.id).maybeSingle();
-      if (artisan != null) row['artisan_profiles'] = artisan;
+    // Always attempt to fetch artisan_profiles and attached documents so portfolio pictures
+    // and bio are never dropped even if users.role is not yet synced.
+    try {
+      final artisan = await client
+          .from('artisan_profiles')
+          .select('*, artisan_documents(*)')
+          .eq('user_id', authUser.id)
+          .maybeSingle();
+      if (artisan != null) {
+        row['artisan_profiles'] = artisan;
+        if (artisan['bio'] != null && (row['bio'] == null || (row['bio'] as String).isEmpty)) {
+          row['bio'] = artisan['bio'];
+        }
+        if (artisan['studio_name'] != null && row['studio_name'] == null) {
+          row['studio_name'] = artisan['studio_name'];
+        }
+        if (artisan['craft_category'] != null && row['craft_category'] == null) {
+          row['craft_category'] = artisan['craft_category'];
+        }
+        if (artisan['address'] != null && row['address'] == null) {
+          row['address'] = artisan['address'];
+        }
+        if (artisan['state'] != null && row['state'] == null) {
+          row['state'] = artisan['state'];
+        }
+        if (artisan['latitude'] != null && row['latitude'] == null) {
+          row['latitude'] = artisan['latitude'];
+        }
+        if (artisan['longitude'] != null && row['longitude'] == null) {
+          row['longitude'] = artisan['longitude'];
+        }
+        if (artisan['status'] != null) {
+          row['artisan_status'] = artisan['status'];
+          if (artisan['status'].toString().toUpperCase() == 'APPROVED') {
+            final currentRole = (row['role'] ?? '').toString();
+            if (currentRole.isEmpty || currentRole == 'Tourist') {
+              row['role'] = 'Artisan';
+            }
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading artisan_profiles join: $e');
+      try {
+        final artisan = await client
+            .from('artisan_profiles')
+            .select()
+            .eq('user_id', authUser.id)
+            .maybeSingle();
+        if (artisan != null) {
+          try {
+            final docs = await client
+                .from('artisan_documents')
+                .select()
+                .eq('artisan_id', artisan['id']);
+            artisan['artisan_documents'] = docs;
+          } catch (docErr) {
+            debugPrint('Error loading artisan_documents fallback: $docErr');
+          }
+          row['artisan_profiles'] = artisan;
+          if (artisan['bio'] != null && (row['bio'] == null || (row['bio'] as String).isEmpty)) {
+            row['bio'] = artisan['bio'];
+          }
+        }
+      } catch (profileErr) {
+        debugPrint('Error loading artisan_profiles fallback: $profileErr');
+      }
     }
     var profile = UserModel.fromMap(row);
     profile = await _enrichUserWithPendingRelocation(profile);
@@ -692,6 +754,8 @@ class SupabaseService {
     userRecord['studioName'] = studioName;
     userRecord['craftCategory'] = craftCategory;
     userRecord['ssmNumber'] = ssmNumber;
+    if (ssmFile != null) userRecord['ssm_file_name'] = ssmFile.name;
+    if (certFile != null) userRecord['cert_file_name'] = certFile.name;
     if (address != null) userRecord['address'] = address;
     if (state != null) userRecord['state'] = state;
     userRecord['status'] = 'PENDING_APPROVAL';
@@ -797,14 +861,8 @@ class SupabaseService {
             ) async {
               if (file == null) return null;
               try {
-                Uint8List? bytes;
-                if (kIsWeb) {
-                  // Fallback for web
-                } else if (file.path != null) {
-                  bytes = await io.File(file.path!).readAsBytes();
-                }
-
-                if (bytes == null) return null;
+                Uint8List bytes = await file.readAsBytes();
+                if (bytes.isEmpty) return null;
 
                 final fileName =
                     '${DateTime.now().millisecondsSinceEpoch}_${file.name.replaceAll(' ', '_')}';
@@ -856,7 +914,7 @@ class SupabaseService {
                     .from(bucket)
                     .uploadBinary(
                       path,
-                      bytes!,
+                      bytes,
                       fileOptions: FileOptions(contentType: mimeType),
                     );
                 final url = client.storage.from(bucket).getPublicUrl(path);
@@ -888,14 +946,6 @@ class SupabaseService {
                   'file_url': ssmUpload['url'],
                   'file_name': ssmUpload['name'],
                 });
-              } else {
-                docsToInsert.add({
-                  'artisan_id': artisanId,
-                  'doc_type': 'SSM_BUSINESS_CERT',
-                  'file_url':
-                      'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-                  'file_name': 'SSM_Registration.pdf',
-                });
               }
 
               if (certUpload != null) {
@@ -904,14 +954,6 @@ class SupabaseService {
                   'doc_type': 'KRAFTANGAN_MASTER_CERT',
                   'file_url': certUpload['url'],
                   'file_name': certUpload['name'],
-                });
-              } else {
-                docsToInsert.add({
-                  'artisan_id': artisanId,
-                  'doc_type': 'KRAFTANGAN_MASTER_CERT',
-                  'file_url':
-                      'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-                  'file_name': 'Kraftangan_Cert.pdf',
                 });
               }
 
@@ -933,21 +975,13 @@ class SupabaseService {
                 }
               }
 
-              if (!docsToInsert.any((d) => d['doc_type'] == 'STUDIO_PHOTO')) {
-                docsToInsert.add({
-                  'artisan_id': artisanId,
-                  'doc_type': 'STUDIO_PHOTO',
-                  'file_url':
-                      'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=600',
-                  'file_name': 'Studio_1.jpg',
-                });
-              }
-
               await client
                   .from('artisan_documents')
                   .delete()
                   .eq('artisan_id', artisanId);
-              await client.from('artisan_documents').insert(docsToInsert);
+              if (docsToInsert.isNotEmpty) {
+                await client.from('artisan_documents').insert(docsToInsert);
+              }
             } catch (docErr) {
               debugPrint(
                 'Supabase linkArtisanRoleToTourist artisan_documents note: $docErr',
@@ -1112,7 +1146,7 @@ class SupabaseService {
           }
 
           // 2. Update Supabase Postgres 'artisan_profiles' table (Professional columns only, by user_id)
-          if (isArtisanAccount) {
+          if (isArtisanAccount || studioName != null || bio != null || craftCategory != null || toolsAndMaterials != null) {
             try {
               final userRow = await client
                   .from('users')
@@ -1134,7 +1168,7 @@ class SupabaseService {
                   if (toolsAndMaterials != null) 'tags': toolsAndMaterials,
                   'updated_at': DateTime.now().toIso8601String(),
                 };
-                if (artisanUpdates.length > 1) {
+                if (artisanUpdates.isNotEmpty) {
                   await client
                       .from('artisan_profiles')
                       .update(artisanUpdates)
@@ -1162,7 +1196,9 @@ class SupabaseService {
       }
     }
 
-    return UserModel.fromMap(userRecord);
+    final updatedProfile = UserModel.fromMap(userRecord);
+    await _saveAuthSession(updatedProfile);
+    return updatedProfile;
   }
 
   Future<UserModel> submitRelocationRequest({

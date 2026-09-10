@@ -7,6 +7,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:warisan_kita/domain/models/pending_artisan_profile.dart';
 import 'package:warisan_kita/domain/validators/profile_validator.dart';
 import 'package:warisan_kita/domain/validators/ssm_validator.dart';
+import 'package:warisan_kita/domain/validators/document_validator.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import 'widgets/workshop_map_picker.dart';
 import 'package:warisan_kita/viewmodels/moderation_viewmodel.dart';
@@ -103,6 +104,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
   final List<PlatformFile> _uploadedPhotos = [];
   String? _ssmFileSizeLabel;
   String? _kraftanganFileSizeLabel;
+  String? _documentError;
   GoogleMapController? _workshopMapController;
   LatLng? _workshopLocation;
   String? _workshopAddress;
@@ -125,14 +127,6 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
     'Terengganu': LatLng(5.3296, 103.1370),
     'Kuala Lumpur': LatLng(3.1390, 101.6869),
   };
-
-  String _formatFileSize(int bytes) {
-    if (bytes < 1024) return '$bytes B';
-    if (bytes < 1024 * 1024) {
-      return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    }
-    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
-  }
 
   final List<String> _craftCategories = const [
     'Woodwork',
@@ -305,16 +299,35 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
       );
 
       if (file != null) {
-        final sizeLabel = _formatFileSize(await file.length());
+        final error = await DocumentValidator.validateDocument(
+          file,
+          documentTitle: 'SSM Business Registration Document',
+        );
+        if (error != null) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(error),
+              backgroundColor: const Color(0xFFEF4444),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          return;
+        }
+
+        final sizeLabel = DocumentValidator.formatFileSize(
+          await file.length(),
+        );
         if (!mounted) return;
         setState(() {
           _ssmFile = file;
           _ssmFileSizeLabel = sizeLabel;
+          _documentError = null;
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('📄 SSM Document attached: ${_ssmFile!.name}'),
+              content: Text('📄 SSM Document verified & attached: ${_ssmFile!.name}'),
               backgroundColor: const Color(0xFF004D40),
               behavior: SnackBarBehavior.floating,
             ),
@@ -332,17 +345,36 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
       );
 
       if (file != null) {
-        final sizeLabel = _formatFileSize(await file.length());
+        final error = await DocumentValidator.validateDocument(
+          file,
+          documentTitle: 'Kraftangan Master Certificate',
+        );
+        if (error != null) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(error),
+              backgroundColor: const Color(0xFFEF4444),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          return;
+        }
+
+        final sizeLabel = DocumentValidator.formatFileSize(
+          await file.length(),
+        );
         if (!mounted) return;
         setState(() {
           _kraftanganFile = file;
           _kraftanganFileSizeLabel = sizeLabel;
+          _documentError = null;
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                '🏆 Kraftangan Certificate attached: ${_kraftanganFile!.name}',
+                '🏆 Kraftangan Certificate verified & attached: ${_kraftanganFile!.name}',
               ),
               backgroundColor: const Color(0xFF004D40),
               behavior: SnackBarBehavior.floating,
@@ -406,7 +438,47 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
       return;
     }
 
-    setState(() => _isSubmitting = true);
+    // Enforce mandatory authentic document validation
+    final ssmError = await DocumentValidator.validateDocument(
+      _ssmFile,
+      documentTitle: 'SSM Business Registration Document',
+      isMandatory: true,
+    );
+    if (!mounted) return;
+    if (ssmError != null) {
+      setState(() => _documentError = ssmError);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(ssmError),
+          backgroundColor: const Color(0xFFB42318),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final certError = await DocumentValidator.validateDocument(
+      _kraftanganFile,
+      documentTitle: 'Kraftangan Master Accreditation Certificate',
+      isMandatory: true,
+    );
+    if (!mounted) return;
+    if (certError != null) {
+      setState(() => _documentError = certError);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(certError),
+          backgroundColor: const Color(0xFFB42318),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _documentError = null;
+      _isSubmitting = true;
+    });
 
     final authVM = context.read<AuthViewModel>();
     final user = authVM.currentUser;
@@ -466,8 +538,8 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
           experience: 'Master Artisan Applicant',
           phone: phone ?? '',
           ssmNumber: ssm,
-          ssmFileName: _ssmFile?.name ?? 'SSM_Registration_Cert.pdf',
-          certFileName: _kraftanganFile?.name ?? 'Kraftangan_Master_Cert.pdf',
+          ssmFileName: _ssmFile?.name,
+          certFileName: _kraftanganFile?.name,
           photos: _uploadedPhotos.map((p) => p.name).toList(),
           bio: bio.isNotEmpty
               ? bio
@@ -896,11 +968,44 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
 
                   const SizedBox(height: 24),
 
+                  Row(
+                    children: [
+                      Text(
+                        'Proof of Authenticity & Credentials',
+                        style: GoogleFonts.dmSerifDisplay(
+                          fontSize: 16,
+                          color: const Color(0xFF004D40),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEF2F2),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: const Color(0xFFF87171)),
+                        ),
+                        child: Text(
+                          'MANDATORY',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFFDC2626),
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
                   Text(
-                    'Verification Documents (Optional)',
-                    style: GoogleFonts.dmSerifDisplay(
-                      fontSize: 16,
-                      color: const Color(0xFF004D40),
+                    'Both official SSM business registration and your Kraftangan Malaysia accreditation certificate are required for verified Master Artisan status.',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12,
+                      color: const Color(0xFF64748B),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -908,10 +1013,10 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                   // Document Pickers
                   _buildUploadTile(
                     icon: Icons.description_outlined,
-                    title: 'SSM Business Registration PDF',
+                    title: '1. SSM Business Registration PDF / Image *',
                     subtitle: _ssmFile != null
                         ? 'Attached: ${_ssmFile!.name} ($_ssmFileSizeLabel)'
-                        : 'Upload PDF / PNG proof of registration',
+                        : 'Upload official SSM business certificate (10 KB – 10 MB)',
                     isAttached: _ssmFile != null,
                     onTap: _pickSsmDocument,
                   ),
@@ -920,10 +1025,10 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
 
                   _buildUploadTile(
                     icon: Icons.workspace_premium_outlined,
-                    title: 'Kraftangan Master Certificate',
+                    title: '2. Kraftangan Master Certificate *',
                     subtitle: _kraftanganFile != null
                         ? 'Attached: ${_kraftanganFile!.name} ($_kraftanganFileSizeLabel)'
-                        : 'Upload accreditation certificate (Optional)',
+                        : 'Upload accreditation certificate from Kraftangan Malaysia',
                     isAttached: _kraftanganFile != null,
                     onTap: _pickKraftanganCertificate,
                   ),
@@ -932,15 +1037,43 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
 
                   _buildUploadTile(
                     icon: Icons.photo_camera_outlined,
-                    title: 'Studio Workshop Photos',
+                    title: 'Studio Workshop Photos (Optional)',
                     subtitle: _uploadedPhotos.isNotEmpty
                         ? 'Attached ${_uploadedPhotos.length} photo(s)'
-                        : 'Upload photos of your craft studio',
+                        : 'Upload photos of your craft studio/workshop',
                     isAttached: _uploadedPhotos.isNotEmpty,
                     onTap: _pickStudioPhotos,
                   ),
 
-                  const SizedBox(height: 30),
+                  if (_documentError != null) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF2F2),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFFCA5A5)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.error_outline_rounded, color: Color(0xFFDC2626), size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _documentError!,
+                              style: GoogleFonts.plusJakartaSans(
+                                color: const Color(0xFFB91C1C),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 24),
 
                   // Submit Button
                   SizedBox(

@@ -271,6 +271,9 @@ class UserModel {
       'artisanStatus': artisanStatus,
       'latitude': latitude,
       'longitude': longitude,
+      'artisan_documents': artisanDocuments,
+      'artisanDocuments': artisanDocuments,
+      'tags': tags,
       'pending_relocation_address': pendingRelocationAddress,
       'pending_relocation_state': pendingRelocationState,
       'pending_relocation_lat': pendingRelocationLatitude,
@@ -306,8 +309,23 @@ class UserModel {
     }
     
     if (artisanMap != null && artisanMap['artisan_documents'] != null) {
-      docs = List<Map<String, dynamic>>.from(artisanMap['artisan_documents']);
+      docs = (artisanMap['artisan_documents'] as List)
+          .map((d) => Map<String, dynamic>.from(d as Map))
+          .toList();
+    } else if (map['artisan_documents'] != null) {
+      docs = (map['artisan_documents'] as List)
+          .map((d) => Map<String, dynamic>.from(d as Map))
+          .toList();
+    } else if (map['artisanDocuments'] != null) {
+      docs = (map['artisanDocuments'] as List)
+          .map((d) => Map<String, dynamic>.from(d as Map))
+          .toList();
     }
+
+    final rawTags = artisanMap?['tags'] ?? map['tags'];
+    final tagsList = rawTags is List
+        ? List<String>.from(rawTags.map((t) => t.toString()))
+        : const <String>[];
 
     // Parse lat/lon
     final latRaw = artisanMap?['latitude'] ?? map['latitude'];
@@ -376,7 +394,7 @@ class UserModel {
       artisanProfileId: artisanMap?['id'],
       artisanStatus: artisanMap?['status'] ?? map['artisanStatus'] ?? map['artisan_status'],
       artisanDocuments: docs,
-      tags: artisanMap?['tags'] != null ? List<String>.from(artisanMap!['tags']) : const [],
+      tags: tagsList,
       pendingRelocationAddress: map['pending_relocation_address'] ?? map['pendingRelocationAddress'] ?? artisanMap?['pending_relocation_address'],
       pendingRelocationState: map['pending_relocation_state'] ?? map['pendingRelocationState'] ?? artisanMap?['pending_relocation_state'],
       pendingRelocationLatitude: pLat,

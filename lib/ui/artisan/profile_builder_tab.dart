@@ -8,6 +8,7 @@ import 'package:file_picker/file_picker.dart' as fp;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:warisan_kita/data/services/supabase_service.dart';
 import 'package:warisan_kita/domain/models/pending_artisan_profile.dart';
+import 'package:warisan_kita/domain/models/user.dart';
 import 'package:warisan_kita/domain/validators/profile_validator.dart';
 import 'package:warisan_kita/ui/tourist/artisan_detail_screen.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
@@ -112,28 +113,88 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
       text: user?.bio ?? '',
     );
     
-    if (user != null) {
-      for (var doc in user.artisanDocuments) {
-        final type = doc['doc_type'] as String?;
-        final url = doc['file_url'] as String?;
-        if (type != null && url != null) {
-          if (type == 'PORTFOLIO_IMAGE' || type == 'STUDIO_PHOTO') {
-            _portfolioImages.add(url);
-          } else {
-            _documents[type] = url;
-          }
-        }
-      }
-      if (user.tags.isNotEmpty) {
-        _toolsAndMaterials = List<String>.from(user.tags);
-      }
-    }
+    _syncFromUser(user, force: true);
 
     Future.microtask(() {
       if (mounted) {
         context.read<AuthViewModel>().refreshCurrentUser();
       }
     });
+  }
+
+  void _syncFromUser(UserModel? user, {bool force = false}) {
+    if (user == null) return;
+
+    if (force || (_bioController.text.isEmpty && (user.bio?.isNotEmpty ?? false))) {
+      _bioController.text = user.bio ?? '';
+    }
+
+    if (force || (_studioNameController.text.isEmpty && ((user.studioName ?? user.displayName)?.isNotEmpty ?? false))) {
+      _studioNameController.text = user.studioName ?? user.displayName ?? '';
+    }
+
+    if (force || (_craftCategoryController.text.isEmpty && (user.craftCategory?.isNotEmpty ?? false))) {
+      _craftCategoryController.text = user.craftCategory ?? '';
+    }
+
+    if (force || (_stateController.text.isEmpty && (user.state?.isNotEmpty ?? false))) {
+      _stateController.text = user.state ?? '';
+    }
+
+    if (force || (_phoneController.text.isEmpty && (user.phone?.isNotEmpty ?? false))) {
+      _phoneController.text = user.phone ?? '';
+    }
+
+    if (force || _workshopAddress == null) {
+      if (user.address != null && user.address!.isNotEmpty) {
+        _workshopAddress = user.address;
+      }
+    }
+
+    if (force || _selectedWorkshopPin == null) {
+      if (user.latitude != null && user.longitude != null && user.latitude != 0.0) {
+        _selectedWorkshopPin = LatLng(user.latitude!, user.longitude!);
+      } else if (user.state != null && user.state!.isNotEmpty) {
+        _selectedWorkshopPin = _resolveStateCenter(user.state);
+      }
+    }
+
+    if (force || _portfolioImages.isEmpty) {
+      final newImages = <String>[];
+      final newDocs = <String, String>{};
+      for (var doc in user.artisanDocuments) {
+        final type = doc['doc_type'] as String?;
+        final url = doc['file_url'] as String?;
+        if (type != null && url != null) {
+          if (type == 'PORTFOLIO_IMAGE' || type == 'STUDIO_PHOTO') {
+            newImages.add(url);
+          } else {
+            newDocs[type] = url;
+          }
+        }
+      }
+      if (newImages.isNotEmpty) {
+        _portfolioImages = newImages;
+      }
+      if (newDocs.isNotEmpty) {
+        _documents = newDocs;
+      }
+    }
+
+    if (force || _toolsAndMaterials.isEmpty) {
+      if (user.tags.isNotEmpty) {
+        _toolsAndMaterials = List<String>.from(user.tags);
+      }
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final user = context.watch<AuthViewModel>().currentUser;
+    if (user != null) {
+      _syncFromUser(user);
+    }
   }
 
   void _onUsernameChanged() {
@@ -632,6 +693,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
             _documents[docType] = uploadRes['url']!;
           }
         });
+        unawaited(context.read<AuthViewModel>().refreshCurrentUser());
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Document uploaded successfully!')));
       } else {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Upload failed.')));
@@ -755,7 +817,12 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          await context.read<AuthViewModel>().refreshCurrentUser();
+          final refreshed = await context.read<AuthViewModel>().refreshCurrentUser();
+          if (mounted && refreshed != null) {
+            setState(() {
+              _syncFromUser(refreshed, force: true);
+            });
+          }
         },
         child: Form(
           key: _formKey,
