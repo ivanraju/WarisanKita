@@ -98,6 +98,44 @@ class AccountSuspendedScreen extends StatelessWidget {
                       color: isDark ? Colors.white70 : const Color(0xFF475569),
                     ),
                   ),
+                  if (user?.suspensionReason != null &&
+                      user!.suspensionReason!.trim().isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEF4444).withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: const Color(0xFFEF4444).withValues(alpha: 0.25),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'REASON FOR SUSPENSION',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.8,
+                              color: const Color(0xFFDC2626),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            user.suspensionReason!,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: isDark ? Colors.white.withValues(alpha: 0.9) : const Color(0xFF1E293B),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 28),
 
                   // Contact support info card
@@ -133,20 +171,19 @@ class AccountSuspendedScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 32),
 
-                  // Sign Out Button
+                  // Back to Login Button
                   SizedBox(
                     width: double.infinity,
                     height: 50,
                     child: ElevatedButton.icon(
                       key: const Key('account_suspended_sign_out_button'),
-                      onPressed: () async {
-                        await authVM.logout();
-                        if (context.mounted) {
-                          Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil(
-                            '/login',
-                            (route) => false,
-                          );
-                        }
+                      onPressed: () {
+                        authVM.clearError();
+                        Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil(
+                          '/login',
+                          (route) => false,
+                        );
+                        authVM.logout();
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFDC2626),
@@ -156,9 +193,9 @@ class AccountSuspendedScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(16),
                         ),
                       ),
-                      icon: const Icon(Icons.logout_rounded, size: 18),
+                      icon: const Icon(Icons.arrow_back_rounded, size: 18),
                       label: Text(
-                        'Sign Out',
+                        'Back to Login',
                         style: GoogleFonts.plusJakartaSans(
                           fontWeight: FontWeight.bold,
                           fontSize: 14,

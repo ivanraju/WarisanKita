@@ -59,7 +59,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
           }
         } else {
           // Native Mobile & Desktop Client (Android, iOS, Windows)
-          if (user.role == 'Admin') {
+          if (user.isSuspended || user.status == 'SUSPENDED') {
+            Navigator.of(context).pushReplacementNamed('/tourist');
+          } else if (user.role == 'Admin') {
             // Admin accounts must access web portal (UC001 A7)
             Navigator.of(context).pushReplacementNamed('/login');
           } else if (user.role == 'Artisan' || user.role == 'Master Artisan') {

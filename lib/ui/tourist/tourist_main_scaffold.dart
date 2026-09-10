@@ -28,7 +28,10 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
     if (widget.enableLivePolling) {
       _statusPollTimer = Timer.periodic(const Duration(seconds: 4), (_) {
         if (mounted) {
-          context.read<AuthViewModel>().refreshCurrentUser();
+          final auth = context.read<AuthViewModel>();
+          if (auth.currentUser != null && !auth.currentUser!.isSuspended) {
+            auth.refreshCurrentUser();
+          }
         }
       });
     }
@@ -48,6 +51,21 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
     // Security Guard: If account is administratively suspended, immediately lock out
     if (user != null && (user.isSuspended || user.status == 'SUSPENDED')) {
       return const AccountSuspendedScreen();
+    }
+
+    if (user == null) {
+      if (!authVM.isLoading) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted &&
+              ModalRoute.of(context)?.isCurrent == true &&
+              context.read<AuthViewModel>().currentUser == null) {
+            Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil('/login', (route) => false);
+          }
+        });
+      }
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
     }
 
     final langVM = context.watch<LanguageViewModel>();

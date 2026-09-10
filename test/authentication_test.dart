@@ -437,4 +437,38 @@ void main() {
       expect(backend.passwordUpdates, 0);
     },
   );
+  test('suspended user session preserves identity and status on restore and refresh', () async {
+    final record = backend.add('suspended_session@test.com', username: 'heritage_hero');
+    final signedIn = await service.signIn('suspended_session@test.com', 'Password123!');
+    expect(signedIn.email, 'suspended_session@test.com');
+    expect(signedIn.isSuspended, isFalse);
+
+    // Admin suspends user in database
+    record['status'] = 'SUSPENDED';
+    record['suspension_reason'] = 'Terms of Service violation';
+
+    // getCurrentUser returns the suspended user model rather than throwing or nullifying
+    final currentUser = await service.getCurrentUser();
+    expect(currentUser, isNotNull);
+    expect(currentUser!.isSuspended, isTrue);
+    expect(currentUser.status, 'SUSPENDED');
+    expect(currentUser.suspensionReason, 'Terms of Service violation');
+
+    // AuthViewModel.refreshCurrentUser retains currentUser and sets error message
+    final vm = AuthViewModel(repository: UserRepository(service: service));
+    final refreshed = await vm.refreshCurrentUser();
+    expect(refreshed, isNotNull);
+    expect(refreshed!.isSuspended, isTrue);
+    expect(vm.currentUser, isNotNull);
+    expect(vm.currentUser!.isSuspended, isTrue);
+    expect(vm.errorMessage, contains('ACCOUNT SUSPENDED'));
+
+    // AuthViewModel.restoreSession preserves suspended user identity
+    final restored = await vm.restoreSession();
+    expect(restored, isNotNull);
+    expect(restored!.isSuspended, isTrue);
+    expect(vm.currentUser, isNotNull);
+    expect(vm.currentUser!.isSuspended, isTrue);
+    expect(vm.errorMessage, contains('ACCOUNT SUSPENDED'));
+  });
 }
