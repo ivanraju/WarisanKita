@@ -24,6 +24,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
   final _formKey = GlobalKey<FormState>();
   final _studioNameController = TextEditingController();
   final _ssmController = TextEditingController();
+  final _experienceController = TextEditingController();
   final _bioController = TextEditingController();
   final _phoneController = TextEditingController();
   final _locationSearchController = TextEditingController();
@@ -49,6 +50,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
     _ssmController.removeListener(_onSsmChanged);
     _studioNameController.dispose();
     _ssmController.dispose();
+    _experienceController.dispose();
     _bioController.dispose();
     _phoneController.dispose();
     _locationSearchController.dispose();
@@ -484,6 +486,8 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
     final user = authVM.currentUser;
     final studioName = _studioNameController.text.trim();
     final ssm = _ssmController.text.trim();
+    final expText = _experienceController.text.trim();
+    final experience = expText.isNotEmpty ? expText : null;
     final bio = _bioController.text.trim();
     final phoneText = _phoneController.text.trim();
     final phone = phoneText.isNotEmpty ? phoneText : null;
@@ -498,6 +502,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
       studioName: studioName,
       craftCategory: _selectedCraftCategory,
       ssmNumber: ssm,
+      experience: experience,
       bio: bio.isNotEmpty ? bio : null,
       phone: phone,
       state: _selectedState,
@@ -535,7 +540,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
           imageUrl:
               'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600',
           email: user?.email ?? '',
-          experience: 'Master Artisan Applicant',
+          experience: expText.isNotEmpty ? expText : 'Craft Artisan',
           phone: phone ?? '',
           ssmNumber: ssm,
           ssmFileName: _ssmFile?.name,
@@ -864,6 +869,34 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                       ),
                     ),
                     validator: (v) => ProfileValidator.validatePhone(v, isRequired: false),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Years of Craft Experience
+                  TextFormField(
+                    controller: _experienceController,
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    decoration: InputDecoration(
+                      labelText: 'Years of Craft Experience *',
+                      hintText: 'e.g. 15 Years Experience or 10+ Years',
+                      prefixIcon: const Icon(
+                        Icons.workspace_premium_outlined,
+                        color: Color(0xFF004D40),
+                      ),
+                      filled: true,
+                      fillColor: const Color(0xFFF8F9FA),
+                      helperText: 'e.g. 15 Years or 25+ Years Experience',
+                      helperStyle: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        color: Colors.grey[600],
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    validator: (v) => ProfileValidator.validateExperience(v, isRequired: true),
                   ),
 
                   const SizedBox(height: 16),

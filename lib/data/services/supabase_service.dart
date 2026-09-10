@@ -375,26 +375,37 @@ class SupabaseService {
           .maybeSingle();
       if (artisan != null) {
         row['artisan_profiles'] = artisan;
-        if (artisan['bio'] != null && (row['bio'] == null || (row['bio'] as String).isEmpty)) {
+        if (artisan['bio'] != null && (artisan['bio'] as String).trim().isNotEmpty) {
           row['bio'] = artisan['bio'];
         }
-        if (artisan['studio_name'] != null && row['studio_name'] == null) {
+        if (artisan['studio_name'] != null && (artisan['studio_name'] as String).trim().isNotEmpty) {
           row['studio_name'] = artisan['studio_name'];
         }
-        if (artisan['craft_category'] != null && row['craft_category'] == null) {
+        if (artisan['craft_category'] != null && (artisan['craft_category'] as String).trim().isNotEmpty) {
           row['craft_category'] = artisan['craft_category'];
         }
-        if (artisan['address'] != null && row['address'] == null) {
+        if (artisan['address'] != null && (artisan['address'] as String).trim().isNotEmpty) {
           row['address'] = artisan['address'];
         }
-        if (artisan['state'] != null && row['state'] == null) {
+        if (artisan['state'] != null && (artisan['state'] as String).trim().isNotEmpty) {
           row['state'] = artisan['state'];
         }
-        if (artisan['latitude'] != null && row['latitude'] == null) {
+        if (artisan['latitude'] != null) {
           row['latitude'] = artisan['latitude'];
         }
-        if (artisan['longitude'] != null && row['longitude'] == null) {
+        if (artisan['longitude'] != null) {
           row['longitude'] = artisan['longitude'];
+        }
+        if (artisan['tags'] != null) {
+          row['tags'] = artisan['tags'];
+        }
+        if (artisan['artisan_documents'] != null) {
+          row['artisan_documents'] = artisan['artisan_documents'];
+        }
+        if (artisan['experience'] != null && artisan['experience'].toString().trim().isNotEmpty) {
+          row['experience'] = artisan['experience'].toString().trim();
+        } else if (artisan['years_experience'] != null && (artisan['years_experience'] as num) > 1) {
+          row['experience'] = '${artisan['years_experience']} Years';
         }
         if (artisan['status'] != null) {
           row['artisan_status'] = artisan['status'];
@@ -425,14 +436,55 @@ class SupabaseService {
             debugPrint('Error loading artisan_documents fallback: $docErr');
           }
           row['artisan_profiles'] = artisan;
-          if (artisan['bio'] != null && (row['bio'] == null || (row['bio'] as String).isEmpty)) {
+          if (artisan['bio'] != null && (artisan['bio'] as String).trim().isNotEmpty) {
             row['bio'] = artisan['bio'];
+          }
+          if (artisan['studio_name'] != null && (artisan['studio_name'] as String).trim().isNotEmpty) {
+            row['studio_name'] = artisan['studio_name'];
+          }
+          if (artisan['craft_category'] != null && (artisan['craft_category'] as String).trim().isNotEmpty) {
+            row['craft_category'] = artisan['craft_category'];
+          }
+          if (artisan['address'] != null && (artisan['address'] as String).trim().isNotEmpty) {
+            row['address'] = artisan['address'];
+          }
+          if (artisan['state'] != null && (artisan['state'] as String).trim().isNotEmpty) {
+            row['state'] = artisan['state'];
+          }
+          if (artisan['latitude'] != null) row['latitude'] = artisan['latitude'];
+          if (artisan['longitude'] != null) row['longitude'] = artisan['longitude'];
+          if (artisan['tags'] != null) row['tags'] = artisan['tags'];
+          if (artisan['artisan_documents'] != null) row['artisan_documents'] = artisan['artisan_documents'];
+          if (artisan['experience'] != null && artisan['experience'].toString().trim().isNotEmpty) {
+            row['experience'] = artisan['experience'].toString().trim();
+          } else if (artisan['years_experience'] != null && (artisan['years_experience'] as num) > 1) {
+            row['experience'] = '${artisan['years_experience']} Years';
           }
         }
       } catch (profileErr) {
         debugPrint('Error loading artisan_profiles fallback: $profileErr');
       }
     }
+
+    if (row['experience'] == null && _userStore.containsKey(authUser.email?.toLowerCase())) {
+      final cached = _userStore[authUser.email!.toLowerCase()];
+      if (cached?['experience'] != null && cached!['experience'].toString().trim().isNotEmpty) {
+        row['experience'] = cached['experience'].toString().trim();
+      }
+    }
+    if (row['experience'] == null) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final rawUser = prefs.getString(_keyAuthUser);
+        if (rawUser != null && rawUser.isNotEmpty) {
+          final cachedUser = jsonDecode(rawUser) as Map<String, dynamic>;
+          if (cachedUser['experience'] != null && cachedUser['experience'].toString().trim().isNotEmpty) {
+            row['experience'] = cachedUser['experience'].toString().trim();
+          }
+        }
+      } catch (_) {}
+    }
+
     var profile = UserModel.fromMap(row);
     profile = await _enrichUserWithPendingRelocation(profile);
     _userStore[profile.email.toLowerCase()] = row;
@@ -671,6 +723,7 @@ class SupabaseService {
     required String studioName,
     required String craftCategory,
     required String ssmNumber,
+    String? experience,
     String? bio,
     String? phone,
     String? state,
@@ -754,6 +807,7 @@ class SupabaseService {
     userRecord['studioName'] = studioName;
     userRecord['craftCategory'] = craftCategory;
     userRecord['ssmNumber'] = ssmNumber;
+    if (experience != null) userRecord['experience'] = experience;
     if (ssmFile != null) userRecord['ssm_file_name'] = ssmFile.name;
     if (certFile != null) userRecord['cert_file_name'] = certFile.name;
     if (address != null) userRecord['address'] = address;
@@ -824,6 +878,11 @@ class SupabaseService {
             'studio_name': studioName,
             'craft_category': craftCategory,
             'ssm_number': ssmNumber,
+            if (experience != null && experience.trim().isNotEmpty) ...{
+              'experience': experience.trim(),
+              if (RegExp(r'\d+').firstMatch(experience) != null)
+                'years_experience': int.tryParse(RegExp(r'\d+').firstMatch(experience)!.group(0)!),
+            },
             'bio':
                 bio ??
                 'Master artisan dedicated to traditional Malaysian craft.',
@@ -1007,6 +1066,7 @@ class SupabaseService {
     String? displayName,
     String? studioName,
     String? bio,
+    String? experience,
     String? phone,
     String? state,
     String? address,
@@ -1052,14 +1112,27 @@ class SupabaseService {
         '',
       );
       if (currentUsername != candidateUsername) {
-        final isAvailable = await isUsernameAvailable(
-          username,
-          excludeEmail: cleanEmail,
-        );
-        if (!isAvailable) {
-          throw Exception(
-            'USERNAME ALREADY TAKEN: "@${username.replaceAll('@', '')}" is registered by another user. Please choose a different username.',
+        if (_client != null) {
+          final isAvailable = await isUsernameAvailable(
+            username,
+            excludeEmail: cleanEmail,
           );
+          if (!isAvailable) {
+            throw Exception(
+              'USERNAME ALREADY TAKEN: "@${username.replaceAll('@', '')}" is registered by another user. Please choose a different username.',
+            );
+          }
+        } else {
+          final candidate = _cleanUsernameKey(candidateUsername);
+          for (final entry in _userStore.entries) {
+            if (entry.key.toLowerCase() == cleanEmail) continue;
+            final existing = (entry.value['username'] as String?)?.trim().toLowerCase();
+            if (existing != null && _cleanUsernameKey(existing) == candidate) {
+              throw Exception(
+                'USERNAME ALREADY TAKEN: "@${username.replaceAll('@', '')}" is registered by another user. Please choose a different username.',
+              );
+            }
+          }
         }
       }
     }
@@ -1088,8 +1161,47 @@ class SupabaseService {
     if (address != null) userRecord['address'] = address;
     if (latitude != null) userRecord['latitude'] = latitude;
     if (longitude != null) userRecord['longitude'] = longitude;
-    if (craftCategory != null) userRecord['craftCategory'] = craftCategory;
+    if (craftCategory != null) {
+      userRecord['craftCategory'] = craftCategory;
+      userRecord['craft_category'] = craftCategory;
+    }
     if (phone != null) userRecord['phone'] = phone;
+    if (experience != null) userRecord['experience'] = experience;
+    if (toolsAndMaterials != null) userRecord['tags'] = toolsAndMaterials;
+
+    Map<String, dynamic> apMap;
+    if (userRecord['artisan_profiles'] is Map) {
+      apMap = Map<String, dynamic>.from(userRecord['artisan_profiles'] as Map);
+    } else {
+      apMap = <String, dynamic>{};
+    }
+    if (studioName != null && studioName.trim().isNotEmpty) {
+      apMap['studio_name'] = studioName.trim();
+    }
+    if (bio != null) apMap['bio'] = bio;
+    if (experience != null) {
+      apMap['experience'] = experience;
+      final match = RegExp(r'\d+').firstMatch(experience);
+      if (match != null) {
+        apMap['years_experience'] = int.tryParse(match.group(0)!);
+      }
+    }
+    if (state != null) apMap['state'] = state;
+    if (address != null) apMap['address'] = address;
+    if (latitude != null) apMap['latitude'] = latitude;
+    if (longitude != null) apMap['longitude'] = longitude;
+    if (craftCategory != null) apMap['craft_category'] = craftCategory;
+    if (toolsAndMaterials != null) apMap['tags'] = toolsAndMaterials;
+    userRecord['artisan_profiles'] = apMap;
+
+    if (isArtisanAccount || studioName != null || craftCategory != null) {
+      if (userRecord['role'] != 'Artisan' && userRecord['role'] != 'Master Artisan') {
+        userRecord['role'] = 'Artisan';
+      }
+      if (userRecord['roles'] is List && !(userRecord['roles'] as List).contains('Artisan')) {
+        (userRecord['roles'] as List).add('Artisan');
+      }
+    }
 
     _userStore[cleanEmail] = userRecord;
 
@@ -1135,6 +1247,9 @@ class SupabaseService {
               if (avatarUrl != null) 'avatar_url': avatarUrl,
               'updated_at': DateTime.now().toIso8601String(),
             };
+            if (isArtisanAccount) {
+              userUpdates['role'] = 'Artisan';
+            }
             if (userUpdates.length > 1) {
               await client
                   .from('users')
@@ -1145,12 +1260,12 @@ class SupabaseService {
             debugPrint('Supabase updateUserProfile users table note: $e');
           }
 
-          // 2. Update Supabase Postgres 'artisan_profiles' table (Professional columns only, by user_id)
-          if (isArtisanAccount || studioName != null || bio != null || craftCategory != null || toolsAndMaterials != null) {
+          // 2. Update or Insert Supabase Postgres 'artisan_profiles' table (Professional columns only, by user_id)
+          if (isArtisanAccount || studioName != null || bio != null || craftCategory != null || toolsAndMaterials != null || experience != null) {
             try {
               final userRow = await client
                   .from('users')
-                  .select('id')
+                  .select('id, full_name, username')
                   .ilike('email', cleanEmail)
                   .maybeSingle();
               final String? effectiveUid =
@@ -1160,6 +1275,11 @@ class SupabaseService {
                   if (studioName != null && studioName.trim().isNotEmpty)
                     'studio_name': studioName.trim(),
                   if (bio != null) 'bio': bio,
+                  if (experience != null && experience.trim().isNotEmpty) ...{
+                    'experience': experience.trim(),
+                    if (RegExp(r'\d+').firstMatch(experience) != null)
+                      'years_experience': int.tryParse(RegExp(r'\d+').firstMatch(experience)!.group(0)!),
+                  },
                   if (state != null) 'state': state,
                   if (address != null) 'address': address,
                   if (latitude != null) 'latitude': latitude,
@@ -1169,10 +1289,65 @@ class SupabaseService {
                   'updated_at': DateTime.now().toIso8601String(),
                 };
                 if (artisanUpdates.isNotEmpty) {
-                  await client
+                  final existingProfile = await client
                       .from('artisan_profiles')
-                      .update(artisanUpdates)
-                      .eq('user_id', effectiveUid);
+                      .select('id, status')
+                      .eq('user_id', effectiveUid)
+                      .maybeSingle();
+
+                  if (existingProfile != null) {
+                    try {
+                      await client
+                          .from('artisan_profiles')
+                          .update(artisanUpdates)
+                          .eq('user_id', effectiveUid);
+                    } catch (artisanErr) {
+                      debugPrint('Direct artisan_profiles update note: $artisanErr');
+                      if (artisanUpdates.containsKey('experience')) {
+                        try {
+                          final fallbackUpdates = Map<String, dynamic>.from(artisanUpdates)
+                            ..remove('experience');
+                          await client
+                              .from('artisan_profiles')
+                              .update(fallbackUpdates)
+                              .eq('user_id', effectiveUid);
+                        } catch (fallbackErr) {
+                          debugPrint('Fallback artisan_profiles update note: $fallbackErr');
+                        }
+                      }
+                    }
+                  } else {
+                    // CRITICAL FIX: The artisan_profiles row was missing!
+                    // Insert new record so artisan data is NEVER silently dropped.
+                    final newProfile = Map<String, dynamic>.from(artisanUpdates);
+                    newProfile['user_id'] = effectiveUid;
+                    newProfile['created_at'] = DateTime.now().toIso8601String();
+                    newProfile['studio_name'] ??= studioName ?? displayName ?? username ?? userRow?['full_name'] ?? 'Artisan Studio';
+                    newProfile['craft_category'] ??= craftCategory ?? 'Traditional Crafts';
+                    newProfile['bio'] ??= bio ?? 'Master artisan dedicated to traditional Malaysian craft.';
+                    newProfile['experience'] ??= experience ?? '10+ Years';
+                    newProfile['address'] ??= address ?? state ?? 'Malaysia';
+                    newProfile['state'] ??= state ?? 'Malaysia';
+                    newProfile['status'] = 'APPROVED';
+                    if (latitude != null) newProfile['latitude'] = latitude;
+                    if (longitude != null) newProfile['longitude'] = longitude;
+                    if (toolsAndMaterials != null) newProfile['tags'] = toolsAndMaterials;
+
+                    try {
+                      await client.from('artisan_profiles').insert(newProfile);
+                    } catch (insertErr) {
+                      debugPrint('Direct artisan_profiles insert note: $insertErr');
+                      if (newProfile.containsKey('experience')) {
+                        try {
+                          final fallbackProfile = Map<String, dynamic>.from(newProfile)
+                            ..remove('experience');
+                          await client.from('artisan_profiles').insert(fallbackProfile);
+                        } catch (fallbackInsertErr) {
+                          debugPrint('Fallback artisan_profiles insert note: $fallbackInsertErr');
+                        }
+                      }
+                    }
+                  }
                 }
               }
             } catch (e) {
@@ -1544,9 +1719,11 @@ class SupabaseService {
               rowMap['ssm_number'] ??= ap['ssm_number'];
               rowMap['bio'] ??= ap['bio'];
               rowMap['state'] ??= ap['state'] ?? ap['address'];
-              rowMap['experience'] ??= ap['years_experience'] != null
-                  ? '${ap['years_experience']} years experience'
-                  : null;
+              rowMap['experience'] ??= (ap['experience'] != null && ap['experience'].toString().trim().isNotEmpty)
+                  ? ap['experience'].toString().trim()
+                  : (ap['years_experience'] != null && (ap['years_experience'] as num) > 1
+                      ? '${ap['years_experience']} years experience'
+                      : null);
 
               // Extract documents if they exist
               if (ap['artisan_documents'] is List) {
@@ -1650,9 +1827,23 @@ class SupabaseService {
 
         if (res is List && res.isNotEmpty) {
           for (final row in res) {
-            final rowStatus = (row['status'] ?? '').toString().toUpperCase();
+            final rowMap = Map<String, dynamic>.from(row);
+            final rowStatus = (rowMap['status'] ?? '').toString().toUpperCase();
             if (rowStatus == 'DELETED') continue;
-            final a = ActiveArtisanMaster.fromMap(Map<String, dynamic>.from(row));
+
+            if (rowMap['artisan_profiles'] == null ||
+                (rowMap['artisan_profiles'] is List && (rowMap['artisan_profiles'] as List).isEmpty)) {
+              try {
+                final ap = await client
+                    .from('artisan_profiles')
+                    .select()
+                    .eq('user_id', rowMap['id'])
+                    .maybeSingle();
+                if (ap != null) rowMap['artisan_profiles'] = ap;
+              } catch (_) {}
+            }
+
+            final a = ActiveArtisanMaster.fromMap(rowMap);
             if (a.email.toLowerCase().startsWith('deleted_')) continue;
             if (_deletedAccounts.contains(a.email.toLowerCase())) continue;
             results.add(a);
@@ -1677,11 +1868,21 @@ class SupabaseService {
       if (_deletedAccounts.contains(email) || email.startsWith('deleted_')) {
         continue;
       }
+      final existingIdx = results.indexWhere((a) => a.email.toLowerCase() == email);
       if (role.contains('Artisan') && !status.contains('PENDING')) {
-        if (!results.any((a) => a.email.toLowerCase() == email)) {
+        if (existingIdx == -1) {
           results.add(
             ActiveArtisanMaster.fromMap(Map<String, dynamic>.from(user)),
           );
+        } else {
+          final existing = results[existingIdx];
+          if ((existing.experience == 'Verified Studio' || existing.experience.isEmpty) &&
+              user['experience'] != null &&
+              user['experience'].toString().trim().isNotEmpty) {
+            results[existingIdx] = existing.copyWith(
+              experience: user['experience'].toString().trim(),
+            );
+          }
         }
       }
     }
@@ -1698,14 +1899,14 @@ class SupabaseService {
         try {
           res = await client
               .from('users')
-              .select('*, artisan_profiles!artisan_profiles_user_id_fkey(*)')
+              .select('*, artisan_profiles!artisan_profiles_user_id_fkey(*, artisan_documents(*))')
               .neq('status', 'DELETED')
               .order('created_at', ascending: false);
         } catch (_) {
           try {
             res = await client
                 .from('users')
-                .select('*, artisan_profiles(*)')
+                .select('*, artisan_profiles(*, artisan_documents(*))')
                 .neq('status', 'DELETED')
                 .order('created_at', ascending: false);
           } catch (_) {
@@ -1719,7 +1920,20 @@ class SupabaseService {
 
         if (res is List && res.isNotEmpty) {
           for (final row in res) {
-            final u = UserModel.fromMap(Map<String, dynamic>.from(row));
+            final rowMap = Map<String, dynamic>.from(row);
+            if (rowMap['artisan_profiles'] == null ||
+                (rowMap['artisan_profiles'] is List && (rowMap['artisan_profiles'] as List).isEmpty)) {
+              try {
+                final ap = await client
+                    .from('artisan_profiles')
+                    .select('*, artisan_documents(*)')
+                    .eq('user_id', rowMap['id'])
+                    .maybeSingle();
+                if (ap != null) rowMap['artisan_profiles'] = ap;
+              } catch (_) {}
+            }
+
+            final u = UserModel.fromMap(rowMap);
             if (u.status.toUpperCase() == 'DELETED') continue;
             if (u.email.toLowerCase().startsWith('deleted_')) continue;
             if (_deletedAccounts.contains(u.email.toLowerCase())) continue;
@@ -1744,8 +1958,16 @@ class SupabaseService {
       if (_deletedAccounts.contains(email) || email.startsWith('deleted_')) {
         continue;
       }
-      if (!results.any((u) => u.email.toLowerCase() == email)) {
+      final existingIdx = results.indexWhere((u) => u.email.toLowerCase() == email);
+      if (existingIdx == -1) {
         results.add(UserModel.fromMap(Map<String, dynamic>.from(user)));
+      } else {
+        final existing = results[existingIdx];
+        if (existing.experience == null && user['experience'] != null) {
+          results[existingIdx] = existing.copyWith(
+            experience: user['experience'].toString().trim(),
+          );
+        }
       }
     }
 

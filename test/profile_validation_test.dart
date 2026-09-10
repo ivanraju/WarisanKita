@@ -1086,5 +1086,130 @@ void main() {
         expect(find.text('Canting'), findsOneWidget);
       }, createHttpClient: (context) => _MockHttpClient());
     });
-  });
+
+    test('updateUserProfile creates artisan_profiles and preserves bio, tags, and documents when row initially missing', () async {
+        final service = SupabaseService();
+        SharedPreferences.setMockInitialValues({});
+
+        // Update profile for an artisan account whose artisan_profiles row was never created
+        final updated = await service.updateUserProfile(
+          email: 'newartisan@warisankita.my',
+          username: 'master_kamal',
+          displayName: 'Kamal Woodcraft',
+          studioName: 'Kamal Ukiran Kayu',
+          craftCategory: 'Traditional Woodcarving',
+          bio: 'Specialist in Kelantan floral woodcarving with 25 years experience.',
+          state: 'Kelantan',
+          address: 'Lot 102, Kampung Laut, Tumpat',
+          latitude: 6.1955,
+          longitude: 102.2355,
+          phone: '+60123456789',
+          toolsAndMaterials: ['Chedung', 'Ketam Kayu', 'Kayu Cengal'],
+        );
+
+        expect(updated.username, equals('master_kamal'));
+        expect(updated.studioName, equals('Kamal Ukiran Kayu'));
+        expect(updated.craftCategory, equals('Traditional Woodcarving'));
+        expect(updated.bio, equals('Specialist in Kelantan floral woodcarving with 25 years experience.'));
+        expect(updated.state, equals('Kelantan'));
+        expect(updated.address, equals('Lot 102, Kampung Laut, Tumpat'));
+        expect(updated.latitude, equals(6.1955));
+        expect(updated.longitude, equals(102.2355));
+        expect(updated.phone, equals('+60123456789'));
+        expect(updated.tags, containsAll(['Chedung', 'Ketam Kayu', 'Kayu Cengal']));
+        expect(updated.role, equals('Artisan'));
+
+        // Verify that getCurrentUser recovers the updated profile and does not drop any field
+        final retrieved = await service.getCurrentUser();
+        expect(retrieved, isNotNull);
+        expect(retrieved!.bio, equals('Specialist in Kelantan floral woodcarving with 25 years experience.'));
+        expect(retrieved.studioName, equals('Kamal Ukiran Kayu'));
+        expect(retrieved.craftCategory, equals('Traditional Woodcarving'));
+        expect(retrieved.tags, containsAll(['Chedung', 'Ketam Kayu', 'Kayu Cengal']));
+        expect(retrieved.latitude, equals(6.1955));
+        expect(retrieved.longitude, equals(102.2355));
+      });
+
+      test('updateUserProfile and UserModel persist and retrieve experience without rank title', () async {
+        final service = SupabaseService();
+        SharedPreferences.setMockInitialValues({});
+
+        final updated = await service.updateUserProfile(
+          email: 'experience_test@warisankita.my',
+          username: 'master_azman',
+          studioName: 'Azman Pottery Studio',
+          craftCategory: 'Pottery & Ceramics',
+          experience: '20+ Years Experience',
+          bio: 'Practicing traditional Labu Sayong pottery craftsmanship for over two decades.',
+          state: 'Perak',
+        );
+
+        expect(updated.experience, equals('20+ Years Experience'));
+
+        // Verify serialization / deserialization
+        final map = updated.toMap();
+        expect(map['experience'], equals('20+ Years Experience'));
+        final restored = UserModel.fromMap(map);
+        expect(restored.experience, equals('20+ Years Experience'));
+
+        // Test ProfileValidator for experience
+        expect(ProfileValidator.validateExperience(null, isRequired: true), isNotNull);
+        expect(ProfileValidator.validateExperience('', isRequired: true), isNotNull);
+        expect(ProfileValidator.validateExperience('20+ Years Experience', isRequired: true), isNull);
+        // Optional mode for profile builder
+        expect(ProfileValidator.validateExperience(null, isRequired: false), isNull);
+        expect(ProfileValidator.validateExperience('', isRequired: false), isNull);
+
+        // Verify that default 1 year from database does NOT force '1 Years' onto user
+        final defaultMap = {
+          'id': 'u_default_1',
+          'email': 'default@artisan.my',
+          'role': 'Artisan',
+          'artisan_profiles': {
+            'years_experience': 1,
+            'experience': null,
+          }
+        };
+        final defaultUser = UserModel.fromMap(defaultMap);
+        expect(defaultUser.experience, isNull);
+      });
+
+      test('Artisan experience persists on getCurrentUser (reload) and displays in admin getActiveArtisans and getAllUsers', () async {
+        final service = SupabaseService();
+        SharedPreferences.setMockInitialValues({});
+
+        // 1. Artisan saves custom experience
+        final updated = await service.updateUserProfile(
+          email: 'reload_test_artisan@warisankita.my',
+          username: 'batik_master_amin',
+          studioName: 'Amin Batik House',
+          craftCategory: 'Batik & Textiles',
+          experience: '15 Years Craft Experience',
+          bio: 'Preserving Terengganu silk batik heritage.',
+          state: 'Terengganu',
+        );
+
+        expect(updated.experience, equals('15 Years Craft Experience'));
+
+        // 2. Simulate app reload via getCurrentUser
+        final reloaded = await service.getCurrentUser();
+        expect(reloaded, isNotNull);
+        expect(reloaded!.email, equals('reload_test_artisan@warisankita.my'));
+        expect(reloaded.experience, equals('15 Years Craft Experience'));
+
+        // 3. Verify Admin gets this artisan in getActiveArtisans with experience
+        final activeArtisans = await service.getActiveArtisans();
+        final foundActive = activeArtisans.firstWhere(
+          (a) => a.email.toLowerCase() == 'reload_test_artisan@warisankita.my',
+        );
+        expect(foundActive.experience, equals('15 Years Craft Experience'));
+
+        // 4. Verify Admin gets this artisan in getAllUsers with experience
+        final allUsers = await service.getAllUsers();
+        final foundUser = allUsers.firstWhere(
+          (u) => u.email.toLowerCase() == 'reload_test_artisan@warisankita.my',
+        );
+        expect(foundUser.experience, equals('15 Years Craft Experience'));
+      });
+    });
 }

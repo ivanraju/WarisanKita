@@ -81,7 +81,13 @@ class ActiveArtisanMaster {
     final String name = (ap?['studio_name'] ?? map['studio_name'] ?? map['studioName'] ?? map['full_name'] ?? map['display_name'] ?? map['displayName'] ?? map['username'] ?? 'Artisan Studio').toString();
     final String category = (ap?['craft_category'] ?? map['craft_category'] ?? map['craftCategory'] ?? 'Handicraft & Heritage').toString();
     final String state = (ap?['state'] ?? map['state'] ?? 'Malaysia').toString();
-    final String exp = ap?['years_experience'] != null ? '${ap!['years_experience']} Years' : (map['experience'] ?? 'Verified Studio').toString();
+    final String exp = (ap?['experience'] != null && ap!['experience'].toString().trim().isNotEmpty)
+        ? ap['experience'].toString().trim()
+        : (map['experience'] != null && map['experience'].toString().trim().isNotEmpty
+            ? map['experience'].toString().trim()
+            : (ap?['years_experience'] != null
+                ? '${ap!['years_experience']} Years'
+                : 'Verified Studio'));
     final String license = (ap?['ssm_number'] ?? map['ssm_number'] ?? map['ssmNumber'] ?? 'SSM Verified').toString();
     final String bio = (ap?['bio'] ?? map['bio'] ?? 'Master artisan dedicated to traditional Malaysian craft.').toString();
     final String phone = (map['phone_number'] ?? map['phone'] ?? '+60 12-345 6789').toString();
