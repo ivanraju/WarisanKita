@@ -30,6 +30,11 @@ class _LoginScreenState extends State<LoginScreen> {
     _emailController.addListener(_clearErrorOnTyping);
     _passwordController.addListener(_clearErrorOnTyping);
 
+    final authVM = context.read<AuthViewModel>();
+    if (authVM.errorMessage != null || authVM.statusMessage != null) {
+      authVM.clearError();
+    }
+
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (mounted) {
         context.read<AuthViewModel>().clearError();

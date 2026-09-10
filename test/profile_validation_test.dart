@@ -5,8 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:warisan_kita/data/repositories/user_repository.dart';
 import 'package:warisan_kita/data/services/supabase_service.dart';
+import 'package:warisan_kita/domain/models/active_artisan_master.dart';
 import 'package:warisan_kita/domain/models/pending_artisan_profile.dart';
 import 'package:warisan_kita/domain/models/user.dart';
 import 'package:warisan_kita/domain/validators/profile_validator.dart';
@@ -107,6 +109,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   HttpOverrides.global = _MockHttpOverrides();
   SharedPreferences.setMockInitialValues({});
+  GoogleFonts.config.allowRuntimeFetching = false;
 
   group('ProfileValidator Domain Tests', () {
     test('validateUsername accepts valid handles and rejects invalid ones', () {
@@ -746,6 +749,61 @@ void main() {
       expect(backend.passwordUpdates, 1);
       expect(vm.currentUser, isNull);
       expect(backend.client.auth.currentSession, isNull);
+    });
+  });
+
+  group('Account Suspension and Moderation Lifecycle Tests', () {
+
+    test('ModerationViewModel.suspendUser synchronizes both registeredUsers and activeArtisanMasters', () async {
+      final backend = AuthBackend();
+      addTearDown(backend.client.dispose);
+      final record = backend.add('master.artisan@warisankita.my', role: 'Master Artisan', username: 'masterhassan');
+      final artisanId = record['id'] as String;
+      final service = SupabaseService(client: backend.client);
+      final repo = UserRepository(service: service);
+      final modVM = ModerationViewModel(repository: repo);
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      modVM.activeArtisanMasters.add(
+        ActiveArtisanMaster(
+          id: artisanId,
+          name: 'Master Hassan',
+          email: 'master.artisan@warisankita.my',
+          category: 'Wood Carving',
+          state: 'Terengganu',
+          experience: '25 Years',
+          plaques: 5,
+          isLiveOpen: true,
+          licenseNo: 'SSM-12345',
+          verifiedDate: '2024-01-01',
+          imageUrl: '',
+          bio: 'Wood carving master',
+          phone: '+60123456789',
+          isSuspended: false,
+        ),
+      );
+
+      // Suspend user
+      await modVM.suspendUser(artisanId);
+
+      final userInList = modVM.registeredUsers.firstWhere((u) => u.id == artisanId);
+      expect(userInList.isSuspended, isTrue);
+      expect(userInList.status, 'SUSPENDED');
+
+      final masterInList = modVM.activeArtisanMasters.firstWhere((a) => a.id == artisanId);
+      expect(masterInList.isSuspended, isTrue);
+      expect(masterInList.isLiveOpen, isFalse);
+
+      // Reactivate user
+      await modVM.reactivateUser(artisanId);
+
+      final reactivatedUser = modVM.registeredUsers.firstWhere((u) => u.id == artisanId);
+      expect(reactivatedUser.isSuspended, isFalse);
+      expect(reactivatedUser.status, 'ACTIVE');
+
+      final reactivatedMaster = modVM.activeArtisanMasters.firstWhere((a) => a.id == artisanId);
+      expect(reactivatedMaster.isSuspended, isFalse);
+      expect(reactivatedMaster.isLiveOpen, isTrue);
     });
   });
 }

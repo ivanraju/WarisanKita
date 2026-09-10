@@ -81,12 +81,13 @@ class AuthViewModel extends ChangeNotifier {
     try {
       final user = await _repository.getCurrentUser();
       if (user != null) {
-        if (user.status != 'SUSPENDED' && !user.isSuspended) {
-          _currentUser = user;
-          _activeRole = user.role;
-          notifyListeners();
-          return user;
+        _currentUser = user;
+        _activeRole = user.role;
+        if (user.status == 'SUSPENDED' || user.isSuspended) {
+          _errorMessage = 'ACCOUNT SUSPENDED BY ADMINISTRATOR: CONTACT SUPPORT';
         }
+        notifyListeners();
+        return user;
       }
       _currentUser = null;
       _activeRole = null;
@@ -130,6 +131,9 @@ class AuthViewModel extends ChangeNotifier {
         if (_currentUser!.isArtisanStudioSuspended &&
             (_activeRole == 'Artisan' || _activeRole == 'Master Artisan')) {
           _activeRole = 'Cultural Tourist';
+        }
+        if (user.status == 'SUSPENDED' || user.isSuspended) {
+          _errorMessage = 'ACCOUNT SUSPENDED BY ADMINISTRATOR: CONTACT SUPPORT';
         }
         notifyListeners();
         return _currentUser;
@@ -941,9 +945,13 @@ class AuthViewModel extends ChangeNotifier {
       _currentUser = null;
       _activeRole = null;
       _requiresRoleSelection = false;
+      _errorMessage = null;
+      _statusMessage = null;
     } catch (e) {
       debugPrint('Logout error: $e');
     } finally {
+      _errorMessage = null;
+      _statusMessage = null;
       notifyListeners();
     }
   }

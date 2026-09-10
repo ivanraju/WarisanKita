@@ -721,6 +721,17 @@ class ModerationViewModel extends ChangeNotifier {
         suspensionReason: trimmedReason,
       );
 
+      final artisanIdx = _activeArtisanMasters.indexWhere(
+        (a) => a.id == id || a.email.toLowerCase() == user.email.toLowerCase(),
+      );
+      if (artisanIdx != -1) {
+        final artisan = _activeArtisanMasters[artisanIdx];
+        _activeArtisanMasters[artisanIdx] = artisan.copyWith(
+          isSuspended: true,
+          isLiveOpen: false,
+        );
+      }
+
       await _repository.updateArtisanStatus(
         email: user.email,
         newStatus: 'SUSPENDED',
@@ -741,6 +752,17 @@ class ModerationViewModel extends ChangeNotifier {
         status: 'ACTIVE',
         clearSuspensionReason: true,
       );
+
+      final artisanIdx = _activeArtisanMasters.indexWhere(
+        (a) => a.id == id || a.email.toLowerCase() == user.email.toLowerCase(),
+      );
+      if (artisanIdx != -1) {
+        final artisan = _activeArtisanMasters[artisanIdx];
+        _activeArtisanMasters[artisanIdx] = artisan.copyWith(
+          isSuspended: false,
+          isLiveOpen: true,
+        );
+      }
 
       await _repository.updateArtisanStatus(
         email: user.email,
