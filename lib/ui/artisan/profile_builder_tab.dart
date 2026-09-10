@@ -40,37 +40,46 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
   GoogleMapController? _workshopMapController;
   LatLng? _selectedWorkshopPin;
   String? _workshopAddress;
+  LatLng? _lastAnimatedPin;
 
   static const Map<String, LatLng> _stateCenters = {
-    'Johor': LatLng(2.0301, 103.3185),
+    'Johor': LatLng(1.4927, 103.7414),
     'Kedah': LatLng(6.1184, 100.3685),
-    'Kelantan': LatLng(5.3117, 102.2381),
+    'Kelantan': LatLng(6.1254, 102.2381),
     'Melaka': LatLng(2.1896, 102.2501),
     'Negeri Sembilan': LatLng(2.7258, 101.9424),
-    'Pahang': LatLng(3.8126, 103.3256),
+    'Pahang': LatLng(3.8077, 103.3260),
     'Penang': LatLng(5.4141, 100.3288),
-    'Perak': LatLng(4.5921, 101.0901),
-    'Perlis': LatLng(6.4449, 100.2048),
-    'Sabah': LatLng(5.9788, 116.0753),
+    'Perak': LatLng(4.5975, 101.0901),
+    'Perlis': LatLng(6.4414, 100.1986),
+    'Sabah': LatLng(5.9804, 116.0735),
     'Sarawak': LatLng(1.5533, 110.3592),
     'Selangor': LatLng(3.0738, 101.5183),
-    'Terengganu': LatLng(5.3117, 103.1324),
+    'Terengganu': LatLng(5.3296, 103.1370),
     'Kuala Lumpur': LatLng(3.1390, 101.6869),
   };
 
+  static LatLng _resolveStateCenter(String? stateName) {
+    if (stateName == null || stateName.trim().isEmpty) {
+      return const LatLng(3.1390, 101.6869);
+    }
+    final lower = stateName.trim().toLowerCase();
+    for (final entry in _stateCenters.entries) {
+      if (lower.contains(entry.key.toLowerCase()) || entry.key.toLowerCase().contains(lower)) {
+        return entry.value;
+      }
+    }
+    return const LatLng(3.1390, 101.6869);
+  }
+
   LatLng get _selectedStateCenter {
     final state = _stateController.text.trim();
-    return _stateCenters[state] ?? const LatLng(4.2105, 101.9758); // Default Malaysia center
+    return _resolveStateCenter(state);
   }
 
   bool _isOpenForDemos = true;
 
-  List<String> _toolsAndMaterials = [
-    'Kampung Morten River Clay',
-    'Paddy Husk Kiln Ash',
-    'Organic Indigo Dyes',
-    'Hand-spun Wooden Wheel',
-  ];
+  List<String> _toolsAndMaterials = [];
 
   List<String> _portfolioImages = [];
   Map<String, String> _documents = {};
@@ -92,8 +101,10 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     );
     _stateController = TextEditingController(text: user?.state ?? '');
     _workshopAddress = user?.address;
-    if (user != null && user.latitude != null && user.longitude != null) {
+    if (user != null && user.latitude != null && user.longitude != null && user.latitude != 0.0) {
       _selectedWorkshopPin = LatLng(user.latitude!, user.longitude!);
+    } else if (user?.state != null && user!.state!.isNotEmpty) {
+      _selectedWorkshopPin = _resolveStateCenter(user.state);
     }
     _experienceController = TextEditingController(text: '');
     _phoneController = TextEditingController(text: user?.phone ?? '');
@@ -117,14 +128,12 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
         _toolsAndMaterials = List<String>.from(user.tags);
       }
     }
-    
-    if (_portfolioImages.isEmpty) {
-      _portfolioImages = [
-        'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&auto=format&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=600&auto=format&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80',
-      ];
-    }
+
+    Future.microtask(() {
+      if (mounted) {
+        context.read<AuthViewModel>().refreshCurrentUser();
+      }
+    });
   }
 
   void _onUsernameChanged() {
@@ -192,33 +201,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     super.dispose();
   }
 
-  Future<void> _openWorkshopMapPicker() async {
-    final result = await Navigator.of(context).push<WorkshopPlaceResult>(
-      MaterialPageRoute(
-        builder: (_) => WorkshopMapPickerPage(
-          initialState: _stateController.text.trim().isEmpty
-              ? 'Melaka'
-              : _stateController.text.trim(),
-          initialLocation: _selectedWorkshopPin,
-          initialAddress: _workshopAddress,
-          stateCenters: _stateCenters,
-        ),
-      ),
-    );
 
-    if (result != null && mounted) {
-      setState(() {
-        _selectedWorkshopPin = result.position;
-        _workshopAddress = result.displayName;
-        if (result.malaysiaState != null) {
-          _stateController.text = result.malaysiaState!;
-        }
-      });
-      await _workshopMapController?.animateCamera(
-        CameraUpdate.newLatLngZoom(result.position, 17),
-      );
-    }
-  }
 
   Future<void> _handleCancelRelocation() async {
     final confirmed = await showDialog<bool>(
@@ -241,6 +224,14 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
       final authVM = context.read<AuthViewModel>();
       await authVM.cancelRelocationRequest();
       if (mounted) {
+        setState(() {});
+        final verifiedPin = _selectedWorkshopPin ??
+            (authVM.currentUser?.latitude != null && authVM.currentUser?.longitude != null
+                ? LatLng(authVM.currentUser!.latitude!, authVM.currentUser!.longitude!)
+                : _selectedStateCenter);
+        _workshopMapController?.animateCamera(
+          CameraUpdate.newLatLngZoom(verifiedPin, 15),
+        );
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Relocation request withdrawn successfully.'),
@@ -323,12 +314,19 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                         const SizedBox(height: 8),
                         OutlinedButton.icon(
                           onPressed: () async {
+                            final effectivePin = _selectedWorkshopPin ??
+                                (currentUser.latitude != null && currentUser.longitude != null && currentUser.latitude != 0.0
+                                    ? LatLng(currentUser.latitude!, currentUser.longitude!)
+                                    : (currentUser.state != null ? _resolveStateCenter(currentUser.state) : null));
+                            final effectiveAddr = _workshopAddress ?? currentUser.address ?? '';
+                            final effectiveState = currentUser.state ?? '';
+
                             final result = await Navigator.of(context).push<WorkshopPlaceResult>(
                               MaterialPageRoute(
                                 builder: (_) => WorkshopMapPickerPage(
-                                  initialState: proposedState ?? currentUser.state ?? 'Melaka',
-                                  initialLocation: proposedPin ?? _selectedWorkshopPin,
-                                  initialAddress: proposedAddress ?? currentUser.address,
+                                  initialState: proposedState ?? effectiveState,
+                                  initialLocation: proposedPin ?? effectivePin,
+                                  initialAddress: proposedAddress ?? effectiveAddr,
                                   stateCenters: _stateCenters,
                                 ),
                               ),
@@ -338,6 +336,9 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                                 proposedPin = result.position;
                                 proposedAddress = result.displayName;
                                 proposedState = result.malaysiaState;
+                                if (reasonController.text.trim().isEmpty) {
+                                  reasonController.text = 'Premise relocation to ${result.displayName}';
+                                }
                               });
                             }
                           },
@@ -412,7 +413,9 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                       return;
                     }
 
-                    final reason = reasonController.text.trim();
+                    final reason = reasonController.text.trim().isNotEmpty
+                        ? reasonController.text.trim()
+                        : 'Premise relocation to $proposedAddress';
                     await authVM.submitRelocationRequest(
                       address: proposedAddress!,
                       state: proposedState ?? currentUser.state ?? 'Melaka',
@@ -428,14 +431,14 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                             id: 'reloc_${currentUser.id}',
                             name: currentUser.studioName ?? currentUser.displayName ?? 'Artisan Studio',
                             craftCategory: currentUser.craftCategory ?? 'Handicraft & Heritage',
-                            state: currentUser.state ?? 'Melaka',
+                            state: currentUser.state ?? _stateController.text.trim(),
                             dateSubmitted: 'Today',
-                            imageUrl: currentUser.avatarUrl ?? 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600',
+                            imageUrl: currentUser.avatarUrl ?? '',
                             email: currentUser.email,
-                            experience: 'Accredited Studio',
-                            phone: currentUser.phone ?? '+60 12-345 6789',
-                            ssmNumber: currentUser.ssmNumber ?? 'Verified Studio',
-                            bio: currentUser.bio,
+                            experience: _experienceController.text.trim(),
+                            phone: currentUser.phone ?? _phoneController.text.trim(),
+                            ssmNumber: currentUser.ssmNumber,
+                            bio: currentUser.bio ?? _bioController.text.trim(),
                             isUpgradeFromTourist: false,
                             isRelocationRequest: true,
                             currentAddress: currentUser.address,
@@ -447,6 +450,13 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                           ),
                         );
                       } catch (_) {}
+
+                      setState(() {});
+                      if (_workshopMapController != null && proposedPin != null) {
+                        _workshopMapController!.animateCamera(
+                          CameraUpdate.newLatLngZoom(proposedPin!, 15),
+                        );
+                      }
 
                       Navigator.pop(dialogCtx);
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -585,7 +595,9 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
           state: _stateController.text.trim().isEmpty ? 'Malaysia' : _stateController.text.trim(),
           bio: _bioController.text.trim(),
           experience: _experienceController.text.trim(),
-          imageUrl: _portfolioImages.firstWhere((img) => img.isNotEmpty, orElse: () => 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&auto=format&fit=crop&q=80'),
+          imageUrl: _portfolioImages.isNotEmpty
+              ? _portfolioImages.first
+              : (context.read<AuthViewModel>().currentUser?.avatarUrl ?? ''),
           tags: _toolsAndMaterials,
           address: _workshopAddress,
           latitude: _selectedWorkshopPin?.latitude,
@@ -701,7 +713,8 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final currentUser = context.watch<AuthViewModel>().currentUser;
+    final authVM = context.watch<AuthViewModel>();
+    final currentUser = authVM.currentUser;
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
@@ -740,11 +753,16 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
           ),
         ],
       ),
-      body: Form(
-        key: _formKey,
-        autovalidateMode: AutovalidateMode.onUserInteraction,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await context.read<AuthViewModel>().refreshCurrentUser();
+        },
+        child: Form(
+          key: _formKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(24.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1090,23 +1108,83 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                     child: IgnorePointer(
                       child: GoogleMap(
                         initialCameraPosition: CameraPosition(
-                          target: _selectedWorkshopPin ?? _selectedStateCenter,
-                          zoom: 14,
+                          target: (currentUser != null &&
+                                  currentUser.latitude != null &&
+                                  currentUser.longitude != null &&
+                                  currentUser.latitude != 0.0)
+                              ? LatLng(currentUser.latitude!, currentUser.longitude!)
+                              : (_selectedWorkshopPin ?? _selectedStateCenter),
+                          zoom: 15,
                         ),
                         onMapCreated: (controller) {
                           _workshopMapController = controller;
+                          final pin = (currentUser != null &&
+                                  currentUser.latitude != null &&
+                                  currentUser.longitude != null &&
+                                  currentUser.latitude != 0.0)
+                              ? LatLng(currentUser.latitude!, currentUser.longitude!)
+                              : (_selectedWorkshopPin ?? _selectedStateCenter);
+                          controller.animateCamera(CameraUpdate.newLatLngZoom(pin, 15));
                         },
-                        markers: _selectedWorkshopPin == null
-                            ? const <Marker>{}
-                            : {
-                                Marker(
-                                  markerId: const MarkerId('workshop-location'),
-                                  position: _selectedWorkshopPin!,
-                                  icon: BitmapDescriptor.defaultMarkerWithHue(
-                                    BitmapDescriptor.hueGreen,
-                                  ),
+                        markers: () {
+                          final user = currentUser;
+                          final set = <Marker>{};
+                          final currentPremisePin = (user != null &&
+                                  user.latitude != null &&
+                                  user.longitude != null &&
+                                  user.latitude != 0.0)
+                              ? LatLng(user.latitude!, user.longitude!)
+                              : (_selectedWorkshopPin ?? _selectedStateCenter);
+
+                          if (_workshopMapController != null && currentPremisePin != _lastAnimatedPin) {
+                            _lastAnimatedPin = currentPremisePin;
+                            Future.microtask(() {
+                              _workshopMapController?.animateCamera(
+                                CameraUpdate.newLatLngZoom(currentPremisePin, 15),
+                              );
+                            });
+                          }
+
+                          set.add(
+                            Marker(
+                              markerId: const MarkerId('workshop-location'),
+                              position: currentPremisePin,
+                              icon: BitmapDescriptor.defaultMarkerWithHue(
+                                BitmapDescriptor.hueGreen,
+                              ),
+                              infoWindow: InfoWindow(
+                                title: _studioNameController.text.trim().isNotEmpty
+                                    ? _studioNameController.text.trim()
+                                    : (user?.studioName ?? 'Verified Workshop'),
+                                snippet: (user?.address != null && user!.address!.trim().isNotEmpty)
+                                    ? user.address!
+                                    : (_workshopAddress ?? 'Accredited Workshop Premise'),
+                              ),
+                            ),
+                          );
+                          if (user != null &&
+                              user.hasPendingRelocation &&
+                              user.pendingRelocationLatitude != null &&
+                              user.pendingRelocationLongitude != null) {
+                            set.add(
+                              Marker(
+                                markerId: const MarkerId('proposed-relocation-pin'),
+                                position: LatLng(
+                                  user.pendingRelocationLatitude!,
+                                  user.pendingRelocationLongitude!,
                                 ),
-                              },
+                                icon: BitmapDescriptor.defaultMarkerWithHue(
+                                  BitmapDescriptor.hueOrange,
+                                ),
+                                infoWindow: InfoWindow(
+                                  title: 'Proposed Premise (Pending Review)',
+                                  snippet: user.pendingRelocationAddress ?? '',
+                                ),
+                              ),
+                            );
+                          }
+                          return set;
+                        }(),
                         myLocationButtonEnabled: false,
                         myLocationEnabled: false,
                         mapToolbarEnabled: false,
@@ -1156,7 +1234,9 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    _workshopAddress ?? currentUser?.address ?? 'Accredited Heritage Workshop Premise',
+                    (currentUser?.address != null && currentUser!.address!.trim().isNotEmpty)
+                        ? currentUser.address!
+                        : (_workshopAddress ?? 'Accredited Heritage Workshop Premise'),
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
@@ -1167,6 +1247,98 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
               ],
             ),
             const SizedBox(height: 12),
+            if (authVM.relocationResolutionNotice == 'APPROVED') ...[
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFECFDF5),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF10B981)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.check_circle_rounded, color: Color(0xFF059669), size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Workshop Relocation Approved & Active!',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF065F46),
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, size: 16, color: Color(0xFF065F46)),
+                          onPressed: () => authVM.clearRelocationResolutionNotice(),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Your accredited workshop location is now officially updated to ${currentUser?.address ?? ""}. Tourist maps and discovery directions now lead to your new workshop premise.',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        color: const Color(0xFF047857),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+            if (authVM.relocationResolutionNotice == 'REJECTED') ...[
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFEF4444)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.cancel_outlined, color: Color(0xFFDC2626), size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Relocation Request Not Approved',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF991B1B),
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, size: 16, color: Color(0xFF991B1B)),
+                          onPressed: () => authVM.clearRelocationResolutionNotice(),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Your proposed relocation premise was not approved by administration. Your workshop location remains at your current accredited address. You may submit a new relocation request anytime.',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        color: const Color(0xFFB91C1C),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
             if (currentUser?.hasPendingRelocation == true) ...[
               Container(
                 padding: const EdgeInsets.all(14),
@@ -1226,6 +1398,31 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                           ),
                         ),
                         const SizedBox(width: 8),
+                        if (currentUser != null &&
+                            currentUser.pendingRelocationLatitude != null &&
+                            currentUser.pendingRelocationLongitude != null) ...[
+                          OutlinedButton.icon(
+                            onPressed: () {
+                              final pLat = currentUser.pendingRelocationLatitude;
+                              final pLng = currentUser.pendingRelocationLongitude;
+                              if (pLat != null && pLng != null) {
+                                _workshopMapController?.animateCamera(
+                                  CameraUpdate.newLatLngZoom(
+                                    LatLng(pLat, pLng),
+                                    15,
+                                  ),
+                                );
+                              }
+                            },
+                            icon: const Icon(Icons.pin_drop_rounded, size: 14, color: Color(0xFFD97706)),
+                            label: const Text('View on Map', style: TextStyle(fontSize: 11, color: Color(0xFF92400E))),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Color(0xFFF59E0B)),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                        ],
                         OutlinedButton(
                           onPressed: _handleCancelRelocation,
                           style: OutlinedButton.styleFrom(
@@ -1674,6 +1871,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
           ],
         ),
       ),
+    ),
     ),
     );
   }

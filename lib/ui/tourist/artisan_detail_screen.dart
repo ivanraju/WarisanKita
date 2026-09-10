@@ -527,60 +527,33 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                     isDark: isDark,
                   ),
 
-                  const SizedBox(height: 24),
-
-                  // 🛠️ TRADITIONAL MATERIALS & TOOLS USED
-                  Text(
-                    'Materials & Traditional Tools Used',
-                    style: GoogleFonts.dmSerifDisplay(
-                      fontSize: 20,
-                      color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                  if (widget.tags.isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    Text(
+                      'Materials & Traditional Tools Used',
+                      style: GoogleFonts.dmSerifDisplay(
+                        fontSize: 20,
+                        color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: widget.tags.isNotEmpty 
-                      ? widget.tags.map((tag) => Chip(
-                          backgroundColor: isDark ? const Color(0xFF0D2825) : null,
-                          side: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : null,
-                          label: Text(
-                            tag,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 12,
-                              color: isDark ? Colors.white70 : null,
-                            ),
-                          ),
-                        )).toList()
-                      : [
-                          Chip(
-                            backgroundColor: isDark ? const Color(0xFF0D2825) : null,
-                            side: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : null,
-                            avatar: Icon(Icons.landscape_rounded, size: 16, color: isDark ? const Color(0xFF34D399) : null),
-                            label: Text('Kampung Morten River Clay', style: GoogleFonts.plusJakartaSans(color: isDark ? Colors.white70 : null)),
-                          ),
-                          Chip(
-                            backgroundColor: isDark ? const Color(0xFF0D2825) : null,
-                            side: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : null,
-                            avatar: Icon(Icons.local_fire_department_rounded, size: 16, color: isDark ? const Color(0xFF34D399) : null),
-                            label: Text('Paddy Husk Kiln Ash', style: GoogleFonts.plusJakartaSans(color: isDark ? Colors.white70 : null)),
-                          ),
-                          Chip(
-                            backgroundColor: isDark ? const Color(0xFF0D2825) : null,
-                            side: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : null,
-                            avatar: Icon(Icons.palette_rounded, size: 16, color: isDark ? const Color(0xFF34D399) : null),
-                            label: Text('Organic Indigo Dyes', style: GoogleFonts.plusJakartaSans(color: isDark ? Colors.white70 : null)),
-                          ),
-                          Chip(
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: widget.tags.map((tag) => Chip(
                             backgroundColor: isDark ? const Color(0xFF0D2825) : null,
                             side: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : null,
                             avatar: Icon(Icons.handyman_rounded, size: 16, color: isDark ? const Color(0xFF34D399) : null),
-                            label: Text('Hand-spun Wooden Wheel', style: GoogleFonts.plusJakartaSans(color: isDark ? Colors.white70 : null)),
-                          ),
-                        ],
-                  ),
-
+                            label: Text(
+                              tag,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12,
+                                color: isDark ? Colors.white70 : null,
+                              ),
+                            ),
+                          )).toList(),
+                    ),
+                  ],
                   const SizedBox(height: 28),
 
                   // Experience & Studio Highlights Chips
@@ -760,7 +733,7 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                         child: Text(
                           widget.address != null && widget.address!.trim().isNotEmpty
                               ? widget.address!
-                              : 'Kampung Morten, ${widget.state}',
+                              : widget.state,
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -801,6 +774,9 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                     builder: (_) => QuestCompletionScreen(
                       workshopName: widget.artisanName,
                       craftCategory: widget.craftCategory,
+                      locationName: (widget.address != null && widget.address!.trim().isNotEmpty)
+                          ? widget.address!
+                          : widget.state,
                     ),
                   ),
                 );

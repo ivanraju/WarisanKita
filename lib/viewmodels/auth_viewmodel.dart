@@ -100,17 +100,39 @@ class AuthViewModel extends ChangeNotifier {
     return null;
   }
 
+  String? _relocationResolutionNotice;
+  String? get relocationResolutionNotice => _relocationResolutionNotice;
+
+  void clearRelocationResolutionNotice() {
+    _relocationResolutionNotice = null;
+    notifyListeners();
+  }
+
   Future<UserModel?> refreshCurrentUser() async {
     try {
       final user = await _repository.getCurrentUser();
       if (user != null) {
+        if (_currentUser != null &&
+            _currentUser!.id != user.id &&
+            _currentUser!.email.isNotEmpty &&
+            user.email.isNotEmpty &&
+            _currentUser!.email.toLowerCase() != user.email.toLowerCase()) {
+          return _currentUser;
+        }
+        if (_currentUser?.hasPendingRelocation == true && !user.hasPendingRelocation) {
+          if (user.address == _currentUser?.pendingRelocationAddress) {
+            _relocationResolutionNotice = 'APPROVED';
+          } else {
+            _relocationResolutionNotice = 'REJECTED';
+          }
+        }
         _currentUser = user;
-        if (user.isArtisanStudioSuspended &&
+        if (_currentUser!.isArtisanStudioSuspended &&
             (_activeRole == 'Artisan' || _activeRole == 'Master Artisan')) {
           _activeRole = 'Cultural Tourist';
         }
         notifyListeners();
-        return user;
+        return _currentUser;
       }
     } catch (e) {
       debugPrint('refreshCurrentUser note: $e');
@@ -235,7 +257,18 @@ class AuthViewModel extends ChangeNotifier {
         longitude: longitude,
         reason: reason,
       );
-      _currentUser = updated;
+      if (_currentUser != null) {
+        _currentUser = _currentUser!.copyWith(
+          pendingRelocationAddress: address.trim(),
+          pendingRelocationState: state.trim(),
+          pendingRelocationLatitude: latitude,
+          pendingRelocationLongitude: longitude,
+          pendingRelocationReason: reason.trim(),
+          pendingRelocationDate: updated.pendingRelocationDate ?? DateTime.now().toIso8601String(),
+        );
+      } else {
+        _currentUser = updated;
+      }
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -248,8 +281,12 @@ class AuthViewModel extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final updated = await _repository.cancelRelocationRequest(email: email);
-      _currentUser = updated;
+      await _repository.cancelRelocationRequest(email: email);
+      if (_currentUser != null) {
+        _currentUser = _currentUser!.copyWith(
+          clearPendingRelocation: true,
+        );
+      }
     } finally {
       _isLoading = false;
       notifyListeners();

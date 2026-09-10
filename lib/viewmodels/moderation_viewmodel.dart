@@ -21,6 +21,9 @@ class ModerationViewModel extends ChangeNotifier {
   String _searchQuery = '';
   String get searchQuery => _searchQuery;
 
+  String _applicationTypeFilter = 'All'; // 'All', 'New Profiles', 'Relocations'
+  String get applicationTypeFilter => _applicationTypeFilter;
+
   String _selectedCategory = 'All Categories';
   String get selectedCategory => _selectedCategory;
 
@@ -181,12 +184,18 @@ class ModerationViewModel extends ChangeNotifier {
       final matchesCategory = _selectedCategory == 'All Categories' ||
           artisan.craftCategory == _selectedCategory;
 
-      return matchesSearch && matchesCategory;
+      final matchesType = _applicationTypeFilter == 'All' ||
+          (_applicationTypeFilter == 'New Profiles' && !artisan.isRelocationRequest) ||
+          (_applicationTypeFilter == 'Relocations' && artisan.isRelocationRequest);
+
+      return matchesSearch && matchesCategory && matchesType;
     }).toList();
   }
 
   List<PendingArtisanProfile> get pendingArtisans => List.unmodifiable(_pendingArtisans);
   int get totalPendingCount => _pendingArtisans.length;
+  int get pendingRelocationCount => _pendingArtisans.where((p) => p.isRelocationRequest).length;
+  int get pendingNewProfilesCount => _pendingArtisans.where((p) => !p.isRelocationRequest).length;
 
   int _sessionApprovedToday = 0;
   final List<Duration> _reviewDurations = [];
@@ -311,6 +320,11 @@ class ModerationViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setApplicationTypeFilter(String filter) {
+    _applicationTypeFilter = filter;
+    notifyListeners();
+  }
+
   void setSelectedCategory(String category) {
     _selectedCategory = category;
     notifyListeners();
@@ -383,15 +397,43 @@ class ModerationViewModel extends ChangeNotifier {
         fetched.add(newProfile);
       }
 
-      // Preserve any pending relocation requests added in this session
-      final localRelocations = _pendingArtisans.where((p) => p.isRelocationRequest).toList();
+      // Also query users with pending relocation from repository
+      try {
+        final allUsers = await _repository.getAllUsers();
+        for (final u in allUsers) {
+          if (u.hasPendingRelocation) {
+            final relocId = 'reloc_${u.id}';
+            if (!fetched.any((p) => p.email.toLowerCase() == u.email.toLowerCase() && p.isRelocationRequest)) {
+              fetched.insert(0, PendingArtisanProfile(
+                id: relocId,
+                name: u.studioName ?? u.displayName ?? 'Artisan Studio',
+                craftCategory: u.craftCategory ?? 'Handicraft & Heritage',
+                state: u.state ?? 'Melaka',
+                dateSubmitted: u.pendingRelocationDate ?? 'Recent',
+                imageUrl: u.avatarUrl ?? 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600',
+                email: u.email,
+                experience: 'Accredited Studio',
+                phone: u.phone ?? '+60 12-345 6789',
+                ssmNumber: u.ssmNumber ?? 'Verified Studio',
+                bio: u.bio,
+                isUpgradeFromTourist: false,
+                isRelocationRequest: true,
+                currentAddress: u.address,
+                proposedAddress: u.pendingRelocationAddress,
+                proposedLatitude: u.pendingRelocationLatitude,
+                proposedLongitude: u.pendingRelocationLongitude,
+                proposedState: u.pendingRelocationState,
+                relocationReason: u.pendingRelocationReason,
+              ));
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('Error fetching relocation requests: $e');
+      }
+
       _pendingArtisans.clear();
       _pendingArtisans.addAll(fetched);
-      for (final rel in localRelocations) {
-        if (!_pendingArtisans.any((p) => p.email.toLowerCase() == rel.email.toLowerCase() && p.isRelocationRequest)) {
-          _pendingArtisans.insert(0, rel);
-        }
-      }
       notifyListeners();
     } catch (e) {
       debugPrint('Error fetching pending artisans: $e');
@@ -449,7 +491,16 @@ class ModerationViewModel extends ChangeNotifier {
       _recordApproval(submittedDate);
 
       if (artisan.isRelocationRequest) {
-        await _repository.approveRelocationRequest(email: artisan.email);
+        await _repository.approveRelocationRequest(
+          email: artisan.email,
+          newAddress: artisan.proposedAddress,
+          newState: artisan.proposedState,
+          newLat: artisan.proposedLatitude,
+          newLng: artisan.proposedLongitude,
+        );
+        _pendingArtisans.removeWhere(
+          (p) => p.email.toLowerCase() == artisan.email.toLowerCase() && p.isRelocationRequest,
+        );
         final userIdx = _registeredUsers.indexWhere((u) => u.email.toLowerCase() == artisan.email.toLowerCase());
         if (userIdx != -1) {
           final u = _registeredUsers[userIdx];
@@ -622,6 +673,9 @@ class ModerationViewModel extends ChangeNotifier {
 
       if (artisan.isRelocationRequest) {
         await _repository.rejectRelocationRequest(email: artisan.email);
+        _pendingArtisans.removeWhere(
+          (p) => p.email.toLowerCase() == artisan.email.toLowerCase() && p.isRelocationRequest,
+        );
         final userIdx = _registeredUsers.indexWhere((u) => u.email.toLowerCase() == artisan.email.toLowerCase());
         if (userIdx != -1) {
           _registeredUsers[userIdx] = _registeredUsers[userIdx].copyWith(

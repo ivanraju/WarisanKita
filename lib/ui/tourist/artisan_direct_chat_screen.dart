@@ -62,7 +62,7 @@ class _ArtisanDirectChatScreenState extends State<ArtisanDirectChatScreen> {
           'sender': widget.artisanName,
           'isMe': false,
           'time': 'Just now',
-          'text': 'Terima kasih for your message! Our studio in Kampung Morten is open today. Feel free to drop by to observe live crafting or ask any questions!',
+          'text': 'Terima kasih for your message! Our workshop is open today. Feel free to drop by to observe live crafting or ask any questions!',
         });
       });
     });

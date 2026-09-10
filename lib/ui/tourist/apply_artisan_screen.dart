@@ -96,12 +96,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
     });
   }
   
-  final List<String> _toolsAndMaterials = [
-    'Kampung Morten River Clay',
-    'Paddy Husk Kiln Ash',
-    'Organic Indigo Dyes',
-    'Hand-spun Wooden Wheel',
-  ];
+  final List<String> _toolsAndMaterials = [];
 
   PlatformFile? _ssmFile;
   PlatformFile? _kraftanganFile;

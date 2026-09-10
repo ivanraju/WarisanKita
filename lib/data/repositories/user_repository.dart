@@ -180,8 +180,20 @@ class UserRepository {
     return _service.cancelRelocationRequest(email: email);
   }
 
-  Future<UserModel> approveRelocationRequest({required String email}) {
-    return _service.approveRelocationRequest(email: email);
+  Future<UserModel> approveRelocationRequest({
+    required String email,
+    String? newAddress,
+    String? newState,
+    double? newLat,
+    double? newLng,
+  }) {
+    return _service.approveRelocationRequest(
+      email: email,
+      proposedAddress: newAddress,
+      proposedState: newState,
+      proposedLat: newLat,
+      proposedLng: newLng,
+    );
   }
 
   Future<UserModel> rejectRelocationRequest({required String email, String? feedback}) {
