@@ -36,6 +36,24 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       _emailController.text = widget.initialEmail!;
     }
     _newPasswordController.addListener(_onPasswordChanged);
+    _emailController.addListener(_clearErrorOnTyping);
+    _tokenController.addListener(_clearErrorOnTyping);
+    _newPasswordController.addListener(_clearErrorOnTyping);
+    _confirmPasswordController.addListener(_clearErrorOnTyping);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<AuthViewModel>().clearError();
+        ScaffoldMessenger.of(context).clearSnackBars();
+      }
+    });
+  }
+
+  void _clearErrorOnTyping() {
+    final authVM = context.read<AuthViewModel>();
+    if (authVM.errorMessage != null) {
+      authVM.clearError();
+    }
   }
 
   void _onPasswordChanged() {
@@ -45,6 +63,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   void dispose() {
     _newPasswordController.removeListener(_onPasswordChanged);
+    _emailController.removeListener(_clearErrorOnTyping);
+    _tokenController.removeListener(_clearErrorOnTyping);
+    _newPasswordController.removeListener(_clearErrorOnTyping);
+    _confirmPasswordController.removeListener(_clearErrorOnTyping);
     _emailController.dispose();
     _tokenController.dispose();
     _newPasswordController.dispose();
@@ -74,7 +96,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('PASSWORD RESET LINK HAS BEEN SENT TO YOUR EMAIL (Valid for 15 mins)'),
+        content: Text('PASSWORD RESET LINK HAS BEEN SENT TO YOUR EMAIL'),
         backgroundColor: Color(0xFF10B981),
         behavior: SnackBarBehavior.floating,
       ),
@@ -112,6 +134,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     }
 
     // UC003 - M3: "PASSWORD RESET SUCCESSFUL: YOU MAY NOW LOGIN"
+    context.read<AuthViewModel>().clearError();
+    ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('PASSWORD RESET SUCCESSFUL: You may now sign in with your new password'),
@@ -138,7 +162,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF004D40)),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () {
+            context.read<AuthViewModel>().clearError();
+            ScaffoldMessenger.of(context).clearSnackBars();
+            Navigator.of(context).pop();
+          },
         ),
       ),
       body: Center(
@@ -315,7 +343,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Reset link expires in 15 minutes. Check your spam folder if you do not see it.',
+                  'Use the latest reset link from your email. If it has expired, request a new one. Check your spam folder if needed.',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
@@ -331,7 +359,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
         // Back to Sign In
         FilledButton.icon(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () {
+            context.read<AuthViewModel>().clearError();
+            ScaffoldMessenger.of(context).clearSnackBars();
+            Navigator.of(context).pop();
+          },
           icon: const Icon(Icons.arrow_back_rounded, size: 18),
           label: const Text('BACK TO SIGN IN'),
           style: FilledButton.styleFrom(

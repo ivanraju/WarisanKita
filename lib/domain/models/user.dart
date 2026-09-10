@@ -92,11 +92,7 @@ class UserModel {
       isDualRole ||
       roles.contains('Tourist');
 
-  bool get isAdmin =>
-      role.toLowerCase().contains('admin') ||
-      roles.any((r) => r.toLowerCase().contains('admin')) ||
-      email.toLowerCase().trim() == 'admin@warisankita.my' ||
-      username?.toLowerCase().trim() == 'admin';
+  bool get isAdmin => role == 'Admin' || roles.contains('Admin');
 
   bool get hasMultipleRoles =>
       isDualRole ||
