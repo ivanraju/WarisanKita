@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
+import 'package:warisan_kita/ui/auth/email_verification_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -113,8 +114,18 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         ? null
                         : () async {
                             if (_formKey.currentState!.validate()) {
-                              await authState.signUp(_emailController.text, _passwordController.text, _selectedRole);
-                              if (mounted) Navigator.pop(context);
+                              final result = await authState.signUp(_emailController.text, _passwordController.text, _selectedRole);
+                              if (!context.mounted || !result.success) return;
+                              if (result.requiresEmailVerification) {
+                                Navigator.of(context).push(MaterialPageRoute(
+                                  builder: (_) => EmailVerificationScreen(
+                                    email: result.unverifiedEmail!,
+                                    targetRoute: result.route,
+                                  ),
+                                ));
+                              } else {
+                                Navigator.of(context).pushNamedAndRemoveUntil(result.route ?? '/tourist', (_) => false);
+                              }
                             }
                           },
                     style: ElevatedButton.styleFrom(

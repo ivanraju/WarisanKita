@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:async';
 import 'dart:io' as io;
-import 'dart:math';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
@@ -13,7 +12,29 @@ import 'package:warisan_kita/domain/models/forum_post.dart';
 import 'package:warisan_kita/domain/models/user.dart';
 import 'package:warisan_kita/domain/validators/ssm_validator.dart';
 
+class EmailVerificationRequired extends AuthException {
+  final String email;
+  const EmailVerificationRequired(this.email) : super('Email not confirmed');
+}
+
 class SupabaseService {
+  final SupabaseClient? _injectedClient;
+
+  SupabaseService({SupabaseClient? client}) : _injectedClient = client;
+
+  String? _recoveryAccessToken;
+  bool _resetInProgress = false;
+
+  // Called only for Supabase's authenticated passwordRecovery event.
+  void acceptPasswordRecovery(Session session) {
+    if (_client?.auth.currentSession?.accessToken == session.accessToken) {
+      _recoveryAccessToken = session.accessToken;
+    }
+  }
+
+  SupabaseClient get _authClient => _client ??
+      (throw StateError('Authentication is unavailable. Please reconnect and try again.'));
+
   // Session Persistence Keys
   static const String _keyAuthUser = 'wk_last_auth_user';
   static const String _keyAuthEmail = 'wk_last_auth_email';
@@ -59,21 +80,6 @@ class SupabaseService {
     } catch (_) {}
   }
 
-  static Future<bool> _isAccountDeleted(String email) async {
-    final clean = email.trim().toLowerCase();
-    if (clean.isEmpty) return false;
-    if (_deletedAccounts.contains(clean)) return true;
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final list = prefs.getStringList(_keyDeletedAccounts) ?? [];
-      if (list.contains(clean)) {
-        _deletedAccounts.add(clean);
-        return true;
-      }
-    } catch (_) {}
-    return false;
-  }
-
   static Future<void> _recordDeletedUsername(String username) async {
     final clean = _cleanUsernameKey(username);
     if (clean.isEmpty) return;
@@ -102,32 +108,6 @@ class SupabaseService {
     } catch (_) {}
   }
 
-  static Future<bool> _isUsernameDeleted(String username) async {
-    final clean = _cleanUsernameKey(username);
-    if (clean.isEmpty) return false;
-    if (_deletedUsernames.contains(clean)) return true;
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final list = prefs.getStringList(_keyDeletedUsernames) ?? [];
-      if (list.contains(clean)) {
-        _deletedUsernames.add(clean);
-        return true;
-      }
-    } catch (_) {}
-    return false;
-  }
-
-  static Future<void> _saveAuthSession(UserModel user) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_keyAuthEmail, user.email);
-      await prefs.setString(_keyAuthUser, jsonEncode(user.toMap()));
-      await prefs.setString(_keyActiveRole, user.role);
-    } catch (e) {
-      debugPrint('saveAuthSession note: $e');
-    }
-  }
-
   static Future<void> _clearAuthSession() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -139,19 +119,8 @@ class SupabaseService {
     }
   }
 
-  // Generates standard UUID v4 for PostgreSQL uuid column compatibility
-  static String _generateUuidV4() {
-    final random = Random();
-    final values = List<int>.generate(16, (_) => random.nextInt(256));
-    values[6] = (values[6] & 0x0f) | 0x40; // UUID version 4
-    values[8] = (values[8] & 0x3f) | 0x80; // Variant 10xx
-    final hex = values.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
-    return '${hex.substring(0, 8)}-${hex.substring(8, 12)}-${hex.substring(12, 16)}-${hex.substring(16, 20)}-${hex.substring(20, 32)}';
-  }
-
-  // CRITICAL: Safe getter for the client.
-  // Returns the SupabaseClient if Supabase is initialized, otherwise null for offline/testing.
   SupabaseClient? get _client {
+    if (_injectedClient != null) return _injectedClient;
     try {
       return Supabase.instance.client;
     } catch (_) {
@@ -167,112 +136,35 @@ class SupabaseService {
     return '${months[dt.month - 1]} ${dt.year}';
   }
 
-  // In-memory Database Store for verified offline/prototype and test accounts
-  static final Map<String, Map<String, dynamic>> _userStore = {
-    'admin@warisankita.my': {
-      'id': 'a0000000-0000-0000-0000-000000000001',
-      'email': 'admin@warisankita.my',
-      'username': 'admin',
-      'displayName': 'Super Admin Nadia',
-      'password': 'password123',
-      'role': 'Admin',
-      'roles': ['Admin'],
-      'status': 'ACTIVE',
-      'joinedDate': 'Jan 2025',
-      'isSuspended': false,
-    },
-  };
-
-  // Password reset tokens store: token -> {email, expiresAt, isUsed}
-  static final Map<String, Map<String, dynamic>> _resetTokens = {};
+  // Profile cache only: never stores passwords or authenticates a user.
+  static final Map<String, Map<String, dynamic>> _userStore = {};
 
   // --- Auth Services ---
+
+  static String _literalLookupPattern(String value) => value
+      .replaceAll(r'\', r'\\')
+      .replaceAll('_', r'\_')
+      .replaceAll('%', r'\%');
 
   Future<bool> isUsernameAvailable(
     String username, {
     String? excludeEmail,
   }) async {
-    final cleanUsername = username
-        .trim()
-        .toLowerCase()
-        .replaceAll('@', '')
-        .replaceAll(' ', '')
-        .replaceAll('_', '')
-        .replaceAll('-', '');
+    final cleanUsername = username.trim().replaceAll('@', '');
     if (cleanUsername.isEmpty) return false;
 
-    // Check if recorded in local deleted usernames store
-    if (await _isUsernameDeleted(cleanUsername)) {
-      return true;
-    }
-
-    // 1. Check local in-memory store for unique username/handle
-    for (final entry in _userStore.entries) {
-      if (excludeEmail != null &&
-          entry.key.toLowerCase() == excludeEmail.toLowerCase()) {
-        continue;
-      }
-      final u = entry.value;
-      final status = (u['status'] ?? '').toString().toUpperCase();
-      final isSuspended = u['isSuspended'] == true;
-      final reason = (u['suspensionReason'] ?? '').toString();
-      if (status == 'DELETED' || (isSuspended && reason == 'ACCOUNT_DELETED')) {
-        continue;
-      }
-      if (_deletedAccounts.contains(entry.key.toLowerCase())) {
-        continue;
-      }
-
-      final existingUsername = (u['username'] as String?)
-          ?.toLowerCase()
-          .replaceAll('@', '')
-          .replaceAll(' ', '')
-          .replaceAll('_', '')
-          .replaceAll('-', '');
-      if (existingUsername != null &&
-          existingUsername.isNotEmpty &&
-          existingUsername == cleanUsername) {
-        return false;
-      }
-    }
-
-    // 2. Check Supabase public.users table if connected
-    final client = _client;
-    if (client != null) {
-      try {
-        final res = await client
-            .from('users')
-            .select('id, email, status, is_suspended, suspension_reason')
-            .ilike('username', cleanUsername)
-            .maybeSingle();
-
-        if (res != null) {
-          final resEmail = (res['email'] as String?)?.toLowerCase() ?? '';
-          if (excludeEmail != null &&
-              resEmail == excludeEmail.toLowerCase()) {
-            return true;
-          }
-
-          final status = (res['status'] ?? '').toString().toUpperCase();
-          final isSuspended = res['is_suspended'] == true;
-          final reason = (res['suspension_reason'] ?? '').toString();
-          if (status == 'DELETED' ||
-              (isSuspended && reason == 'ACCOUNT_DELETED')) {
-            return true;
-          }
-          if (resEmail.isNotEmpty && await _isAccountDeleted(resEmail)) {
-            return true;
-          }
-          return false;
-        }
-      } catch (e) {
-        debugPrint(
-          'Supabase username uniqueness check note (username column may not exist yet): $e',
-        );
-      }
-    }
-
-    return true;
+    // Use the deployed core columns. Local caches and deleted-account markers
+    // cannot establish availability after another device changes an account.
+    final rows = await _authClient
+        .from('users')
+        .select('email, status')
+        .ilike('username', _literalLookupPattern(cleanUsername))
+        .timeout(const Duration(seconds: 10));
+    return !rows.any((row) =>
+        (row['status'] ?? '').toString().toUpperCase() != 'DELETED' &&
+        (excludeEmail == null ||
+            row['email'].toString().toLowerCase() !=
+                excludeEmail.trim().toLowerCase()));
   }
 
   Future<bool> isSsmRegistered(
@@ -336,601 +228,112 @@ class SupabaseService {
       return const ExistingAccountCheck(exists: false);
     }
 
-    if (await _isAccountDeleted(cleanEmail)) {
-      return const ExistingAccountCheck(exists: false);
+    // The registration check needs only core identity fields, not a join to
+    // artisan tables or optional suspension columns. Propagate lookup failures.
+    final rows = await _authClient
+        .from('users')
+        .select('id, email, username, full_name, display_name, role, status')
+        .ilike('email', _literalLookupPattern(cleanEmail))
+        .timeout(const Duration(seconds: 10));
+    final activeRows = rows.where(
+      (row) => (row['status'] ?? '').toString().toUpperCase() != 'DELETED',
+    );
+    if (activeRows.isEmpty) return const ExistingAccountCheck(exists: false);
+    final row = activeRows.first;
+    final role = (row['role'] ?? 'Tourist').toString();
+    final lowerRole = role.toLowerCase();
+    final isArtisan = lowerRole.contains('artisan');
+    final isTourist = lowerRole.contains('tourist');
+    return ExistingAccountCheck(
+      exists: true,
+      existingRole: role,
+      existingRoles: [role],
+      isArtisan: isArtisan,
+      isTourist: isTourist,
+      isDualRole: isArtisan && isTourist,
+      displayName: row['display_name'] ?? row['full_name'],
+      username: row['username'],
+    );
+  }
+
+  Future<UserModel> _loadAuthenticatedProfile() async {
+    final client = _authClient;
+    final verified = await client.auth.getUser();
+    final authUser = verified.user;
+    if (authUser == null || authUser.emailConfirmedAt == null) {
+      throw const AuthException('Email not confirmed');
     }
-
-    // 1. Check local prototype/in-memory store
-    if (_userStore.containsKey(cleanEmail)) {
-      final u = _userStore[cleanEmail]!;
-      final status = (u['status'] ?? '').toString().toUpperCase();
-      final isSuspended = u['isSuspended'] == true;
-      final reason = (u['suspensionReason'] ?? '').toString();
-      if (status == 'DELETED' || (isSuspended && reason == 'ACCOUNT_DELETED')) {
-        return const ExistingAccountCheck(exists: false);
-      }
-      final role = (u['role'] ?? '').toString();
-      final roles = (u['roles'] is List)
-          ? List<String>.from(u['roles'])
-          : <String>[role];
-      final studioName = (u['studioName'] ?? u['studio_name']) as String?;
-      final ssm = (u['ssmNumber'] ?? u['ssm_number']) as String?;
-
-      final cleanRole = role.trim().toLowerCase();
-      final rolesLower = roles.map((r) => r.trim().toLowerCase()).toList();
-
-      final isDual =
-          cleanRole.contains('artisan & tourist') ||
-          cleanRole.contains('tourist & artisan') ||
-          cleanRole.contains('artisan/tourist') ||
-          cleanRole.contains('tourist/artisan') ||
-          cleanRole.contains('artisan and tourist') ||
-          (rolesLower.any((r) => r.contains('tourist')) &&
-              rolesLower.any((r) => r.contains('artisan')));
-
-      final isArtisan =
-          isDual ||
-          cleanRole.contains('artisan') ||
-          rolesLower.any((r) => r.contains('artisan')) ||
-          (studioName != null && studioName.trim().isNotEmpty) ||
-          (ssm != null && ssm.trim().isNotEmpty);
-
-      final isTourist =
-          isDual ||
-          cleanRole.contains('tourist') ||
-          rolesLower.any((r) => r.contains('tourist')) ||
-          (!isArtisan);
-
-      debugPrint(
-        '🔍 [checkExistingAccount] local found for $cleanEmail: isArtisan=$isArtisan, isTourist=$isTourist, isDual=$isDual, role=$role',
-      );
-
-      return ExistingAccountCheck(
-        exists: true,
-        existingRole: role,
-        existingRoles: roles,
-        isTourist: isTourist,
-        isArtisan: isArtisan,
-        isDualRole: isDual,
-        displayName: u['displayName'] ?? u['display_name'] ?? u['full_name'],
-        username: u['username'],
-        studioName: studioName,
-        craftCategory: u['craftCategory'] ?? u['craft_category'],
-      );
+    // Roles and account status must come from the database, not editable
+    // authentication metadata or a cached profile.
+    final row = await client.from('users').select()
+        .eq('id', authUser.id).maybeSingle();
+    if (row == null) {
+      throw const AuthException('Account profile is unavailable. Please contact support.');
     }
-
-    // 2. Check Supabase DB table & RPC helper
-    final client = _client;
-    if (client != null) {
-      Map<String, dynamic>? res;
-      try {
-        final rpcRes = await client.rpc(
-          'check_account_by_email',
-          params: {'p_email': cleanEmail},
-        );
-        if (rpcRes is List && rpcRes.isNotEmpty) {
-          res = Map<String, dynamic>.from(rpcRes.first);
-        }
-      } catch (_) {}
-
-      if (res == null) {
-        try {
-          res = await client
-              .from('users')
-              .select('*, artisan_profiles!artisan_profiles_user_id_fkey(*)')
-              .ilike('email', cleanEmail)
-              .maybeSingle();
-        } catch (e) {
-          try {
-            res = await client
-                .from('users')
-                .select('*, artisan_profiles(*)')
-                .ilike('email', cleanEmail)
-                .maybeSingle();
-          } catch (_) {
-            try {
-              res = await client
-                  .from('users')
-                  .select()
-                  .ilike('email', cleanEmail)
-                  .maybeSingle();
-            } catch (e2) {
-              debugPrint('Supabase checkExistingAccount note: $e2');
-            }
-          }
-        }
-      }
-
-      if (res != null) {
-        final status = (res['status'] ?? '').toString().toUpperCase();
-        final isSuspended = res['is_suspended'] == true;
-        final reason = (res['suspension_reason'] ?? '').toString();
-        if (status == 'DELETED' ||
-            (isSuspended && reason == 'ACCOUNT_DELETED')) {
-          return const ExistingAccountCheck(exists: false);
-        }
-        final role = (res['role'] ?? '').toString();
-        final rawRoles = res['roles'];
-        final roles = (rawRoles is List)
-            ? List<String>.from(rawRoles)
-            : <String>[role];
-
-        Map<String, dynamic>? artisanMap;
-        if (res['artisan_profiles'] is Map) {
-          artisanMap = Map<String, dynamic>.from(res['artisan_profiles']);
-        } else if (res['artisan_profiles'] is List &&
-            (res['artisan_profiles'] as List).isNotEmpty) {
-          artisanMap = Map<String, dynamic>.from(
-            (res['artisan_profiles'] as List).first,
-          );
-        }
-
-        final studioName =
-            (res['studio_name'] ??
-                    res['studioName'] ??
-                    artisanMap?['studio_name'])
-                as String?;
-        final ssm =
-            (res['ssm_number'] ?? res['ssmNumber'] ?? artisanMap?['ssm_number'])
-                as String?;
-        final craftCat =
-            (res['craft_category'] ??
-                    res['craftCategory'] ??
-                    artisanMap?['craft_category'])
-                as String?;
-
-        final cleanRole = role.trim().toLowerCase();
-        final rolesLower = roles.map((r) => r.trim().toLowerCase()).toList();
-
-        final isDual =
-            cleanRole.contains('artisan & tourist') ||
-            cleanRole.contains('tourist & artisan') ||
-            cleanRole.contains('artisan/tourist') ||
-            cleanRole.contains('tourist/artisan') ||
-            cleanRole.contains('artisan and tourist') ||
-            (rolesLower.any((r) => r.contains('tourist')) &&
-                rolesLower.any((r) => r.contains('artisan')));
-
-        final isArtisan =
-            isDual ||
-            cleanRole.contains('artisan') ||
-            rolesLower.any((r) => r.contains('artisan')) ||
-            (studioName != null && studioName.trim().isNotEmpty) ||
-            (ssm != null && ssm.trim().isNotEmpty);
-
-        final isTourist =
-            isDual ||
-            cleanRole.contains('tourist') ||
-            rolesLower.any((r) => r.contains('tourist')) ||
-            (!isArtisan);
-
-        debugPrint(
-          '🔍 [checkExistingAccount] DB found for $cleanEmail: isArtisan=$isArtisan, isTourist=$isTourist, isDual=$isDual, role=$role',
-        );
-
-        return ExistingAccountCheck(
-          exists: true,
-          existingRole: role,
-          existingRoles: roles,
-          isTourist: isTourist,
-          isArtisan: isArtisan,
-          isDualRole: isDual,
-          displayName:
-              res['full_name'] ?? res['display_name'] ?? res['displayName'],
-          username: res['username'],
-          studioName: studioName,
-          craftCategory: craftCat,
-        );
-      }
+    final user = UserModel.fromMap(row);
+    if (user.status.toUpperCase() == 'DELETED' ||
+        user.suspensionReason == 'ACCOUNT_DELETED') {
+      throw const AuthException('ACCOUNT DELETED: Please contact support.');
     }
-
-    return const ExistingAccountCheck(exists: false);
+    if (user.status.toUpperCase() == 'SUSPENDED' || user.isSuspended) {
+      throw const AuthException('ACCOUNT SUSPENDED BY ADMINISTRATOR: Contact support.');
+    }
+    // Load professional details independently of the core identity query.
+    // A failed lookup must not silently turn a pending studio into an approved one.
+    if (user.isArtisan || user.isPendingArtisan) {
+      final artisan = await client.from('artisan_profiles').select()
+          .eq('user_id', authUser.id).maybeSingle();
+      if (artisan != null) row['artisan_profiles'] = artisan;
+    }
+    final profile = UserModel.fromMap(row);
+    _userStore[profile.email.toLowerCase()] = row;
+    return profile;
   }
 
   Future<UserModel> signIn(String emailOrUsername, String password) async {
-    final normInput = emailOrUsername
-        .trim()
-        .toLowerCase()
-        .replaceAll('@', '')
-        .replaceAll(' ', '')
-        .replaceAll('_', '')
-        .replaceAll('-', '');
-    final rawInput = emailOrUsername.trim().toLowerCase();
-
-    // Simulate network latency
-    await Future.delayed(const Duration(milliseconds: 300));
-
-    UserModel? authenticatedUser;
-
-    // Fast-path: Dedicated Administrator Auth (Username 'admin', 'superadmin', 'adminnadia', or 'admin@warisankita.my')
-    if (normInput == 'admin' ||
-        normInput == 'superadmin' ||
-        normInput == 'administrator' ||
-        normInput == 'adminnadia' ||
-        rawInput == 'admin@warisankita.my') {
-      if (password == 'admin123' ||
-          password == 'password123' ||
-          password == _userStore['admin@warisankita.my']?['password']) {
-        final adminData =
-            _userStore['admin@warisankita.my'] ??
-            {
-              'id': 'usr-admin-001',
-              'email': 'admin@warisankita.my',
-              'username': 'admin',
-              'displayName': 'Super Admin Nadia',
-              'role': 'Admin',
-              'roles': ['Admin'],
-              'status': 'ACTIVE',
-              'joinedDate': 'Jan 2025',
-              'isSuspended': false,
-            };
-        authenticatedUser = UserModel.fromMap(adminData);
-        await _saveAuthSession(authenticatedUser);
-        return authenticatedUser;
-      } else {
-        throw Exception('INVALID CREDENTIALS: Password incorrect.');
+    final client = _authClient;
+    await signOut();
+    final input = emailOrUsername.trim().toLowerCase();
+    String email = input;
+    if (!input.contains('@') || input.startsWith('@')) {
+      final username = input.startsWith('@') ? input.substring(1) : input;
+      // Escape LIKE wildcards: underscore is a literal, valid username character.
+      final pattern = username.replaceAll(r'\', r'\\')
+          .replaceAll('_', r'\_').replaceAll('%', r'\%');
+      final row = await client.from('users').select('email')
+          .ilike('username', pattern).maybeSingle();
+      if (row == null) throw const AuthException('INVALID CREDENTIALS: Account not found.');
+      email = row['email'] as String;
+    }
+    try {
+      final response = await client.auth.signInWithPassword(email: email, password: password);
+      if (response.session == null) {
+        throw const AuthException('Sign in did not create a valid session.');
       }
-    }
-
-    // 1. Resolve email from in-memory store by exact email or current active username only
-    String cleanEmail = rawInput;
-    bool storeMatch = false;
-
-    for (final entry in _userStore.entries) {
-      final storedEmail = entry.key.toLowerCase();
-      final u = entry.value;
-      final uNameNorm = (u['username'] as String?)
-          ?.toLowerCase()
-          .replaceAll('@', '')
-          .replaceAll(' ', '')
-          .replaceAll('_', '')
-          .replaceAll('-', '');
-
-      if (storedEmail == rawInput ||
-          (uNameNorm != null &&
-              uNameNorm.isNotEmpty &&
-              uNameNorm == normInput)) {
-        cleanEmail = entry.key;
-        storeMatch = true;
-        break;
+      return await _loadAuthenticatedProfile();
+    } catch (error) {
+      await signOut();
+      if (error is AuthException &&
+          (error.code == 'email_not_confirmed' ||
+           error.message.toLowerCase().contains('email not confirmed'))) {
+        throw EmailVerificationRequired(email);
       }
+      rethrow;
     }
-
-    if (await _isAccountDeleted(cleanEmail) ||
-        await _isAccountDeleted(rawInput)) {
-      final client = _client;
-      if (client != null) {
-        try {
-          await client.auth.signOut();
-        } catch (_) {}
-      }
-      await _clearAuthSession();
-      _userStore.remove(cleanEmail);
-      throw Exception(
-        'ACCOUNT DELETED: This account has been permanently deleted. Please create a new account.',
-      );
-    }
-
-    final client = _client;
-    if (client != null) {
-      // 2. If client connected and input does not contain '@', lookup email from Supabase users table by username only
-      if (!rawInput.contains('@')) {
-        bool emailFound = false;
-
-        try {
-          final userRow = await client
-              .from('users')
-              .select('email')
-              .ilike('username', normInput)
-              .maybeSingle();
-          if (userRow != null && userRow['email'] != null) {
-            cleanEmail = (userRow['email'] as String).toLowerCase();
-            emailFound = true;
-          }
-        } catch (e) {
-          debugPrint('Supabase username lookup note: $e');
-        }
-
-        if (!emailFound && !storeMatch) {
-          throw Exception(
-            'INVALID CREDENTIALS: User account not found with username "@$emailOrUsername".',
-          );
-        }
-      }
-    } else if (!storeMatch && !_userStore.containsKey(rawInput)) {
-      throw Exception(
-        'INVALID CREDENTIALS: User account not found with identifier "$emailOrUsername".',
-      );
-    }
-
-    if (client != null) {
-      try {
-        final authRes = await client.auth.signInWithPassword(
-          email: cleanEmail,
-          password: password,
-        );
-        if (authRes.user != null) {
-          Map<String, dynamic>? profileData;
-          try {
-            profileData = await client
-                .from('users')
-                .select('*, artisan_profiles!artisan_profiles_user_id_fkey(*)')
-                .eq('id', authRes.user!.id)
-                .maybeSingle();
-            profileData ??= await client
-                .from('users')
-                .select('*, artisan_profiles!artisan_profiles_user_id_fkey(*)')
-                .ilike('email', cleanEmail)
-                .maybeSingle();
-          } catch (e) {
-            try {
-              profileData = await client
-                  .from('users')
-                  .select('*, artisan_profiles(*, artisan_documents(*))')
-                  .eq('id', authRes.user!.id)
-                  .maybeSingle();
-            } catch (_) {
-              try {
-                profileData = await client
-                    .from('users')
-                    .select()
-                    .eq('id', authRes.user!.id)
-                    .maybeSingle();
-              } catch (_) {}
-            }
-            debugPrint('Supabase table select note: $e');
-          }
-
-          if (profileData != null) {
-            final profileStatus =
-                (profileData['status'] ?? '').toString().toUpperCase();
-            final isSuspended = profileData['is_suspended'] == true;
-            final reason = (profileData['suspension_reason'] ?? '').toString();
-
-            if (profileStatus == 'DELETED' ||
-                (isSuspended && reason == 'ACCOUNT_DELETED')) {
-              await client.auth.signOut();
-              await _clearAuthSession();
-              _userStore.remove(cleanEmail);
-              throw Exception(
-                'ACCOUNT DELETED: This account has been permanently deleted.',
-              );
-            }
-
-            // Keep in-memory store in sync with database row
-            _userStore[cleanEmail] = profileData;
-            authenticatedUser = UserModel.fromMap(profileData);
-            await _saveAuthSession(authenticatedUser);
-            return authenticatedUser;
-          }
-
-          final meta = authRes.user!.userMetadata ?? {};
-          final role = (meta['role'] as String?) ?? 'Tourist';
-          final roles = meta['roles'] != null
-              ? List<String>.from(meta['roles'])
-              : [role];
-          final status = (meta['status'] as String?) ?? 'ACTIVE';
-          final isDeleted = meta['is_deleted'] == true || status == 'DELETED';
-
-          if (isDeleted) {
-            await client.auth.signOut();
-            await _clearAuthSession();
-            _userStore.remove(cleanEmail);
-            throw Exception(
-              'ACCOUNT DELETED: This account has been permanently deleted.',
-            );
-          }
-
-          // If profileData was null, confirm whether public.users record exists
-          bool rowExistsInDb = false;
-          try {
-            final check = await client
-                .from('users')
-                .select('id, status')
-                .eq('id', authRes.user!.id)
-                .maybeSingle();
-            if (check != null) {
-              rowExistsInDb = true;
-              final s = (check['status'] ?? '').toString().toUpperCase();
-              if (s == 'DELETED') {
-                await client.auth.signOut();
-                await _clearAuthSession();
-                _userStore.remove(cleanEmail);
-                throw Exception(
-                  'ACCOUNT DELETED: This account has been permanently deleted.',
-                );
-              }
-            }
-          } catch (_) {}
-
-          if (!rowExistsInDb) {
-            await client.auth.signOut();
-            await _clearAuthSession();
-            _userStore.remove(cleanEmail);
-            throw Exception(
-              'ACCOUNT NOT FOUND: This account record has been deleted.',
-            );
-          }
-
-          if (status == 'SUSPENDED') {
-            throw Exception(
-              'ACCOUNT SUSPENDED BY ADMINISTRATOR: Contact support.',
-            );
-          }
-
-          authenticatedUser = UserModel(
-            id: authRes.user!.id,
-            email: authRes.user!.email ?? cleanEmail,
-            username: meta['username'] as String?,
-            displayName:
-                (meta['display_name'] ?? meta['full_name'] ?? meta['username'])
-                    as String?,
-            role: role,
-            roles: roles,
-            status: status,
-            studioName: meta['studio_name'] as String?,
-            craftCategory: meta['craft_category'] as String?,
-            ssmNumber: meta['ssm_number'] as String?,
-            bio: meta['bio'] as String?,
-          );
-          await _saveAuthSession(authenticatedUser);
-          return authenticatedUser;
-        }
-      } catch (e) {
-        final errString = e.toString();
-        debugPrint('Supabase online signIn error/note: $errString');
-        if (errString.contains('ACCOUNT SUSPENDED')) {
-          rethrow;
-        }
-      }
-    }
-
-    // Local / Prototype / Offline Fallback Data Store:
-    if (!_userStore.containsKey(cleanEmail)) {
-      // UC001 - A2: Authentication failed
-      throw Exception('INVALID CREDENTIALS: User not found in system.');
-    }
-
-    final userData = _userStore[cleanEmail]!;
-    final storedPass = userData['password'];
-    final isPasswordValid =
-        storedPass == password ||
-        (cleanEmail == 'admin@warisankita.my' &&
-            (password == 'admin123' || password == 'password123'));
-    if (!isPasswordValid) {
-      throw Exception('INVALID CREDENTIALS: Password incorrect.');
-    }
-
-    // Check account status
-    if (userData['status'] == 'SUSPENDED' || userData['isSuspended'] == true) {
-      // UC001 - A3: Account suspended
-      throw Exception('ACCOUNT SUSPENDED BY ADMINISTRATOR: Contact support.');
-    }
-
-    authenticatedUser = UserModel.fromMap(userData);
-    await _saveAuthSession(authenticatedUser);
-    return authenticatedUser;
   }
 
-  // --- Session & Current User Retrieval ---
   Future<UserModel?> getCurrentUser() async {
     final client = _client;
-    if (client != null) {
-      final session = client.auth.currentSession;
-      final authUser = client.auth.currentUser;
-      if (session != null && authUser != null) {
-        final email = authUser.email?.toLowerCase();
-        if (email != null && await _isAccountDeleted(email)) {
-          await client.auth.signOut();
-          await _clearAuthSession();
-          _userStore.remove(email);
-          return null;
-        }
-
-        try {
-          final profileData = await client
-              .from('users')
-              .select('*, artisan_profiles(*, artisan_documents(*))')
-              .eq('id', authUser.id)
-              .maybeSingle();
-          if (profileData != null) {
-            final profileStatus =
-                (profileData['status'] ?? '').toString().toUpperCase();
-            final isSuspended = profileData['is_suspended'] == true;
-            final reason = (profileData['suspension_reason'] ?? '').toString();
-
-            if (profileStatus == 'DELETED' ||
-                (isSuspended && reason == 'ACCOUNT_DELETED') ||
-                (email != null && await _isAccountDeleted(email))) {
-              await client.auth.signOut();
-              await _clearAuthSession();
-              if (email != null) _userStore.remove(email);
-              return null;
-            }
-
-            if (email != null) {
-              _userStore[email] = profileData;
-            }
-            final u = UserModel.fromMap(profileData);
-            await _saveAuthSession(u);
-            return u;
-          }
-        } catch (e) {
-          debugPrint('getCurrentUser DB lookup note: $e');
-        }
-
-        final meta = authUser.userMetadata ?? {};
-        final role = (meta['role'] as String?) ?? 'Tourist';
-        final roles = meta['roles'] != null
-            ? List<String>.from(meta['roles'])
-            : [role];
-        final status = (meta['status'] as String?) ?? 'ACTIVE';
-        final isDeleted = meta['is_deleted'] == true ||
-            status.toUpperCase() == 'DELETED' ||
-            (email != null && await _isAccountDeleted(email));
-
-        if (isDeleted) {
-          await client.auth.signOut();
-          await _clearAuthSession();
-          if (email != null) _userStore.remove(email);
-          return null;
-        }
-
-        final u = UserModel(
-          id: authUser.id,
-          email: authUser.email ?? '',
-          username: meta['username'] as String?,
-          displayName:
-              (meta['display_name'] ?? meta['full_name'] ?? meta['username'])
-                  as String?,
-          role: role,
-          roles: roles,
-          status: status,
-          studioName: meta['studio_name'] as String?,
-          craftCategory: meta['craft_category'] as String?,
-          ssmNumber: meta['ssm_number'] as String?,
-          bio: meta['bio'] as String?,
-        );
-        await _saveAuthSession(u);
-        return u;
-      }
+    if (client == null || client.auth.currentSession == null) {
+      await _clearAuthSession();
+      return null;
     }
-
-    // Local / Cached Session Fallback from SharedPreferences
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final rawUser = prefs.getString(_keyAuthUser);
-      if (rawUser != null && rawUser.isNotEmpty) {
-        final map = jsonDecode(rawUser) as Map<String, dynamic>;
-        final user = UserModel.fromMap(map);
-        final email = user.email.toLowerCase();
-        if (user.status.toUpperCase() == 'DELETED' ||
-            await _isAccountDeleted(email)) {
-          await _clearAuthSession();
-          _userStore.remove(email);
-          return null;
-        }
-        if (_userStore.containsKey(email)) {
-          final storeData = _userStore[email]!;
-          final storeStatus =
-              (storeData['status'] ?? '').toString().toUpperCase();
-          final isSuspended = storeData['isSuspended'] == true;
-          final reason = (storeData['suspensionReason'] ?? '').toString();
-          if (storeStatus == 'DELETED' ||
-              (isSuspended && reason == 'ACCOUNT_DELETED')) {
-            await _clearAuthSession();
-            _userStore.remove(email);
-            return null;
-          }
-          return UserModel.fromMap(storeData);
-        }
-        return user;
-      }
-    } catch (e) {
-      debugPrint('getCurrentUser prefs fallback note: $e');
+      return await _loadAuthenticatedProfile();
+    } catch (_) {
+      await signOut();
+      rethrow;
     }
-
-    return null;
   }
 
   Future<UserModel> signUp({
@@ -946,704 +349,111 @@ class SupabaseService {
     String? certFileName,
     List<String>? photos,
   }) async {
+    final client = _authClient;
     final cleanEmail = email.trim().toLowerCase();
-    await _unrecordDeletedAccount(cleanEmail);
-    if (username != null && username.trim().isNotEmpty) {
-      await _unrecordDeletedUsername(username);
+    final isArtisan = const ['Artisan', 'Master Artisan', 'Artisan & Tourist',
+      'Tourist & Artisan', 'Artisan and Tourist', 'Dual Role'].contains(role);
+    if (!isArtisan && role != 'Tourist' && role != 'Cultural Tourist') {
+      throw const AuthException('This role cannot be created through registration.');
     }
-    await Future.delayed(const Duration(milliseconds: 300));
-
-    // Account already exists check:
-    if (_userStore.containsKey(cleanEmail)) {
-      final u = _userStore[cleanEmail]!;
-      final status = (u['status'] ?? '').toString().toUpperCase();
-      final isSuspended = u['isSuspended'] == true;
-      final reason = (u['suspensionReason'] ?? '').toString();
-      if (status == 'DELETED' || (isSuspended && reason == 'ACCOUNT_DELETED')) {
-        _userStore.remove(cleanEmail);
-      } else {
-        throw Exception(
-          'ACCOUNT ALREADY REGISTERED: An account is already registered with email "$email". Please sign in instead.',
-        );
-      }
+    final finalRole = isArtisan ? 'Artisan' : 'Tourist';
+    final status = isArtisan ? 'PENDING_APPROVAL' : 'ACTIVE';
+    final handle = (username?.trim().isNotEmpty == true
+        ? username!.trim().replaceAll('@', '') : cleanEmail.split('@').first);
+    if (!await isUsernameAvailable(handle)) {
+      throw const AuthException('USERNAME ALREADY TAKEN: Please choose a unique username.');
     }
-
-    final client = _client;
-    if (client != null) {
-      try {
-        final existingOnline = await client
-            .from('users')
-            .select('id, status, is_suspended, suspension_reason')
-            .eq('email', cleanEmail)
-            .maybeSingle();
-        if (existingOnline != null) {
-          final onlineStatus =
-              (existingOnline['status'] ?? '').toString().toUpperCase();
-          final isSuspended = existingOnline['is_suspended'] == true;
-          final reason =
-              (existingOnline['suspension_reason'] ?? '').toString();
-          if (onlineStatus != 'DELETED' &&
-              !(isSuspended && reason == 'ACCOUNT_DELETED')) {
-            throw Exception(
-              'ACCOUNT ALREADY REGISTERED: An account is already registered with email "$email". Please sign in instead.',
-            );
-          }
-        }
-      } catch (e) {
-        if (e.toString().contains('ACCOUNT ALREADY REGISTERED')) rethrow;
-      }
-    }
-
-    final resolvedUsername = (username != null && username.trim().isNotEmpty)
-        ? username.trim().replaceAll('@', '')
-        : cleanEmail.split('@')[0];
-
-    final resolvedDisplayName =
-        (displayName != null && displayName.trim().isNotEmpty)
-        ? displayName.trim()
-        : ((username != null && username.trim().isNotEmpty)
-              ? username.trim()
-              : cleanEmail.split('@')[0]);
-
-    // Enforce unique username constraint
-    final isAvailable = await isUsernameAvailable(resolvedUsername);
-    if (!isAvailable) {
-      throw Exception(
-        'USERNAME ALREADY TAKEN: Please choose a unique username.',
-      );
-    }
-
-    final isDual =
-        role == 'Artisan & Tourist' ||
-        role == 'Tourist & Artisan' ||
-        role == 'Artisan and Tourist' ||
-        role == 'Dual Role';
-    final isArtisan = isDual || role == 'Artisan' || role == 'Master Artisan';
-
-    final bool isAdmin = role.toLowerCase().contains('admin');
-    final String finalRole;
-    final List<String> finalRoles;
-    if (isAdmin) {
-      finalRole = 'Admin';
-      finalRoles = ['Admin'];
-    } else if (isDual) {
-      finalRole = 'Artisan & Tourist';
-      finalRoles = ['Tourist', 'Artisan'];
-    } else if (isArtisan) {
-      finalRole = 'Artisan';
-      finalRoles = ['Artisan'];
-    } else {
-      finalRole = 'Tourist';
-      finalRoles = ['Tourist'];
-    }
-
-    final initialStatus = isArtisan ? 'PENDING_APPROVAL' : 'ACTIVE';
-
     if (isArtisan) {
-      final ssmErr = SsmValidator.validate(ssmNumber);
-      if (ssmErr != null) {
-        throw Exception('INVALID_SSM: $ssmErr');
-      }
-      final isTaken = await isSsmRegistered(ssmNumber!);
-      if (isTaken) {
-        throw Exception(
-          'DUPLICATE_SSM: An artisan studio is already registered with SSM number "$ssmNumber".',
-        );
+      final error = SsmValidator.validate(ssmNumber);
+      if (error != null) throw AuthException('INVALID SSM: $error');
+      if (await isSsmRegistered(ssmNumber!)) {
+        throw const AuthException('DUPLICATE SSM: This studio is already registered.');
       }
     }
-
-    final newUser = <String, dynamic>{
-      'id': _generateUuidV4(),
-      'email': cleanEmail,
-      'username': resolvedUsername,
-      'displayName': resolvedDisplayName,
-      'full_name': resolvedDisplayName,
-      'password': password,
-      'role': finalRole,
-      'roles': finalRoles,
-      'joinedDate': _formatMonthYear(DateTime.now()),
-      'created_at': DateTime.now().toIso8601String(),
-      'isSuspended': false,
-      'studioName': studioName,
-      'craftCategory': craftCategory,
-      'ssmNumber': ssmNumber,
-      'bio': isArtisan
-          ? 'New applicant studio registered on Warisan Kita.'
-          : null,
-    };
-
-    if (client != null) {
-      try {
-        final authRes = await client.auth.signUp(
-          email: cleanEmail,
-          password: password,
-          data: {
-            'username': resolvedUsername,
-            'display_name': resolvedDisplayName,
-            'full_name': resolvedDisplayName,
-            'role': finalRole,
-            'roles': finalRoles,
-            'status': initialStatus,
-            'studio_name': studioName,
-            'craft_category': craftCategory,
-            'ssm_number': ssmNumber,
-          },
-        );
-
-        if (authRes.user != null) {
-          newUser['id'] = authRes.user!.id;
-
-          // 1. Insert Core Identity into normalized public.users
-          try {
-            await client.from('users').upsert({
-              'id': authRes.user!.id,
-              'email': cleanEmail,
-              'username': resolvedUsername,
-              'full_name': resolvedDisplayName,
-              'role': finalRole,
-              'status': initialStatus,
-              'created_at': DateTime.now().toIso8601String(),
-              'updated_at': DateTime.now().toIso8601String(),
-            });
-          } catch (tableErr) {
-            debugPrint('Supabase public.users table insert note: $tableErr');
-          }
-
-          // 2. If Artisan, insert professional details into public.artisan_profiles
-          if (finalRole.contains('Artisan') ||
-              (studioName != null && studioName.trim().isNotEmpty)) {
-            try {
-              await client.from('artisan_profiles').upsert({
-                'user_id': authRes.user!.id,
-                'studio_name': studioName ?? resolvedDisplayName,
-                'craft_category': craftCategory ?? 'Pottery & Ceramics',
-                'ssm_number': ssmNumber,
-                'bio':
-                    'Master artisan dedicated to traditional Malaysian craft.',
-                'address': 'Malaysia',
-                'state': 'Melaka',
-                'status': initialStatus,
-                'created_at': DateTime.now().toIso8601String(),
-                'updated_at': DateTime.now().toIso8601String(),
-              });
-            } catch (artisanErr) {
-              debugPrint(
-                'Supabase public.artisan_profiles table insert note: $artisanErr',
-              );
-            }
-          }
-        }
-      } catch (e) {
-        final errString = e.toString();
-        debugPrint('Supabase online signUp note: $errString');
-        if (errString.contains('user_already_exists') ||
-            errString.contains('User already registered') ||
-            errString.contains('already registered')) {
-          // Attempt cross-role authentication with existing password
-          try {
-            final loginRes = await client.auth.signInWithPassword(
-              email: cleanEmail,
-              password: password,
-            );
-
-            if (loginRes.user != null) {
-              // Retrieve existing user record from public.users table
-              final existingRow = await client
-                  .from('users')
-                  .select()
-                  .ilike('email', cleanEmail)
-                  .maybeSingle();
-              final currentRole =
-                  (existingRow != null ? (existingRow['role'] ?? '') : '')
-                      .toString()
-                      .toLowerCase();
-
-              final isTargetTourist =
-                  role == 'Tourist' || role == 'Cultural Tourist';
-              final isTargetArtisan =
-                  role == 'Artisan' ||
-                  role == 'Master Artisan' ||
-                  role == 'Artisan & Tourist';
-
-              if (currentRole.contains('artisan') && isTargetTourist) {
-                // Upgrade Artisan to Dual Role immediately
-                await client
-                    .from('users')
-                    .update({
-                      'role': 'Artisan & Tourist',
-                      'updated_at': DateTime.now().toIso8601String(),
-                    })
-                    .ilike('email', cleanEmail);
-
-                try {
-                  await client.auth.updateUser(
-                    UserAttributes(
-                      data: {
-                        'role': 'Artisan & Tourist',
-                        'roles': ['Tourist', 'Artisan'],
-                      },
-                    ),
-                  );
-                } catch (_) {}
-
-                final upgraded = <String, dynamic>{
-                  ...?existingRow,
-                  'email': cleanEmail,
-                  'role': 'Artisan & Tourist',
-                  'roles': ['Tourist', 'Artisan'],
-                  'status': 'ACTIVE',
-                };
-                _userStore[cleanEmail] = upgraded;
-                return UserModel.fromMap(upgraded);
-              } else if (currentRole.contains('tourist') && isTargetArtisan) {
-                // 1. Update users table (role & status only)
-                await client
-                    .from('users')
-                    .update({
-                      'role': 'Artisan & Tourist',
-                      'status': 'PENDING_APPROVAL',
-                      'updated_at': DateTime.now().toIso8601String(),
-                    })
-                    .ilike('email', cleanEmail);
-
-                // 2. Upsert artisan_profiles table
-                final String? effectiveUid =
-                    existingRow?['id']?.toString() ?? loginRes.user?.id;
-                if (effectiveUid != null) {
-                  try {
-                    await client.from('artisan_profiles').upsert({
-                      'user_id': effectiveUid,
-                      'studio_name': studioName ?? resolvedDisplayName,
-                      'craft_category': craftCategory ?? 'Pottery & Ceramics',
-                      'ssm_number': ssmNumber,
-                      'bio':
-                          'Master artisan dedicated to traditional Malaysian craft.',
-                      'address': 'Malaysia',
-                      'state': 'Melaka',
-                      'status': 'PENDING_APPROVAL',
-                      'created_at': DateTime.now().toIso8601String(),
-                      'updated_at': DateTime.now().toIso8601String(),
-                    });
-                  } catch (apErr) {
-                    debugPrint('Supabase link artisan_profiles note: $apErr');
-                  }
-                }
-
-                try {
-                  await client.auth.updateUser(
-                    UserAttributes(
-                      data: {
-                        'role': 'Artisan & Tourist',
-                        'roles': ['Tourist', 'Artisan'],
-                        'status': 'PENDING_APPROVAL',
-                        'studio_name': studioName,
-                        'craft_category': craftCategory,
-                        'ssm_number': ssmNumber,
-                      },
-                    ),
-                  );
-                } catch (_) {}
-
-                final upgraded = <String, dynamic>{
-                  ...?existingRow,
-                  'email': cleanEmail,
-                  'role': 'Artisan & Tourist',
-                  'roles': ['Tourist', 'Artisan'],
-                  'status': 'PENDING_APPROVAL',
-                  'studioName': studioName,
-                  'craftCategory': craftCategory,
-                  'ssmNumber': ssmNumber,
-                };
-                _userStore[cleanEmail] = upgraded;
-              } else {
-                final existingStatus =
-                    (existingRow?['status'] ?? '').toString().toUpperCase();
-                final isSuspended = existingRow?['is_suspended'] == true;
-                final reason =
-                    (existingRow?['suspension_reason'] ?? '').toString();
-                final isAccountDeleted = existingStatus == 'DELETED' ||
-                    (isSuspended && reason == 'ACCOUNT_DELETED');
-
-                if (isAccountDeleted ||
-                    currentRole.isEmpty ||
-                    currentRole == role.toLowerCase()) {
-                  final String? effectiveUid =
-                      existingRow?['id']?.toString() ?? loginRes.user?.id;
-                  if (effectiveUid != null && effectiveUid.isNotEmpty) {
-                    try {
-                      await client.from('users').upsert({
-                        'id': effectiveUid,
-                        'email': cleanEmail,
-                        'username': resolvedUsername,
-                        'full_name': resolvedDisplayName,
-                        'display_name': resolvedDisplayName,
-                        'role': finalRole,
-                        'roles': finalRoles,
-                        'status': initialStatus,
-                        'is_suspended': false,
-                        'suspension_reason': null,
-                        'studio_name': studioName,
-                        'craft_category': craftCategory,
-                        'ssm_number': ssmNumber,
-                        'updated_at': DateTime.now().toIso8601String(),
-                      });
-                    } catch (dbErr) {
-                      debugPrint('Reactivating deleted user in users table: $dbErr');
-                    }
-
-                    try {
-                      await client.auth.updateUser(
-                        UserAttributes(
-                          password: password,
-                          data: {
-                            'status': initialStatus,
-                            'role': finalRole,
-                            'roles': finalRoles,
-                            'username': resolvedUsername,
-                            'display_name': resolvedDisplayName,
-                            'full_name': resolvedDisplayName,
-                            'is_deleted': false,
-                          },
-                        ),
-                      );
-                    } catch (_) {}
-
-                    final revived = <String, dynamic>{
-                      'id': effectiveUid,
-                      'email': cleanEmail,
-                      'username': resolvedUsername,
-                      'displayName': resolvedDisplayName,
-                      'full_name': resolvedDisplayName,
-                      'role': finalRole,
-                      'roles': finalRoles,
-                      'status': initialStatus,
-                      'isSuspended': false,
-                      'joinedDate': _formatMonthYear(DateTime.now()),
-                      'created_at': DateTime.now().toIso8601String(),
-                      'studioName': studioName,
-                      'craftCategory': craftCategory,
-                      'ssmNumber': ssmNumber,
-                    };
-                    _userStore[cleanEmail] = revived;
-                    final revivedUser = UserModel.fromMap(revived);
-                    await _saveAuthSession(revivedUser);
-                    return revivedUser;
-                  }
-                }
-              }
-            }
-          } catch (authErr) {
-            final authErrStr = authErr.toString().toLowerCase();
-            if (authErrStr.contains('invalid') ||
-                authErrStr.contains('credentials') ||
-                authErrStr.contains('password')) {
-              throw Exception(
-                'INCORRECT PASSWORD: The password entered does not match your existing account. Please enter your existing account password to link this profile.',
-              );
-            }
-          }
-          throw Exception(
-            'ACCOUNT ALREADY REGISTERED: An account with this email already exists. Please sign in instead.',
-          );
-        }
-
-        // Direct table fallback if auth signup rate limited or offline
-        try {
-          await client.from('users').upsert({
-            'id': newUser['id'],
-            'email': cleanEmail,
-            'username': resolvedUsername,
-            'full_name': resolvedDisplayName,
-            'role': finalRole,
-            'status': initialStatus,
-            'created_at': DateTime.now().toIso8601String(),
-            'updated_at': DateTime.now().toIso8601String(),
-          });
-        } catch (_) {
-          try {
-            await client.from('users').upsert({
-              'id': newUser['id'],
-              'email': cleanEmail,
-              'full_name': resolvedDisplayName,
-              'role': finalRole,
-              'status': initialStatus,
-              'created_at': DateTime.now().toIso8601String(),
-              'updated_at': DateTime.now().toIso8601String(),
-            });
-          } catch (tableErr) {
-            debugPrint('Supabase public.users fallback note: $tableErr');
-          }
-        }
-      }
+    await signOut();
+    final response = await client.auth.signUp(
+      email: cleanEmail, password: password,
+      data: {
+        'username': handle, 'full_name': displayName ?? handle,
+        'display_name': displayName ?? handle, 'role': finalRole,
+        'roles': [finalRole], 'status': status, 'studio_name': studioName,
+        'craft_category': craftCategory, 'ssm_number': ssmNumber,
+      },
+    );
+    final user = response.user;
+    if (user == null || user.identities?.isEmpty == true) {
+      throw const AuthException('Account could not be created. If already registered, please sign in.');
     }
-
-    _userStore[cleanEmail] = newUser;
-    return UserModel.fromMap(newUser);
+    await _unrecordDeletedAccount(cleanEmail);
+    await _unrecordDeletedUsername(handle);
+    // The auth.users trigger creates the profile atomically. Do not insert
+    // a substitute identity when signup fails or before email confirmation.
+    return UserModel(id: user.id, email: cleanEmail, username: handle,
+      displayName: displayName ?? handle, role: finalRole, roles: [finalRole],
+      status: status, studioName: studioName, craftCategory: craftCategory,
+      ssmNumber: ssmNumber);
   }
 
   Future<void> sendPasswordResetEmail(String email) async {
+    final client = _authClient;
     final cleanEmail = email.trim().toLowerCase();
-    await Future.delayed(const Duration(milliseconds: 400));
-
-    // Admin security policy: Admins cannot reset password via consumer self-service
-    if (cleanEmail == 'admin@warisankita.my') {
-      throw Exception(
-        'ADMIN SECURITY RESTRICTION: Administrator credentials cannot be reset via self-service. Please contact system security.',
+    final account = await client.from('users').select('role')
+        .eq('email', cleanEmail).maybeSingle();
+    if (account == null) {
+      throw const AuthException(
+        'EMAIL NOT FOUND: No account is registered with this email address.',
       );
     }
-
-    // 1. Verify existence in local store or Supabase DB
-    final accountCheck = await checkExistingAccount(cleanEmail);
-    if (accountCheck.existingRole == 'Admin') {
-      throw Exception(
-        'ADMIN SECURITY RESTRICTION: Administrator credentials cannot be reset via self-service. Please contact system security.',
-      );
+    if (account['role'] == 'Admin') {
+      throw const AuthException('Administrator credentials cannot be reset via self-service. Contact support.');
     }
-    final existsLocally = _userStore.containsKey(cleanEmail);
-    final existsInDb = accountCheck.exists;
-
-    final client = _client;
-
-    if (!existsLocally && !existsInDb) {
-      throw Exception(
-        'EMAIL NOT FOUND: No account registered with this email.',
-      );
-    }
-
-    // Populate local store if discovered via DB
-    if (!existsLocally && existsInDb) {
-      _userStore[cleanEmail] = {
-        'id': 'usr-${DateTime.now().millisecondsSinceEpoch}',
-        'email': cleanEmail,
-        'username': accountCheck.username ?? cleanEmail.split('@').first,
-        'displayName': accountCheck.displayName ?? cleanEmail.split('@').first,
-        'password': 'password123',
-        'role': accountCheck.existingRole ?? 'Tourist',
-        'roles': accountCheck.existingRoles,
-        'status': 'ACTIVE',
-        'isSuspended': false,
-      };
-    }
-
-    // UC003 - C1: Password reset tokens must expire after 15 minutes
-    final token =
-        'TOKEN-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
-    final expiresAt = DateTime.now().add(const Duration(minutes: 15));
-
-    _resetTokens[token] = {
-      'email': cleanEmail,
-      'expiresAt': expiresAt,
-      'isUsed': false,
-    };
-
-    if (client != null) {
-      try {
-        await client.auth.resetPasswordForEmail(
-          cleanEmail,
-          redirectTo: 'io.supabase.warisankita://reset-callback',
-        );
-      } catch (e) {
-        debugPrint('Supabase resetPasswordForEmail note: $e');
-        final errStr = e.toString().toLowerCase();
-        if (errStr.contains('user not found') ||
-            errStr.contains('email not found')) {
-          if (!existsLocally && !existsInDb) {
-            throw Exception(
-              'EMAIL NOT FOUND: No account registered with this email.',
-            );
-          }
-        }
-      }
-    }
-
-    debugPrint(
-      'Generated 15-min password reset token for $cleanEmail: $token (Expires: $expiresAt)',
-    );
+    await client.auth.resetPasswordForEmail(cleanEmail,
+      redirectTo: kIsWeb ? Uri.base.resolve('/forgot-password').toString()
+          : 'io.supabase.warisankita://reset-callback');
   }
 
   Future<void> resetPasswordWithToken({
-    required String email,
-    required String token,
-    required String newPassword,
+    required String email, required String token, required String newPassword,
   }) async {
-    final cleanEmail = email.trim().toLowerCase();
-    await Future.delayed(const Duration(milliseconds: 500));
-
-    // Validate email exists
-    final accountCheck = await checkExistingAccount(cleanEmail);
-    final existsLocally = _userStore.containsKey(cleanEmail);
-    final existsInDb = accountCheck.exists;
-
-    if (!existsLocally && !existsInDb) {
-      throw Exception('EMAIL NOT FOUND: Account does not exist.');
-    }
-
-    // Security Constraint: New password cannot be the same as current password (case-insensitive check to prevent trivial variations)
-    if (existsLocally) {
-      final oldPassword = _userStore[cleanEmail]?['password'];
-      if (oldPassword != null &&
-          oldPassword.toString().trim().toLowerCase() == newPassword.trim().toLowerCase()) {
-        throw Exception(
-          'NEW PASSWORD IS TOO SIMILAR TO YOUR CURRENT PASSWORD: Please choose a completely new password, not just a change in uppercase or lowercase.',
-        );
+    if (_resetInProgress) throw const AuthException('Password reset is already in progress.');
+    final client = _authClient;
+    _resetInProgress = true;
+    try {
+      final session = client.auth.currentSession;
+      // The UI enters this flow through a recovery link validated by Supabase.
+      // An arbitrary token or an ordinary signed-in session is not recovery proof.
+      if (token.isNotEmpty || session == null || session.isExpired ||
+          _recoveryAccessToken != session.accessToken ||
+          session.user.email?.toLowerCase() != email.trim().toLowerCase()) {
+        throw const AuthException('Invalid or expired recovery session. Please open a new password reset link.');
       }
-    }
-
-    if (!existsLocally) {
-      _userStore[cleanEmail] = {
-        'id': 'usr-${DateTime.now().millisecondsSinceEpoch}',
-        'email': cleanEmail,
-        'username': accountCheck.username ?? cleanEmail.split('@').first,
-        'displayName': accountCheck.displayName ?? cleanEmail.split('@').first,
-        'password': newPassword,
-        'role': accountCheck.existingRole ?? 'Tourist',
-        'roles': accountCheck.existingRoles,
-        'status': 'ACTIVE',
-        'isSuspended': false,
-      };
-    } else {
-      _userStore[cleanEmail]!['password'] = newPassword;
-    }
-
-    // UC003 - A4: Expired or invalid token check
-    if (_resetTokens.containsKey(token)) {
-      final tokenInfo = _resetTokens[token]!;
-      if (tokenInfo['isUsed'] == true) {
-        throw Exception('RESET LINK ALREADY USED: Please request a new link.');
+      final profile = await _loadAuthenticatedProfile();
+      if (profile.isAdmin) {
+        throw const AuthException('Administrator credentials cannot be reset via self-service. Contact support.');
       }
-      final DateTime expiresAt = tokenInfo['expiresAt'] as DateTime;
-      if (DateTime.now().isAfter(expiresAt)) {
-        throw Exception('RESET LINK EXPIRED: Token expired after 15 minutes.');
-      }
-      // UC003 - C4: Token single-use - invalidate immediately
-      tokenInfo['isUsed'] = true;
-    }
-
-    final client = _client;
-    if (client != null) {
-      try {
-        await client.auth.updateUser(UserAttributes(password: newPassword));
-      } catch (e) {
-        debugPrint('Supabase updateUser password note: $e');
-        final errStr = e.toString().toLowerCase();
-        if (errStr.contains('should be different') ||
-            errStr.contains('same as old') ||
-            errStr.contains('cannot be the same') ||
-            errStr.contains('same password')) {
-          throw Exception(
-            'NEW PASSWORD CANNOT BE THE SAME AS YOUR CURRENT PASSWORD: Please choose a different password.',
-          );
-        }
-      }
+      await client.auth.updateUser(UserAttributes(password: newPassword));
+      _recoveryAccessToken = null;
+      await signOut();
+    } finally {
+      _resetInProgress = false;
     }
   }
 
-  static final Map<String, Map<String, dynamic>> _pendingEmailOtps = {};
-
-  Future<UserModel> verifyEmailOtp({
-    required String email,
-    required String token,
-  }) async {
-    final cleanEmail = email.trim().toLowerCase();
-    final cleanToken = token.trim();
-    await Future.delayed(const Duration(milliseconds: 500));
-
-    final client = _client;
-    if (client != null) {
-      try {
-        final authResponse = await client.auth.verifyOTP(
-          email: cleanEmail,
-          token: cleanToken,
-          type: OtpType.signup,
-        );
-
-        if (authResponse.user != null) {
-          final profile = await client
-              .from('users')
-              .select()
-              .eq('id', authResponse.user!.id)
-              .maybeSingle();
-
-          if (profile != null) {
-            final user = UserModel.fromMap(profile);
-            await _saveAuthSession(user);
-            _pendingEmailOtps.remove(cleanEmail);
-            return user;
-          }
-        }
-      } catch (e) {
-        debugPrint('Supabase verifyOTP note: $e');
-        if (!e.toString().contains('Token has expired') &&
-            cleanToken != '123456') {
-          throw Exception(
-            'INVALID_OTP: The verification code entered is invalid or has expired.',
-          );
-        }
-      }
+  Future<UserModel> verifyEmailOtp({required String email, required String token}) async {
+    final client = _authClient;
+    final response = await client.auth.verifyOTP(
+      email: email.trim().toLowerCase(), token: token.trim(), type: OtpType.signup);
+    if (response.session == null) throw const AuthException('Email verification failed.');
+    try {
+      return await _loadAuthenticatedProfile();
+    } catch (_) {
+      await signOut();
+      rethrow;
     }
-
-    // Local / Offline / Mock Validation
-    final isMasterToken = cleanToken == '123456';
-    final hasPending = _pendingEmailOtps.containsKey(cleanEmail);
-    final pendingData = _pendingEmailOtps[cleanEmail];
-    final isStoredTokenMatch = hasPending && pendingData?['otp'] == cleanToken;
-
-    if (!isMasterToken && !isStoredTokenMatch) {
-      throw Exception(
-        'INVALID_OTP: The verification code entered is invalid or has expired.',
-      );
-    }
-
-    if (hasPending && pendingData?['expiresAt'] != null) {
-      final DateTime expiresAt = pendingData!['expiresAt'] as DateTime;
-      if (DateTime.now().isAfter(expiresAt) && !isMasterToken) {
-        throw Exception(
-          'OTP_EXPIRED: The verification code has expired. Please request a new one.',
-        );
-      }
-    }
-
-    if (_userStore.containsKey(cleanEmail)) {
-      _userStore[cleanEmail]!['email_verified'] = true;
-      _userStore[cleanEmail]!['email_confirmed_at'] = DateTime.now()
-          .toIso8601String();
-      final user = UserModel.fromMap(_userStore[cleanEmail]!);
-      await _saveAuthSession(user);
-      _pendingEmailOtps.remove(cleanEmail);
-      return user;
-    }
-
-    final user = UserModel(
-      id: 'usr-${DateTime.now().millisecondsSinceEpoch}',
-      email: cleanEmail,
-      role: 'Tourist',
-      status: 'ACTIVE',
-    );
-    await _saveAuthSession(user);
-    _pendingEmailOtps.remove(cleanEmail);
-    return user;
   }
 
   Future<void> resendVerificationOtp({required String email}) async {
-    final cleanEmail = email.trim().toLowerCase();
-    await Future.delayed(const Duration(milliseconds: 400));
-
-    final newOtp = (100000 + (DateTime.now().millisecondsSinceEpoch % 900000))
-        .toString();
-    _pendingEmailOtps[cleanEmail] = {
-      'otp': newOtp,
-      'expiresAt': DateTime.now().add(const Duration(minutes: 15)),
-      'sentAt': DateTime.now(),
-    };
-
-    final client = _client;
-    if (client != null) {
-      try {
-        await client.auth.resend(type: OtpType.signup, email: cleanEmail);
-      } catch (e) {
-        debugPrint('Supabase resend OTP note: $e');
-      }
-    }
+    await _authClient.auth.resend(type: OtpType.signup, email: email.trim().toLowerCase());
   }
 
   Future<UserModel> linkArtisanRoleToTourist({
@@ -2879,6 +1689,7 @@ class SupabaseService {
   }
 
   Future<void> signOut() async {
+    _recoveryAccessToken = null;
     await Future.delayed(const Duration(milliseconds: 200));
     await _clearAuthSession();
     final client = _client;
@@ -2919,11 +1730,7 @@ class SupabaseService {
     );
 
     // 3. Clear any pending OTPs or reset tokens for this account
-    _pendingEmailOtps.remove(cleanEmail);
-    _resetTokens.removeWhere(
-      (key, value) =>
-          (value['email'] as String?)?.toLowerCase() == cleanEmail,
-    );
+    _recoveryAccessToken = null;
 
     // 4. Clear local session from SharedPreferences
     await _clearAuthSession();

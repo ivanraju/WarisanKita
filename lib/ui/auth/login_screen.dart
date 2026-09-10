@@ -27,20 +27,35 @@ class _LoginScreenState extends State<LoginScreen> {
     super.initState();
     _emailController = TextEditingController();
     _passwordController = TextEditingController();
+    _emailController.addListener(_clearErrorOnTyping);
+    _passwordController.addListener(_clearErrorOnTyping);
 
-    if (kIsWeb) {
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (mounted) {
+        context.read<AuthViewModel>().clearError();
+        ScaffoldMessenger.of(context).clearSnackBars();
+      }
+      if (kIsWeb) {
         final authVM = context.read<AuthViewModel>();
         final UserModel? user = authVM.currentUser ?? await authVM.restoreSession();
         if (mounted && user != null && user.isAdmin) {
           Navigator.of(context).pushReplacementNamed('/admin');
         }
-      });
+      }
+    });
+  }
+
+  void _clearErrorOnTyping() {
+    final authVM = context.read<AuthViewModel>();
+    if (authVM.errorMessage != null) {
+      authVM.clearError();
     }
   }
 
   @override
   void dispose() {
+    _emailController.removeListener(_clearErrorOnTyping);
+    _passwordController.removeListener(_clearErrorOnTyping);
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -249,7 +264,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
 
     if (!result.success) {
-      if (kIsWeb && (result.message?.contains('ACCESS DENIED') == true || result.user?.role != 'Admin')) {
+      if (kIsWeb && (result.message?.contains('ACCESS DENIED') == true)) {
         showDialog(
           context: context,
           builder: (dialogCtx) => AlertDialog(
@@ -312,6 +327,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 style: FilledButton.styleFrom(backgroundColor: const Color(0xFF004D40)),
                 onPressed: () {
                   Navigator.pop(dialogCtx);
+                  context.read<AuthViewModel>().clearError();
+                  ScaffoldMessenger.of(context).clearSnackBars();
                   Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => EmailVerificationScreen(
@@ -414,6 +431,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     // Handle Regular RBAC Routes [M2]
+    ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('LOGIN SUCCESSFUL: Authenticated as ${result.user?.role ?? "User"}'),
@@ -593,6 +611,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     alignment: Alignment.centerRight,
                     child: TextButton(
                       onPressed: () {
+                        context.read<AuthViewModel>().clearError();
+                        ScaffoldMessenger.of(context).clearSnackBars();
                         Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
                         );
@@ -680,7 +700,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         style: GoogleFonts.plusJakartaSans(fontSize: 13, color: Colors.black54),
                       ),
                       GestureDetector(
-                        onTap: () => Navigator.of(context).pushNamed('/register'),
+                        onTap: () {
+                          context.read<AuthViewModel>().clearError();
+                          ScaffoldMessenger.of(context).clearSnackBars();
+                          Navigator.of(context).pushNamed('/register');
+                        },
                         child: Text(
                           'Register / Join Us',
                           style: GoogleFonts.plusJakartaSans(

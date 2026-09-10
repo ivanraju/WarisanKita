@@ -1,8 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show AuthException;
 import 'package:warisan_kita/data/repositories/user_repository.dart';
 import 'package:warisan_kita/domain/models/user.dart';
 import 'package:warisan_kita/domain/validators/ssm_validator.dart';
+import 'package:warisan_kita/domain/validators/profile_validator.dart';
+import 'package:warisan_kita/data/services/supabase_service.dart' show EmailVerificationRequired;
 
 enum AuthStatus { unauthenticated, authenticating, authenticated, error }
 
@@ -33,6 +36,17 @@ class AuthViewModel extends ChangeNotifier {
 
   AuthViewModel({UserRepository? repository})
     : _repository = repository ?? UserRepository();
+
+  static String _friendlyError(Object error) {
+    if (error is AuthException) {
+      if (error.code == 'invalid_credentials' ||
+          error.message.toLowerCase().contains('invalid login credentials')) {
+        return 'Incorrect email, username, or password. Please try again.';
+      }
+      return error.message;
+    }
+    return error.toString().replaceFirst('Exception: ', '');
+  }
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
@@ -101,7 +115,10 @@ class AuthViewModel extends ChangeNotifier {
     } catch (e) {
       debugPrint('refreshCurrentUser note: $e');
     }
-    return _currentUser;
+    _currentUser = null;
+    _activeRole = null;
+    notifyListeners();
+    return null;
   }
 
   void clearError() {
@@ -279,6 +296,9 @@ class AuthViewModel extends ChangeNotifier {
     _errorMessage = null;
     _statusMessage = null;
     _requiresRoleSelection = false;
+    _currentUser = null;
+    _activeRole = null;
+    _availableRoles = [];
     notifyListeners();
 
     try {
@@ -294,8 +314,7 @@ class AuthViewModel extends ChangeNotifier {
       final isEmailAttempt =
           cleanEmail.contains('@') && !cleanEmail.startsWith('@');
       if (isEmailAttempt) {
-        final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-        if (!emailRegex.hasMatch(cleanEmail)) {
+        if (ProfileValidator.validateEmail(cleanEmail) != null) {
           _errorMessage = 'INVALID CREDENTIALS: Enter a valid email format';
           _isLoading = false;
           notifyListeners();
@@ -308,6 +327,7 @@ class AuthViewModel extends ChangeNotifier {
 
       // Alternate Flow A3: Account Suspended Check
       if (user.status == 'SUSPENDED' || user.isSuspended) {
+        await _repository.signOut();
         _errorMessage = 'ACCOUNT SUSPENDED BY ADMINISTRATOR: CONTACT SUPPORT';
         _isLoading = false;
         notifyListeners();
@@ -316,6 +336,7 @@ class AuthViewModel extends ChangeNotifier {
 
       // 🌐 UC102: Web Moderation Portal Strict RBAC Guard
       if (kIsWeb && user.role != 'Admin') {
+        await _repository.signOut();
         _errorMessage =
             'ACCESS DENIED: The Web Portal is exclusively for Administrators.';
         _isLoading = false;
@@ -367,7 +388,7 @@ class AuthViewModel extends ChangeNotifier {
         message: _statusMessage,
       );
     } catch (e) {
-      final rawError = e.toString().replaceAll('Exception: ', '');
+      final rawError = _friendlyError(e);
       final lower = rawError.toLowerCase();
       _isLoading = false;
 
@@ -380,7 +401,7 @@ class AuthViewModel extends ChangeNotifier {
         return AuthResult(
           success: false,
           requiresEmailVerification: true,
-          unverifiedEmail: cleanEmail,
+          unverifiedEmail: e is EmailVerificationRequired ? e.email : cleanEmail,
           message: _errorMessage,
         );
       }
@@ -413,13 +434,19 @@ class AuthViewModel extends ChangeNotifier {
         email: cleanEmail,
         token: cleanToken,
       );
+      if (user.isSuspended || user.status.toUpperCase() == 'SUSPENDED' ||
+          (kIsWeb && !user.isAdmin)) {
+        await _repository.signOut();
+        throw Exception('ACCESS DENIED: This account cannot access this application.');
+      }
       _currentUser = user;
       _activeRole = user.role;
       _statusMessage = 'EMAIL VERIFIED SUCCESSFULLY: WELCOME TO WARISAN KITA';
       _isLoading = false;
       notifyListeners();
 
-      final route = targetRoute ?? (user.role.contains('Artisan') ? 'pending_artisan' : '/tourist');
+      final route = user.isAdmin ? '/admin' :
+          user.isArtisan ? (user.isApprovedArtisan ? '/artisan' : 'pending_artisan') : '/tourist';
       return AuthResult(
         success: true,
         user: user,
@@ -470,6 +497,23 @@ class AuthViewModel extends ChangeNotifier {
   }
 
   // UC002_USER_REGISTRATION: Cultural Tourist
+  Future<AuthResult> _finishRegistration(UserModel user, String route) async {
+    // Supabase can be configured to confirm email immediately. Only a real,
+    // validated session may skip the verification screen in that configuration.
+    final authenticated = await _repository.getCurrentUser();
+    _currentUser = authenticated;
+    _activeRole = authenticated?.role;
+    notifyListeners();
+    return AuthResult(
+      success: true,
+      user: authenticated ?? user,
+      requiresEmailVerification: authenticated == null,
+      unverifiedEmail: authenticated == null ? user.email : null,
+      route: route,
+      message: _statusMessage,
+    );
+  }
+
   Future<AuthResult> registerTourist({
     required String username,
     String? fullName,
@@ -504,8 +548,7 @@ class AuthViewModel extends ChangeNotifier {
         return AuthResult(success: false, message: _errorMessage);
       }
 
-      final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-      if (!emailRegex.hasMatch(cleanEmail)) {
+      if (ProfileValidator.validateEmail(cleanEmail) != null) {
         _errorMessage = 'PLEASE ENTER A VALID EMAIL ADDRESS';
         _isLoading = false;
         notifyListeners();
@@ -526,16 +569,9 @@ class AuthViewModel extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
 
-      return AuthResult(
-        success: true,
-        user: user,
-        requiresEmailVerification: true,
-        unverifiedEmail: cleanEmail,
-        route: '/tourist',
-        message: _statusMessage,
-      );
+      return await _finishRegistration(user, '/tourist');
     } catch (e) {
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _errorMessage = _friendlyError(e);
       _isLoading = false;
       notifyListeners();
       return AuthResult(success: false, message: _errorMessage);
@@ -564,12 +600,10 @@ class AuthViewModel extends ChangeNotifier {
         username: username?.trim(),
         displayName: displayName?.trim(),
       );
-      _currentUser = user;
-      _activeRole = role;
-      _statusMessage = 'REGISTRATION SUCCESSFUL';
+      _statusMessage = 'REGISTRATION SUCCESSFUL: PLEASE VERIFY YOUR EMAIL';
       _isLoading = false;
       notifyListeners();
-      return AuthResult(success: true, user: user, message: _statusMessage);
+      return await _finishRegistration(user, user.isArtisan ? 'pending_artisan' : '/tourist');
     } catch (e) {
       _errorMessage = e.toString().replaceAll('Exception: ', '');
       _isLoading = false;
@@ -666,20 +700,11 @@ class AuthViewModel extends ChangeNotifier {
         photos: photos,
       );
 
-      _currentUser = user;
-      _activeRole = role;
       _statusMessage = 'ARTISAN APPLICATION SUBMITTED: PENDING ADMIN APPROVAL';
       _isLoading = false;
       notifyListeners();
 
-      return AuthResult(
-        success: true,
-        user: user,
-        requiresEmailVerification: true,
-        unverifiedEmail: cleanEmail,
-        route: 'pending_artisan',
-        message: _statusMessage,
-      );
+      return await _finishRegistration(user, 'pending_artisan');
     } catch (e) {
       _errorMessage = e.toString().replaceAll('Exception: ', '');
       _isLoading = false;
@@ -794,8 +819,7 @@ class AuthViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-      if (!emailRegex.hasMatch(cleanEmail)) {
+      if (ProfileValidator.validateEmail(cleanEmail) != null) {
         _errorMessage = 'PLEASE ENTER A VALID EMAIL ADDRESS';
         _isLoading = false;
         notifyListeners();
@@ -811,7 +835,7 @@ class AuthViewModel extends ChangeNotifier {
 
       return AuthResult(success: true, message: _statusMessage);
     } catch (e) {
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _errorMessage = _friendlyError(e);
       _isLoading = false;
       notifyListeners();
       return AuthResult(success: false, message: _errorMessage);
@@ -857,6 +881,9 @@ class AuthViewModel extends ChangeNotifier {
         token: cleanToken,
         newPassword: cleanPassword,
       );
+      _currentUser = null;
+      _activeRole = null;
+      _requiresRoleSelection = false;
 
       _statusMessage = 'PASSWORD RESET SUCCESSFUL: YOU MAY NOW LOGIN';
       _isLoading = false;

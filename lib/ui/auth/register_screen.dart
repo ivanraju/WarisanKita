@@ -26,6 +26,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   ExistingAccountCheck? _existingAccountCheck;
+  bool _isCheckingEmail = false;
+  String? _emailAccountMessage;
+  Timer? _emailDebounce;
 
   bool _isCheckingUsername = false;
   bool? _isUsernameAvailable;
@@ -38,6 +41,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _emailController.addListener(_onEmailChanged);
     _usernameController.addListener(_onUsernameChanged);
     _passwordController.addListener(_onPasswordChanged);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<AuthViewModel>().clearError();
+        ScaffoldMessenger.of(context).clearSnackBars();
+      }
+    });
   }
 
   void _onPasswordChanged() {
@@ -71,39 +81,77 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
 
     _usernameDebounce = Timer(const Duration(milliseconds: 300), () async {
-      final authVM = context.read<AuthViewModel>();
-      final isAvailable = await authVM.isUsernameAvailable(raw);
-      if (!mounted) return;
-      setState(() {
-        _isCheckingUsername = false;
-        _isUsernameAvailable = isAvailable;
-        _usernameMessage = isAvailable ? '@$raw is available' : '@$raw is already taken';
-      });
+      try {
+        final isAvailable =
+            await context.read<AuthViewModel>().isUsernameAvailable(raw);
+        if (!mounted ||
+            _usernameController.text.trim().replaceAll('@', '') != raw) {
+          return;
+        }
+        setState(() {
+          _isCheckingUsername = false;
+          _isUsernameAvailable = isAvailable;
+          _usernameMessage =
+              isAvailable ? '@$raw is available' : '@$raw is already taken';
+        });
+      } catch (_) {
+        if (!mounted ||
+            _usernameController.text.trim().replaceAll('@', '') != raw) {
+          return;
+        }
+        setState(() {
+          _isCheckingUsername = false;
+          _isUsernameAvailable = null;
+          _usernameMessage = 'Unable to check this username right now.';
+        });
+      }
     });
   }
 
   void _onEmailChanged() {
+    _emailDebounce?.cancel();
     final email = _emailController.text.trim().toLowerCase();
-    if (email.contains('@') && email.contains('.')) {
-      context.read<AuthViewModel>().checkExistingAccount(email).then((check) {
-        if (mounted) {
-          setState(() {
-            _existingAccountCheck = check.exists ? check : null;
-          });
-        }
+    if (ProfileValidator.validateEmail(email) != null) {
+      setState(() {
+        _isCheckingEmail = false;
+        _existingAccountCheck = null;
+        _emailAccountMessage = null;
       });
-    } else {
-      if (_existingAccountCheck != null) {
+      return;
+    }
+
+    setState(() {
+      _isCheckingEmail = true;
+      _existingAccountCheck = null;
+      _emailAccountMessage = 'Checking whether this email is registered…';
+    });
+
+    _emailDebounce = Timer(const Duration(milliseconds: 450), () async {
+      try {
+        final check = await context.read<AuthViewModel>().checkExistingAccount(email);
+        if (!mounted || _emailController.text.trim().toLowerCase() != email) return;
         setState(() {
+          _isCheckingEmail = false;
+          _existingAccountCheck = check.exists ? check : null;
+          _emailAccountMessage = check.exists
+              ? 'This email is already registered. Please sign in instead.'
+              : 'This email is available for registration.';
+        });
+      } catch (_) {
+        if (!mounted || _emailController.text.trim().toLowerCase() != email) return;
+        setState(() {
+          _isCheckingEmail = false;
           _existingAccountCheck = null;
+          _emailAccountMessage = 'Unable to check this email right now.';
         });
       }
-    }
+    });
   }
 
   @override
   void dispose() {
     _usernameDebounce?.cancel();
+    _emailDebounce?.cancel();
     _emailController.removeListener(_onEmailChanged);
     _usernameController.removeListener(_onUsernameChanged);
     _passwordController.removeListener(_onPasswordChanged);
@@ -117,6 +165,54 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _handleRegister() async {
     if (!_formKey.currentState!.validate()) return;
+
+    _emailDebounce?.cancel();
+    _usernameDebounce?.cancel();
+    final submittedEmail = _emailController.text.trim().toLowerCase();
+    final submittedUsername =
+        _usernameController.text.trim().replaceAll('@', '');
+    setState(() {
+      _isCheckingEmail = true;
+      _isCheckingUsername = true;
+    });
+    try {
+      final authVM = context.read<AuthViewModel>();
+      final results = await Future.wait<Object>([
+        authVM.checkExistingAccount(submittedEmail),
+        authVM.isUsernameAvailable(submittedUsername),
+      ]);
+      final latestCheck = results[0] as ExistingAccountCheck;
+      final usernameAvailable = results[1] as bool;
+      if (!mounted) return;
+      setState(() {
+        _isCheckingEmail = false;
+        _isCheckingUsername = false;
+        _existingAccountCheck = latestCheck.exists ? latestCheck : null;
+        _isUsernameAvailable = usernameAvailable;
+        _usernameMessage = usernameAvailable
+            ? '@$submittedUsername is available'
+            : '@$submittedUsername is already taken';
+        _emailAccountMessage = latestCheck.exists
+            ? 'This email is already registered. Please sign in instead.'
+            : 'This email is available for registration.';
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isCheckingEmail = false;
+        _isCheckingUsername = false;
+        _emailAccountMessage = 'Unable to check this email right now.';
+        _usernameMessage = 'Unable to check this username right now.';
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Unable to verify this email. Please try again.'),
+          backgroundColor: Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
 
     if (_isUsernameAvailable == false) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -169,13 +265,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     if (result.requiresEmailVerification) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('📨 Verification code sent! Please check your email inbox.'),
-          backgroundColor: Color(0xFF0284C7),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ScaffoldMessenger.of(context).clearSnackBars();
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => EmailVerificationScreen(
@@ -188,13 +278,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('🎉 WELCOME TO WARISAN KITA: Account created successfully!'),
-        backgroundColor: Color(0xFF10B981),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    ScaffoldMessenger.of(context).clearSnackBars();
     Navigator.of(context).pushNamedAndRemoveUntil('/tourist', (route) => false);
   }
 
@@ -211,6 +295,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF004D40)),
           onPressed: () {
+            context.read<AuthViewModel>().clearError();
+            ScaffoldMessenger.of(context).clearSnackBars();
             if (Navigator.of(context).canPop()) {
               Navigator.of(context).pop();
             } else {
@@ -365,6 +451,36 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       labelText: 'Email Address',
                       hintText: 'e.g. siti@example.com',
                       prefixIcon: const Icon(Icons.email_outlined, color: Color(0xFF004D40)),
+                      suffixIcon: _isCheckingEmail
+                          ? const Padding(
+                              padding: EdgeInsets.all(14),
+                              child: SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            )
+                          : (_emailAccountMessage == null
+                              ? null
+                              : Icon(
+                                  _existingAccountCheck != null
+                                      ? Icons.error_outline_rounded
+                                      : Icons.check_circle_outline_rounded,
+                                  color: _existingAccountCheck != null
+                                      ? const Color(0xFFDC2626)
+                                      : const Color(0xFF10B981),
+                                )),
+                      helperText: _emailAccountMessage,
+                      helperMaxLines: 2,
+                      helperStyle: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: _isCheckingEmail
+                            ? Colors.grey[600]
+                            : (_existingAccountCheck != null
+                                ? const Color(0xFFDC2626)
+                                : const Color(0xFF10B981)),
+                      ),
                       filled: true,
                       fillColor: const Color(0xFFF8F9FA),
                       border: OutlineInputBorder(
@@ -376,9 +492,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       if (v == null || v.trim().isEmpty) {
                         return 'Please enter your email address';
                       }
-                      final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-                      if (!emailRegex.hasMatch(v.trim())) {
-                        return 'Please enter a valid email format';
+                      final validation = ProfileValidator.validateEmail(v);
+                      if (validation != null) return validation;
+                      if (_existingAccountCheck?.exists == true) {
+                        return 'This email is already registered';
                       }
                       return null;
                     },
@@ -424,6 +541,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           const SizedBox(width: 6),
                           FilledButton(
                             onPressed: () {
+                              context.read<AuthViewModel>().clearError();
+                              ScaffoldMessenger.of(context).clearSnackBars();
                               Navigator.of(context).pushReplacementNamed('/login');
                             },
                             style: FilledButton.styleFrom(
@@ -589,7 +708,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                       ),
                       GestureDetector(
-                        onTap: () => Navigator.of(context).pushReplacementNamed('/login'),
+                        onTap: () {
+                          context.read<AuthViewModel>().clearError();
+                          ScaffoldMessenger.of(context).clearSnackBars();
+                          Navigator.of(context).pushReplacementNamed('/login');
+                        },
                         child: Text(
                           'Sign In',
                           style: GoogleFonts.plusJakartaSans(

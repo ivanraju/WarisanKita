@@ -38,6 +38,12 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<AuthViewModel>().clearError();
+        ScaffoldMessenger.of(context).clearSnackBars();
+      }
+    });
     if (widget.autoStartTimer) {
       _startCooldownTimer();
     }
@@ -75,6 +81,9 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   String get _otpCode => _controllers.map((c) => c.text).join();
 
   void _onDigitChanged(int index, String value) {
+    if (_errorMessage != null) {
+      setState(() => _errorMessage = null);
+    }
     if (value.length > 1) {
       final clean = value.replaceAll(RegExp(r'\D'), '');
       if (clean.isNotEmpty) {
@@ -143,6 +152,8 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
       return;
     }
 
+    context.read<AuthViewModel>().clearError();
+    ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('🎉 Email verified successfully! Welcome to Warisan Kita.'),
@@ -195,7 +206,11 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF004D40)),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () {
+            context.read<AuthViewModel>().clearError();
+            ScaffoldMessenger.of(context).clearSnackBars();
+            Navigator.of(context).pop();
+          },
         ),
       ),
       body: Center(
@@ -425,7 +440,11 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                   // Wrong Email / Back Link
                   Center(
                     child: TextButton.icon(
-                      onPressed: () => Navigator.of(context).pop(),
+                      onPressed: () {
+                        context.read<AuthViewModel>().clearError();
+                        ScaffoldMessenger.of(context).clearSnackBars();
+                        Navigator.of(context).pop();
+                      },
                       icon: const Icon(Icons.edit_outlined, size: 16, color: Color(0xFF64748B)),
                       label: Text(
                         'Change email address',

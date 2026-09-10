@@ -182,13 +182,21 @@ class _WarisanKitaAppState extends State<WarisanKitaApp> {
     ) {
       final AuthChangeEvent event = data.event;
       if (event == AuthChangeEvent.passwordRecovery) {
+        if (!mounted) return;
+        if (data.session != null) {
+          context.read<SupabaseService>().acceptPasswordRecovery(data.session!);
+        }
         final email = data.session?.user.email;
-        navigatorKey.currentState?.push(
-          MaterialPageRoute(
-            builder: (_) =>
-                ForgotPasswordScreen(initialStep: 3, initialEmail: email),
-          ),
-        );
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          navigatorKey.currentState?.push(
+            MaterialPageRoute(
+              builder: (_) =>
+                  ForgotPasswordScreen(initialStep: 3, initialEmail: email),
+            ),
+          );
+        });
+        WidgetsBinding.instance.ensureVisualUpdate();
       }
     });
   }

@@ -1,3 +1,4 @@
+import 'support/auth_backend.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -533,7 +534,9 @@ void main() {
 
   group('Account Deletion, Cache & Re-Registration Lifecycle Tests', () {
     test('Deleting an account frees username, email and excludes user from getAllUsers & getCurrentUser', () async {
-      final service = SupabaseService();
+      final backend = AuthBackend();
+      addTearDown(backend.client.dispose);
+      final service = SupabaseService(client: backend.client);
       final repo = UserRepository(service: service);
 
       const testEmail = 'deletetest@example.com';
@@ -549,6 +552,7 @@ void main() {
         displayName: 'Delete Test User',
       );
       expect(signupUser.email, testEmail);
+      await service.verifyEmailOtp(email: testEmail, token: '654321');
 
       // Verify username is taken
       final availableBefore = await service.isUsernameAvailable(testUsername);
@@ -637,68 +641,28 @@ void main() {
   });
 
   group('Password Reset Security Policy Tests', () {
-    test('resetPasswordWithToken rejects reusing the same old password', () async {
-      final service = SupabaseService();
-      final repo = UserRepository(service: service);
-      final authVM = AuthViewModel(repository: repo);
+    test('backend enforces password reuse and valid recovery can update password', () async {
+      final backend = AuthBackend();
+      addTearDown(backend.client.dispose);
+      final service = SupabaseService(client: backend.client);
+      final vm = AuthViewModel(repository: UserRepository(service: service));
+      const email = 'resetpolicy@test.com';
+      backend.add(email, password: 'OriginalPassword123!');
+      await service.signIn(email, 'OriginalPassword123!');
+      service.acceptPasswordRecovery(backend.client.auth.currentSession!);
 
-      const testEmail = 'resetpolicy@test.com';
-      const initialPassword = 'OriginalPassword123!';
+      final reused = await vm.confirmPasswordReset(email: email, token: '',
+        newPassword: 'OriginalPassword123!', confirmPassword: 'OriginalPassword123!');
+      expect(reused.success, isFalse);
+      expect(reused.message, contains('should be different'));
+      expect(backend.passwordUpdates, 0);
 
-      // 1. Create account
-      await service.signUp(
-        email: testEmail,
-        password: initialPassword,
-        role: 'Tourist',
-        username: 'resetpolicyuser',
-      );
-
-      // 2. Request reset link
-      await authVM.sendPasswordReset(testEmail);
-
-      // 3. Attempt to reset using the EXACT same old password
-      final resetResult = await authVM.confirmPasswordReset(
-        email: testEmail,
-        token: 'DUMMY-TOKEN',
-        newPassword: initialPassword,
-        confirmPassword: initialPassword,
-      );
-
-      expect(resetResult.success, isFalse);
-      expect(
-        resetResult.message?.toUpperCase(),
-        contains('NEW PASSWORD IS TOO SIMILAR TO YOUR CURRENT PASSWORD'),
-      );
-
-      // 4. Attempt to reset using a trivial casing difference (lowercase only)
-      final caseDiffReset = await authVM.confirmPasswordReset(
-        email: testEmail,
-        token: 'DUMMY-TOKEN',
-        newPassword: 'originalpassword123!',
-        confirmPassword: 'originalpassword123!',
-      );
-
-      expect(caseDiffReset.success, isFalse);
-      expect(
-        caseDiffReset.message?.toUpperCase(),
-        contains('NEW PASSWORD IS TOO SIMILAR TO YOUR CURRENT PASSWORD'),
-      );
-
-      // 5. Attempt to reset using a genuinely NEW password
-      const newPassword = 'BrandNewPassword456!';
-      final validReset = await authVM.confirmPasswordReset(
-        email: testEmail,
-        token: 'DUMMY-TOKEN',
-        newPassword: newPassword,
-        confirmPassword: newPassword,
-      );
-
-      expect(validReset.success, isTrue);
-
-      // Clean up
-      final users = await service.getAllUsers();
-      final user = users.firstWhere((u) => u.email == testEmail);
-      await repo.deleteAccount(userId: user.id, email: testEmail, username: 'resetpolicyuser');
+      final changed = await vm.confirmPasswordReset(email: email, token: '',
+        newPassword: 'BrandNewPassword456!', confirmPassword: 'BrandNewPassword456!');
+      expect(changed.success, isTrue);
+      expect(backend.passwordUpdates, 1);
+      expect(vm.currentUser, isNull);
+      expect(backend.client.auth.currentSession, isNull);
     });
   });
 }
