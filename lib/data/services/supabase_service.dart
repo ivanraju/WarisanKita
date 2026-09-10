@@ -276,7 +276,9 @@ class SupabaseService {
       final existingSsm = (u['ssmNumber'] ?? u['ssm_number']) as String?;
       if (existingSsm != null && existingSsm.trim().isNotEmpty) {
         final existingNorm = SsmValidator.normalize(existingSsm);
-        final existingNoSpaces = existingSsm.replaceAll(RegExp(r'\s+'), '').toUpperCase();
+        final existingNoSpaces = existingSsm
+            .replaceAll(RegExp(r'\s+'), '')
+            .toUpperCase();
         if (existingNorm == normalized || existingNoSpaces == noSpaces) {
           return true;
         }
@@ -4776,7 +4778,9 @@ class SupabaseService {
       taskRows = List<Map<String, dynamic>>.from(
         await client
             .from('heritage_tasks')
-            .select('id, quest_id, xp_reward, status, is_archived')
+            .select(
+              'id, quest_id, is_required, xp_reward, created_at, status, is_archived',
+            )
             .eq('status', 'APPROVED')
             .eq('is_archived', false),
       );
@@ -4789,7 +4793,7 @@ class SupabaseService {
       questProgressRows = List<Map<String, dynamic>>.from(
         await client
             .from('quest_progress')
-            .select('quest_id, status')
+            .select('quest_id, status, started_at')
             .eq('user_id', user.id),
       );
     } catch (error) {
@@ -4894,6 +4898,130 @@ class SupabaseService {
         .maybeSingle();
   }
 
+  Future<Map<String, dynamic>> fetchArtisanHeritageAnalytics({
+    required DateTime startedAtUtc,
+    required DateTime endedAtUtcExclusive,
+  }) async {
+    final client = _requireSupabaseClient();
+    final authenticatedUser = _requireAuthenticatedUser(
+      client,
+      'You must be signed in to view heritage analytics.',
+    );
+    final artisanProfile = await fetchCurrentArtisanQuestProfile();
+    if (artisanProfile == null) {
+      throw StateError(
+        'No artisan profile is linked to this signed-in account.',
+      );
+    }
+
+    final questRows = List<Map<String, dynamic>>.from(
+      await client
+          .from('quests')
+          .select('id')
+          .eq('artisan_id', artisanProfile['id'])
+          .eq('status', 'APPROVED'),
+    );
+    final questIds = questRows
+        .map((row) => row['id']?.toString() ?? '')
+        .where((id) => id.isNotEmpty)
+        .toList(growable: false);
+    if (questIds.isEmpty) {
+      return const {
+        'visits': <Object>[],
+        'stamps': <Object>[],
+        'completions': <Object>[],
+        'stamps_available': true,
+        'completions_available': true,
+      };
+    }
+
+    final arrivalTaskRows = List<Map<String, dynamic>>.from(
+      await client
+          .from('heritage_tasks')
+          .select('id')
+          .inFilter('quest_id', questIds)
+          .eq('is_system_task', true)
+          .eq('sort_order', 1)
+          .eq('status', 'APPROVED')
+          .eq('is_archived', false),
+    );
+    final arrivalTaskIds = arrivalTaskRows
+        .map((row) => row['id']?.toString() ?? '')
+        .where((id) => id.isNotEmpty)
+        .toList(growable: false);
+
+    var visits = <Map<String, dynamic>>[];
+    var visitorSource = 'arrival_task';
+    if (arrivalTaskIds.isNotEmpty) {
+      visits = List<Map<String, dynamic>>.from(
+        await client
+            .from('task_progress')
+            .select('user_id, completed_at')
+            .inFilter('task_id', arrivalTaskIds)
+            .eq('is_completed', true)
+            .neq('user_id', authenticatedUser.id)
+            .not('completed_at', 'is', null)
+            .gte('completed_at', startedAtUtc.toIso8601String())
+            .lt('completed_at', endedAtUtcExclusive.toIso8601String()),
+      );
+    } else {
+      // Some legacy quests do not expose a reliably identifiable arrival task.
+      // A completed approved quest is the only verified fallback available in
+      // the existing schema.
+      visitorSource = 'completed_quest';
+      visits = List<Map<String, dynamic>>.from(
+        await client
+            .from('quest_progress')
+            .select('user_id, completed_at')
+            .inFilter('quest_id', questIds)
+            .eq('status', 'COMPLETED')
+            .neq('user_id', authenticatedUser.id)
+            .not('completed_at', 'is', null)
+            .gte('completed_at', startedAtUtc.toIso8601String())
+            .lt('completed_at', endedAtUtcExclusive.toIso8601String()),
+      );
+    }
+
+    var stamps = <Map<String, dynamic>>[];
+    var completions = <Map<String, dynamic>>[];
+    var stampsAvailable = false;
+    var completionsAvailable = false;
+    try {
+      stamps = List<Map<String, dynamic>>.from(
+        await client
+            .from('passport_stamps')
+            .select('user_id, quest_id')
+            .inFilter('quest_id', questIds)
+            .neq('user_id', authenticatedUser.id),
+      );
+      stampsAvailable = true;
+    } catch (error) {
+      debugPrint('Artisan passport-stamp analytics unavailable: $error');
+    }
+    try {
+      completions = List<Map<String, dynamic>>.from(
+        await client
+            .from('quest_progress')
+            .select('user_id, quest_id')
+            .inFilter('quest_id', questIds)
+            .eq('status', 'COMPLETED')
+            .neq('user_id', authenticatedUser.id),
+      );
+      completionsAvailable = true;
+    } catch (error) {
+      debugPrint('Artisan quest-completion analytics unavailable: $error');
+    }
+
+    return {
+      'visits': visits,
+      'visitor_source': visitorSource,
+      'stamps': stamps,
+      'completions': completions,
+      'stamps_available': stampsAvailable,
+      'completions_available': completionsAvailable,
+    };
+  }
+
   Future<List<Map<String, dynamic>>> fetchQuestsForArtisan(
     String artisanProfileId,
   ) async {
@@ -4914,158 +5042,6 @@ class SupabaseService {
         .order('created_at', ascending: false);
 
     return List<Map<String, dynamic>>.from(response);
-  }
-
-  Future<Map<String, dynamic>> updateCurrentArtisanQuest({
-    required String questId,
-    required String title,
-    required String description,
-    required String category,
-  }) async {
-    final client = _client;
-
-    if (client == null) {
-      throw StateError('Supabase is not initialized.');
-    }
-    if (client.auth.currentUser == null) {
-      throw StateError('You must be signed in to edit your cultural quest.');
-    }
-
-    final artisanProfile = await fetchCurrentArtisanQuestProfile();
-    if (artisanProfile == null) {
-      throw StateError(
-        'No artisan profile is linked to this signed-in account.',
-      );
-    }
-
-    return client
-        .from('quests')
-        .update({
-          'title': title.trim(),
-          'description': description.trim(),
-          'category': category.trim(),
-          'status': 'PENDING_APPROVAL',
-        })
-        .eq('id', questId)
-        .eq('artisan_id', artisanProfile['id'])
-        .select(
-          'id, artisan_id, title, description, category, '
-          'qr_code_secret, geofence_radius_meters, stamp_title, stamp_image_url, status, '
-          'created_at',
-        )
-        .single();
-  }
-
-  Future<List<Map<String, dynamic>>> fetchQuestChangeRequests(
-    String questId,
-  ) async {
-    final client = _client;
-    if (client == null) {
-      throw StateError('Supabase is not initialized.');
-    }
-
-    final response = await client
-        .from('quest_change_requests')
-        .select(
-          'id, quest_id, proposed_title, proposed_description, '
-          'proposed_category, status, rejection_reason, submitted_at, '
-          'reviewed_at, reviewed_by',
-        )
-        .eq('quest_id', questId)
-        .order('submitted_at', ascending: false);
-
-    return List<Map<String, dynamic>>.from(response);
-  }
-
-  Future<Map<String, dynamic>> insertQuestChangeRequest({
-    required String questId,
-    required String proposedTitle,
-    required String proposedDescription,
-    required String proposedCategory,
-  }) async {
-    final client = _client;
-    if (client == null) {
-      throw StateError('Supabase is not initialized.');
-    }
-    if (client.auth.currentUser == null) {
-      throw StateError('You must be signed in to request quest changes.');
-    }
-
-    final artisanProfile = await fetchCurrentArtisanQuestProfile();
-    if (artisanProfile == null) {
-      throw StateError(
-        'No artisan profile is linked to this signed-in account.',
-      );
-    }
-
-    final existing = await client
-        .from('quest_change_requests')
-        .select('id')
-        .eq('quest_id', questId)
-        .eq('status', 'PENDING_APPROVAL')
-        .maybeSingle();
-    if (existing != null) {
-      throw StateError(
-        'This quest already has an update awaiting admin approval.',
-      );
-    }
-
-    return client
-        .from('quest_change_requests')
-        .insert({
-          'quest_id': questId,
-          'proposed_title': proposedTitle.trim(),
-          'proposed_description': proposedDescription.trim(),
-          'proposed_category': proposedCategory.trim(),
-          'status': 'PENDING_APPROVAL',
-        })
-        .select(
-          'id, quest_id, proposed_title, proposed_description, '
-          'proposed_category, status, rejection_reason, submitted_at, '
-          'reviewed_at, reviewed_by',
-        )
-        .single();
-  }
-
-  Future<Map<String, dynamic>> updatePendingQuestChangeRequest({
-    required String requestId,
-    required String questId,
-    required String proposedTitle,
-    required String proposedDescription,
-    required String proposedCategory,
-  }) async {
-    final client = _client;
-    if (client == null) {
-      throw StateError('Supabase is not initialized.');
-    }
-    if (client.auth.currentUser == null) {
-      throw StateError('You must be signed in to edit a pending quest update.');
-    }
-
-    final updatedRequest = await client
-        .from('quest_change_requests')
-        .update({
-          'proposed_title': proposedTitle.trim(),
-          'proposed_description': proposedDescription.trim(),
-          'proposed_category': proposedCategory.trim(),
-          'submitted_at': DateTime.now().toUtc().toIso8601String(),
-        })
-        .eq('id', requestId)
-        .eq('quest_id', questId)
-        .eq('status', 'PENDING_APPROVAL')
-        .select(
-          'id, quest_id, proposed_title, proposed_description, '
-          'proposed_category, status, rejection_reason, submitted_at, '
-          'reviewed_at, reviewed_by',
-        )
-        .maybeSingle();
-
-    if (updatedRequest == null) {
-      throw StateError(
-        'This quest update is no longer pending. Refresh to see the latest admin decision.',
-      );
-    }
-    return updatedRequest;
   }
 
   Future<Map<String, dynamic>> insertHeritageTask({
@@ -5140,6 +5116,14 @@ class SupabaseService {
   }
 
   Future<String?> fetchCurrentQuestProgressStatus(String questId) async {
+    final row = await fetchCurrentQuestProgressSnapshot(questId);
+    final status = row?['status'];
+    return status is String && status.trim().isNotEmpty ? status : null;
+  }
+
+  Future<Map<String, dynamic>?> fetchCurrentQuestProgressSnapshot(
+    String questId,
+  ) async {
     final client = _client;
     if (client == null) {
       throw StateError('Supabase is not initialized.');
@@ -5152,13 +5136,107 @@ class SupabaseService {
 
     final row = await client
         .from('quest_progress')
-        .select('status')
+        .select('status, started_at')
         .eq('user_id', user.id)
         .eq('quest_id', questId)
         .maybeSingle();
 
-    final status = row?['status'];
-    return status is String && status.trim().isNotEmpty ? status : null;
+    return row;
+  }
+
+  Future<List<Map<String, dynamic>>> fetchActiveQuestProgressRows() async {
+    final client = _requireSupabaseClient();
+    final user = _requireAuthenticatedUser(
+      client,
+      'You must be signed in to view your active journey.',
+    );
+    return _fetchActiveQuestProgressRowsForUser(client, user.id);
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchActiveQuestProgressRowsForUser(
+    SupabaseClient client,
+    String userId,
+  ) async {
+    final progressRows = List<Map<String, dynamic>>.from(
+      await client
+          .from('quest_progress')
+          .select('quest_id, status, started_at')
+          .eq('user_id', userId)
+          .eq('status', 'IN_PROGRESS'),
+    );
+    if (progressRows.isEmpty) return const [];
+
+    final questIds = progressRows
+        .map((row) => row['quest_id']?.toString().trim() ?? '')
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .toList(growable: false);
+    if (questIds.isEmpty) return const [];
+
+    final questRows = List<Map<String, dynamic>>.from(
+      await client
+          .from('quests')
+          .select('id, artisan_id, title')
+          .inFilter('id', questIds),
+    );
+    final questsById = {
+      for (final row in questRows) row['id']?.toString() ?? '': row,
+    };
+    final artisanIds = questRows
+        .map((row) => row['artisan_id']?.toString().trim() ?? '')
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .toList(growable: false);
+    final artisanRows = artisanIds.isEmpty
+        ? const <Map<String, dynamic>>[]
+        : List<Map<String, dynamic>>.from(
+            await client
+                .from('artisan_profiles')
+                .select('id, studio_name')
+                .inFilter('id', artisanIds),
+          );
+    final artisansById = {
+      for (final row in artisanRows) row['id']?.toString() ?? '': row,
+    };
+
+    final enriched = <Map<String, dynamic>>[];
+    for (final progress in progressRows) {
+      final questId = progress['quest_id']?.toString() ?? '';
+      final quest = questsById[questId];
+      final artisanId = quest?['artisan_id']?.toString() ?? '';
+      final artisan = artisansById[artisanId];
+      enriched.add({
+        ...progress,
+        'quest_title': quest?['title'] ?? 'Cultural Quest',
+        'artisan_id': artisanId,
+        'studio_name': artisan?['studio_name'] ?? 'Artisan Studio',
+      });
+    }
+    enriched.sort(_compareActiveQuestRows);
+    return enriched;
+  }
+
+  int _compareActiveQuestRows(
+    Map<String, dynamic> first,
+    Map<String, dynamic> second,
+  ) {
+    final firstStarted = DateTime.tryParse(
+      first['started_at']?.toString() ?? '',
+    )?.toUtc();
+    final secondStarted = DateTime.tryParse(
+      second['started_at']?.toString() ?? '',
+    )?.toUtc();
+    if (firstStarted != null && secondStarted != null) {
+      final newestFirst = secondStarted.compareTo(firstStarted);
+      if (newestFirst != 0) return newestFirst;
+    } else if (firstStarted != null) {
+      return -1;
+    } else if (secondStarted != null) {
+      return 1;
+    }
+    return (first['quest_id']?.toString() ?? '').compareTo(
+      second['quest_id']?.toString() ?? '',
+    );
   }
 
   Future<bool> hasEarnedQuestStamp(String questId) async {
@@ -5176,28 +5254,91 @@ class SupabaseService {
     return row != null;
   }
 
-  Future<String> startQuest({
+  Future<Map<String, dynamic>> startQuest({
     required String questId,
     required List<String> taskIds,
   }) async {
-    final client = _client;
-    if (client == null) {
-      throw StateError('Supabase is not initialized.');
+    final client = _requireSupabaseClient();
+    final user = _requireAuthenticatedUser(
+      client,
+      'You must be signed in to start a quest.',
+    );
+
+    var activeRows = await _fetchActiveQuestProgressRowsForUser(
+      client,
+      user.id,
+    );
+    if (activeRows.isNotEmpty) {
+      final activeQuestId = activeRows.first['quest_id']?.toString() ?? '';
+      if (activeQuestId != questId) {
+        return {
+          'outcome': 'blocked',
+          'active_rows': activeRows,
+          'progress': activeRows.first,
+        };
+      }
+      await _ensureTaskProgressRows(client, user.id, taskIds);
+      return {
+        'outcome': 'resumed',
+        'active_rows': activeRows,
+        'progress': activeRows.first,
+      };
     }
 
-    final user = client.auth.currentUser;
-    if (user == null) {
-      throw StateError('You must be signed in to start a quest.');
+    try {
+      await client
+          .from('quest_progress')
+          .upsert(
+            {'user_id': user.id, 'quest_id': questId, 'status': 'IN_PROGRESS'},
+            onConflict: 'user_id,quest_id',
+            ignoreDuplicates: true,
+          );
+    } catch (_) {
+      activeRows = await _fetchActiveQuestProgressRowsForUser(client, user.id);
+      if (activeRows.isEmpty) rethrow;
+      final activeQuestId = activeRows.first['quest_id']?.toString() ?? '';
+      if (activeRows.length > 1) {
+        return {
+          'outcome': 'integrity_conflict',
+          'active_rows': activeRows,
+          'progress': activeRows.first,
+        };
+      }
+      if (activeQuestId == questId) {
+        await _ensureTaskProgressRows(client, user.id, taskIds);
+      }
+      return {
+        'outcome': activeQuestId == questId ? 'resumed' : 'blocked',
+        'active_rows': activeRows,
+        'progress': activeRows.first,
+      };
     }
 
-    await client
-        .from('quest_progress')
-        .upsert(
-          {'user_id': user.id, 'quest_id': questId, 'status': 'IN_PROGRESS'},
-          onConflict: 'user_id,quest_id',
-          ignoreDuplicates: true,
-        );
+    activeRows = await _fetchActiveQuestProgressRowsForUser(client, user.id);
+    final activeQuestId = activeRows.isEmpty
+        ? ''
+        : activeRows.first['quest_id']?.toString() ?? '';
+    if (activeRows.length != 1 || activeQuestId != questId) {
+      return {
+        'outcome': activeRows.length > 1 ? 'integrity_conflict' : 'blocked',
+        'active_rows': activeRows,
+        'progress': activeRows.isEmpty ? null : activeRows.first,
+      };
+    }
 
+    await _ensureTaskProgressRows(client, user.id, taskIds);
+    return {
+      'outcome': 'started',
+      'active_rows': activeRows,
+      'progress': activeRows.first,
+    };
+  }
+
+  Future<void> _ensureTaskProgressRows(
+    SupabaseClient client,
+    String userId,
+    List<String> taskIds,
+  ) async {
     if (taskIds.isNotEmpty) {
       await client
           .from('task_progress')
@@ -5205,7 +5346,7 @@ class SupabaseService {
             taskIds
                 .map(
                   (taskId) => {
-                    'user_id': user.id,
+                    'user_id': userId,
                     'task_id': taskId,
                     'is_completed': false,
                   },
@@ -5215,8 +5356,6 @@ class SupabaseService {
             ignoreDuplicates: true,
           );
     }
-
-    return await fetchCurrentQuestProgressStatus(questId) ?? 'IN_PROGRESS';
   }
 
   Future<List<Map<String, dynamic>>> fetchTaskProgress(
@@ -5253,6 +5392,12 @@ class SupabaseService {
     if (task == null) {
       throw StateError('This task is not available for completion.');
     }
+    final questId = task['quest_id'].toString();
+    await _assertNoDifferentActiveQuest(
+      client: client,
+      userId: user.id,
+      questId: questId,
+    );
     await _ensureTaskProgress(client, user.id, taskId);
 
     final now = DateTime.now().toUtc().toIso8601String();
@@ -5272,7 +5417,7 @@ class SupabaseService {
     await _updateQuestRewardAndCompletion(
       client: client,
       userId: user.id,
-      questId: task['quest_id'].toString(),
+      questId: questId,
     );
     return completed;
   }
@@ -5311,7 +5456,7 @@ class SupabaseService {
 
     final task = await client
         .from('heritage_tasks')
-        .select('id, is_system_task, sort_order')
+        .select('id, is_system_task, sort_order, created_at')
         .eq('id', taskId)
         .eq('quest_id', questId)
         .eq('status', 'APPROVED')
@@ -5328,11 +5473,36 @@ class SupabaseService {
 
     final questProgress = await client
         .from('quest_progress')
-        .select('status')
+        .select('status, started_at')
         .eq('user_id', user.id)
         .eq('quest_id', questId)
         .maybeSingle();
-    if (questProgress?['status']?.toString().toUpperCase() != 'IN_PROGRESS') {
+    final progressStatus = questProgress?['status']?.toString().toUpperCase();
+    final taskCreatedAt = DateTime.tryParse(
+      task['created_at']?.toString() ?? '',
+    )?.toUtc();
+    final participantStartedAt = DateTime.tryParse(
+      questProgress?['started_at']?.toString() ?? '',
+    )?.toUtc();
+    final isBonusForParticipant =
+        taskCreatedAt != null &&
+        participantStartedAt != null &&
+        taskCreatedAt.isAfter(participantStartedAt);
+    final hasStamp =
+        progressStatus == 'COMPLETED' ||
+        await client
+                .from('passport_stamps')
+                .select('id')
+                .eq('user_id', user.id)
+                .eq('quest_id', questId)
+                .maybeSingle() !=
+            null;
+    final isPermanentlyCompleted = progressStatus == 'COMPLETED' || hasStamp;
+    final canCompleteJourneyTask =
+        progressStatus == 'IN_PROGRESS' && !isPermanentlyCompleted;
+    final canCompleteBonusTask =
+        isPermanentlyCompleted && isBonusForParticipant;
+    if (!canCompleteJourneyTask && !canCompleteBonusTask) {
       throw StateError('Start this quest before scanning the workshop QR.');
     }
 
@@ -5348,18 +5518,45 @@ class SupabaseService {
     required String userId,
     required String questId,
   }) async {
+    final progress = await client
+        .from('quest_progress')
+        .select('status, started_at')
+        .eq('user_id', userId)
+        .eq('quest_id', questId)
+        .maybeSingle();
+    if (progress == null) return;
+
+    final existingStamp = await client
+        .from('passport_stamps')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('quest_id', questId)
+        .maybeSingle();
+    if (progress['status']?.toString().toUpperCase() == 'COMPLETED' ||
+        existingStamp != null) {
+      return;
+    }
+
+    final participantStartedAt = DateTime.tryParse(
+      progress['started_at']?.toString() ?? '',
+    )?.toUtc();
     final taskRows = await client
         .from('heritage_tasks')
-        .select('id, is_required')
+        .select('id, is_required, created_at')
         .eq('quest_id', questId)
         .eq('status', 'APPROVED')
         .eq('is_archived', false);
     final tasks = List<Map<String, dynamic>>.from(taskRows);
-    final allTaskIds = tasks
-        .map((row) => row['id'].toString())
-        .toList(growable: false);
     final requiredTaskIds = tasks
-        .where((row) => row['is_required'] == true)
+        .where((row) {
+          if (row['is_required'] != true) return false;
+          final taskCreatedAt = DateTime.tryParse(
+            row['created_at']?.toString() ?? '',
+          )?.toUtc();
+          return taskCreatedAt == null ||
+              participantStartedAt == null ||
+              !taskCreatedAt.isAfter(participantStartedAt);
+        })
         .map((row) => row['id'].toString())
         .toList(growable: false);
     if (requiredTaskIds.isEmpty) return;
@@ -5369,7 +5566,7 @@ class SupabaseService {
         .select('task_id')
         .eq('user_id', userId)
         .eq('is_completed', true)
-        .inFilter('task_id', allTaskIds);
+        .inFilter('task_id', requiredTaskIds);
     final completedIds = List<Map<String, dynamic>>.from(
       progressRows,
     ).map((row) => row['task_id'].toString()).toSet();
@@ -5387,14 +5584,13 @@ class SupabaseService {
           ignoreDuplicates: true,
         );
 
-    if (allTaskIds.every(completedIds.contains)) {
-      final now = DateTime.now().toUtc().toIso8601String();
-      await client
-          .from('quest_progress')
-          .update({'status': 'COMPLETED', 'completed_at': now})
-          .eq('user_id', userId)
-          .eq('quest_id', questId);
-    }
+    final now = DateTime.now().toUtc().toIso8601String();
+    await client
+        .from('quest_progress')
+        .update({'status': 'COMPLETED', 'completed_at': now})
+        .eq('user_id', userId)
+        .eq('quest_id', questId)
+        .neq('status', 'COMPLETED');
   }
 
   Future<Map<String, dynamic>> startTimedTask(String taskId) async {
@@ -5402,6 +5598,21 @@ class SupabaseService {
     final user = _requireAuthenticatedUser(
       client,
       'You must be signed in to track a task.',
+    );
+    final task = await client
+        .from('heritage_tasks')
+        .select('quest_id')
+        .eq('id', taskId)
+        .eq('status', 'APPROVED')
+        .eq('is_archived', false)
+        .maybeSingle();
+    if (task == null) {
+      throw StateError('This task is not available for tracking.');
+    }
+    await _assertNoDifferentActiveQuest(
+      client: client,
+      userId: user.id,
+      questId: task['quest_id'].toString(),
     );
     await _ensureTaskProgress(client, user.id, taskId);
 
@@ -5452,8 +5663,6 @@ class SupabaseService {
       client,
       'You must be signed in to complete a task.',
     );
-    await _ensureTaskProgress(client, user.id, taskId);
-
     final task = await client
         .from('heritage_tasks')
         .select('quest_id, is_system_task, sort_order')
@@ -5466,6 +5675,12 @@ class SupabaseService {
         task['sort_order'] != 2) {
       throw StateError('This is not the workshop timer system task.');
     }
+    await _assertNoDifferentActiveQuest(
+      client: client,
+      userId: user.id,
+      questId: task['quest_id'].toString(),
+    );
+    await _ensureTaskProgress(client, user.id, taskId);
 
     final current = await _fetchTaskProgressRow(client, user.id, taskId);
     if (current['is_completed'] == true) return current;
@@ -5509,6 +5724,28 @@ class SupabaseService {
   static const String _taskProgressColumns =
       'user_id, task_id, is_completed, completed_at, progress_seconds, '
       'tracking_started_at';
+
+  Future<void> _assertNoDifferentActiveQuest({
+    required SupabaseClient client,
+    required String userId,
+    required String questId,
+  }) async {
+    final rows = await client
+        .from('quest_progress')
+        .select('quest_id')
+        .eq('user_id', userId)
+        .eq('status', 'IN_PROGRESS');
+    final activeQuestIds = List<Map<String, dynamic>>.from(rows)
+        .map((row) => row['quest_id']?.toString() ?? '')
+        .where((id) => id.isNotEmpty)
+        .toSet();
+    if (activeQuestIds.any((id) => id != questId)) {
+      throw StateError(
+        'Complete your active journey before attempting activities from '
+        'another quest.',
+      );
+    }
+  }
 
   SupabaseClient _requireSupabaseClient() {
     final client = _client;
@@ -5563,7 +5800,7 @@ class SupabaseService {
       throw StateError('You must be signed in to update a task submission.');
     }
 
-    return client
+    final updatedTask = await client
         .from('heritage_tasks')
         .update({
           'title': title.trim(),
@@ -5583,7 +5820,13 @@ class SupabaseService {
           'status, rejection_reason, reviewed_at, reviewed_by, is_system_task, '
           'is_archived',
         )
-        .single();
+        .maybeSingle();
+    if (updatedTask == null) {
+      throw StateError(
+        'This task submission is no longer pending or rejected. Refresh to see the latest admin decision.',
+      );
+    }
+    return updatedTask;
   }
 
   Future<void> deleteUnapprovedHeritageTask(String taskId) async {
@@ -5759,77 +6002,6 @@ class SupabaseService {
     }
   }
 
-  Future<Map<String, dynamic>> resubmitRejectedQuestChangeRequest({
-    required String requestId,
-    required String questId,
-    required String proposedTitle,
-    required String proposedDescription,
-    required String proposedCategory,
-  }) async {
-    final client = _client;
-    if (client == null) {
-      throw StateError('Supabase is not initialized.');
-    }
-    if (client.auth.currentUser == null) {
-      throw StateError('You must be signed in to resubmit a quest update.');
-    }
-
-    final updatedRequest = await client
-        .from('quest_change_requests')
-        .update({
-          'proposed_title': proposedTitle.trim(),
-          'proposed_description': proposedDescription.trim(),
-          'proposed_category': proposedCategory.trim(),
-          'status': 'PENDING_APPROVAL',
-          'rejection_reason': null,
-          'reviewed_at': null,
-          'reviewed_by': null,
-          'submitted_at': DateTime.now().toUtc().toIso8601String(),
-        })
-        .eq('id', requestId)
-        .eq('quest_id', questId)
-        .eq('status', 'REJECTED')
-        .select(
-          'id, quest_id, proposed_title, proposed_description, '
-          'proposed_category, status, rejection_reason, submitted_at, '
-          'reviewed_at, reviewed_by',
-        )
-        .maybeSingle();
-    if (updatedRequest == null) {
-      throw StateError(
-        'This rejected quest update no longer exists or cannot be resubmitted.',
-      );
-    }
-    return updatedRequest;
-  }
-
-  Future<void> deleteRejectedQuestChangeRequest({
-    required String requestId,
-    required String questId,
-  }) async {
-    final client = _client;
-    if (client == null) {
-      throw StateError('Supabase is not initialized.');
-    }
-    if (client.auth.currentUser == null) {
-      throw StateError('You must be signed in to dismiss a quest update.');
-    }
-
-    final deletedRequest = await client
-        .from('quest_change_requests')
-        .delete()
-        .eq('id', requestId)
-        .eq('quest_id', questId)
-        .eq('status', 'REJECTED')
-        .select('id')
-        .maybeSingle();
-    if (deletedRequest == null) {
-      throw StateError(
-        'This rejected quest update no longer exists or cannot be dismissed.',
-      );
-    }
-  }
-
   Future<Map<String, dynamic>> resubmitRejectedHeritageTaskEditRequest({
     required String requestId,
     required String taskId,
@@ -5894,10 +6066,6 @@ class SupabaseService {
         'id, task_id, request_type, proposed_title, proposed_is_required, '
         'proposed_xp_reward, status, rejection_reason, submitted_at, '
         'reviewed_at, reviewed_by';
-    const questChangeColumns =
-        'id, quest_id, proposed_title, proposed_description, '
-        'proposed_category, status, rejection_reason, submitted_at, '
-        'reviewed_at, reviewed_by';
 
     final newTaskRows = List<Map<String, dynamic>>.from(
       await client
@@ -5911,12 +6079,6 @@ class SupabaseService {
       await client
           .from('heritage_task_change_requests')
           .select(taskChangeColumns)
-          .eq('status', 'PENDING_APPROVAL'),
-    );
-    final questChangeRows = List<Map<String, dynamic>>.from(
-      await client
-          .from('quest_change_requests')
-          .select(questChangeColumns)
           .eq('status', 'PENDING_APPROVAL'),
     );
 
@@ -5942,7 +6104,6 @@ class SupabaseService {
 
     final questIds = <String>{
       ...tasksById.values.map((row) => row['quest_id'].toString()),
-      ...questChangeRows.map((row) => row['quest_id'].toString()),
     }.where((id) => id.isNotEmpty).toList(growable: false);
     final questsById = <String, Map<String, dynamic>>{};
     if (questIds.isNotEmpty) {
@@ -6005,19 +6166,6 @@ class SupabaseService {
         'task_change': change,
       });
     }
-    for (final change in questChangeRows) {
-      final quest = questsById[change['quest_id'].toString()];
-      if (quest == null) continue;
-      requests.add({
-        'request_kind': 'QUEST_CHANGE',
-        'request_id': change['id'],
-        'submitted_at': change['submitted_at'],
-        'artisan_name': artisanNames[quest['artisan_id'].toString()],
-        'quest': quest,
-        'quest_change': change,
-      });
-    }
-
     requests.sort((a, b) {
       final aDate = DateTime.tryParse(a['submitted_at']?.toString() ?? '');
       final bDate = DateTime.tryParse(b['submitted_at']?.toString() ?? '');
@@ -6110,48 +6258,6 @@ class SupabaseService {
 
     await client
         .from('heritage_task_change_requests')
-        .update(
-          _gamificationReviewFields(
-            approve: approve,
-            rejectionReason: rejectionReason,
-          ),
-        )
-        .eq('id', requestId)
-        .eq('status', 'PENDING_APPROVAL');
-  }
-
-  Future<void> reviewQuestChange({
-    required String requestId,
-    required bool approve,
-    String? rejectionReason,
-  }) async {
-    final client = _requireSupabaseClient();
-    final request = await client
-        .from('quest_change_requests')
-        .select(
-          'id, quest_id, proposed_title, proposed_description, '
-          'proposed_category, status',
-        )
-        .eq('id', requestId)
-        .eq('status', 'PENDING_APPROVAL')
-        .maybeSingle();
-    if (request == null) {
-      throw StateError('This quest change request is no longer pending.');
-    }
-
-    if (approve) {
-      await client
-          .from('quests')
-          .update({
-            'title': request['proposed_title'],
-            'description': request['proposed_description'],
-            'category': request['proposed_category'],
-          })
-          .eq('id', request['quest_id']);
-    }
-
-    await client
-        .from('quest_change_requests')
         .update(
           _gamificationReviewFields(
             approve: approve,

@@ -8,7 +8,9 @@ import 'package:warisan_kita/ui/core/live_forum_tab.dart';
 import 'package:warisan_kita/ui/tourist/tourist_directory_tab.dart';
 import 'package:warisan_kita/ui/tourist/tourist_profile_tab.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
+import 'package:warisan_kita/viewmodels/gamification_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
+import 'package:warisan_kita/viewmodels/map_viewmodel.dart';
 
 class TouristMainScaffold extends StatefulWidget {
   final bool enableLivePolling;
@@ -21,6 +23,7 @@ class TouristMainScaffold extends StatefulWidget {
 class _TouristMainScaffoldState extends State<TouristMainScaffold> {
   int _currentIndex = 0;
   Timer? _statusPollTimer;
+  bool _journeyRestoreScheduled = false;
 
   @override
   void initState() {
@@ -50,11 +53,15 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
       return const AccountSuspendedScreen();
     }
 
+    _scheduleJourneyRestoration();
+
     final langVM = context.watch<LanguageViewModel>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
+      backgroundColor: isDark
+          ? const Color(0xFF041412)
+          : const Color(0xFFF8F9FA),
       extendBody: true,
       body: IndexedStack(
         index: _currentIndex,
@@ -85,7 +92,9 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
               ),
             ],
             border: Border.all(
-              color: isDark ? const Color(0xFF1E3A34) : Colors.white.withValues(alpha: 0.12),
+              color: isDark
+                  ? const Color(0xFF1E3A34)
+                  : Colors.white.withValues(alpha: 0.12),
               width: 1.5,
             ),
           ),
@@ -123,6 +132,22 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
     );
   }
 
+  void _scheduleJourneyRestoration() {
+    if (_journeyRestoreScheduled) return;
+    _journeyRestoreScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final gamificationViewModel = context.read<GamificationViewModel?>();
+      final mapViewModel = context.read<MapViewModel?>();
+      if (gamificationViewModel != null) {
+        unawaited(gamificationViewModel.loadActiveQuestState());
+      }
+      if (mapViewModel != null) {
+        unawaited(mapViewModel.loadJourneyData());
+      }
+    });
+  }
+
   Widget _buildNavItem({
     required int index,
     required IconData icon,
@@ -142,12 +167,13 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
           vertical: 8,
         ),
         decoration: BoxDecoration(
-          color: isSelected
-              ? const Color(0xFF004D40)
-              : Colors.transparent,
+          color: isSelected ? const Color(0xFF004D40) : Colors.transparent,
           borderRadius: BorderRadius.circular(24),
           border: isSelected
-              ? Border.all(color: const Color(0xFFFFD54F).withValues(alpha: 0.5), width: 1)
+              ? Border.all(
+                  color: const Color(0xFFFFD54F).withValues(alpha: 0.5),
+                  width: 1,
+                )
               : null,
           boxShadow: isSelected
               ? [
@@ -155,7 +181,7 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
                     color: const Color(0xFF004D40).withValues(alpha: 0.6),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
-                  )
+                  ),
                 ]
               : null,
         ),

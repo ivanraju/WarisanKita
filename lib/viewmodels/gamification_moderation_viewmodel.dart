@@ -2,13 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:warisan_kita/data/repositories/gamification_repository.dart';
 import 'package:warisan_kita/domain/models/gamification_moderation_request.dart';
 
-enum GamificationModerationFilter {
-  all,
-  newTasks,
-  taskChanges,
-  deleteRequests,
-  questChanges,
-}
+enum GamificationModerationFilter { all, newTasks, taskChanges, deleteRequests }
 
 class GamificationModerationViewModel extends ChangeNotifier {
   final GamificationRepository _repository;
@@ -32,15 +26,13 @@ class GamificationModerationViewModel extends ChangeNotifier {
   String? _reviewingRequestId;
   bool isReviewing(String requestId) => _reviewingRequestId == requestId;
 
-  int get totalCount => _requests.length;
   int get newTaskCount => _requests.where((item) => item.isNewTask).length;
   int get taskChangeCount => _requests
       .where((item) => item.isTaskChange && !item.isDeleteRequest)
       .length;
   int get deleteRequestCount =>
       _requests.where((item) => item.isDeleteRequest).length;
-  int get questChangeCount =>
-      _requests.where((item) => item.isQuestChange).length;
+  int get totalCount => newTaskCount + taskChangeCount + deleteRequestCount;
 
   List<GamificationModerationRequest> get filteredRequests {
     return switch (_filter) {
@@ -53,8 +45,6 @@ class GamificationModerationViewModel extends ChangeNotifier {
             .toList(growable: false),
       GamificationModerationFilter.deleteRequests =>
         requests.where((item) => item.isDeleteRequest).toList(growable: false),
-      GamificationModerationFilter.questChanges =>
-        requests.where((item) => item.isQuestChange).toList(growable: false),
     };
   }
 
@@ -110,12 +100,6 @@ class GamificationModerationViewModel extends ChangeNotifier {
           );
         case GamificationModerationRequestType.taskChange:
           await _repository.reviewHeritageTaskChange(
-            requestId: request.id,
-            approve: approve,
-            rejectionReason: rejectionReason,
-          );
-        case GamificationModerationRequestType.questChange:
-          await _repository.reviewQuestChange(
             requestId: request.id,
             approve: approve,
             rejectionReason: rejectionReason,

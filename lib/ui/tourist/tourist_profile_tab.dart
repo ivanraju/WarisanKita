@@ -31,11 +31,12 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
     showDialog(
       context: context,
       builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
         return Dialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(28),
           ),
-          backgroundColor: Colors.white,
+          backgroundColor: isDark ? const Color(0xFF17332E) : Colors.white,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 420),
             child: SingleChildScrollView(
@@ -52,8 +53,12 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                     ),
                     decoration: BoxDecoration(
                       color: stamp.isUnlocked
-                          ? const Color(0xFFFEF3C7)
-                          : Colors.grey[200],
+                          ? (isDark
+                                ? const Color(0xFF493A1E)
+                                : const Color(0xFFFEF3C7))
+                          : (isDark
+                                ? const Color(0xFF29433D)
+                                : Colors.grey[200]),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -64,8 +69,10 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                         color: stamp.isUnlocked
-                            ? const Color(0xFFB45309)
-                            : Colors.grey[600],
+                            ? (isDark
+                                  ? const Color(0xFFFFD54F)
+                                  : const Color(0xFFB45309))
+                            : (isDark ? Colors.white70 : Colors.grey[600]),
                       ),
                     ),
                   ),
@@ -75,7 +82,9 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                     textAlign: TextAlign.center,
                     style: GoogleFonts.dmSerifDisplay(
                       fontSize: 22,
-                      color: const Color(0xFF0F172A),
+                      color: isDark
+                          ? const Color(0xFFF5EBCF)
+                          : const Color(0xFF0F172A),
                     ),
                   ),
                   if (stamp.category.isNotEmpty)
@@ -89,7 +98,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                       ),
                     ),
                   const SizedBox(height: 14),
-                  const Divider(),
+                  Divider(color: isDark ? Colors.white24 : null),
                   const SizedBox(height: 14),
                   if (stamp.questTitle.isNotEmpty)
                     _buildStampDetailRow(
@@ -110,7 +119,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                       textAlign: TextAlign.center,
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 12,
-                        color: Colors.grey[600],
+                        color: isDark ? Colors.white70 : Colors.grey[600],
                         height: 1.4,
                       ),
                     ),
@@ -122,7 +131,12 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                     child: FilledButton(
                       onPressed: () => Navigator.of(context).pop(),
                       style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFF004D40),
+                        backgroundColor: isDark
+                            ? const Color(0xFFFFD54F)
+                            : const Color(0xFF004D40),
+                        foregroundColor: isDark
+                            ? const Color(0xFF08211D)
+                            : Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
@@ -143,9 +157,14 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
   }
 
   Widget _buildStampDetailRow(IconData icon, String text) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       children: [
-        Icon(icon, size: 16, color: const Color(0xFF004D40)),
+        Icon(
+          icon,
+          size: 16,
+          color: isDark ? const Color(0xFF6EE7B7) : const Color(0xFF004D40),
+        ),
         const SizedBox(width: 6),
         Expanded(
           child: Text(
@@ -153,7 +172,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
             style: GoogleFonts.plusJakartaSans(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: const Color(0xFF334155),
+              color: isDark ? const Color(0xFFD9F2E8) : const Color(0xFF334155),
             ),
           ),
         ),
@@ -253,6 +272,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final langVM = context.watch<LanguageViewModel>();
     final authVM = context.watch<AuthViewModel>();
     final gameStat = context.watch<GamificationViewModel>();
@@ -279,482 +299,400 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
               '(${_formatNumber(nextTier.minimumXp - gameStat.totalEarnedXp)} '
               'XP to Tier ${nextTier.level})';
 
-    return RefreshIndicator(
-      key: const Key('tourist-passport-page'),
-      onRefresh: gameStat.loadPassport,
-      color: const Color(0xFF004D40),
-      child: CustomScrollView(
-        physics: const AlwaysScrollableScrollPhysics(
-          parent: BouncingScrollPhysics(),
-        ),
-        slivers: [
-          SliverAppBar(
-            backgroundColor: const Color(0xFFF8F9FA),
-            elevation: 0,
-            title: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(
-                langVM.translate('Heritage Passport & Mastery'),
-                style: GoogleFonts.dmSerifDisplay(
-                  color: const Color(0xFF004D40),
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.edit_outlined, color: Color(0xFF004D40)),
-                tooltip: 'Edit Explorer Profile',
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const EditProfileScreen(),
-                    ),
-                  );
-                },
-              ),
-              IconButton(
-                icon: const Icon(
-                  Icons.settings_outlined,
-                  color: Color(0xFF004D40),
-                ),
-                tooltip: 'Settings',
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                  );
-                },
-              ),
-            ],
+    return ColoredBox(
+      color: isDark ? const Color(0xFF081B18) : const Color(0xFFF8F9FA),
+      child: RefreshIndicator(
+        key: const Key('tourist-passport-page'),
+        onRefresh: gameStat.loadPassport,
+        color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+        backgroundColor: isDark ? const Color(0xFF173C35) : Colors.white,
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(
+            parent: BouncingScrollPhysics(),
           ),
-
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 20.0,
-                vertical: 8.0,
+          slivers: [
+            SliverAppBar(
+              backgroundColor: isDark
+                  ? const Color(0xFF081B18)
+                  : const Color(0xFFF8F9FA),
+              elevation: 0,
+              title: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  langVM.translate('Heritage Passport & Mastery'),
+                  style: GoogleFonts.dmSerifDisplay(
+                    color: isDark
+                        ? const Color(0xFFFFE082)
+                        : const Color(0xFF004D40),
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 🛂 POLARSTEPS INSPIRED ROYAL PASSPORT BOOKLET CARD
-                  GestureDetector(
-                    onTap: () => _showCertificateModal(
-                      username,
-                      completedQuests,
-                      visitedStudios,
-                    ),
-                    child: Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [Color(0xFF0A192F), Color(0xFF004D40)],
-                        ),
-                        borderRadius: BorderRadius.circular(28),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(
-                              0xFF004D40,
-                            ).withValues(alpha: 0.35),
-                            blurRadius: 24,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                        border: Border.all(
-                          color: const Color(0xFFFFD54F).withValues(alpha: 0.3),
-                          width: 1.5,
-                        ),
+              actions: [
+                IconButton(
+                  icon: Icon(
+                    Icons.edit_outlined,
+                    color: isDark
+                        ? const Color(0xFFFFD54F)
+                        : const Color(0xFF004D40),
+                  ),
+                  tooltip: 'Edit Explorer Profile',
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const EditProfileScreen(),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.auto_awesome_rounded,
-                                      color: Color(0xFFFFD54F),
-                                      size: 20,
+                    );
+                  },
+                ),
+                IconButton(
+                  icon: Icon(
+                    Icons.settings_outlined,
+                    color: isDark
+                        ? const Color(0xFFFFD54F)
+                        : const Color(0xFF004D40),
+                  ),
+                  tooltip: 'Settings',
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                    );
+                  },
+                ),
+              ],
+            ),
+
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20.0,
+                  vertical: 8.0,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 🛂 POLARSTEPS INSPIRED ROYAL PASSPORT BOOKLET CARD
+                    GestureDetector(
+                      onTap: () => _showCertificateModal(
+                        username,
+                        completedQuests,
+                        visitedStudios,
+                      ),
+                      child: Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [Color(0xFF0A192F), Color(0xFF004D40)],
+                          ),
+                          borderRadius: BorderRadius.circular(28),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(
+                                0xFF004D40,
+                              ).withValues(alpha: 0.35),
+                              blurRadius: 24,
+                              offset: const Offset(0, 10),
+                            ),
+                          ],
+                          border: Border.all(
+                            color: const Color(
+                              0xFFFFD54F,
+                            ).withValues(alpha: 0.3),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.auto_awesome_rounded,
+                                        color: Color(0xFFFFD54F),
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          'PASPORT WARISAN KITA',
+                                          softWrap: true,
+                                          style: GoogleFonts.plusJakartaSans(
+                                            color: const Color(0xFFFFD54F),
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w900,
+                                            letterSpacing: 1.5,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: const Color(
+                                        0xFFFFD54F,
+                                      ).withValues(alpha: 0.5),
                                     ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        'PASPORT WARISAN KITA',
-                                        softWrap: true,
+                                  ),
+                                  child: Text(
+                                    passportId,
+                                    style: GoogleFonts.sourceCodePro(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            const SizedBox(height: 20),
+
+                            Row(
+                              children: [
+                                Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    Container(
+                                      width: 76,
+                                      height: 76,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: const Color(0xFFFFD54F),
+                                          width: 2.5,
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: const Color(
+                                              0xFFFFD54F,
+                                            ).withValues(alpha: 0.3),
+                                            blurRadius: 12,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    CircleAvatar(
+                                      radius: 34,
+                                      backgroundColor: const Color(0xFFFFD54F),
+                                      backgroundImage:
+                                          user?.avatarImageProvider,
+                                      child: user?.avatarImageProvider != null
+                                          ? null
+                                          : Text(
+                                              initials,
+                                              style: GoogleFonts.dmSerifDisplay(
+                                                color: const Color(0xFF004D40),
+                                                fontSize: 26,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              username,
+                                              style: GoogleFonts.dmSerifDisplay(
+                                                color: Colors.white,
+                                                fontSize: 24,
+                                              ),
+                                            ),
+                                          ),
+                                          InkWell(
+                                            onTap: () {
+                                              Navigator.of(context).push(
+                                                MaterialPageRoute(
+                                                  builder: (_) =>
+                                                      const EditProfileScreen(),
+                                                ),
+                                              );
+                                            },
+                                            borderRadius: BorderRadius.circular(
+                                              20,
+                                            ),
+                                            child: Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 4,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white.withValues(
+                                                  alpha: 0.15,
+                                                ),
+                                                borderRadius:
+                                                    BorderRadius.circular(20),
+                                                border: Border.all(
+                                                  color: Colors.white24,
+                                                ),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  const Icon(
+                                                    Icons.edit_rounded,
+                                                    size: 12,
+                                                    color: Color(0xFFFFD54F),
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    'Edit',
+                                                    style:
+                                                        GoogleFonts.plusJakartaSans(
+                                                          fontSize: 10,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          color: Colors.white,
+                                                        ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        gameStat.hasPassportXpData
+                                            ? 'Tier ${gameStat.currentTier.level}: '
+                                                  '${gameStat.currentTier.title}'
+                                            : 'Tier unavailable',
                                         style: GoogleFonts.plusJakartaSans(
                                           color: const Color(0xFFFFD54F),
                                           fontSize: 12,
-                                          fontWeight: FontWeight.w900,
-                                          letterSpacing: 1.5,
+                                          fontWeight: FontWeight.bold,
                                         ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                    color: const Color(
-                                      0xFFFFD54F,
-                                    ).withValues(alpha: 0.5),
-                                  ),
-                                ),
-                                child: Text(
-                                  passportId,
-                                  style: GoogleFonts.sourceCodePro(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 20),
-
-                          Row(
-                            children: [
-                              Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  Container(
-                                    width: 76,
-                                    height: 76,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: const Color(0xFFFFD54F),
-                                        width: 2.5,
+                                      const SizedBox(height: 8),
+                                      Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          ClipRRect(
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
+                                            child: LinearProgressIndicator(
+                                              value: gameStat.hasPassportXpData
+                                                  ? gameStat.rankProgress
+                                                  : 0,
+                                              backgroundColor: Colors.white24,
+                                              color: const Color(0xFFFFD54F),
+                                              minHeight: 8,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            xpSummary,
+                                            style: GoogleFonts.plusJakartaSans(
+                                              color: Colors.white70,
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: const Color(
-                                            0xFFFFD54F,
-                                          ).withValues(alpha: 0.3),
-                                          blurRadius: 12,
-                                        ),
-                                      ],
-                                    ),
+                                    ],
                                   ),
-                                  CircleAvatar(
-                                    radius: 34,
-                                    backgroundColor: const Color(0xFFFFD54F),
-                                    backgroundImage: user?.avatarImageProvider,
-                                    child: user?.avatarImageProvider != null
-                                        ? null
-                                        : Text(
-                                            initials,
-                                            style: GoogleFonts.dmSerifDisplay(
-                                              color: const Color(0xFF004D40),
-                                              fontSize: 26,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            username,
-                                            style: GoogleFonts.dmSerifDisplay(
-                                              color: Colors.white,
-                                              fontSize: 24,
-                                            ),
-                                          ),
-                                        ),
-                                        InkWell(
-                                          onTap: () {
-                                            Navigator.of(context).push(
-                                              MaterialPageRoute(
-                                                builder: (_) =>
-                                                    const EditProfileScreen(),
-                                              ),
-                                            );
-                                          },
-                                          borderRadius: BorderRadius.circular(
-                                            20,
-                                          ),
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 8,
-                                              vertical: 4,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: Colors.white.withValues(
-                                                alpha: 0.15,
-                                              ),
-                                              borderRadius:
-                                                  BorderRadius.circular(20),
-                                              border: Border.all(
-                                                color: Colors.white24,
-                                              ),
-                                            ),
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                const Icon(
-                                                  Icons.edit_rounded,
-                                                  size: 12,
-                                                  color: Color(0xFFFFD54F),
-                                                ),
-                                                const SizedBox(width: 4),
-                                                Text(
-                                                  'Edit',
-                                                  style:
-                                                      GoogleFonts.plusJakartaSans(
-                                                        fontSize: 10,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        color: Colors.white,
-                                                      ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      gameStat.hasPassportXpData
-                                          ? 'Tier ${gameStat.currentTier.level}: '
-                                                '${gameStat.currentTier.title}'
-                                          : 'Tier unavailable',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        color: const Color(0xFFFFD54F),
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        ClipRRect(
-                                          borderRadius: BorderRadius.circular(
-                                            6,
-                                          ),
-                                          child: LinearProgressIndicator(
-                                            value: gameStat.hasPassportXpData
-                                                ? gameStat.rankProgress
-                                                : 0,
-                                            backgroundColor: Colors.white24,
-                                            color: const Color(0xFFFFD54F),
-                                            minHeight: 8,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          xpSummary,
-                                          style: GoogleFonts.plusJakartaSans(
-                                            color: Colors.white70,
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
                                 ),
-                              ),
-                            ],
-                          ),
+                              ],
+                            ),
 
-                          const SizedBox(height: 20),
-                          const Divider(color: Colors.white24),
-                          const SizedBox(height: 12),
+                            const SizedBox(height: 20),
+                            const Divider(color: Colors.white24),
+                            const SizedBox(height: 12),
 
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: [
-                              _buildPassportMetric(
-                                completedQuests,
-                                'Quests Done',
-                                Icons.check_circle_rounded,
-                              ),
-                              _buildPassportMetric(
-                                visitedStudios,
-                                'Studios Visited',
-                                Icons.storefront_rounded,
-                              ),
-                              _buildPassportMetric(
-                                passportStamps,
-                                'Heritage Passport Stamps',
-                                Icons.workspace_premium_rounded,
-                              ),
-                            ],
-                          ),
-                        ],
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceAround,
+                              children: [
+                                _buildPassportMetric(
+                                  completedQuests,
+                                  'Quests Done',
+                                  Icons.check_circle_rounded,
+                                ),
+                                _buildPassportMetric(
+                                  visitedStudios,
+                                  'Studios Visited',
+                                  Icons.storefront_rounded,
+                                ),
+                                _buildPassportMetric(
+                                  passportStamps,
+                                  'Heritage Passport Stamps',
+                                  Icons.workspace_premium_rounded,
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
 
-                  const SizedBox(height: 24),
+                    const SizedBox(height: 24),
 
-                  // 🌱 HERITAGE PRESERVATION IMPACT CARD
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF0FDF4),
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: const Color(0xFF86EFAC)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(
-                            0xFF166534,
-                          ).withValues(alpha: 0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
+                    // 🌱 HERITAGE PRESERVATION IMPACT CARD
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFF15362F)
+                            : const Color(0xFFF0FDF4),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: isDark
+                              ? const Color(0xFF3D806B)
+                              : const Color(0xFF86EFAC),
                         ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
+                        boxShadow: [
+                          BoxShadow(
                             color: const Color(
                               0xFF166534,
-                            ).withValues(alpha: 0.12),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.nature_people_rounded,
-                            size: 28,
-                            color: Color(0xFF166534),
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Preservation Impact',
-                                style: GoogleFonts.dmSerifDisplay(
-                                  fontSize: 16,
-                                  color: const Color(0xFF14532D),
-                                ),
-                              ),
-                              Text(
-                                gameStat.hasPassportQuestStatistics
-                                    ? 'Your visits directly supported '
-                                          '${gameStat.visitedPassportQuests} '
-                                          'Master Artisan '
-                                          '${gameStat.visitedPassportQuests == 1 ? 'Family' : 'Families'}.'
-                                    : 'Preservation impact is temporarily unavailable. Pull to refresh.',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 11,
-                                  color: const Color(0xFF166534),
-                                  height: 1.3,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (authVM.currentUser?.isArtisanStudioSuspended == true) ...[
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFEF2F2),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFFEF4444)),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: const Color(
-                                0xFFEF4444,
-                              ).withValues(alpha: 0.2),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.block_rounded,
-                              color: Color(0xFFEF4444),
-                              size: 24,
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Master Artisan Studio: Suspended',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                    color: const Color(0xFFDC2626),
-                                  ),
-                                ),
-                                Text(
-                                  'Your studio license is under administrative suspension. You may continue exploring as a Cultural Tourist.',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 11,
-                                    color: const Color(0xFF7F1D1D),
-                                  ),
-                                ),
-                              ],
-                            ),
+                            ).withValues(alpha: 0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
                           ),
                         ],
                       ),
-                    ),
-                  ] else if (authVM.currentUser?.isApprovedArtisan == true) ...[
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFEF3C7),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFFF59E0B)),
-                      ),
                       child: Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(10),
+                            padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
                               color: const Color(
-                                0xFFD97706,
-                              ).withValues(alpha: 0.2),
+                                0xFF166534,
+                              ).withValues(alpha: 0.12),
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
-                              Icons.storefront_rounded,
-                              color: Color(0xFFB45309),
-                              size: 24,
+                              Icons.nature_people_rounded,
+                              size: 28,
+                              color: Color(0xFF166534),
                             ),
                           ),
                           const SizedBox(width: 14),
@@ -763,480 +701,626 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Dual Role: Master Artisan Studio',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                    color: const Color(0xFF92400E),
+                                  'Preservation Impact',
+                                  style: GoogleFonts.dmSerifDisplay(
+                                    fontSize: 16,
+                                    color: isDark
+                                        ? const Color(0xFFD9F2E8)
+                                        : const Color(0xFF14532D),
                                   ),
                                 ),
                                 Text(
-                                  'Switch to manage your craft studio, live sessions, and masterworks.',
+                                  gameStat.hasPassportQuestStatistics
+                                      ? 'Your visits directly supported '
+                                            '${gameStat.visitedPassportQuests} '
+                                            'Master Artisan '
+                                            '${gameStat.visitedPassportQuests == 1 ? 'Family' : 'Families'}.'
+                                      : 'Preservation impact is temporarily unavailable. Pull to refresh.',
                                   style: GoogleFonts.plusJakartaSans(
                                     fontSize: 11,
-                                    color: const Color(0xFFB45309),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          FilledButton(
-                            onPressed: () {
-                              authVM.selectActiveRole('Master Artisan');
-                              Navigator.of(
-                                context,
-                              ).pushReplacementNamed('/artisan');
-                            },
-                            style: FilledButton.styleFrom(
-                              backgroundColor: const Color(0xFFD97706),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 8,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: const Text(
-                              'Switch',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ] else if (authVM.currentUser?.isPendingArtisan == true ||
-                      authVM.currentUser?.isPendingApproval == true ||
-                      (authVM.currentUser?.studioName != null &&
-                          authVM.currentUser!.studioName!.trim().isNotEmpty &&
-                          authVM.currentUser?.isApprovedArtisan != true)) ...[
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFFBEB),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFFFCD34D)),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: const Color(
-                                0xFFD97706,
-                              ).withValues(alpha: 0.15),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.hourglass_top_rounded,
-                              color: Color(0xFFB45309),
-                              size: 24,
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Flexible(
-                                      child: Text(
-                                        'Artisan Studio Application',
-                                        softWrap: true,
-                                        style: GoogleFonts.plusJakartaSans(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 13,
-                                          color: const Color(0xFF92400E),
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFFEF3C7),
-                                        borderRadius: BorderRadius.circular(6),
-                                        border: Border.all(
-                                          color: const Color(0xFFF59E0B),
-                                        ),
-                                      ),
-                                      child: Text(
-                                        'PENDING REVIEW',
-                                        style: GoogleFonts.plusJakartaSans(
-                                          fontSize: 8,
-                                          fontWeight: FontWeight.w900,
-                                          color: const Color(0xFF92400E),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  'Your Master Artisan registration is undergoing Kraftangan Malaysia verification. Studio access unlocks upon approval.',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 11,
-                                    color: const Color(0xFF78350F),
+                                    color: isDark
+                                        ? const Color(0xFF9ED8C3)
+                                        : const Color(0xFF166534),
                                     height: 1.3,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          FilledButton(
-                            onPressed: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) =>
-                                      ArtisanApplicationPendingScreen(
-                                        studioName:
-                                            authVM.currentUser?.studioName ??
-                                            'Your Craft Studio',
-                                        craftCategory:
-                                            authVM.currentUser?.craftCategory ??
-                                            'Malaysian Heritage Craft',
-                                        ssmNumber:
-                                            authVM.currentUser?.ssmNumber ??
-                                            'Pending Document Verification',
-                                      ),
-                                ),
-                              );
-                            },
-                            style: FilledButton.styleFrom(
-                              backgroundColor: const Color(0xFFD97706),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: const Text(
-                              'View Application',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 11,
-                              ),
-                            ),
-                          ),
                         ],
                       ),
                     ),
-                  ] else ...[
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: const Color(
-                            0xFF004D40,
-                          ).withValues(alpha: 0.15),
+                    if (authVM.currentUser?.isArtisanStudioSuspended ==
+                        true) ...[
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEF2F2),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: const Color(0xFFEF4444)),
                         ),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: const Color(
-                                0xFF004D40,
-                              ).withValues(alpha: 0.08),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.palette_outlined,
-                              color: Color(0xFF004D40),
-                              size: 22,
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Are you a Master Artisan?',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                    color: const Color(0xFF004D40),
-                                  ),
-                                ),
-                                Text(
-                                  'Register your traditional studio to host quests and earn Kraftangan recognition.',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 11,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          OutlinedButton(
-                            onPressed: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => const ApplyArtisanScreen(),
-                                ),
-                              );
-                            },
-                            style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: Color(0xFF004D40)),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 8,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: const Text(
-                              'Apply',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 11,
-                                color: Color(0xFF004D40),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-
-                  const SizedBox(height: 24),
-
-                  // 📜 HERITAGE PASSPORT STAMPS COLLECTION HEADER
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Row(
                           children: [
-                            Text(
-                              'Heritage Passport Stamps',
-                              maxLines: 2,
-                              softWrap: true,
-                              style: GoogleFonts.dmSerifDisplay(
-                                fontSize: 22,
-                                color: const Color(0xFF004D40),
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: const Color(
+                                  0xFFEF4444,
+                                ).withValues(alpha: 0.2),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.block_rounded,
+                                color: Color(0xFFEF4444),
+                                size: 24,
                               ),
                             ),
-                            Text(
-                              'Tap any stamp to inspect certificate lore',
-                              maxLines: 2,
-                              softWrap: true,
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 11,
-                                color: Colors.grey[600],
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Master Artisan Studio: Suspended',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: const Color(0xFFDC2626),
+                                    ),
+                                  ),
+                                  Text(
+                                    'Your studio license is under administrative suspension. You may continue exploring as a Cultural Tourist.',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 11,
+                                      color: const Color(0xFF7F1D1D),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(width: 8),
+                    ] else if (authVM.currentUser?.isApprovedArtisan ==
+                        true) ...[
+                      const SizedBox(height: 16),
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 5,
-                        ),
+                        padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFEF3C7),
-                          borderRadius: BorderRadius.circular(12),
+                          color: isDark
+                              ? const Color(0xFF3B2C1B)
+                              : const Color(0xFFFEF3C7),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: const Color(0xFFF59E0B)),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: const Color(
+                                  0xFFD97706,
+                                ).withValues(alpha: 0.2),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.storefront_rounded,
+                                color: Color(0xFFB45309),
+                                size: 24,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Dual Role: Master Artisan Studio',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: isDark
+                                          ? const Color(0xFFFFE082)
+                                          : const Color(0xFF92400E),
+                                    ),
+                                  ),
+                                  Text(
+                                    'Switch to manage your craft studio, live sessions, and masterworks.',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 11,
+                                      color: isDark
+                                          ? const Color(0xFFF5C76B)
+                                          : const Color(0xFFB45309),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            FilledButton(
+                              onPressed: () {
+                                authVM.selectActiveRole('Master Artisan');
+                                Navigator.of(
+                                  context,
+                                ).pushReplacementNamed('/artisan');
+                              },
+                              style: FilledButton.styleFrom(
+                                backgroundColor: const Color(0xFFD97706),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 8,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: const Text(
+                                'Switch',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ] else if (authVM.currentUser?.isPendingArtisan == true ||
+                        authVM.currentUser?.isPendingApproval == true ||
+                        (authVM.currentUser?.studioName != null &&
+                            authVM.currentUser!.studioName!.trim().isNotEmpty &&
+                            authVM.currentUser?.isApprovedArtisan != true)) ...[
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFFBEB),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: const Color(0xFFFCD34D)),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: const Color(
+                                  0xFFD97706,
+                                ).withValues(alpha: 0.15),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.hourglass_top_rounded,
+                                color: Color(0xFFB45309),
+                                size: 24,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          'Artisan Studio Application',
+                                          softWrap: true,
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                            color: const Color(0xFF92400E),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFFEF3C7),
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
+                                          border: Border.all(
+                                            color: const Color(0xFFF59E0B),
+                                          ),
+                                        ),
+                                        child: Text(
+                                          'PENDING REVIEW',
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 8,
+                                            fontWeight: FontWeight.w900,
+                                            color: const Color(0xFF92400E),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Your Master Artisan registration is undergoing Kraftangan Malaysia verification. Studio access unlocks upon approval.',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 11,
+                                      color: const Color(0xFF78350F),
+                                      height: 1.3,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            FilledButton(
+                              onPressed: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        ArtisanApplicationPendingScreen(
+                                          studioName:
+                                              authVM.currentUser?.studioName ??
+                                              'Your Craft Studio',
+                                          craftCategory:
+                                              authVM
+                                                  .currentUser
+                                                  ?.craftCategory ??
+                                              'Malaysian Heritage Craft',
+                                          ssmNumber:
+                                              authVM.currentUser?.ssmNumber ??
+                                              'Pending Document Verification',
+                                        ),
+                                  ),
+                                );
+                              },
+                              style: FilledButton.styleFrom(
+                                backgroundColor: const Color(0xFFD97706),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: const Text(
+                                'View Application',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ] else ...[
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
                           border: Border.all(
                             color: const Color(
-                              0xFFF59E0B,
-                            ).withValues(alpha: 0.5),
+                              0xFF004D40,
+                            ).withValues(alpha: 0.15),
                           ),
                         ),
                         child: Row(
                           children: [
-                            const Icon(
-                              Icons.verified_rounded,
-                              size: 12,
-                              color: Color(0xFFB45309),
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: const Color(
+                                  0xFF004D40,
+                                ).withValues(alpha: 0.08),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.palette_outlined,
+                                color: Color(0xFF004D40),
+                                size: 22,
+                              ),
                             ),
-                            const SizedBox(width: 4),
-                            Text(
-                              _stampCounterText(gameStat),
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w900,
-                                color: const Color(0xFFB45309),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Are you a Master Artisan?',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: const Color(0xFF004D40),
+                                    ),
+                                  ),
+                                  Text(
+                                    'Register your traditional studio to host quests and earn Kraftangan recognition.',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 11,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            OutlinedButton(
+                              onPressed: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => const ApplyArtisanScreen(),
+                                  ),
+                                );
+                              },
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(
+                                  color: Color(0xFF004D40),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 8,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: const Text(
+                                'Apply',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 11,
+                                  color: Color(0xFF004D40),
+                                ),
                               ),
                             ),
                           ],
                         ),
                       ),
                     ],
-                  ),
 
-                  if (gameStat.passportWarning != null) ...[
-                    const SizedBox(height: 12),
-                    _buildPassportNotice(
-                      gameStat.passportWarning!,
-                      gameStat.loadPassport,
-                    ),
-                  ],
+                    const SizedBox(height: 24),
 
-                  const SizedBox(height: 16),
-                ],
-              ),
-            ),
-          ),
-
-          // 🎨 PERFECTLY CENTERED PASSPORT STAMPS GRID
-          if (gameStat.isLoadingPassport && gameStat.stamps.isEmpty)
-            const SliverToBoxAdapter(
-              child: Padding(
-                key: Key('passport-loading'),
-                padding: EdgeInsets.symmetric(vertical: 44),
-                child: Center(
-                  child: CircularProgressIndicator(color: Color(0xFF004D40)),
-                ),
-              ),
-            )
-          else if (gameStat.passportError != null && gameStat.stamps.isEmpty)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: _buildPassportStateCard(
-                  icon: Icons.cloud_off_rounded,
-                  title: 'Passport unavailable',
-                  message: gameStat.passportError!,
-                  actionLabel: 'Try Again',
-                  onAction: gameStat.loadPassport,
-                ),
-              ),
-            )
-          else if (gameStat.stamps.isEmpty)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: _buildPassportStateCard(
-                  icon: Icons.auto_awesome_outlined,
-                  title: 'Your first stamp awaits',
-                  message: gameStat.hasAvailablePassportStampData
-                      ? 'No approved Heritage Passport badges are available yet.'
-                      : 'No earned stamps were found. Pull to refresh your Passport.',
-                  actionLabel: 'Refresh',
-                  onAction: gameStat.loadPassport,
-                ),
-              ),
-            )
-          else
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  childAspectRatio: 0.82,
-                ),
-                delegate: SliverChildBuilderDelegate((context, index) {
-                  final stamp = gameStat.stamps[index];
-                  final unlocked = stamp.isUnlocked;
-                  final color = _stampColor(stamp);
-
-                  return GestureDetector(
-                    onTap: () => _showStampDetailModal(stamp),
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: unlocked
-                            ? Colors.white
-                            : const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(
-                          color: unlocked
-                              ? color.withValues(alpha: 0.35)
-                              : Colors.black12,
-                          width: unlocked ? 1.5 : 1.0,
-                        ),
-                        boxShadow: unlocked
-                            ? [
-                                BoxShadow(
-                                  color: color.withValues(alpha: 0.12),
-                                  blurRadius: 16,
-                                  offset: const Offset(0, 6),
+                    // 📜 HERITAGE PASSPORT STAMPS COLLECTION HEADER
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Heritage Passport Stamps',
+                                maxLines: 2,
+                                softWrap: true,
+                                style: GoogleFonts.dmSerifDisplay(
+                                  fontSize: 22,
+                                  color: isDark
+                                      ? const Color(0xFFFFE082)
+                                      : const Color(0xFF004D40),
                                 ),
-                              ]
-                            : [],
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          _buildStampArtwork(stamp, color, size: 64),
-
-                          const SizedBox(height: 12),
-
-                          Flexible(
-                            child: Text(
-                              stamp.title,
-                              maxLines: 3,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
-                              style: GoogleFonts.dmSerifDisplay(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: unlocked
-                                    ? const Color(0xFF0F172A)
-                                    : Colors.grey[500],
                               ),
+                              Text(
+                                'Tap any stamp to inspect certificate lore',
+                                maxLines: 2,
+                                softWrap: true,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11,
+                                  color: isDark
+                                      ? Colors.white70
+                                      : Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF3C7),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: const Color(
+                                0xFFF59E0B,
+                              ).withValues(alpha: 0.5),
                             ),
                           ),
-
-                          const SizedBox(height: 6),
-
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: unlocked
-                                  ? color.withValues(alpha: 0.1)
-                                  : Colors.grey[200],
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              unlocked && stamp.earnedAt != null
-                                  ? _formatStampDate(stamp.earnedAt!)
-                                  : 'LOCKED STAMP',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: unlocked ? color : Colors.grey[500],
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.verified_rounded,
+                                size: 12,
+                                color: Color(0xFFB45309),
                               ),
-                            ),
+                              const SizedBox(width: 4),
+                              Text(
+                                _stampCounterText(gameStat),
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w900,
+                                  color: const Color(0xFFB45309),
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  );
-                }, childCount: gameStat.stamps.length),
+
+                    if (gameStat.passportWarning != null) ...[
+                      const SizedBox(height: 12),
+                      _buildPassportNotice(
+                        gameStat.passportWarning!,
+                        gameStat.loadPassport,
+                      ),
+                    ],
+
+                    const SizedBox(height: 16),
+                  ],
+                ),
               ),
             ),
 
-          const SliverToBoxAdapter(child: SizedBox(height: 100)),
-        ],
+            // 🎨 PERFECTLY CENTERED PASSPORT STAMPS GRID
+            if (gameStat.isLoadingPassport && gameStat.stamps.isEmpty)
+              const SliverToBoxAdapter(
+                child: Padding(
+                  key: Key('passport-loading'),
+                  padding: EdgeInsets.symmetric(vertical: 44),
+                  child: Center(
+                    child: CircularProgressIndicator(color: Color(0xFF004D40)),
+                  ),
+                ),
+              )
+            else if (gameStat.passportError != null && gameStat.stamps.isEmpty)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: _buildPassportStateCard(
+                    icon: Icons.cloud_off_rounded,
+                    title: 'Passport unavailable',
+                    message: gameStat.passportError!,
+                    actionLabel: 'Try Again',
+                    onAction: gameStat.loadPassport,
+                  ),
+                ),
+              )
+            else if (gameStat.stamps.isEmpty)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: _buildPassportStateCard(
+                    icon: Icons.auto_awesome_outlined,
+                    title: 'Your first stamp awaits',
+                    message: gameStat.hasAvailablePassportStampData
+                        ? 'No approved Heritage Passport badges are available yet.'
+                        : 'No earned stamps were found. Pull to refresh your Passport.',
+                    actionLabel: 'Refresh',
+                    onAction: gameStat.loadPassport,
+                  ),
+                ),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                sliver: SliverGrid(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: 0.82,
+                  ),
+                  delegate: SliverChildBuilderDelegate((context, index) {
+                    final stamp = gameStat.stamps[index];
+                    final unlocked = stamp.isUnlocked;
+                    final color = _stampColor(stamp);
+
+                    return GestureDetector(
+                      onTap: () => _showStampDetailModal(stamp),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: unlocked
+                              ? (isDark
+                                    ? const Color(0xFF17332E)
+                                    : Colors.white)
+                              : (isDark
+                                    ? const Color(0xFF102622)
+                                    : const Color(0xFFF8FAFC)),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: unlocked
+                                ? color.withValues(alpha: 0.35)
+                                : (isDark
+                                      ? const Color(0xFF36554D)
+                                      : Colors.black12),
+                            width: unlocked ? 1.5 : 1.0,
+                          ),
+                          boxShadow: unlocked
+                              ? [
+                                  BoxShadow(
+                                    color: color.withValues(alpha: 0.12),
+                                    blurRadius: 16,
+                                    offset: const Offset(0, 6),
+                                  ),
+                                ]
+                              : [],
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            _buildStampArtwork(stamp, color, size: 64),
+
+                            const SizedBox(height: 12),
+
+                            Flexible(
+                              child: Text(
+                                stamp.title,
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.dmSerifDisplay(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: unlocked
+                                      ? (isDark
+                                            ? const Color(0xFFF5EBCF)
+                                            : const Color(0xFF0F172A))
+                                      : (isDark
+                                            ? const Color(0xFFB9C8C3)
+                                            : Colors.grey[500]),
+                                ),
+                              ),
+                            ),
+
+                            const SizedBox(height: 6),
+
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: unlocked
+                                    ? color.withValues(alpha: 0.1)
+                                    : (isDark
+                                          ? const Color(0xFF29433D)
+                                          : Colors.grey[200]),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                unlocked && stamp.earnedAt != null
+                                    ? _formatStampDate(stamp.earnedAt!)
+                                    : 'LOCKED STAMP',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: unlocked
+                                      ? color
+                                      : (isDark
+                                            ? Colors.white70
+                                            : Colors.grey[500]),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }, childCount: gameStat.stamps.length),
+                ),
+              ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 100)),
+          ],
+        ),
       ),
     );
   }
@@ -1325,6 +1409,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
     Color color, {
     required double size,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final validUrl =
         stamp.iconUrl.startsWith('https://') ||
         stamp.iconUrl.startsWith('http://');
@@ -1337,10 +1422,12 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
           decoration: BoxDecoration(
             color: stamp.isUnlocked
                 ? color.withValues(alpha: 0.12)
-                : Colors.grey[200],
+                : (isDark ? const Color(0xFF29433D) : Colors.grey[200]),
             shape: BoxShape.circle,
             border: Border.all(
-              color: stamp.isUnlocked ? color : Colors.grey[400]!,
+              color: stamp.isUnlocked
+                  ? color
+                  : (isDark ? const Color(0xFF789087) : Colors.grey[400]!),
               width: 2,
             ),
           ),
@@ -1380,17 +1467,20 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
   }
 
   Widget _stampImageFallback(HeritageStamp stamp, Color color) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       key: Key('stamp-image-fallback-${stamp.id}'),
       color: stamp.isUnlocked
           ? color.withValues(alpha: 0.08)
-          : Colors.grey[200],
+          : (isDark ? const Color(0xFF29433D) : Colors.grey[200]),
       alignment: Alignment.center,
       child: Icon(
         stamp.isUnlocked
             ? _stampFallbackIcon(stamp)
             : Icons.lock_outline_rounded,
-        color: stamp.isUnlocked ? color : Colors.grey[400],
+        color: stamp.isUnlocked
+            ? color
+            : (isDark ? const Color(0xFF9BB0A8) : Colors.grey[400]),
       ),
     );
   }

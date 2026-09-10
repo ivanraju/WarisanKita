@@ -33,6 +33,7 @@ class _QuestViewState extends State<QuestView> {
     _pendingQuest = null;
 
     final gamificationVM = context.read<GamificationViewModel>();
+    await gamificationVM.loadActiveQuestState();
     await gamificationVM.loadQuestsForArtisan(widget.workshop.id);
 
     if (!mounted || gamificationVM.error != null) {
@@ -166,12 +167,22 @@ class _QuestViewState extends State<QuestView> {
           ),
         ),
         const SizedBox(height: 22),
-        for (final quest in quests) _buildQuestCard(quest),
+        for (final quest in quests) _buildQuestCard(quest, gamificationVM),
       ],
     );
   }
 
-  Widget _buildQuestCard(Quest quest) {
+  Widget _buildQuestCard(
+    Quest quest,
+    GamificationViewModel gamificationViewModel,
+  ) {
+    final isActive = gamificationViewModel.isActiveQuest(quest.id);
+    final isBlocked = gamificationViewModel.hasActiveQuest && !isActive;
+    final stateLabel = isActive
+        ? 'Continue Journey'
+        : isBlocked
+        ? 'Another Journey Active'
+        : 'Start Quest';
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
@@ -227,6 +238,17 @@ class _QuestViewState extends State<QuestView> {
                           color: const Color(0xFF64748B),
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        stateLabel,
+                        style: GoogleFonts.plusJakartaSans(
+                          color: isBlocked
+                              ? const Color(0xFFB45309)
+                              : const Color(0xFF00695C),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
                     ],

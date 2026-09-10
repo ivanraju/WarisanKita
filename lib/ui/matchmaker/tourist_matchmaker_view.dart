@@ -84,7 +84,10 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
   void didUpdateWidget(covariant TouristMatchmakerView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.isActive && !oldWidget.isActive) {
-      unawaited(context.read<MapViewModel>().loadJourneyData());
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !widget.isActive) return;
+        unawaited(context.read<MapViewModel>().loadJourneyData());
+      });
     }
   }
 
@@ -251,6 +254,7 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
           address: artisan.workshop?.address,
           latitude: artisan.latitude,
           longitude: artisan.longitude,
+          onViewQuest: () => _handleViewQuest(context, artisan),
         ),
       ),
     );
@@ -331,11 +335,7 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
         _handleViewProfile(context, artisan);
       },
       onViewQuest: () {
-        if (artisan.journey == null) {
-          _handleViewProfile(context, artisan);
-        } else {
-          _handleViewQuest(context, artisan);
-        }
+        _handleViewQuest(context, artisan);
       },
     );
   }

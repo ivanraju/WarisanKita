@@ -1,12 +1,76 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:warisan_kita/domain/models/heritage_task.dart';
 import 'package:warisan_kita/domain/models/heritage_task_change_request.dart';
 import 'package:warisan_kita/domain/models/quest.dart';
-import 'package:warisan_kita/domain/models/quest_change_request.dart';
 import 'package:warisan_kita/viewmodels/gamification_viewmodel.dart';
+
+const _progressProtectionNotice =
+    'Existing tourist progress will be protected. New tasks become bonus '
+    'activities for tourists who already started. Previously awarded XP will '
+    'not change.';
+
+final _unsupportedControlCharacters = RegExp(
+  r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]',
+);
+
+String? _boundedRequiredText(
+  String? value, {
+  required String label,
+  required int maxLength,
+}) {
+  final trimmed = value?.trim() ?? '';
+  if (trimmed.isEmpty) {
+    return '$label is required.';
+  }
+  if (_unsupportedControlCharacters.hasMatch(trimmed)) {
+    return '$label contains unsupported characters.';
+  }
+  if (trimmed.length > maxLength) {
+    return '$label must be $maxLength characters or fewer.';
+  }
+  return null;
+}
+
+String? _taskXpError(String? value) {
+  final xp = int.tryParse(value?.trim() ?? '');
+  return xp == null || xp < 0 || xp > GamificationViewModel.maxTaskXpReward
+      ? 'Enter a whole number from 0 to ${GamificationViewModel.maxTaskXpReward}.'
+      : null;
+}
+
+Widget _buildProgressProtectionNotice() {
+  return Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: const Color(0xFFFFF8E1),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: const Color(0xFFE9B949)),
+    ),
+    child: const Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(Icons.shield_outlined, color: Color(0xFF9A6700), size: 18),
+        SizedBox(width: 9),
+        Expanded(
+          child: Text(
+            _progressProtectionNotice,
+            style: TextStyle(
+              color: Color(0xFF6B4F00),
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              height: 1.4,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
 class ArtisanHeritageTaskManagementView extends StatefulWidget {
   const ArtisanHeritageTaskManagementView({super.key});
@@ -75,6 +139,8 @@ class _ArtisanHeritageTaskManagementViewState
     HeritageTaskChangeRequest? rejectedChange,
   }) async {
     final viewModel = context.read<GamificationViewModel>();
+    final isPendingNewTaskEdit =
+        task.status.toUpperCase() == 'PENDING_APPROVAL';
     final isNewTaskResubmission = task.status.toUpperCase() == 'REJECTED';
     viewModel.clearArtisanTaskError();
     final submitted = await showModalBottomSheet<bool>(
@@ -96,6 +162,8 @@ class _ArtisanHeritageTaskManagementViewState
           content: Text(
             viewModel.lastTaskEditReverted
                 ? 'Task update cancelled. The approved task was kept unchanged.'
+                : isPendingNewTaskEdit
+                ? 'Pending task submission updated successfully.'
                 : isNewTaskResubmission
                 ? 'Task updated and resubmitted for admin approval.'
                 : pendingChange != null
@@ -104,101 +172,6 @@ class _ArtisanHeritageTaskManagementViewState
                 ? 'Task update revised and resubmitted for admin approval.'
                 : 'Task edit request submitted for admin approval.',
           ),
-          backgroundColor: _green,
-        ),
-      );
-    }
-  }
-
-  Future<void> _showEditQuestSheet(
-    Quest quest, {
-    QuestChangeRequest? pendingChange,
-    QuestChangeRequest? rejectedChange,
-  }) async {
-    final viewModel = context.read<GamificationViewModel>();
-    viewModel.clearArtisanTaskError();
-    final submitted = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => ChangeNotifierProvider.value(
-        value: viewModel,
-        child: _EditQuestSheet(
-          quest: quest,
-          pendingChange: pendingChange,
-          rejectedChange: rejectedChange,
-        ),
-      ),
-    );
-    if (submitted == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            pendingChange != null
-                ? 'Pending quest update revised successfully.'
-                : rejectedChange != null
-                ? 'Quest update revised and resubmitted for admin approval.'
-                : 'Quest update submitted for admin approval.',
-          ),
-          backgroundColor: _green,
-        ),
-      );
-    }
-  }
-
-  void _showQuestChanges(Quest quest, QuestChangeRequest change) {
-    _showChangesSheet(
-      title: 'Quest Update Request',
-      current: [
-        ('Title', quest.title),
-        ('Category', quest.category),
-        ('Description', quest.description),
-      ],
-      requested: [
-        ('Title', change.proposedTitle),
-        ('Category', change.proposedCategory),
-        ('Description', change.proposedDescription),
-      ],
-      actionLabel: change.isPending ? 'Edit Pending Update' : null,
-      onAction: change.isPending
-          ? () => _showEditQuestSheet(quest, pendingChange: change)
-          : null,
-    );
-  }
-
-  Future<void> _dismissRejectedQuestUpdate(
-    Quest quest,
-    QuestChangeRequest request,
-  ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Keep original quest?'),
-        content: Text(
-          'The rejected update for “${quest.title}” will be dismissed. The approved quest remains unchanged.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            style: FilledButton.styleFrom(backgroundColor: _green),
-            child: const Text('Keep Original'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-
-    final success = await context
-        .read<GamificationViewModel>()
-        .dismissRejectedQuestUpdate(request);
-    if (success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Rejected update dismissed. Original quest retained.'),
           backgroundColor: _green,
         ),
       );
@@ -269,13 +242,29 @@ class _ArtisanHeritageTaskManagementViewState
                 ('XP reward', '${task.xpReward} XP'),
               ], pending: true),
               const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: () => Navigator.pop(sheetContext),
-                  style: FilledButton.styleFrom(backgroundColor: _green),
-                  child: const Text('Done'),
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(sheetContext),
+                      child: const Text('Done'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: () {
+                        Navigator.pop(sheetContext);
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (mounted) _showEditTaskSheet(task);
+                        });
+                      },
+                      style: FilledButton.styleFrom(backgroundColor: _green),
+                      icon: const Icon(Icons.edit_outlined, size: 17),
+                      label: const Text('Edit Submission'),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -730,7 +719,7 @@ class _ArtisanHeritageTaskManagementViewState
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 36),
       children: [
         Text(
-          'MY CULTURAL QUEST',
+          'QUEST REWARD',
           style: GoogleFonts.plusJakartaSans(
             color: isDark ? const Color(0xFFFFD54F) : _green,
             fontWeight: FontWeight.w800,
@@ -738,7 +727,7 @@ class _ArtisanHeritageTaskManagementViewState
           ),
         ),
         const SizedBox(height: 12),
-        _questSummary(quest, viewModel),
+        _questRewardCard(quest),
         const SizedBox(height: 22),
         Row(
           children: [
@@ -793,187 +782,67 @@ class _ArtisanHeritageTaskManagementViewState
     );
   }
 
-  Widget _questSummary(Quest quest, GamificationViewModel viewModel) {
-    final pendingChange = viewModel.pendingArtisanQuestChange;
-    final rejectedChange = viewModel.rejectedArtisanQuestChange;
-    final statusColor = switch (quest.status.toUpperCase()) {
-      'APPROVED' => const Color(0xFF087F5B),
-      'REJECTED' => const Color(0xFFB42318),
-      _ => const Color(0xFF9A6700),
-    };
+  Widget _questRewardCard(Quest quest) {
+    final hasStampImage = quest.stampImageUrl.trim().isNotEmpty;
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: _green,
         borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: _green.withValues(alpha: 0.16),
+            blurRadius: 18,
+            offset: const Offset(0, 7),
+          ),
+        ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: SizedBox.square(
+                  dimension: 58,
+                  child: hasStampImage
+                      ? Image.network(
+                          quest.stampImageUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => _buildStampFallback(),
+                        )
+                      : _buildStampFallback(),
+                ),
+              ),
+              const SizedBox(width: 13),
               Expanded(
-                child: Text(
-                  quest.title,
-                  style: GoogleFonts.dmSerifDisplay(
-                    color: Colors.white,
-                    fontSize: 25,
-                  ),
-                ),
-              ),
-              IconButton.filled(
-                tooltip: pendingChange != null
-                    ? 'Edit pending update'
-                    : rejectedChange != null
-                    ? 'Resolve rejected update below'
-                    : 'Edit quest information',
-                onPressed:
-                    rejectedChange == null &&
-                        quest.status.toUpperCase() == 'APPROVED' &&
-                        !viewModel.isUpdatingArtisanQuest
-                    ? () => _showEditQuestSheet(
-                        quest,
-                        pendingChange: pendingChange,
-                      )
-                    : null,
-                style: IconButton.styleFrom(
-                  backgroundColor: Colors.white.withValues(alpha: 0.12),
-                  disabledBackgroundColor: Colors.white.withValues(alpha: 0.07),
-                ),
-                icon: const Icon(Icons.edit_rounded, color: Color(0xFFFFD166)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            quest.category,
-            style: const TextStyle(
-              color: Color(0xFFFFD166),
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            quest.description,
-            style: const TextStyle(color: Color(0xFFD6E7E2), height: 1.45),
-          ),
-          const SizedBox(height: 18),
-          _summaryRow('Interaction Radius', '${quest.geofenceRadiusMeters} m'),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  'Status',
-                  style: TextStyle(color: Color(0xFFD6E7E2)),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 5,
-                ),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.22),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: statusColor),
-                ),
-                child: Text(
-                  quest.status.replaceAll('_', ' ').toUpperCase(),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          const Text(
-            'QUEST REWARD',
-            style: TextStyle(
-              color: Color(0xFFFFD166),
-              fontSize: 10,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1.1,
-            ),
-          ),
-          const SizedBox(height: 7),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
-            ),
-            child: Row(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: SizedBox.square(
-                    dimension: 42,
-                    child: Image.network(
-                      quest.stampImageUrl,
-                      fit: BoxFit.cover,
-                      loadingBuilder: (context, child, progress) =>
-                          progress == null
-                          ? child
-                          : const ColoredBox(
-                              color: Color(0xFF0B7062),
-                              child: Center(
-                                child: SizedBox.square(
-                                  dimension: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Color(0xFFFFD166),
-                                  ),
-                                ),
-                              ),
-                            ),
-                      errorBuilder: (context, error, stackTrace) =>
-                          const ColoredBox(
-                            color: Color(0xFF0B7062),
-                            child: Icon(
-                              Icons.workspace_premium_rounded,
-                              color: Color(0xFFFFD166),
-                            ),
-                          ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      quest.stampTitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.dmSerifDisplay(
+                        color: Colors.white,
+                        fontSize: 19,
+                        height: 1.15,
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 11),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        quest.stampTitle,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                        ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Workshop passport stamp',
+                      style: GoogleFonts.plusJakartaSans(
+                        color: const Color(0xFFD6E7E2),
+                        fontSize: 11,
                       ),
-                      const SizedBox(height: 2),
-                      const Text(
-                        'Workshop passport stamp',
-                        style: TextStyle(
-                          color: Color(0xFFD6E7E2),
-                          fontSize: 10,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
@@ -983,144 +852,56 @@ class _ArtisanHeritageTaskManagementViewState
               style: OutlinedButton.styleFrom(
                 foregroundColor: const Color(0xFFFFD166),
                 side: const BorderSide(color: Color(0xFFFFD166)),
-                textStyle: const TextStyle(fontWeight: FontWeight.w800),
+                textStyle: GoogleFonts.plusJakartaSans(
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
           ),
-          if (pendingChange != null) ...[
-            const SizedBox(height: 12),
-            InkWell(
-              onTap: () => _showQuestChanges(quest, pendingChange),
-              borderRadius: BorderRadius.circular(14),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '🕒 Update pending admin review',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    SizedBox(height: 5),
-                    Text(
-                      'View changes ›',
-                      style: TextStyle(
-                        color: Color(0xFFFFD166),
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ] else if (rejectedChange != null) ...[
-            const SizedBox(height: 12),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFE8E8).withValues(alpha: 0.16),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: const Color(0xFFFFB4B4).withValues(alpha: 0.55),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Quest update rejected',
-                    style: TextStyle(
-                      color: Color(0xFFFFB4B4),
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  if (rejectedChange.rejectionReason != null) ...[
-                    const SizedBox(height: 5),
-                    Text(
-                      'Reason: ${rejectedChange.rejectionReason}',
-                      style: const TextStyle(color: Colors.white, fontSize: 11),
-                    ),
-                  ],
-                  const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      OutlinedButton(
-                        onPressed: viewModel.isUpdatingArtisanQuest
-                            ? null
-                            : () => _dismissRejectedQuestUpdate(
-                                quest,
-                                rejectedChange,
-                              ),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          side: const BorderSide(color: Colors.white70),
-                        ),
-                        child: const Text('Keep Original'),
-                      ),
-                      FilledButton.icon(
-                        onPressed: viewModel.isUpdatingArtisanQuest
-                            ? null
-                            : () => _showEditQuestSheet(
-                                quest,
-                                rejectedChange: rejectedChange,
-                              ),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFFFFD166),
-                          foregroundColor: _green,
-                        ),
-                        icon: const Icon(Icons.edit_outlined, size: 16),
-                        label: const Text('Edit & Resubmit'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
         ],
       ),
     );
   }
 
-  Widget _summaryRow(String label, String value) => Row(
-    children: [
-      Expanded(
-        child: Text(label, style: const TextStyle(color: Color(0xFFD6E7E2))),
+  Widget _buildStampFallback() {
+    return const ColoredBox(
+      color: Color(0xFF0B7062),
+      child: Icon(
+        Icons.workspace_premium_rounded,
+        color: Color(0xFFFFD166),
+        size: 30,
       ),
-      Text(
-        value,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w800,
-        ),
-      ),
-    ],
-  );
+    );
+  }
 
   Widget _taskCard(int index, HeritageTask task, bool isDark) {
     final viewModel = context.read<GamificationViewModel>();
     final pendingChange = viewModel.pendingChangeForTask(task.id);
     final hasPendingEdit = pendingChange?.requestType.toUpperCase() == 'EDIT';
+    final hasPendingDelete =
+        pendingChange?.requestType.toUpperCase() == 'DELETE';
     final rejectedEdit = viewModel.rejectedEditForTask(task.id);
     final isPendingSubmission = task.status.toUpperCase() == 'PENDING_APPROVAL';
     final isRejectedSubmission = task.status.toUpperCase() == 'REJECTED';
     final isTaskActionBusy = isRejectedSubmission
         ? viewModel.isUpdatingNewTask
         : viewModel.isSubmittingTaskChange;
-    final statusColor = switch (task.status.toUpperCase()) {
+    final displayStatus = task.isArchived
+        ? 'ARCHIVED'
+        : hasPendingDelete
+        ? 'DELETE PENDING'
+        : hasPendingEdit
+        ? 'EDIT PENDING'
+        : isPendingSubmission
+        ? 'PENDING'
+        : isRejectedSubmission || rejectedEdit != null
+        ? 'REJECTED'
+        : task.status.replaceAll('_', ' ').toUpperCase();
+    final statusColor = switch (displayStatus) {
       'APPROVED' => const Color(0xFF087F5B),
       'REJECTED' => const Color(0xFFB42318),
+      'DELETE PENDING' => const Color(0xFF9F5C5C),
+      'ARCHIVED' => const Color(0xFF64748B),
       _ => const Color(0xFF9A6700),
     };
 
@@ -1154,7 +935,7 @@ class _ArtisanHeritageTaskManagementViewState
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
-                  task.status.replaceAll('_', ' ').toUpperCase(),
+                  displayStatus,
                   style: TextStyle(
                     color: statusColor,
                     fontSize: 10,
@@ -1274,23 +1055,27 @@ class _ArtisanHeritageTaskManagementViewState
                 InkWell(
                   onTap: () => _showTaskChanges(task, pendingChange),
                   borderRadius: BorderRadius.circular(12),
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 4),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '🕒 Update pending admin review',
-                          style: TextStyle(
+                          hasPendingDelete
+                              ? '🕒 Deletion pending admin review'
+                              : '🕒 Update pending admin review',
+                          style: const TextStyle(
                             color: Color(0xFF9A6700),
                             fontSize: 11,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
-                        SizedBox(height: 4),
+                        const SizedBox(height: 4),
                         Text(
-                          'View changes ›',
-                          style: TextStyle(
+                          hasPendingDelete
+                              ? 'View deletion request ›'
+                              : 'View changes ›',
+                          style: const TextStyle(
                             color: _green,
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
@@ -1493,335 +1278,6 @@ class _ArtisanHeritageTaskManagementViewState
   );
 }
 
-class _EditQuestSheet extends StatefulWidget {
-  final Quest quest;
-  final QuestChangeRequest? pendingChange;
-  final QuestChangeRequest? rejectedChange;
-
-  const _EditQuestSheet({
-    required this.quest,
-    this.pendingChange,
-    this.rejectedChange,
-  }) : assert(pendingChange == null || rejectedChange == null);
-
-  @override
-  State<_EditQuestSheet> createState() => _EditQuestSheetState();
-}
-
-class _EditQuestSheetState extends State<_EditQuestSheet> {
-  static const _green = Color(0xFF005B4F);
-  static const _questCategories = <String>[
-    'Demonstration & Lore',
-    'Hands-on Crafting',
-    'Guided Workshop',
-    'Cultural Storytelling',
-  ];
-  final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _title;
-  late final TextEditingController _description;
-  late String _selectedCategory;
-
-  bool get _isResubmission => widget.rejectedChange != null;
-  bool get _isPendingRevision => widget.pendingChange != null;
-
-  @override
-  void initState() {
-    super.initState();
-    final requestedChange = widget.pendingChange ?? widget.rejectedChange;
-    _title = TextEditingController(
-      text: requestedChange?.proposedTitle ?? widget.quest.title,
-    );
-    _description = TextEditingController(
-      text: requestedChange?.proposedDescription ?? widget.quest.description,
-    );
-    final initialCategory =
-        requestedChange?.proposedCategory ?? widget.quest.category;
-    _selectedCategory = _questCategories.contains(initialCategory)
-        ? initialCategory
-        : _questCategories.first;
-  }
-
-  @override
-  void dispose() {
-    _title.dispose();
-    _description.dispose();
-    super.dispose();
-  }
-
-  Future<void> _submit() async {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
-    final viewModel = context.read<GamificationViewModel>();
-    final success = _isPendingRevision
-        ? await viewModel.updatePendingQuestUpdate(
-            request: widget.pendingChange!,
-            title: _title.text,
-            category: _selectedCategory,
-            description: _description.text,
-          )
-        : _isResubmission
-        ? await viewModel.resubmitRejectedQuestUpdate(
-            request: widget.rejectedChange!,
-            title: _title.text,
-            category: _selectedCategory,
-            description: _description.text,
-          )
-        : await viewModel.updateArtisanQuest(
-            title: _title.text,
-            category: _selectedCategory,
-            description: _description.text,
-          );
-    if (mounted && success) Navigator.pop(context, true);
-  }
-
-  IconData _categoryIcon(String category) => switch (category) {
-    'Hands-on Crafting' => Icons.front_hand_outlined,
-    'Guided Workshop' => Icons.groups_2_outlined,
-    'Cultural Storytelling' => Icons.auto_stories_outlined,
-    _ => Icons.theater_comedy_outlined,
-  };
-
-  Widget _categoryRow(String category, {bool highlighted = false}) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: highlighted ? const Color(0xFFE4F3EE) : Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: const BoxDecoration(
-              color: Color(0xFFFFF0CF),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              _categoryIcon(category),
-              color: const Color(0xFFD27A00),
-              size: 18,
-            ),
-          ),
-          const SizedBox(width: 11),
-          Expanded(
-            child: Text(
-              category,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: _green,
-                fontSize: 14,
-                fontWeight: highlighted ? FontWeight.w700 : FontWeight.w600,
-              ),
-            ),
-          ),
-          if (highlighted)
-            const Icon(Icons.check_circle, color: _green, size: 19),
-        ],
-      ),
-    );
-  }
-
-  Widget _selectedCategoryRow(String category) {
-    return Row(
-      children: [
-        Container(
-          width: 24,
-          height: 24,
-          decoration: const BoxDecoration(
-            color: Color(0xFFFFF0CF),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            _categoryIcon(category),
-            color: const Color(0xFFD27A00),
-            size: 15,
-          ),
-        ),
-        const SizedBox(width: 9),
-        Expanded(
-          child: Text(
-            category,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: _green,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final viewModel = context.watch<GamificationViewModel>();
-    return Container(
-      padding: EdgeInsets.fromLTRB(
-        20,
-        20,
-        20,
-        MediaQuery.viewInsetsOf(context).bottom + 24,
-      ),
-      decoration: const BoxDecoration(
-        color: Color(0xFFF7F5EF),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _isPendingRevision
-                      ? 'Edit Pending Quest Update'
-                      : _isResubmission
-                      ? 'Edit & Resubmit Quest'
-                      : 'Edit Cultural Quest',
-                  style: GoogleFonts.dmSerifDisplay(
-                    color: _green,
-                    fontSize: 25,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  _isPendingRevision
-                      ? 'Revise the update that is awaiting admin review. The approved quest remains unchanged.'
-                      : _isResubmission
-                      ? 'Revise the rejected update and submit it again. The approved quest remains visible until admin approval.'
-                      : 'Only the title, category, and description can be changed. The approved version remains visible during admin review.',
-                  style: const TextStyle(
-                    color: Color(0xFF64748B),
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(height: 18),
-                TextFormField(
-                  controller: _title,
-                  decoration: _decoration('Quest title'),
-                  validator: _required('Quest title'),
-                ),
-                const SizedBox(height: 14),
-                DropdownButtonFormField<String>(
-                  initialValue: _selectedCategory,
-                  isExpanded: true,
-                  borderRadius: BorderRadius.circular(18),
-                  dropdownColor: const Color(0xFFFFFCF6),
-                  elevation: 8,
-                  menuMaxHeight: 280,
-                  icon: Container(
-                    width: 30,
-                    height: 30,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFE4F3EE),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.keyboard_arrow_down_rounded,
-                      color: _green,
-                    ),
-                  ),
-                  decoration: _decoration('Category'),
-                  selectedItemBuilder: (context) => _questCategories
-                      .map((category) => _selectedCategoryRow(category))
-                      .toList(),
-                  items: _questCategories
-                      .map(
-                        (category) => DropdownMenuItem<String>(
-                          value: category,
-                          child: _categoryRow(
-                            category,
-                            highlighted: category == _selectedCategory,
-                          ),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: viewModel.isUpdatingArtisanQuest
-                      ? null
-                      : (category) {
-                          if (category != null) {
-                            setState(() => _selectedCategory = category);
-                          }
-                        },
-                ),
-                const SizedBox(height: 14),
-                TextFormField(
-                  controller: _description,
-                  minLines: 3,
-                  maxLines: 5,
-                  decoration: _decoration('Description'),
-                  validator: _required('Description'),
-                ),
-                if (viewModel.artisanTaskError != null) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    viewModel.artisanTaskError!,
-                    style: const TextStyle(color: Color(0xFFB42318)),
-                  ),
-                ],
-                const SizedBox(height: 22),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: viewModel.isUpdatingArtisanQuest
-                            ? null
-                            : () => Navigator.pop(context),
-                        child: const Text('Cancel'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: FilledButton(
-                        onPressed: viewModel.isUpdatingArtisanQuest
-                            ? null
-                            : _submit,
-                        style: FilledButton.styleFrom(backgroundColor: _green),
-                        child: viewModel.isUpdatingArtisanQuest
-                            ? const SizedBox.square(
-                                dimension: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : Text(
-                                _isPendingRevision
-                                    ? 'Save Pending Update'
-                                    : _isResubmission
-                                    ? 'Resubmit Update'
-                                    : 'Submit Update',
-                              ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  String? Function(String?) _required(String label) {
-    return (value) =>
-        value == null || value.trim().isEmpty ? '$label is required.' : null;
-  }
-
-  InputDecoration _decoration(String label) => InputDecoration(
-    labelText: label,
-    filled: true,
-    fillColor: Colors.white,
-    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-  );
-}
-
 class _AddHeritageTaskSheet extends StatefulWidget {
   const _AddHeritageTaskSheet();
 
@@ -1890,14 +1346,26 @@ class _AddHeritageTaskSheetState extends State<_AddHeritageTaskSheet> {
                   'The task will be saved as pending and sent for admin approval.',
                   style: TextStyle(color: Color(0xFF64748B), fontSize: 12),
                 ),
+                const SizedBox(height: 12),
+                _buildProgressProtectionNotice(),
                 const SizedBox(height: 18),
                 TextFormField(
                   controller: _title,
                   decoration: _decoration('Task title'),
                   textCapitalization: TextCapitalization.sentences,
-                  validator: (value) => value == null || value.trim().isEmpty
-                      ? 'Task title is required.'
-                      : null,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.deny(
+                      _unsupportedControlCharacters,
+                    ),
+                    LengthLimitingTextInputFormatter(
+                      GamificationViewModel.maxTaskTitleLength,
+                    ),
+                  ],
+                  validator: (value) => _boundedRequiredText(
+                    value,
+                    label: 'Task title',
+                    maxLength: GamificationViewModel.maxTaskTitleLength,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 const Text(
@@ -1921,12 +1389,8 @@ class _AddHeritageTaskSheetState extends State<_AddHeritageTaskSheet> {
                   controller: _xp,
                   keyboardType: TextInputType.number,
                   decoration: _decoration('XP reward'),
-                  validator: (value) {
-                    final xp = int.tryParse(value?.trim() ?? '');
-                    return xp == null || xp < 0
-                        ? 'Enter a whole number of 0 or more.'
-                        : null;
-                  },
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  validator: _taskXpError,
                 ),
                 if (viewModel.artisanTaskError != null) ...[
                   const SizedBox(height: 12),
@@ -2002,12 +1466,16 @@ class _EditHeritageTaskSheetState extends State<_EditHeritageTaskSheet> {
   late final TextEditingController _xp;
   late bool _required;
 
-  bool get _isNewTaskResubmission =>
+  bool get _isPendingNewTaskEdit =>
+      widget.task.status.toUpperCase() == 'PENDING_APPROVAL';
+  bool get _isRejectedNewTaskResubmission =>
       widget.task.status.toUpperCase() == 'REJECTED';
+  bool get _isNewTaskSubmission =>
+      _isPendingNewTaskEdit || _isRejectedNewTaskResubmission;
   bool get _isRejectedEditResubmission => widget.rejectedChange != null;
   bool get _isPendingEdit => widget.pendingChange != null;
   bool get _isResubmission =>
-      _isNewTaskResubmission || _isRejectedEditResubmission;
+      _isRejectedNewTaskResubmission || _isRejectedEditResubmission;
 
   @override
   void initState() {
@@ -2034,7 +1502,7 @@ class _EditHeritageTaskSheetState extends State<_EditHeritageTaskSheet> {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     final viewModel = context.read<GamificationViewModel>();
     final xpReward = int.parse(_xp.text.trim());
-    final success = _isNewTaskResubmission
+    final success = _isNewTaskSubmission
         ? await viewModel.updateNewTaskSubmission(
             task: widget.task,
             title: _title.text,
@@ -2071,7 +1539,7 @@ class _EditHeritageTaskSheetState extends State<_EditHeritageTaskSheet> {
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<GamificationViewModel>();
-    final isBusy = _isNewTaskResubmission
+    final isBusy = _isNewTaskSubmission
         ? viewModel.isUpdatingNewTask
         : viewModel.isSubmittingTaskChange;
     return Container(
@@ -2095,7 +1563,9 @@ class _EditHeritageTaskSheetState extends State<_EditHeritageTaskSheet> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _isPendingEdit
+                  _isPendingNewTaskEdit
+                      ? 'Edit Pending Task Submission'
+                      : _isPendingEdit
                       ? 'Edit Pending Task Update'
                       : _isResubmission
                       ? 'Edit & Resubmit Task'
@@ -2107,10 +1577,12 @@ class _EditHeritageTaskSheetState extends State<_EditHeritageTaskSheet> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  _isPendingEdit
+                  _isPendingNewTaskEdit
+                      ? 'Update this new task while it is awaiting admin review.'
+                      : _isPendingEdit
                       ? 'Revise the pending request. The approved task remains unchanged during admin review.'
                       : _isResubmission
-                      ? _isNewTaskResubmission
+                      ? _isRejectedNewTaskResubmission
                             ? 'Update the rejected new task and submit it for admin review again.'
                             : 'Revise the rejected update and submit it for admin review again. The approved task stays unchanged.'
                       : 'The existing task remains unchanged until an admin approves this request.',
@@ -2119,14 +1591,26 @@ class _EditHeritageTaskSheetState extends State<_EditHeritageTaskSheet> {
                     fontSize: 12,
                   ),
                 ),
+                const SizedBox(height: 12),
+                _buildProgressProtectionNotice(),
                 const SizedBox(height: 18),
                 TextFormField(
                   controller: _title,
                   decoration: _decoration('Task title'),
                   textCapitalization: TextCapitalization.sentences,
-                  validator: (value) => value == null || value.trim().isEmpty
-                      ? 'Task title is required.'
-                      : null,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.deny(
+                      _unsupportedControlCharacters,
+                    ),
+                    LengthLimitingTextInputFormatter(
+                      GamificationViewModel.maxTaskTitleLength,
+                    ),
+                  ],
+                  validator: (value) => _boundedRequiredText(
+                    value,
+                    label: 'Task title',
+                    maxLength: GamificationViewModel.maxTaskTitleLength,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 const Text(
@@ -2150,12 +1634,8 @@ class _EditHeritageTaskSheetState extends State<_EditHeritageTaskSheet> {
                   controller: _xp,
                   keyboardType: TextInputType.number,
                   decoration: _decoration('XP reward'),
-                  validator: (value) {
-                    final xp = int.tryParse(value?.trim() ?? '');
-                    return xp == null || xp < 0
-                        ? 'Enter a whole number of 0 or more.'
-                        : null;
-                  },
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  validator: _taskXpError,
                 ),
                 if (viewModel.artisanTaskError != null) ...[
                   const SizedBox(height: 12),
@@ -2189,7 +1669,9 @@ class _EditHeritageTaskSheetState extends State<_EditHeritageTaskSheet> {
                                 ),
                               )
                             : Text(
-                                _isPendingEdit
+                                _isPendingNewTaskEdit
+                                    ? 'Update Submission'
+                                    : _isPendingEdit
                                     ? 'Update Request'
                                     : _isResubmission
                                     ? 'Resubmit Task'

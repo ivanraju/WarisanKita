@@ -63,11 +63,19 @@ class HeritageNearbyBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final ink = dark ? const Color(0xFFF5EBCF) : const Color(0xFF004D40);
+    final ink = dark ? const Color(0xFFFFF4D6) : const Color(0xFF004D40);
     return Material(
       key: const Key('heritage-nearby-banner'),
-      color: dark ? const Color(0xFF0D2825) : const Color(0xFFFFF8E1),
-      borderRadius: BorderRadius.circular(16),
+      color: dark ? const Color(0xFF173C35) : const Color(0xFFFFF8E1),
+      shadowColor: Colors.black54,
+      elevation: dark ? 6 : 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: dark ? const Color(0xFFB8943E) : const Color(0xFFD6A11D),
+          width: 1.25,
+        ),
+      ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
@@ -77,7 +85,7 @@ class HeritageNearbyBanner extends StatelessWidget {
             children: [
               const Icon(
                 Icons.auto_awesome_rounded,
-                color: Color(0xFFC28D16),
+                color: Color(0xFFFFD54F),
                 size: 20,
               ),
               const SizedBox(width: 10),
@@ -101,8 +109,9 @@ class HeritageNearbyBanner extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.plusJakartaSans(
-                        color: ink,
+                        color: dark ? Colors.white70 : ink,
                         fontSize: 11,
+                        fontWeight: dark ? FontWeight.w500 : FontWeight.normal,
                       ),
                     ),
                   ],

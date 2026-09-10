@@ -6,6 +6,8 @@ import 'package:warisan_kita/ui/artisan/profile_builder_tab.dart';
 import 'package:warisan_kita/ui/core/live_forum_tab.dart';
 import 'package:warisan_kita/ui/artisan/artisan_settings_screen.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
+import 'package:warisan_kita/viewmodels/gamification_viewmodel.dart';
+import 'package:warisan_kita/domain/models/artisan_heritage_analytics.dart';
 
 class ArtisanDashboardTab extends StatefulWidget {
   const ArtisanDashboardTab({super.key});
@@ -17,15 +19,15 @@ class ArtisanDashboardTab extends StatefulWidget {
 class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
   bool _isStudioOpen = true;
 
-  final List<Map<String, dynamic>> _weeklyPreservationData = const [
-    {'day': 'Mon', 'visitors': '14 Visitors', 'heightRatio': 0.40},
-    {'day': 'Tue', 'visitors': '22 Visitors', 'heightRatio': 0.55},
-    {'day': 'Wed', 'visitors': '18 Visitors', 'heightRatio': 0.45},
-    {'day': 'Thu', 'visitors': '30 Visitors', 'heightRatio': 0.70},
-    {'day': 'Fri', 'visitors': '38 Visitors', 'heightRatio': 0.85},
-    {'day': 'Sat', 'visitors': '48 Visitors', 'heightRatio': 1.00}, // PEAK
-    {'day': 'Sun', 'visitors': '28 Visitors', 'heightRatio': 0.65},
-  ];
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<GamificationViewModel>().loadArtisanHeritageAnalytics();
+      }
+    });
+  }
 
   void _toggleStudioStatus(bool isOpen) {
     setState(() => _isStudioOpen = isOpen);
@@ -36,7 +38,9 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
               ? '🟢 Studio Live Status: OPEN FOR EDUCATIONAL WALK-INS & DEMOS'
               : '🔴 Studio Live Status: IN KILN SESSION (DEMOS PAUSED)',
         ),
-        backgroundColor: isOpen ? const Color(0xFF004D40) : const Color(0xFFEF4444),
+        backgroundColor: isOpen
+            ? const Color(0xFF004D40)
+            : const Color(0xFFEF4444),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
@@ -47,8 +51,10 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final authVM = context.watch<AuthViewModel>();
+    final gamificationVM = context.watch<GamificationViewModel>();
     final user = authVM.currentUser;
-    final studioName = user?.studioName ?? user?.displayName ?? 'Artisan Studio';
+    final studioName =
+        user?.studioName ?? user?.displayName ?? 'Artisan Studio';
     final handle = user?.handle ?? (user?.effectiveUsername ?? '');
     final craft = user?.craftCategory ?? 'Heritage Craft';
     final initials = user?.initials ?? 'AS';
@@ -58,7 +64,9 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
       slivers: [
         // Top App Bar
         SliverAppBar(
-          backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
+          backgroundColor: isDark
+              ? const Color(0xFF041412)
+              : const Color(0xFFF8F9FA),
           elevation: 0,
           title: Text(
             'Master Artisan Command Center',
@@ -69,10 +77,17 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
           ),
           actions: [
             IconButton(
-              icon: Icon(Icons.settings_outlined, color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40)),
+              icon: Icon(
+                Icons.settings_outlined,
+                color: isDark
+                    ? const Color(0xFFFFD54F)
+                    : const Color(0xFF004D40),
+              ),
               onPressed: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ArtisanSettingsScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const ArtisanSettingsScreen(),
+                  ),
                 );
               },
             ),
@@ -81,7 +96,10 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
 
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 20.0,
+              vertical: 8.0,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -97,13 +115,15 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
                           : [const Color(0xFF0A192F), const Color(0xFF004D40)],
                     ),
                     borderRadius: BorderRadius.circular(28),
-                    border: isDark ? Border.all(color: const Color(0xFF1E3A34)) : null,
+                    border: isDark
+                        ? Border.all(color: const Color(0xFF1E3A34))
+                        : null,
                     boxShadow: [
                       BoxShadow(
                         color: const Color(0xFF004D40).withValues(alpha: 0.3),
                         blurRadius: 20,
                         offset: const Offset(0, 10),
-                      )
+                      ),
                     ],
                   ),
                   child: Column(
@@ -123,7 +143,10 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
                                       height: 60,
                                       decoration: BoxDecoration(
                                         shape: BoxShape.circle,
-                                        border: Border.all(color: const Color(0xFFFFD54F), width: 2),
+                                        border: Border.all(
+                                          color: const Color(0xFFFFD54F),
+                                          width: 2,
+                                        ),
                                       ),
                                     ),
                                     CircleAvatar(
@@ -143,7 +166,8 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
                                 const SizedBox(width: 14),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         studioName,
@@ -178,9 +202,21 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
                         spacing: 8,
                         runSpacing: 6,
                         children: [
-                          _buildHeaderBadge('🏆 Kraftangan Certified Master', const Color(0xFFFFD54F), const Color(0xFF004D40)),
-                          _buildHeaderBadge('📜 License #KFG-2024-889', Colors.white24, Colors.white),
-                          _buildHeaderBadge('🏛️ UNESCO Living Heritage Nominee', Colors.white24, Colors.white),
+                          _buildHeaderBadge(
+                            '🏆 Kraftangan Certified Master',
+                            const Color(0xFFFFD54F),
+                            const Color(0xFF004D40),
+                          ),
+                          _buildHeaderBadge(
+                            '📜 License #KFG-2024-889',
+                            Colors.white24,
+                            Colors.white,
+                          ),
+                          _buildHeaderBadge(
+                            '🏛️ UNESCO Living Heritage Nominee',
+                            Colors.white24,
+                            Colors.white,
+                          ),
                         ],
                       ),
 
@@ -198,15 +234,22 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
                               children: [
                                 Text(
                                   'Studio Live Cultural Status:',
-                                  style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.white70),
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 11,
+                                    color: Colors.white70,
+                                  ),
                                 ),
                                 Text(
-                                  _isStudioOpen ? '🟢 OPEN FOR EDUCATIONAL DEMOS' : '🔴 IN KILN SESSION (DEMOS PAUSED)',
+                                  _isStudioOpen
+                                      ? '🟢 OPEN FOR EDUCATIONAL DEMOS'
+                                      : '🔴 IN KILN SESSION (DEMOS PAUSED)',
                                   softWrap: true,
                                   style: GoogleFonts.plusJakartaSans(
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
-                                    color: _isStudioOpen ? const Color(0xFF34D399) : const Color(0xFFFCA5A5),
+                                    color: _isStudioOpen
+                                        ? const Color(0xFF34D399)
+                                        : const Color(0xFFFCA5A5),
                                   ),
                                 ),
                               ],
@@ -232,7 +275,9 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
                   'Studio Management Portal',
                   style: GoogleFonts.dmSerifDisplay(
                     fontSize: 20,
-                    color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                    color: isDark
+                        ? const Color(0xFFFFD54F)
+                        : const Color(0xFF004D40),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -248,7 +293,10 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
                         isDark: isDark,
                         onTap: () {
                           Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const ArtisanTaskManagementScreen()),
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  const ArtisanTaskManagementScreen(),
+                            ),
                           );
                         },
                       ),
@@ -259,11 +307,15 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
                         context,
                         icon: Icons.history_edu_rounded,
                         label: 'Craft Portfolio',
-                        color: isDark ? const Color(0xFF34D399) : const Color(0xFF004D40),
+                        color: isDark
+                            ? const Color(0xFF34D399)
+                            : const Color(0xFF004D40),
                         isDark: isDark,
                         onTap: () {
                           Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const ProfileBuilderTab()),
+                            MaterialPageRoute(
+                              builder: (_) => const ProfileBuilderTab(),
+                            ),
                           );
                         },
                       ),
@@ -278,7 +330,9 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
                         isDark: isDark,
                         onTap: () {
                           Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const LiveForumTab()),
+                            MaterialPageRoute(
+                              builder: (_) => const LiveForumTab(),
+                            ),
                           );
                         },
                       ),
@@ -288,214 +342,49 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
 
                 const SizedBox(height: 28),
 
-                // 📊 INFORMATIONAL CULTURAL PRESERVATION METRICS & KNOWLEDGE TRANSFER HUB
-                Wrap(
-                  alignment: WrapAlignment.spaceBetween,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: 12,
-                  runSpacing: 6,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Heritage Preservation Metrics',
-                          style: GoogleFonts.dmSerifDisplay(
-                            fontSize: 22,
-                            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
-                          ),
-                        ),
-                        Text(
-                          'Knowledge transfer, apprentice outreach & lore archival',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 11,
-                            color: isDark ? Colors.white60 : Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFFEF3C7),
-                        borderRadius: BorderRadius.circular(8),
-                        border: isDark ? Border.all(color: const Color(0xFF34D399).withValues(alpha: 0.3)) : null,
-                      ),
-                      child: Text(
-                        'August 2026',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFB45309),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 16),
-
-                // 📊 WEEKLY TOURIST & STUDENT KNOWLEDGE TRANSMISSION CHART
-                Container(
-                  padding: const EdgeInsets.all(22),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: isDark
-                          ? [const Color(0xFF0D2825), const Color(0xFF061A18)]
-                          : [const Color(0xFF0A192F), const Color(0xFF0F172A)],
-                    ),
-                    borderRadius: BorderRadius.circular(28),
-                    border: isDark ? Border.all(color: const Color(0xFF1E3A34)) : null,
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF004D40).withValues(alpha: 0.25),
-                        blurRadius: 16,
-                        offset: const Offset(0, 6),
-                      )
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Wrap(
-                        alignment: WrapAlignment.spaceBetween,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        spacing: 12,
-                        runSpacing: 10,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Total Cultural Lore Preserved',
-                                style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.white70),
-                              ),
-                              Text(
-                                '1,450 Craft Hours',
-                                style: GoogleFonts.dmSerifDisplay(fontSize: 24, color: Colors.white, fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF10B981).withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: const Color(0xFF10B981)),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.school_rounded, color: Color(0xFF34D399), size: 14),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '340 Students Taught',
-                                  style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFF34D399)),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      // Goal Progress Indicator
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(6),
-                              child: const LinearProgressIndicator(
-                                value: 0.92,
-                                backgroundColor: Colors.white24,
-                                color: Color(0xFFFFD54F),
-                                minHeight: 8,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            '92% Archival Goal',
-                            style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFFFFD54F)),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // Weekly Cultural Visitor Visualizer Chart
-                      SizedBox(
-                        height: 120,
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: _weeklyPreservationData.map((data) {
-                              final double heightRatio = data['heightRatio'];
-                              final bool isPeak = heightRatio == 1.0;
-
-                            return Column(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                Text(
-                                  data['visitors'],
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 8,
-                                    fontWeight: FontWeight.bold,
-                                    color: isPeak ? const Color(0xFFFFD54F) : Colors.white60,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Container(
-                                  width: 18,
-                                  height: 80 * heightRatio,
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.bottomCenter,
-                                      end: Alignment.topCenter,
-                                      colors: isPeak
-                                          ? [const Color(0xFFF59E0B), const Color(0xFFFFD54F)]
-                                          : [const Color(0xFF004D40), const Color(0xFF10B981)],
-                                    ),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  data['day'],
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 10,
-                                    fontWeight: isPeak ? FontWeight.bold : FontWeight.normal,
-                                    color: isPeak ? const Color(0xFFFFD54F) : Colors.white70,
-                                  ),
-                                ),
-                              ],
-                            );
-                          }).toList(),
-                          ),
-                        ),
-                      ),
-                    ],
+                Text(
+                  'Heritage Preservation Metrics',
+                  style: GoogleFonts.dmSerifDisplay(
+                    fontSize: 22,
+                    color: isDark
+                        ? const Color(0xFFFFD54F)
+                        : const Color(0xFF004D40),
                   ),
                 ),
-
+                const SizedBox(height: 4),
+                Text(
+                  'Verified workshop arrivals and quest achievements',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11,
+                    color: isDark ? Colors.white60 : Colors.grey[600],
+                  ),
+                ),
                 const SizedBox(height: 16),
-
+                _buildHeritageAnalytics(gamificationVM),
+                const SizedBox(height: 16),
                 // 📜 INFORMATIONAL HERITAGE PRESERVATION CARD
                 Container(
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF0D2825) : const Color(0xFFF0FDF4),
+                    color: isDark
+                        ? const Color(0xFF0D2825)
+                        : const Color(0xFFF0FDF4),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: isDark ? const Color(0xFF1E3A34) : const Color(0xFF86EFAC)),
+                    border: Border.all(
+                      color: isDark
+                          ? const Color(0xFF1E3A34)
+                          : const Color(0xFF86EFAC),
+                    ),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.verified_user_rounded, color: isDark ? const Color(0xFF34D399) : const Color(0xFF166534), size: 26),
+                      Icon(
+                        Icons.verified_user_rounded,
+                        color: isDark
+                            ? const Color(0xFF34D399)
+                            : const Color(0xFF166534),
+                        size: 26,
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
@@ -506,7 +395,9 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w900,
-                                color: isDark ? const Color(0xFF34D399) : const Color(0xFF14532D),
+                                color: isDark
+                                    ? const Color(0xFF34D399)
+                                    : const Color(0xFF14532D),
                               ),
                             ),
                             const SizedBox(height: 2),
@@ -514,7 +405,9 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
                               'Your studio is recognized as an official Cultural Preservation Site by Kraftangan Malaysia. All completed quests contribute directly to national craft heritage documentation.',
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 11,
-                                color: isDark ? Colors.white70 : const Color(0xFF166534),
+                                color: isDark
+                                    ? Colors.white70
+                                    : const Color(0xFF166534),
                                 height: 1.3,
                               ),
                             ),
@@ -531,53 +424,6 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
           ),
         ),
 
-        // 4 Informational Cultural Metric Cards Grid
-        SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0),
-          sliver: SliverGrid(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 1.05,
-            ),
-            delegate: SliverChildListDelegate([
-              _buildRichAnalyticsCard(
-                title: 'Students & Tourists',
-                value: '340 Taught',
-                subtitle: '↗ +18% outreach',
-                icon: Icons.groups_rounded,
-                color: const Color(0xFF0284C7),
-                isDark: isDark,
-              ),
-              _buildRichAnalyticsCard(
-                title: 'Published Quests',
-                value: '14 Active',
-                subtitle: 'All admin verified',
-                icon: Icons.stars_rounded,
-                color: const Color(0xFF10B981),
-                isDark: isDark,
-              ),
-              _buildRichAnalyticsCard(
-                title: 'Digital Plaques',
-                value: '28 Issued',
-                subtitle: 'Handshake verified',
-                icon: Icons.verified_rounded,
-                color: const Color(0xFFF59E0B),
-                isDark: isDark,
-              ),
-              _buildRichAnalyticsCard(
-                title: 'Craft Lore Hours',
-                value: '1,450 Hrs',
-                subtitle: 'Preserved in 2026',
-                icon: Icons.history_edu_rounded,
-                color: const Color(0xFF8B5CF6),
-                isDark: isDark,
-              ),
-            ]),
-          ),
-        ),
-
         const SliverToBoxAdapter(child: SizedBox(height: 40)),
       ],
     );
@@ -586,10 +432,17 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
   Widget _buildHeaderBadge(String text, Color bg, Color textCol) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(8)),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(8),
+      ),
       child: Text(
         text,
-        style: GoogleFonts.plusJakartaSans(color: textCol, fontSize: 10, fontWeight: FontWeight.bold),
+        style: GoogleFonts.plusJakartaSans(
+          color: textCol,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
@@ -609,13 +462,17 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF0D2825) : Colors.white,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: isDark ? const Color(0xFF1E3A34) : color.withValues(alpha: 0.3)),
+          border: Border.all(
+            color: isDark
+                ? const Color(0xFF1E3A34)
+                : color.withValues(alpha: 0.3),
+          ),
           boxShadow: [
             BoxShadow(
               color: color.withValues(alpha: 0.06),
               blurRadius: 10,
               offset: const Offset(0, 4),
-            )
+            ),
           ],
         ),
         child: Column(
@@ -644,76 +501,321 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
     );
   }
 
-  Widget _buildRichAnalyticsCard({
-    required String title,
-    required String value,
-    required String subtitle,
-    required IconData icon,
-    required Color color,
-    required bool isDark,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0D2825) : Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: isDark ? const Color(0xFF1E3A34) : Colors.black.withValues(alpha: 0.06)),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          )
-        ],
-      ),
+  Widget _buildHeritageAnalytics(GamificationViewModel viewModel) {
+    if (viewModel.isLoadingArtisanHeritageAnalytics &&
+        viewModel.artisanHeritageAnalytics == null) {
+      return _analyticsShell(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: List.generate(
+            5,
+            (index) => Container(
+              height: index == 4 ? 120 : 18,
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    final analytics = viewModel.artisanHeritageAnalytics;
+    if (analytics == null) {
+      return _analyticsShell(
+        child: Column(
+          children: [
+            const Icon(Icons.cloud_off_rounded, color: Color(0xFFFFD54F)),
+            const SizedBox(height: 10),
+            Text(
+              viewModel.artisanHeritageAnalyticsError ??
+                  'Heritage analytics are currently unavailable.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.plusJakartaSans(color: Colors.white70),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: viewModel.loadArtisanHeritageAnalytics,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFFFFD54F),
+                side: const BorderSide(color: Color(0xFFFFD54F)),
+              ),
+              icon: const Icon(Icons.refresh_rounded, size: 17),
+              label: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final highestCount = analytics.dailyVisitors.fold<int>(
+      0,
+      (highest, day) => day.count > highest ? day.count : highest,
+    );
+    final highlightedIndex = analytics.highlightedDayIndex;
+    final visitorWord = analytics.totalUniqueVisitors == 1
+        ? 'Visitor'
+        : 'Visitors';
+    final completionProgress = analytics.completionProgress;
+
+    return _analyticsShell(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
+              Expanded(
+                child: Text(
+                  'Verified Workshop Visitors',
+                  style: GoogleFonts.dmSerifDisplay(
+                    color: Colors.white,
+                    fontSize: 18,
+                  ),
                 ),
-                child: Icon(icon, color: color, size: 20),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Last 7 Days',
+                style: GoogleFonts.plusJakartaSans(
+                  color: const Color(0xFFFFD54F),
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 6),
           Text(
-            value,
-            softWrap: true,
+            '${analytics.totalUniqueVisitors} $visitorWord',
             style: GoogleFonts.dmSerifDisplay(
-              fontSize: 20,
+              color: Colors.white,
+              fontSize: 28,
               fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : const Color(0xFF0F172A),
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            title,
-            softWrap: true,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: isDark ? Colors.white60 : Colors.grey[600],
             ),
           ),
           Text(
-            subtitle,
-            softWrap: true,
+            analytics.totalUniqueVisitors == 0
+                ? 'No verified workshop visits in this period.'
+                : 'Unique tourists who reached your workshop',
             style: GoogleFonts.plusJakartaSans(
+              color: Colors.white70,
               fontSize: 10,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            analytics.visitorSource == 'completed_quest'
+                ? 'Verified from completed quests (arrival-task fallback)'
+                : 'Verified from completed workshop arrival tasks',
+            style: GoogleFonts.plusJakartaSans(
+              color: Colors.white54,
+              fontSize: 8,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            decoration: BoxDecoration(
+              color: const Color(0xFF10B981).withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFF34D399)),
+            ),
+            child: Text(
+              analytics.passportStampsAwarded == null
+                  ? 'Passport Stamps Awarded · Unavailable'
+                  : '${analytics.passportStampsAwarded} Passport Stamps Awarded',
+              style: GoogleFonts.plusJakartaSans(
+                color: const Color(0xFF6EE7B7),
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            completionProgress == null
+                ? 'Tourist Quest Completions'
+                : 'Quest Completion Goal',
+            style: GoogleFonts.plusJakartaSans(
+              color: Colors.white70,
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            analytics.completedTourists == null
+                ? 'Unavailable'
+                : completionProgress == null
+                ? '${analytics.completedTourists} Completed'
+                : '${analytics.completedTourists} / ${analytics.completionTarget} Quests Completed',
+            style: GoogleFonts.plusJakartaSans(
+              color: Colors.white,
+              fontSize: 13,
               fontWeight: FontWeight.bold,
-              color: color,
+            ),
+          ),
+          if (completionProgress != null) ...[
+            const SizedBox(height: 8),
+            LinearProgressIndicator(
+              value: completionProgress,
+              minHeight: 7,
+              borderRadius: BorderRadius.circular(6),
+              backgroundColor: Colors.white24,
+              color: const Color(0xFFFFD54F),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              completionProgress >= 1
+                  ? 'Goal Achieved'
+                  : '${(completionProgress * 100).round()}% Goal Progress',
+              style: GoogleFonts.plusJakartaSans(
+                color: const Color(0xFFFFD54F),
+                fontSize: 9,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+          const SizedBox(height: 18),
+          SizedBox(
+            height: 132,
+            child: Stack(
+              children: [
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: List.generate(
+                    3,
+                    (_) => Divider(
+                      height: 1,
+                      color: Colors.white.withValues(alpha: 0.09),
+                    ),
+                  ),
+                ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: List.generate(analytics.dailyVisitors.length, (
+                    index,
+                  ) {
+                    final day = analytics.dailyVisitors[index];
+                    final highlighted = index == highlightedIndex;
+                    final ratio = highestCount == 0
+                        ? 0.0
+                        : day.count / highestCount;
+                    final height = day.count == 0 ? 4.0 : 18.0 + 58 * ratio;
+                    return Expanded(
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: () => _showDailyVisitors(day),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Text(
+                              '${day.count}',
+                              style: GoogleFonts.plusJakartaSans(
+                                color: highlighted
+                                    ? const Color(0xFFFFD54F)
+                                    : Colors.white70,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Container(
+                              width: 18,
+                              height: height,
+                              decoration: BoxDecoration(
+                                gradient: highlighted
+                                    ? const LinearGradient(
+                                        begin: Alignment.bottomCenter,
+                                        end: Alignment.topCenter,
+                                        colors: [
+                                          Color(0xFFF59E0B),
+                                          Color(0xFFFFD54F),
+                                        ],
+                                      )
+                                    : const LinearGradient(
+                                        begin: Alignment.bottomCenter,
+                                        end: Alignment.topCenter,
+                                        colors: [
+                                          Color(0xFF00796B),
+                                          Color(0xFF34D399),
+                                        ],
+                                      ),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              _weekday(day.date),
+                              style: GoogleFonts.plusJakartaSans(
+                                color: highlighted
+                                    ? const Color(0xFFFFD54F)
+                                    : Colors.white70,
+                                fontSize: 9,
+                                fontWeight: highlighted
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+              ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  Widget _analyticsShell({required Widget child}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF0A192F), Color(0xFF063C36)],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFF1E5B52)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF004D40).withValues(alpha: 0.20),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+
+  void _showDailyVisitors(DailyVerifiedVisitors day) {
+    final countLabel = day.count == 1 ? 'visitor' : 'visitors';
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            '${day.date.day.toString().padLeft(2, '0')}/'
+            '${day.date.month.toString().padLeft(2, '0')}/${day.date.year}: '
+            '${day.count} $countLabel',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+  }
+
+  String _weekday(DateTime date) {
+    const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return labels[date.weekday - 1];
   }
 }

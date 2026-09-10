@@ -97,6 +97,36 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget>
   ]
   ''';
 
+  // Night palette based on Warisan Kita's deep emerald, bronze, and gold
+  // identity. Business clutter stays hidden while cultural attractions retain
+  // a restrained gold treatment.
+  static const String _darkHeritageMapStyle = '''
+  [
+    {"elementType":"geometry","stylers":[{"color":"#101c19"}]},
+    {"elementType":"labels.text.fill","stylers":[{"color":"#c8bda8"}]},
+    {"elementType":"labels.text.stroke","stylers":[{"color":"#101c19"}]},
+    {"featureType":"administrative","elementType":"geometry.stroke","stylers":[{"color":"#56645d"}]},
+    {"featureType":"landscape.man_made","elementType":"geometry","stylers":[{"color":"#263b35"}]},
+    {"featureType":"landscape.man_made","elementType":"geometry.stroke","stylers":[{"color":"#3e574f"}]},
+    {"featureType":"poi","elementType":"labels.icon","stylers":[{"visibility":"off"}]},
+    {"featureType":"poi.business","stylers":[{"visibility":"off"}]},
+    {"featureType":"poi.attraction","elementType":"labels.text.fill","stylers":[{"color":"#d5a928"}]},
+    {"featureType":"poi.park","elementType":"geometry","stylers":[{"color":"#28483a"}]},
+    {"featureType":"poi.park","elementType":"labels.text.fill","stylers":[{"color":"#9caf9d"}]},
+    {"featureType":"road","elementType":"geometry","stylers":[{"color":"#786950"}]},
+    {"featureType":"road","elementType":"geometry.stroke","stylers":[{"color":"#4d4639"}]},
+    {"featureType":"road","elementType":"labels.text.fill","stylers":[{"color":"#e4dac5"}]},
+    {"featureType":"road","elementType":"labels.text.stroke","stylers":[{"color":"#2b2923"}]},
+    {"featureType":"road.highway","elementType":"geometry","stylers":[{"color":"#a58a59"}]},
+    {"featureType":"road.highway","elementType":"geometry.stroke","stylers":[{"color":"#5c4c35"}]},
+    {"featureType":"road","elementType":"labels.icon","stylers":[{"visibility":"off"}]},
+    {"featureType":"transit","elementType":"labels.icon","stylers":[{"visibility":"off"}]},
+    {"featureType":"transit.line","elementType":"geometry","stylers":[{"color":"#394a43"}]},
+    {"featureType":"water","elementType":"geometry","stylers":[{"color":"#123e43"}]},
+    {"featureType":"water","elementType":"labels.text.fill","stylers":[{"color":"#8eafb0"}]}
+  ]
+  ''';
+
   // Default Malaysia view.
   static const LatLng _initialPosition = LatLng(3.1390, 101.6869);
 
@@ -432,6 +462,7 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget>
     return switch (journey?.state) {
       WorkshopQuestState.inProgress => _activeQuestMarkerIcon,
       WorkshopQuestState.available => _workshopMarkerIcon,
+      WorkshopQuestState.blockedByOtherQuest => _unavailableQuestMarkerIcon,
       WorkshopQuestState.completed => _completedQuestMarkerIcon,
       WorkshopQuestState.unavailable || null => _unavailableQuestMarkerIcon,
     };
@@ -456,7 +487,7 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget>
         infoWindow: InfoWindow(
           title: workshop.name,
           snippet: journey == null
-              ? '${workshop.craftCategory} • View studio'
+              ? '${workshop.craftCategory} • View quest'
               : '${journey.stateLabel} • ${journey.progressLabel}',
         ),
 
@@ -655,12 +686,19 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget>
   Widget _buildMapButton({
     required IconData icon,
     required VoidCallback onPressed,
+    required bool isDark,
     String? tooltip,
   }) {
     return Material(
-      color: Colors.white,
+      color: isDark ? const Color(0xFF173C35) : Colors.white,
       elevation: 4,
-      borderRadius: BorderRadius.circular(14),
+      shadowColor: isDark ? Colors.black87 : Colors.black54,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(
+          color: isDark ? const Color(0xFFB8943E) : Colors.transparent,
+        ),
+      ),
       child: InkWell(
         onTap: onPressed,
         borderRadius: BorderRadius.circular(14),
@@ -669,7 +707,11 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget>
           child: SizedBox(
             width: 46,
             height: 46,
-            child: Icon(icon, size: 24, color: const Color(0xFF004D40)),
+            child: Icon(
+              icon,
+              size: 24,
+              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+            ),
           ),
         ),
       ),
@@ -682,6 +724,7 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final location = widget.userLocation;
     final hasInitialUserLocation =
         widget.isActive && widget.myLocationEnabled && _hasValidUserLocation();
@@ -693,7 +736,7 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget>
         // ======================================================
         Positioned.fill(
           child: GoogleMap(
-            style: _heritageMapStyle,
+            style: isDark ? _darkHeritageMapStyle : _heritageMapStyle,
             initialCameraPosition: CameraPosition(
               target: hasInitialUserLocation && location != null
                   ? LatLng(location.latitude, location.longitude)
@@ -766,6 +809,7 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget>
                 // ==============================================
                 _buildMapButton(
                   icon: Icons.my_location_rounded,
+                  isDark: isDark,
                   tooltip: 'My location',
                   onPressed: () {
                     _recenterToUser();
@@ -779,6 +823,7 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget>
                 // ==============================================
                 _buildMapButton(
                   icon: Icons.add_rounded,
+                  isDark: isDark,
                   tooltip: 'Zoom in',
                   onPressed: () {
                     _zoomIn();
@@ -792,6 +837,7 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget>
                 // ==============================================
                 _buildMapButton(
                   icon: Icons.remove_rounded,
+                  isDark: isDark,
                   tooltip: 'Zoom out',
                   onPressed: () {
                     _zoomOut();
