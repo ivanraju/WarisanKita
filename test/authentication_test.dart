@@ -193,6 +193,35 @@ void main() {
       hasLength(1),
     );
   });
+  test('administrator accounts cannot request password reset via email', () async {
+    backend.add('admin@warisankita.my', role: 'Tourist');
+    backend.add('clqadmin@gmail.com', role: 'Admin', username: 'clqadmin');
+    backend.add('staff@test.com', role: 'Admin', username: 'staffadmin');
+    backend.add('user_named_admin@test.com', role: 'Tourist', username: 'admin');
+
+    for (final email in [
+      'admin@warisankita.my',
+      'clqadmin@gmail.com',
+      'admin@example.org',
+      'staff@test.com',
+      'user_named_admin@test.com',
+    ]) {
+      await expectLater(
+        service.sendPasswordResetEmail(email),
+        throwsA(
+          isA<AuthException>().having(
+            (error) => error.message,
+            'message',
+            contains('ADMINISTRATOR ACCOUNT PROTECTED'),
+          ),
+        ),
+      );
+    }
+    expect(
+      backend.requests.where((request) => request.url.path.endsWith('/recover')),
+      isEmpty,
+    );
+  });
   test('registration lookup identifies an existing live account', () async {
     backend.add('existing@test.com');
 
@@ -319,6 +348,26 @@ void main() {
       );
     },
   );
+  test('administrator recovery session cannot reset password', () async {
+    backend.add('admin@test.com', role: 'Admin');
+    await service.signIn('admin@test.com', 'Password123!');
+    service.acceptPasswordRecovery(backend.client.auth.currentSession!);
+    await expectLater(
+      service.resetPasswordWithToken(
+        email: 'admin@test.com',
+        token: '',
+        newPassword: 'NewPassword123!',
+      ),
+      throwsA(
+        isA<AuthException>().having(
+          (error) => error.message,
+          'message',
+          contains('ADMINISTRATOR ACCOUNT PROTECTED'),
+        ),
+      ),
+    );
+    expect(backend.passwordUpdates, 0);
+  });
   test('failed login clears previous view model user', () async {
     final vm = AuthViewModel(repository: UserRepository(service: service));
     backend.add('old@test.com');

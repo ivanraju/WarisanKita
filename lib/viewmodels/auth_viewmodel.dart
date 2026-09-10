@@ -605,7 +605,7 @@ class AuthViewModel extends ChangeNotifier {
       notifyListeners();
       return await _finishRegistration(user, user.isArtisan ? 'pending_artisan' : '/tourist');
     } catch (e) {
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _errorMessage = _friendlyError(e);
       _isLoading = false;
       notifyListeners();
       return AuthResult(success: false, message: _errorMessage);
@@ -706,7 +706,7 @@ class AuthViewModel extends ChangeNotifier {
 
       return await _finishRegistration(user, 'pending_artisan');
     } catch (e) {
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _errorMessage = _friendlyError(e);
       _isLoading = false;
       notifyListeners();
       return AuthResult(success: false, message: _errorMessage);
@@ -788,7 +788,7 @@ class AuthViewModel extends ChangeNotifier {
         message: _statusMessage,
       );
     } catch (e) {
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _errorMessage = _friendlyError(e);
       _isLoading = false;
       notifyListeners();
       return AuthResult(success: false, message: _errorMessage);
@@ -891,7 +891,7 @@ class AuthViewModel extends ChangeNotifier {
 
       return AuthResult(success: true, message: _statusMessage);
     } catch (e) {
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _errorMessage = _friendlyError(e);
       _isLoading = false;
       notifyListeners();
       return AuthResult(success: false, message: _errorMessage);

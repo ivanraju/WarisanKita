@@ -397,15 +397,26 @@ class SupabaseService {
   Future<void> sendPasswordResetEmail(String email) async {
     final client = _authClient;
     final cleanEmail = email.trim().toLowerCase();
-    final account = await client.from('users').select('role')
+    if (cleanEmail == 'admin@warisankita.my' ||
+        cleanEmail.startsWith('admin@') ||
+        cleanEmail.startsWith('clqadmin@')) {
+      throw const AuthException(
+        'ADMINISTRATOR ACCOUNT PROTECTED: Administrator credentials cannot be reset via self-service. Contact support.',
+      );
+    }
+    final account = await client.from('users').select('role, username')
         .eq('email', cleanEmail).maybeSingle();
     if (account == null) {
       throw const AuthException(
         'EMAIL NOT FOUND: No account is registered with this email address.',
       );
     }
-    if (account['role'] == 'Admin') {
-      throw const AuthException('Administrator credentials cannot be reset via self-service. Contact support.');
+    final role = (account['role'] ?? '').toString().toLowerCase();
+    final username = (account['username'] ?? '').toString().toLowerCase();
+    if (role.contains('admin') || username == 'admin' || username == 'clqadmin') {
+      throw const AuthException(
+        'ADMINISTRATOR ACCOUNT PROTECTED: Administrator credentials cannot be reset via self-service. Contact support.',
+      );
     }
     await client.auth.resetPasswordForEmail(cleanEmail,
       redirectTo: kIsWeb ? Uri.base.resolve('/forgot-password').toString()
@@ -428,8 +439,19 @@ class SupabaseService {
         throw const AuthException('Invalid or expired recovery session. Please open a new password reset link.');
       }
       final profile = await _loadAuthenticatedProfile();
-      if (profile.isAdmin) {
-        throw const AuthException('Administrator credentials cannot be reset via self-service. Contact support.');
+      final pEmail = profile.email.toLowerCase().trim();
+      final pRole = profile.role.toLowerCase();
+      final pUsername = (profile.username ?? '').toLowerCase().trim();
+      if (profile.isAdmin ||
+          pRole.contains('admin') ||
+          pEmail == 'admin@warisankita.my' ||
+          pEmail.startsWith('admin@') ||
+          pEmail.startsWith('clqadmin@') ||
+          pUsername == 'admin' ||
+          pUsername == 'clqadmin') {
+        throw const AuthException(
+          'ADMINISTRATOR ACCOUNT PROTECTED: Administrator credentials cannot be reset via self-service. Contact support.',
+        );
       }
       await client.auth.updateUser(UserAttributes(password: newPassword));
       _recoveryAccessToken = null;
