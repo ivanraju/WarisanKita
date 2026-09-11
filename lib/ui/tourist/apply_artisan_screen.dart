@@ -436,6 +436,24 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
 
   Future<void> _submitApplication() async {
     if (!_formKey.currentState!.validate()) return;
+    final ssm = _ssmController.text.trim();
+    final authVM = context.read<AuthViewModel>();
+
+    if (ssm.isNotEmpty) {
+      final isAvailable = await authVM.isSsmAvailable(ssm);
+      if (!isAvailable) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('⚠️ This SSM registration number is already registered by another artisan studio.'),
+            backgroundColor: Color(0xFFEF4444),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+    }
+
     if (_isSsmAvailable == false) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -506,14 +524,12 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
       _isSubmitting = true;
     });
 
-    final authVM = context.read<AuthViewModel>();
     UserModel? user = authVM.currentUser;
     if (user == null || user.email.trim().isEmpty) {
       user = await authVM.restoreSession();
     }
     if (!mounted) return;
     final studioName = _studioNameController.text.trim();
-    final ssm = _ssmController.text.trim();
     final expText = _experienceController.text.trim();
     final experience = expText.isNotEmpty ? expText : null;
     final bio = _bioController.text.trim();
