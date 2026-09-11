@@ -2754,6 +2754,11 @@ class SupabaseService {
           updatePayload['is_suspended'] = false;
           updatePayload['suspension_reason'] = null;
         }
+        if (resolvedArtisanStatus == 'REJECTED') {
+          updatePayload['rejection_reason'] = rejectionReason;
+        } else if (resolvedArtisanStatus == 'APPROVED') {
+          updatePayload['rejection_reason'] = null;
+        }
         try {
           await client
               .from('users')
