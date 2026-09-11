@@ -926,6 +926,14 @@ class SupabaseService {
     userRecord['studioName'] = studioName;
     userRecord['craftCategory'] = craftCategory;
     userRecord['ssmNumber'] = ssmNumber;
+    userRecord['ssm_number'] = ssmNumber;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final uid = userRecord['id']?.toString() ?? '';
+      if (uid.isNotEmpty) {
+        await prefs.setString('artisan_ssm_$uid', ssmNumber);
+      }
+    } catch (_) {}
     if (experience != null) userRecord['experience'] = experience;
     if (ssmFile != null) userRecord['ssm_file_name'] = ssmFile.name;
     if (certFile != null) userRecord['cert_file_name'] = certFile.name;
@@ -2916,6 +2924,11 @@ class SupabaseService {
             prefs.getInt('artisan_workshop_count_$userId');
         if (savedWorkshops != null) {
           map['workshop_count'] = savedWorkshops;
+        }
+        final savedSsm = prefs.getString('artisan_ssm_$profileId') ??
+            prefs.getString('artisan_ssm_$userId');
+        if (savedSsm != null && savedSsm.isNotEmpty && (map['ssm_number'] == null || map['ssm_number'].toString().isEmpty)) {
+          map['ssm_number'] = savedSsm;
         }
         return ArtisanModel.fromMap(map);
       }).toList();

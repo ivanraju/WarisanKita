@@ -21,6 +21,8 @@ class ArtisanDetailScreen extends StatefulWidget {
   final VoidCallback? onViewQuest;
   final bool isLiveOpen;
   final int? workshopsHosted;
+  final String? ssmNumber;
+  final List<Map<String, dynamic>> documents;
 
   const ArtisanDetailScreen({
     super.key,
@@ -40,6 +42,8 @@ class ArtisanDetailScreen extends StatefulWidget {
     this.onViewQuest,
     this.isLiveOpen = true,
     this.workshopsHosted,
+    this.ssmNumber,
+    this.documents = const [],
   });
 
   @override
@@ -521,23 +525,29 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
 
                   _buildCredentialTile(
                     icon: Icons.verified_rounded,
-                    title: 'Kraftangan Malaysia Certified Master',
-                    subtitle:
-                        'License #KFG-2024-889 • Verified Authentic Master Craftsman',
+                    title: 'Kraftangan Malaysia Accredited Master',
+                    subtitle: widget.documents.any((d) {
+                      final t = d['doc_type']?.toString().toUpperCase() ?? '';
+                      return t == 'KRAFTANGAN_MASTER_CERT' || t == 'KRAFTANGAN_CERT';
+                    })
+                        ? 'Accredited in ${widget.craftCategory} (${widget.state}) • Official Certificate Verified'
+                        : 'Accredited in ${widget.craftCategory} (${widget.state}) • Verified Master Craftsman',
                     isDark: isDark,
                   ),
                   _buildCredentialTile(
                     icon: Icons.business_rounded,
                     title: 'SSM Business Registration',
-                    subtitle:
-                        'Registration #002941-X • Official Registered Heritage Studio',
+                    subtitle: (widget.ssmNumber != null && widget.ssmNumber!.trim().isNotEmpty)
+                        ? 'Registration #${widget.ssmNumber!.trim()} • Official Registered Heritage Studio'
+                        : 'Official Registered Heritage Studio Premise',
                     isDark: isDark,
                   ),
                   _buildCredentialTile(
-                    icon: Icons.military_tech_rounded,
-                    title: 'UNESCO Living Heritage Nominee',
-                    subtitle:
-                        'Recognized for 25+ years preserving Malaccan clay pottery',
+                    icon: Icons.workspace_premium_rounded,
+                    title: 'Heritage Craft Practitioner',
+                    subtitle: widget.experience.trim().isNotEmpty
+                        ? '${widget.experience.trim()} of authentic ${widget.craftCategory} heritage mastery in ${widget.state}'
+                        : 'Dedicated authentic ${widget.craftCategory} practitioner in ${widget.state}',
                     isDark: isDark,
                   ),
 

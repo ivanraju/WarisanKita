@@ -14,6 +14,8 @@ class ArtisanModel {
   final double? latitude;
   final double? longitude;
   final bool isLiveOpen;
+  final String? ssmNumber;
+  final List<Map<String, dynamic>> documents;
 
   ArtisanModel({
     required this.id,
@@ -31,6 +33,8 @@ class ArtisanModel {
     this.latitude,
     this.longitude,
     this.isLiveOpen = true,
+    this.ssmNumber,
+    this.documents = const [],
   });
 
   factory ArtisanModel.fromMap(Map<String, dynamic> map) {
@@ -85,6 +89,18 @@ class ArtisanModel {
         (map['users'] != null ? map['users']['is_live_open'] : null) ??
         true;
 
+    final String? ssm = (map['ssm_number'] ??
+            map['ssmNumber'] ??
+            (map['users'] != null ? map['users']['ssm_number'] : null))
+        ?.toString();
+
+    List<Map<String, dynamic>> docsList = [];
+    if (map['artisan_documents'] != null) {
+      docsList = List<Map<String, dynamic>>.from(map['artisan_documents']);
+    } else if (map['documents'] != null) {
+      docsList = List<Map<String, dynamic>>.from(map['documents']);
+    }
+
     return ArtisanModel(
       id: map['id'] ?? '',
       name: map['studio_name'] ?? 'Unknown Studio',
@@ -106,6 +122,8 @@ class ArtisanModel {
       latitude: lat,
       longitude: lng,
       isLiveOpen: isLive,
+      ssmNumber: ssm,
+      documents: docsList,
     );
   }
 }

@@ -678,6 +678,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
   }
 
   void _previewTouristView() {
+    final user = context.read<AuthViewModel>().currentUser;
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => ArtisanDetailScreen(
@@ -686,14 +687,16 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
           state: _stateController.text.trim().isEmpty ? 'Malaysia' : _stateController.text.trim(),
           bio: _bioController.text.trim(),
           experience: _experienceController.text.trim(),
+          ssmNumber: user?.ssmNumber,
+          documents: user?.artisanDocuments ?? const [],
           imageUrl: _portfolioImages.isNotEmpty
               ? _portfolioImages.first
-              : (context.read<AuthViewModel>().currentUser?.avatarUrl ?? ''),
+              : (user?.avatarUrl ?? ''),
           tags: _toolsAndMaterials,
           address: _workshopAddress,
           latitude: _selectedWorkshopPin?.latitude,
           longitude: _selectedWorkshopPin?.longitude,
-          isLiveOpen: context.read<AuthViewModel>().currentUser?.isLiveOpen ?? true,
+          isLiveOpen: user?.isLiveOpen ?? true,
         ),
       ),
     );

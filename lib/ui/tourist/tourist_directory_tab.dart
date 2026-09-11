@@ -346,6 +346,8 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
       'latitude': a.latitude,
       'longitude': a.longitude,
       'isLiveOpen': a.isLiveOpen,
+      'ssmNumber': a.ssmNumber,
+      'documents': a.documents,
       'artisanModel': a, // pass the model for the detail screen
     }).toList();
 
@@ -1000,6 +1002,8 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                     latitude: (artisan['latitude'] as num?)?.toDouble(),
                     longitude: (artisan['longitude'] as num?)?.toDouble(),
                     isLiveOpen: artisan['isLiveOpen'] ?? true,
+                    ssmNumber: artisan['ssmNumber'] as String?,
+                    documents: (artisan['documents'] as List<Map<String, dynamic>>?) ?? const [],
                   ),
                 ),
               );
@@ -1228,6 +1232,8 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                                 latitude: (artisan['latitude'] as num?)?.toDouble(),
                                 longitude: (artisan['longitude'] as num?)?.toDouble(),
                                 isLiveOpen: artisan['isLiveOpen'] ?? true,
+                                ssmNumber: artisan['ssmNumber'] as String?,
+                                documents: (artisan['documents'] as List<Map<String, dynamic>>?) ?? const [],
                               ),
                             ),
                           );
@@ -1353,6 +1359,8 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                   latitude: latitude,
                   longitude: longitude,
                   isLiveOpen: artisan['isLiveOpen'] ?? true,
+                  ssmNumber: artisan['ssmNumber'] as String?,
+                  documents: (artisan['documents'] as List<Map<String, dynamic>>?) ?? const [],
                 ),
               ),
             );
