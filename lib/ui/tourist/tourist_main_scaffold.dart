@@ -29,6 +29,11 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<AuthViewModel>().refreshCurrentUser();
+      }
+    });
     if (widget.enableLivePolling) {
       _statusPollTimer = Timer.periodic(const Duration(seconds: 4), (_) {
         if (mounted) {

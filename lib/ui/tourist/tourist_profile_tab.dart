@@ -22,7 +22,10 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.read<GamificationViewModel>().loadPassport();
+      if (mounted) {
+        context.read<GamificationViewModel>().loadPassport();
+        context.read<AuthViewModel>().refreshCurrentUser();
+      }
     });
   }
 

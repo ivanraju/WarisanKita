@@ -777,11 +777,21 @@ class ModerationViewModel extends ChangeNotifier {
             roles: const ['Tourist'],
             status: 'ACTIVE',
             artisanStatus: 'REJECTED',
+            studioName: artisan.name.isNotEmpty ? artisan.name : existingUser.studioName,
+            craftCategory: artisan.craftCategory.isNotEmpty ? artisan.craftCategory : existingUser.craftCategory,
+            ssmNumber: (artisan.ssmNumber != null && artisan.ssmNumber!.isNotEmpty)
+                ? artisan.ssmNumber
+                : existingUser.ssmNumber,
           );
         } else {
           _registeredUsers[userIdx] = existingUser.copyWith(
             status: 'REJECTED',
             artisanStatus: 'REJECTED',
+            studioName: artisan.name.isNotEmpty ? artisan.name : existingUser.studioName,
+            craftCategory: artisan.craftCategory.isNotEmpty ? artisan.craftCategory : existingUser.craftCategory,
+            ssmNumber: (artisan.ssmNumber != null && artisan.ssmNumber!.isNotEmpty)
+                ? artisan.ssmNumber
+                : existingUser.ssmNumber,
           );
         }
       }

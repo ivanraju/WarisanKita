@@ -511,28 +511,113 @@ class SupabaseService {
       }
     }
 
-    if (row['experience'] == null && _userStore.containsKey(authUser.email?.toLowerCase())) {
-      final cached = _userStore[authUser.email!.toLowerCase()];
+    final cleanEmail = authUser.email?.toLowerCase() ?? '';
+
+    // Fallback for artisan_status, studio_name, craft_category, ssm_number, and experience
+    // when user is a Tourist who applied for artisan role (or remote query missed it).
+    if (row['artisan_status'] == null || (row['artisan_status'] as String).isEmpty) {
+      final meta = authUser.userMetadata;
+      if (meta != null && meta['artisan_status'] != null && meta['artisan_status'].toString().isNotEmpty) {
+        row['artisan_status'] = meta['artisan_status'].toString().toUpperCase();
+      }
+      if ((row['artisan_status'] == null || (row['artisan_status'] as String).isEmpty) && _userStore.containsKey(cleanEmail)) {
+        final cached = _userStore[cleanEmail];
+        final st = cached?['artisan_status'] ?? cached?['artisanStatus'];
+        if (st != null && st.toString().isNotEmpty) {
+          row['artisan_status'] = st.toString().toUpperCase();
+        }
+      }
+    }
+
+    if (row['studio_name'] == null || (row['studio_name'] as String).isEmpty) {
+      final meta = authUser.userMetadata;
+      if (meta != null && meta['studio_name'] != null && meta['studio_name'].toString().isNotEmpty) {
+        row['studio_name'] = meta['studio_name'];
+      }
+      if ((row['studio_name'] == null || (row['studio_name'] as String).isEmpty) && _userStore.containsKey(cleanEmail)) {
+        final cached = _userStore[cleanEmail];
+        final sn = cached?['studio_name'] ?? cached?['studioName'];
+        if (sn != null && sn.toString().isNotEmpty) {
+          row['studio_name'] = sn;
+        }
+      }
+    }
+
+    if (row['craft_category'] == null || (row['craft_category'] as String).isEmpty) {
+      final meta = authUser.userMetadata;
+      if (meta != null && meta['craft_category'] != null && meta['craft_category'].toString().isNotEmpty) {
+        row['craft_category'] = meta['craft_category'];
+      }
+      if ((row['craft_category'] == null || (row['craft_category'] as String).isEmpty) && _userStore.containsKey(cleanEmail)) {
+        final cached = _userStore[cleanEmail];
+        final cc = cached?['craft_category'] ?? cached?['craftCategory'];
+        if (cc != null && cc.toString().isNotEmpty) {
+          row['craft_category'] = cc;
+        }
+      }
+    }
+
+    if (row['ssm_number'] == null || (row['ssm_number'] as String).isEmpty) {
+      final meta = authUser.userMetadata;
+      if (meta != null && meta['ssm_number'] != null && meta['ssm_number'].toString().isNotEmpty) {
+        row['ssm_number'] = meta['ssm_number'];
+      }
+      if ((row['ssm_number'] == null || (row['ssm_number'] as String).isEmpty) && _userStore.containsKey(cleanEmail)) {
+        final cached = _userStore[cleanEmail];
+        final ssm = cached?['ssm_number'] ?? cached?['ssmNumber'];
+        if (ssm != null && ssm.toString().isNotEmpty) {
+          row['ssm_number'] = ssm;
+        }
+      }
+    }
+
+    if (row['experience'] == null && _userStore.containsKey(cleanEmail)) {
+      final cached = _userStore[cleanEmail];
       if (cached?['experience'] != null && cached!['experience'].toString().trim().isNotEmpty) {
         row['experience'] = cached['experience'].toString().trim();
       }
     }
-    if (row['experience'] == null) {
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        final rawUser = prefs.getString(_keyAuthUser);
-        if (rawUser != null && rawUser.isNotEmpty) {
-          final cachedUser = jsonDecode(rawUser) as Map<String, dynamic>;
-          final cachedEmail = cachedUser['email']?.toString().toLowerCase();
-          final cachedId = cachedUser['id']?.toString();
-          if ((cachedId == authUser.id || cachedEmail == authUser.email?.toLowerCase()) &&
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final rawUser = prefs.getString(_keyAuthUser);
+      if (rawUser != null && rawUser.isNotEmpty) {
+        final cachedUser = jsonDecode(rawUser) as Map<String, dynamic>;
+        final cachedEmail = cachedUser['email']?.toString().toLowerCase();
+        final cachedId = cachedUser['id']?.toString();
+        if (cachedId == authUser.id || cachedEmail == cleanEmail) {
+          if (row['artisan_status'] == null || (row['artisan_status'] as String).isEmpty) {
+            final st = cachedUser['artisan_status'] ?? cachedUser['artisanStatus'];
+            if (st != null && st.toString().isNotEmpty) {
+              row['artisan_status'] = st.toString().toUpperCase();
+            }
+          }
+          if (row['studio_name'] == null || (row['studio_name'] as String).isEmpty) {
+            final sn = cachedUser['studio_name'] ?? cachedUser['studioName'];
+            if (sn != null && sn.toString().isNotEmpty) {
+              row['studio_name'] = sn;
+            }
+          }
+          if (row['craft_category'] == null || (row['craft_category'] as String).isEmpty) {
+            final cc = cachedUser['craft_category'] ?? cachedUser['craftCategory'];
+            if (cc != null && cc.toString().isNotEmpty) {
+              row['craft_category'] = cc;
+            }
+          }
+          if (row['ssm_number'] == null || (row['ssm_number'] as String).isEmpty) {
+            final ssm = cachedUser['ssm_number'] ?? cachedUser['ssmNumber'];
+            if (ssm != null && ssm.toString().isNotEmpty) {
+              row['ssm_number'] = ssm;
+            }
+          }
+          if (row['experience'] == null &&
               cachedUser['experience'] != null &&
               cachedUser['experience'].toString().trim().isNotEmpty) {
             row['experience'] = cachedUser['experience'].toString().trim();
           }
         }
-      } catch (_) {}
-    }
+      }
+    } catch (_) {}
 
     var profile = UserModel.fromMap(row);
     profile = await _enrichUserWithPendingRelocation(profile);
@@ -991,15 +1076,30 @@ class SupabaseService {
             '00000000-0000-4000-8000-000000000001';
 
         if (existing != null) {
-          await client
-              .from('users')
-              .update({
-                'status': 'PENDING_APPROVAL',
-                'role': 'Artisan & Tourist',
-                if (phone != null) 'phone_number': phone,
-                'updated_at': DateTime.now().toIso8601String(),
-              })
-              .ilike('email', cleanEmail);
+          try {
+            await client
+                .from('users')
+                .update({
+                  'status': 'PENDING_APPROVAL',
+                  'role': 'Artisan & Tourist',
+                  'studio_name': studioName,
+                  'craft_category': craftCategory,
+                  'ssm_number': ssmNumber,
+                  if (phone != null) 'phone_number': phone,
+                  'updated_at': DateTime.now().toIso8601String(),
+                })
+                .ilike('email', cleanEmail);
+          } catch (_) {
+            await client
+                .from('users')
+                .update({
+                  'status': 'PENDING_APPROVAL',
+                  'role': 'Artisan & Tourist',
+                  if (phone != null) 'phone_number': phone,
+                  'updated_at': DateTime.now().toIso8601String(),
+                })
+                .ilike('email', cleanEmail);
+          }
         } else {
           await client.from('users').insert({
             'id': userId,
@@ -1208,7 +1308,10 @@ class SupabaseService {
       }
     }
 
-    return UserModel.fromMap(userRecord);
+    final profile = UserModel.fromMap(userRecord);
+    _userStore[cleanEmail] = userRecord;
+    await _saveAuthSession(profile);
+    return profile;
   }
 
   Future<UserModel> updateUserProfile({
@@ -2313,13 +2416,27 @@ class SupabaseService {
           if (newRole.isNotEmpty) {
             userUpdate['role'] = newRole;
           }
+          final resolvedUserArtisanStatus = (newStatus.toUpperCase() == 'ACTIVE' ||
+                  newStatus.toUpperCase() == 'APPROVED')
+              ? 'APPROVED'
+              : newStatus;
           try {
             await client
                 .from('users')
-                .update(userUpdate)
+                .update({
+                  ...userUpdate,
+                  'artisan_status': resolvedUserArtisanStatus,
+                })
                 .ilike('email', cleanEmail);
-          } catch (err) {
-            debugPrint('Direct user table active sync note: $err');
+          } catch (_) {
+            try {
+              await client
+                  .from('users')
+                  .update(userUpdate)
+                  .ilike('email', cleanEmail);
+            } catch (err) {
+              debugPrint('Direct user table active sync note: $err');
+            }
           }
         }
 
@@ -2340,13 +2457,27 @@ class SupabaseService {
                   newStatus.toUpperCase() == 'APPROVED')
               ? 'APPROVED'
               : newStatus;
-          await client
-              .from('artisan_profiles')
-              .update({
-                'status': artisanStatus,
-                'updated_at': DateTime.now().toIso8601String(),
-              })
-              .eq('user_id', userRow['id']);
+          if (artisanProfileBeforeUpdate != null) {
+            await client
+                .from('artisan_profiles')
+                .update({
+                  'status': artisanStatus,
+                  'updated_at': DateTime.now().toIso8601String(),
+                })
+                .eq('user_id', userRow['id']);
+          } else {
+            final cached = _userStore[cleanEmail];
+            await client.from('artisan_profiles').insert({
+              'user_id': userRow['id'],
+              'status': artisanStatus,
+              'studio_name': cached?['studioName'] ?? cached?['studio_name'] ?? 'Heritage Studio',
+              'craft_category': cached?['craftCategory'] ?? cached?['craft_category'] ?? 'Traditional Craft',
+              if (cached?['ssmNumber'] != null || cached?['ssm_number'] != null)
+                'ssm_number': cached?['ssmNumber'] ?? cached?['ssm_number'],
+              'created_at': DateTime.now().toIso8601String(),
+              'updated_at': DateTime.now().toIso8601String(),
+            });
+          }
 
           // The RPC above may already have changed the profile to APPROVED.
           // Always reconcile the quest and its system tasks when approving so
