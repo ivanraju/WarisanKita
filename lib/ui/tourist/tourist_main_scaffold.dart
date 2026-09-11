@@ -7,6 +7,7 @@ import 'package:warisan_kita/ui/matchmaker/tourist_matchmaker_view.dart';
 import 'package:warisan_kita/ui/core/live_forum_tab.dart';
 import 'package:warisan_kita/ui/tourist/tourist_directory_tab.dart';
 import 'package:warisan_kita/ui/tourist/tourist_profile_tab.dart';
+import 'package:warisan_kita/ui/artisan/artisan_application_pending_screen.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/gamification_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
@@ -76,18 +77,108 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
     final langVM = context.watch<LanguageViewModel>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    final isArtisanRejected = user.artisanStatus?.toUpperCase() == 'REJECTED' &&
+        user.isApprovedArtisan != true;
+
     return Scaffold(
       backgroundColor: isDark
           ? const Color(0xFF041412)
           : const Color(0xFFF8F9FA),
       extendBody: true,
-      body: IndexedStack(
-        index: _currentIndex,
+      body: Column(
         children: [
-          const TouristDirectoryTab(),
-          TouristMatchmakerView(isActive: _currentIndex == 1),
-          const LiveForumTab(),
-          const TouristProfileTab(),
+          if (isArtisanRejected)
+            Material(
+              color: isDark ? const Color(0xFF2A1215) : const Color(0xFFFEF2F2),
+              elevation: 2,
+              child: SafeArea(
+                bottom: false,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(
+                        color: isDark ? const Color(0xFF5C1D24) : const Color(0xFFFCA5A5),
+                        width: 1,
+                      ),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFEF4444),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.cancel_outlined, color: Colors.white, size: 16),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Artisan Application Not Approved',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? const Color(0xFFFCA5A5) : const Color(0xFF991B1B),
+                              ),
+                            ),
+                            Text(
+                              'Kraftangan review required document updates.',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11,
+                                color: isDark ? Colors.white70 : const Color(0xFF7F1D1D),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      FilledButton(
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => ArtisanApplicationPendingScreen(
+                                studioName: user.studioName ?? '',
+                                craftCategory: user.craftCategory ?? '',
+                                ssmNumber: user.ssmNumber ?? '',
+                              ),
+                            ),
+                          );
+                        },
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFFEF4444),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        child: Text(
+                          'Review',
+                          style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          Expanded(
+            child: IndexedStack(
+              index: _currentIndex,
+              children: [
+                const TouristDirectoryTab(),
+                TouristMatchmakerView(isActive: _currentIndex == 1),
+                const LiveForumTab(),
+                const TouristProfileTab(),
+              ],
+            ),
+          ),
         ],
       ),
       bottomNavigationBar: SafeArea(
