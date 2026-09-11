@@ -1,11 +1,18 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:warisan_kita/data/repositories/artisan_repository.dart';
 import 'package:warisan_kita/data/repositories/gamification_repository.dart';
+import 'package:warisan_kita/data/repositories/location_repository.dart';
 import 'package:warisan_kita/data/services/supabase_service.dart';
 import 'package:warisan_kita/domain/models/nearby_artisan.dart';
 import 'package:warisan_kita/domain/models/workshop_location.dart';
 import 'package:warisan_kita/domain/models/workshop_quest_journey.dart';
 import 'package:warisan_kita/ui/matchmaker/widgets/artisan_match_card.dart';
+import 'package:warisan_kita/ui/matchmaker/widgets/heritage_map_chrome.dart';
+import 'package:warisan_kita/viewmodels/map_viewmodel.dart';
 
 class _ReadOnlyJourneyService extends SupabaseService {
   int readCount = 0;
@@ -60,8 +67,141 @@ class _ReadOnlyJourneyService extends SupabaseService {
   };
 }
 
+class _MapRefreshService extends _ReadOnlyJourneyService {
+  List<Map<String, dynamic>> workshopRows = [_workshopRow('studio-a', 'Old')];
+  Completer<void>? workshopGate;
+  int workshopReadCount = 0;
+
+  @override
+  Future<List<Map<String, dynamic>>> fetchWorkshopLocations() async {
+    workshopReadCount++;
+    final gate = workshopGate;
+    if (gate != null) {
+      await gate.future;
+      workshopGate = null;
+    }
+    return workshopRows.map(Map<String, dynamic>.from).toList();
+  }
+
+  @override
+  Stream<List<Map<String, dynamic>>> watchWorkshopLocations() =>
+      const Stream.empty();
+
+  static Map<String, dynamic> _workshopRow(String id, String suffix) => {
+    'id': id,
+    'studio_name': 'Studio $suffix',
+    'craft_category': 'Woodwork',
+    'address': 'Heritage Street',
+    'state': 'Melaka',
+    'latitude': 2.2,
+    'longitude': 102.2,
+  };
+}
+
+Future<void> _waitFor(bool Function() predicate) async {
+  for (var attempt = 0; attempt < 100; attempt++) {
+    if (predicate()) return;
+    await Future<void>.delayed(const Duration(milliseconds: 1));
+  }
+  fail('Timed out while waiting for asynchronous map state.');
+}
+
 void main() {
   group('Tourist map journey data', () {
+    test('map menu is removed and only the independent refresh remains', () {
+      final viewSource = File(
+        'lib/ui/matchmaker/tourist_matchmaker_view.dart',
+      ).readAsStringSync();
+      final controlsSource = File(
+        'lib/ui/matchmaker/widgets/heritage_map_chrome.dart',
+      ).readAsStringSync();
+
+      expect(viewSource, isNot(contains('Mood & craft preferences')));
+      expect(viewSource, isNot(contains('TranslationLanguageDialog')));
+      expect(viewSource, isNot(contains('DailyMoodCheckinDialog')));
+      expect(viewSource, isNot(contains('_showMapSettings')));
+      expect(controlsSource, isNot(contains('map-settings')));
+      expect(controlsSource, contains('map-refresh-studios'));
+      expect(controlsSource, contains("label: 'Refresh studios'"));
+    });
+
+    testWidgets('refresh control disables and spins while busy', (
+      tester,
+    ) async {
+      var refreshCalls = 0;
+
+      Widget controls({required bool refreshing}) => MaterialApp(
+        home: Scaffold(
+          body: HeritageMapControls(
+            translate: (value) => value,
+            isRefreshing: refreshing,
+            onRefresh: refreshing ? null : () => refreshCalls++,
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(controls(refreshing: false));
+      expect(find.byKey(const Key('map-refresh-studios')), findsOneWidget);
+      expect(find.byTooltip('Refresh studios'), findsOneWidget);
+      expect(find.byIcon(Icons.tune_rounded), findsNothing);
+      await tester.tap(find.byKey(const Key('map-refresh-studios')));
+      expect(refreshCalls, 1);
+
+      await tester.pumpWidget(controls(refreshing: true));
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      await tester.tap(find.byKey(const Key('map-refresh-studios')));
+      expect(refreshCalls, 1);
+    });
+
+    test(
+      'refresh is single-flight and reconciles the selected workshop',
+      () async {
+        final service = _MapRefreshService();
+        final viewModel = MapViewModel(
+          artisanRepository: ArtisanRepository(service: service),
+          gamificationRepository: GamificationRepository(service: service),
+          locationRepository: LocationRepository(),
+        );
+        addTearDown(viewModel.dispose);
+
+        await _waitFor(
+          () => !viewModel.isLoading && !viewModel.isLoadingJourneys,
+        );
+        viewModel.focusWorkshop(viewModel.workshops.single);
+
+        service.workshopRows = [
+          _MapRefreshService._workshopRow('studio-a', 'Updated'),
+        ];
+        final gate = Completer<void>();
+        service.workshopGate = gate;
+        final firstRefresh = viewModel.refreshWorkshops();
+
+        expect(viewModel.isRefreshing, isTrue);
+        expect(await viewModel.refreshWorkshops(), isFalse);
+        expect(service.workshopReadCount, 2);
+
+        gate.complete();
+        expect(await firstRefresh, isTrue);
+        expect(viewModel.isRefreshing, isFalse);
+        expect(viewModel.selectedWorkshop?.id, 'studio-a');
+        expect(viewModel.selectedWorkshop?.name, 'Studio Updated');
+
+        service.workshopRows = [];
+        expect(await viewModel.refreshWorkshops(), isTrue);
+        expect(viewModel.selectedWorkshop, isNull);
+      },
+    );
+
+    test('dark heritage sheet keeps a visible filtered motif', () {
+      final source = File(
+        'lib/ui/matchmaker/tourist_matchmaker_view.dart',
+      ).readAsStringSync();
+
+      expect(source, contains('opacity: isDark ? 0.34 : 0.14'));
+      expect(source, contains('Color(0xFF286A5E)'));
+      expect(source, contains('BlendMode.modulate'));
+    });
+
     test(
       'maps available, active, and completed states from persisted data',
       () async {

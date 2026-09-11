@@ -48,7 +48,7 @@ class GeofenceUnlockedDialog extends StatelessWidget {
                           color: Color(0xFFD97706),
                           blurRadius: 18,
                           offset: Offset(0, 4),
-                        )
+                        ),
                       ],
                     ),
                     child: const Icon(
@@ -64,7 +64,10 @@ class GeofenceUnlockedDialog extends StatelessWidget {
 
               // Tagline Header
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFF004D40).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
@@ -117,9 +120,14 @@ class GeofenceUnlockedDialog extends StatelessWidget {
                       },
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFF004D40),
-                        side: const BorderSide(color: Color(0xFF004D40), width: 1.5),
+                        side: const BorderSide(
+                          color: Color(0xFF004D40),
+                          width: 1.5,
+                        ),
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                       ),
                       child: Text(
                         'View Profile',
@@ -141,7 +149,9 @@ class GeofenceUnlockedDialog extends StatelessWidget {
                         backgroundColor: const Color(0xFF004D40),
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                       ),
                       child: Text(
                         'Claim Badge',

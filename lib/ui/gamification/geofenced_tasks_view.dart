@@ -29,7 +29,8 @@ class GeofencedTasksScreen extends StatelessWidget {
                   context,
                   title: 'Melaka Pottery Hub',
                   distance: '1.2km away',
-                  image: 'https://images.unsplash.com/photo-1565193998771-e64b81bd957d?w=400',
+                  image:
+                      'https://images.unsplash.com/photo-1565193998771-e64b81bd957d?w=400',
                   difficulty: 'Medium',
                   xp: '150 XP',
                   isLocked: true,
@@ -39,7 +40,8 @@ class GeofencedTasksScreen extends StatelessWidget {
                   context,
                   title: 'Heritage Blacksmith',
                   distance: '4.5km away',
-                  image: 'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?w=400',
+                  image:
+                      'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?w=400',
                   difficulty: 'Hard',
                   xp: '300 XP',
                   isLocked: true,
@@ -92,7 +94,7 @@ class GeofencedTasksScreen extends StatelessWidget {
             color: Colors.black.withOpacity(0.05),
             blurRadius: 30,
             offset: const Offset(0, 15),
-          )
+          ),
         ],
       ),
       child: Column(
@@ -101,7 +103,9 @@ class GeofencedTasksScreen extends StatelessWidget {
           Stack(
             children: [
               ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(32),
+                ),
                 child: Image.network(
                   'https://images.unsplash.com/photo-1605721911519-3dfeb3be25e7?w=600',
                   height: 180,
@@ -113,11 +117,16 @@ class GeofencedTasksScreen extends StatelessWidget {
                 top: 16,
                 left: 16,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFD54F),
                     borderRadius: BorderRadius.circular(16),
-                    boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10)],
+                    boxShadow: [
+                      BoxShadow(color: Colors.black12, blurRadius: 10),
+                    ],
                   ),
                   child: Text(
                     'ACTIVE NOW',
@@ -139,12 +148,19 @@ class GeofencedTasksScreen extends StatelessWidget {
               children: [
                 Text(
                   'Zaid Woodworks Studio',
-                  style: GoogleFonts.dmSerifDisplay(fontSize: 24, color: const Color(0xFF004D40)),
+                  style: GoogleFonts.dmSerifDisplay(
+                    fontSize: 24,
+                    color: const Color(0xFF004D40),
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    const Icon(Icons.location_on, size: 14, color: Color(0xFFFF7043)),
+                    const Icon(
+                      Icons.location_on,
+                      size: 14,
+                      color: Color(0xFFFF7043),
+                    ),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
@@ -179,9 +195,13 @@ class GeofencedTasksScreen extends StatelessWidget {
             height: 28,
             width: 28,
             decoration: BoxDecoration(
-              color: task.isCompleted ? const Color(0xFF2E7D32) : Colors.transparent,
+              color: task.isCompleted
+                  ? const Color(0xFF2E7D32)
+                  : Colors.transparent,
               border: Border.all(
-                color: task.isCompleted ? const Color(0xFF2E7D32) : Colors.black12,
+                color: task.isCompleted
+                    ? const Color(0xFF2E7D32)
+                    : Colors.black12,
                 width: 2,
               ),
               shape: BoxShape.circle,
@@ -199,7 +219,9 @@ class GeofencedTasksScreen extends StatelessWidget {
                   task.title,
                   style: GoogleFonts.plusJakartaSans(
                     color: task.isCompleted ? Colors.black26 : Colors.black87,
-                    decoration: task.isCompleted ? TextDecoration.lineThrough : null,
+                    decoration: task.isCompleted
+                        ? TextDecoration.lineThrough
+                        : null,
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
                   ),
@@ -207,7 +229,11 @@ class GeofencedTasksScreen extends StatelessWidget {
                 if (!task.isCompleted)
                   Text(
                     'REWARD: ${task.xpReward}',
-                    style: const TextStyle(fontSize: 10, color: Color(0xFFFFD54F), fontWeight: FontWeight.w900),
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: Color(0xFFFFD54F),
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
               ],
             ),
@@ -222,21 +248,36 @@ class GeofencedTasksScreen extends StatelessWidget {
                 ),
               ),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFF004D40),
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
-                    BoxShadow(color: const Color(0xFF004D40).withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 4))
+                    BoxShadow(
+                      color: const Color(0xFF004D40).withOpacity(0.2),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
                   ],
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 16),
+                    const Icon(
+                      Icons.qr_code_scanner_rounded,
+                      color: Colors.white,
+                      size: 16,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       'SCAN',
-                      style: GoogleFonts.plusJakartaSans(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 11),
+                      style: GoogleFonts.plusJakartaSans(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 11,
+                      ),
                     ),
                   ],
                 ),
@@ -267,38 +308,67 @@ class GeofencedTasksScreen extends StatelessWidget {
               color: Colors.black.withOpacity(0.03),
               blurRadius: 15,
               offset: const Offset(0, 8),
-            )
+            ),
           ],
         ),
         child: ListTile(
           contentPadding: const EdgeInsets.all(16),
           leading: ClipRRect(
             borderRadius: BorderRadius.circular(20),
-            child: Image.network(image, width: 80, height: 80, fit: BoxFit.cover),
+            child: Image.network(
+              image,
+              width: 80,
+              height: 80,
+              fit: BoxFit.cover,
+            ),
           ),
-          title: Text(title, style: GoogleFonts.dmSerifDisplay(fontSize: 18, color: const Color(0xFF004D40))),
+          title: Text(
+            title,
+            style: GoogleFonts.dmSerifDisplay(
+              fontSize: 18,
+              color: const Color(0xFF004D40),
+            ),
+          ),
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 6),
-              Text(distance, style: TextStyle(fontSize: 12, color: Colors.grey.shade400, fontWeight: FontWeight.bold)),
+              Text(
+                distance,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade400,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               const SizedBox(height: 12),
               Row(
                 children: [
                   _buildQuestBadge(difficulty, const Color(0xFF004D40)),
                   const SizedBox(width: 8),
-                  _buildQuestBadge(xp, const Color(0xFFFFD54F), textColor: const Color(0xFF004D40)),
+                  _buildQuestBadge(
+                    xp,
+                    const Color(0xFFFFD54F),
+                    textColor: const Color(0xFF004D40),
+                  ),
                 ],
               ),
             ],
           ),
-          trailing: Icon(isLocked ? Icons.lock_outline_rounded : Icons.chevron_right_rounded, color: Colors.black12),
+          trailing: Icon(
+            isLocked ? Icons.lock_outline_rounded : Icons.chevron_right_rounded,
+            color: Colors.black12,
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildQuestBadge(String label, Color color, {Color textColor = Colors.white}) {
+  Widget _buildQuestBadge(
+    String label,
+    Color color, {
+    Color textColor = Colors.white,
+  }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
@@ -307,7 +377,12 @@ class GeofencedTasksScreen extends StatelessWidget {
       ),
       child: Text(
         label.toUpperCase(),
-        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: color, letterSpacing: 0.5),
+        style: TextStyle(
+          fontSize: 9,
+          fontWeight: FontWeight.w900,
+          color: color,
+          letterSpacing: 0.5,
+        ),
       ),
     );
   }

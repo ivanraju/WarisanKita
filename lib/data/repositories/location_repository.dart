@@ -4,26 +4,23 @@ import 'package:warisan_kita/domain/models/user_location.dart';
 class LocationRepository {
   final LocationService _service;
 
-  LocationRepository({
-    LocationService? service,
-  }) : _service =
-      service ?? const LocationService();
+  LocationRepository({LocationService? service})
+    : _service = service ?? const LocationService();
 
   Future<void> requestLocationAccess() {
     return _service.ensureLocationPermission();
   }
 
   Stream<UserLocation> watchLocation() {
-    return _service.getPositionStream().map(
-          (position) {
-        return UserLocation(
-          latitude: position.latitude,
-          longitude: position.longitude,
-          accuracy: position.accuracy,
-          heading: position.heading,
-        );
-      },
-    );
+    return _service.getPositionStream().map((position) {
+      return UserLocation(
+        latitude: position.latitude,
+        longitude: position.longitude,
+        accuracy: position.accuracy,
+        heading: position.heading,
+        recordedAt: position.timestamp,
+      );
+    });
   }
 
   Stream<double> watchHeading() {
@@ -31,14 +28,14 @@ class LocationRepository {
   }
 
   Future<UserLocation> getCurrentLocation() async {
-    final position =
-    await _service.getCurrentPosition();
+    final position = await _service.getCurrentPosition();
 
     return UserLocation(
       latitude: position.latitude,
       longitude: position.longitude,
       accuracy: position.accuracy,
       heading: position.heading,
+      recordedAt: position.timestamp,
     );
   }
 

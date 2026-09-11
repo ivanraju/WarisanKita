@@ -386,7 +386,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
         .where((entry) => viewModel.isBonusTask(entry.$2))
         .toList(growable: false);
     return _buildSectionCard(
-      title: 'Heritage Journey',
+      title: 'Heritage Quest',
       icon: Icons.auto_awesome_rounded,
       child: tasks.isEmpty
           ? Text(
@@ -422,7 +422,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
                   ),
                   const SizedBox(height: 5),
                   Text(
-                    'Optional additions that do not change your original journey progress.',
+                    'Optional additions that do not change your original quest progress.',
                     style: GoogleFonts.plusJakartaSans(
                       color: _secondaryText,
                       fontSize: 10,
@@ -550,7 +550,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
               if (isBonus) ...[
                 const SizedBox(height: 6),
                 Text(
-                  'Added after you began this journey',
+                  'Added after you began this quest',
                   style: GoogleFonts.plusJakartaSans(
                     color: _isDark
                         ? const Color(0xFFFFD98A)
@@ -737,7 +737,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
             ),
             const SizedBox(height: 8),
             Text(
-              'You completed every required activity for this heritage journey.',
+              'You completed every required activity for this heritage quest.',
               textAlign: TextAlign.center,
               style: GoogleFonts.plusJakartaSans(
                 color: const Color(0xFF475569),
@@ -1020,7 +1020,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
                     : canResume
                     ? () => _resumeQuest(context, viewModel)
                     : canStart
-                    ? () => _startQuest(context, viewModel, distance)
+                    ? () => _startQuest(context, viewModel)
                     : null,
                 style: FilledButton.styleFrom(
                   backgroundColor: canResume
@@ -1059,13 +1059,13 @@ class _QuestDetailViewState extends State<QuestDetailView>
                       : isCompleted
                       ? 'Quest Completed'
                       : isBlockedByAnotherQuest
-                      ? 'Another Journey Active'
+                      ? 'Another Quest Active'
                       : isOutOfRange
                       ? 'Return to Quest Area'
                       : canResume
                       ? 'Resume Quest'
                       : isInProgress
-                      ? 'Continue Journey'
+                      ? 'Quest In Progress'
                       : isOutsideBeforeStart
                       ? 'Move Within Quest Zone'
                       : 'Start Quest',
@@ -1085,7 +1085,26 @@ class _QuestDetailViewState extends State<QuestDetailView>
     BuildContext context,
     GamificationViewModel viewModel,
   ) async {
-    final resumed = await viewModel.resumeSelectedQuest();
+    final location = await context
+        .read<MapViewModel>()
+        .validateFreshQuestLocation(
+          workshop: workshop,
+          radiusMeters: quest.geofenceRadiusMeters.toDouble(),
+        );
+    if (!context.mounted) return;
+    if (!location.isValid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(location.message ?? 'Unable to verify your location.'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: const Color(0xFFB42318),
+        ),
+      );
+      return;
+    }
+    final resumed = await viewModel.resumeSelectedQuest(
+      verifiedLocation: location,
+    );
     if (!context.mounted || !resumed) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -1099,38 +1118,21 @@ class _QuestDetailViewState extends State<QuestDetailView>
   Future<void> _startQuest(
     BuildContext context,
     GamificationViewModel viewModel,
-    double? currentDistance,
   ) async {
     if (!viewModel.canStartQuest(quest.id)) {
       await _showActiveQuestConflict(context, viewModel);
       return;
     }
-    var distance = currentDistance;
     final mapViewModel = context.read<MapViewModel>();
-    if (distance == null) {
-      await mapViewModel.startLocationTracking();
-      if (!context.mounted) return;
-      distance = mapViewModel.getDistanceToWorkshop(workshop);
-    }
-
-    if (distance == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Current location is unavailable. Enable location access and try again.',
-          ),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
-
-    if (distance > quest.geofenceRadiusMeters) {
+    final location = await mapViewModel.validateFreshQuestLocation(
+      workshop: workshop,
+      radiusMeters: quest.geofenceRadiusMeters.toDouble(),
+    );
+    if (!context.mounted) return;
+    if (!location.isValid) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Move within ${quest.geofenceRadiusMeters} m of the workshop to start this quest.',
-          ),
+          content: Text(location.message ?? 'Unable to verify your location.'),
           behavior: SnackBarBehavior.floating,
           backgroundColor: const Color(0xFFB42318),
         ),
@@ -1139,7 +1141,9 @@ class _QuestDetailViewState extends State<QuestDetailView>
     }
 
     viewModel.clearStartQuestError();
-    final started = await viewModel.startSelectedQuest();
+    final started = await viewModel.startSelectedQuest(
+      verifiedLocation: location,
+    );
     if (!context.mounted) return;
     if (started) {
       ScaffoldMessenger.of(context).showSnackBar(

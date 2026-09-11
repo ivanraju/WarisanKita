@@ -55,11 +55,19 @@ class SettingsScreen extends StatelessWidget {
             child: OutlinedButton.icon(
               onPressed: () => _showLogoutDialog(context),
               icon: const Icon(Icons.logout, color: Colors.red),
-              label: const Text('LOGOUT', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+              label: const Text(
+                'LOGOUT',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               style: OutlinedButton.styleFrom(
                 side: BorderSide(color: Colors.red.withOpacity(0.5)),
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ),
@@ -85,7 +93,9 @@ class SettingsScreen extends StatelessWidget {
     return ListTile(
       leading: Icon(icon, color: const Color(0xFF5D4037)),
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
-      subtitle: subtitle != null ? Text(subtitle, style: const TextStyle(fontSize: 12)) : null,
+      subtitle: subtitle != null
+          ? Text(subtitle, style: const TextStyle(fontSize: 12))
+          : null,
       trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
       onTap: onTap,
     );
@@ -98,7 +108,9 @@ class SettingsScreen extends StatelessWidget {
       context: context,
       builder: (dialogCtx) => AlertDialog(
         title: const Text('Logout', style: TextStyle(fontFamily: 'Serif')),
-        content: const Text('Are you sure you want to sign out of WarisanKita?'),
+        content: const Text(
+          'Are you sure you want to sign out of WarisanKita?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogCtx),
@@ -110,7 +122,10 @@ class SettingsScreen extends StatelessWidget {
               await authVM.logout();
               nav.pushNamedAndRemoveUntil('/login', (route) => false);
             },
-            child: const Text('LOGOUT', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+            child: const Text(
+              'LOGOUT',
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),

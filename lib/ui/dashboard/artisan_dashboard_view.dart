@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
+
 class ArtisanDashboardScreen extends StatelessWidget {
   const ArtisanDashboardScreen({super.key});
 
@@ -52,7 +53,10 @@ class ArtisanDashboardScreen extends StatelessWidget {
           onPressed: () async {
             await context.read<AuthViewModel>().logout();
             if (!context.mounted) return;
-            Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil('/login', (route) => false);
+            Navigator.of(
+              context,
+              rootNavigator: true,
+            ).pushNamedAndRemoveUntil('/login', (route) => false);
           },
         ),
         const SizedBox(width: 8),
@@ -76,16 +80,24 @@ class ArtisanDashboardScreen extends StatelessWidget {
                 children: [
                   Container(
                     padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
                     child: const CircleAvatar(
                       radius: 44,
-                      backgroundImage: NetworkImage('https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200'),
+                      backgroundImage: NetworkImage(
+                        'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200',
+                      ),
                     ),
                   ),
                   const SizedBox(height: 12),
                   Text(
                     'Ahmad Fauzi',
-                    style: GoogleFonts.dmSerifDisplay(color: Colors.white, fontSize: 26),
+                    style: GoogleFonts.dmSerifDisplay(
+                      color: Colors.white,
+                      fontSize: 26,
+                    ),
                   ),
                   Text(
                     'MASTER BATIK ARTIST',
@@ -108,21 +120,39 @@ class ArtisanDashboardScreen extends StatelessWidget {
   Widget _buildSectionHeader(String title) {
     return Text(
       title,
-      style: GoogleFonts.dmSerifDisplay(fontSize: 22, color: const Color(0xFF004D40)),
+      style: GoogleFonts.dmSerifDisplay(
+        fontSize: 22,
+        color: const Color(0xFF004D40),
+      ),
     );
   }
 
   Widget _buildStatsGrid() {
     return Row(
       children: [
-        _buildStatCard('VISITORS', '1.2k', Icons.group_rounded, const Color(0xFF00796B)),
+        _buildStatCard(
+          'VISITORS',
+          '1.2k',
+          Icons.group_rounded,
+          const Color(0xFF00796B),
+        ),
         const SizedBox(width: 16),
-        _buildStatCard('SAVED', '452', Icons.bookmark_rounded, const Color(0xFFFF7043)),
+        _buildStatCard(
+          'SAVED',
+          '452',
+          Icons.bookmark_rounded,
+          const Color(0xFFFF7043),
+        ),
       ],
     );
   }
 
-  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(24),
@@ -130,7 +160,11 @@ class ArtisanDashboardScreen extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(32),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 20, offset: const Offset(0, 10))
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
           ],
         ),
         child: Column(
@@ -138,12 +172,29 @@ class ArtisanDashboardScreen extends StatelessWidget {
           children: [
             Container(
               padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(16)),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(16),
+              ),
               child: Icon(icon, color: color, size: 20),
             ),
             const SizedBox(height: 20),
-            Text(value, style: GoogleFonts.dmSerifDisplay(fontSize: 28, color: const Color(0xFF004D40))),
-            Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.black26, letterSpacing: 1)),
+            Text(
+              value,
+              style: GoogleFonts.dmSerifDisplay(
+                fontSize: 28,
+                color: const Color(0xFF004D40),
+              ),
+            ),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
+                color: Colors.black26,
+                letterSpacing: 1,
+              ),
+            ),
           ],
         ),
       ),
@@ -162,16 +213,23 @@ class ArtisanDashboardScreen extends StatelessWidget {
             color: const Color(0xFF004D40).withOpacity(0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
-          )
+          ),
         ],
       ),
       child: Column(
         children: [
-          const Icon(Icons.qr_code_scanner_rounded, size: 72, color: Color(0xFFFFD54F)),
+          const Icon(
+            Icons.qr_code_scanner_rounded,
+            size: 72,
+            color: Color(0xFFFFD54F),
+          ),
           const SizedBox(height: 20),
           Text(
             'Check-in Token',
-            style: GoogleFonts.dmSerifDisplay(color: Colors.white, fontSize: 24),
+            style: GoogleFonts.dmSerifDisplay(
+              color: Colors.white,
+              fontSize: 24,
+            ),
           ),
           const SizedBox(height: 12),
           const Text(
@@ -187,7 +245,10 @@ class ArtisanDashboardScreen extends StatelessWidget {
               foregroundColor: const Color(0xFF004D40),
               minimumSize: const Size(double.infinity, 60),
             ),
-            child: const Text('REVEAL TOKEN', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1)),
+            child: const Text(
+              'REVEAL TOKEN',
+              style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1),
+            ),
           ),
         ],
       ),
@@ -204,14 +265,33 @@ class ArtisanDashboardScreen extends StatelessWidget {
             borderRadius: BorderRadius.circular(24),
           ),
           child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 8,
+            ),
             leading: CircleAvatar(
               backgroundColor: const Color(0xFFF8F9FA),
-              child: Text('${index + 1}', style: const TextStyle(color: Color(0xFF004D40), fontWeight: FontWeight.bold)),
+              child: Text(
+                '${index + 1}',
+                style: const TextStyle(
+                  color: Color(0xFF004D40),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
-            title: Text('Visitor #771$index', style: const TextStyle(fontWeight: FontWeight.bold)),
+            title: Text(
+              'Visitor #771$index',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
             subtitle: const Text('Claimed Batik Master Stamp'),
-            trailing: const Text('2h ago', style: TextStyle(fontSize: 11, color: Colors.black26, fontWeight: FontWeight.bold)),
+            trailing: const Text(
+              '2h ago',
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.black26,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         );
       }),
@@ -231,16 +311,36 @@ class ArtisanDashboardScreen extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(2))),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
             const SizedBox(height: 40),
-            const Icon(Icons.qr_code_2_rounded, size: 200, color: Color(0xFF004D40)),
+            const Icon(
+              Icons.qr_code_2_rounded,
+              size: 200,
+              color: Color(0xFF004D40),
+            ),
             const SizedBox(height: 24),
             Text(
               'Ahmad Fauzi • Batik',
-              style: GoogleFonts.dmSerifDisplay(fontSize: 24, color: const Color(0xFF004D40)),
+              style: GoogleFonts.dmSerifDisplay(
+                fontSize: 24,
+                color: const Color(0xFF004D40),
+              ),
             ),
             const SizedBox(height: 8),
-            const Text('TOKEN ID: AF-BTK-2024', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black26)),
+            const Text(
+              'TOKEN ID: AF-BTK-2024',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.black26,
+              ),
+            ),
             const SizedBox(height: 40),
           ],
         ),

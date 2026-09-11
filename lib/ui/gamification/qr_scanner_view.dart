@@ -11,11 +11,7 @@ class QRScannerScreen extends StatefulWidget {
   final Quest quest;
   final HeritageTask task;
 
-  const QRScannerScreen({
-    super.key,
-    required this.quest,
-    required this.task,
-  });
+  const QRScannerScreen({super.key, required this.quest, required this.task});
 
   @override
   State<QRScannerScreen> createState() => _QRScannerScreenState();
@@ -51,7 +47,9 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     if (!mounted) return;
 
     if (completed) {
-      await _showSuccessDialog();
+      await _showSuccessDialog(
+        viewModel.authoritativeXpAwardForTask(widget.task.id),
+      );
       if (!mounted) return;
 
       // The dialog and scanner are two separate overlay routes. Popping both
@@ -77,7 +75,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     await _scannerController.start();
   }
 
-  Future<void> _showSuccessDialog() {
+  Future<void> _showSuccessDialog(int? xpAwarded) {
     return showDialog<void>(
       context: context,
       barrierDismissible: false,
@@ -101,8 +99,10 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              '${widget.task.title} is complete. '
-              'You earned ${widget.task.xpReward} XP.',
+              xpAwarded == null
+                  ? '${widget.task.title} completed successfully.'
+                  : '${widget.task.title} is complete. '
+                        'You earned $xpAwarded XP.',
               textAlign: TextAlign.center,
               style: GoogleFonts.plusJakartaSans(height: 1.45),
             ),
