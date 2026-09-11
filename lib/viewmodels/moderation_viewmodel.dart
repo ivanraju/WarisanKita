@@ -10,7 +10,7 @@ class ModerationViewModel extends ChangeNotifier {
   final UserRepository _repository;
 
   ModerationViewModel({UserRepository? repository, SupabaseService? service})
-      : _repository = repository ?? UserRepository(service: service) {
+    : _repository = repository ?? UserRepository(service: service) {
     _loadTodayStats();
     refreshAllData();
   }
@@ -39,6 +39,12 @@ class ModerationViewModel extends ChangeNotifier {
   // Pending Artisan Approvals State
   final List<PendingArtisanProfile> _pendingArtisans = [];
 
+  String? _artisanApprovalError;
+  String? get artisanApprovalError => _artisanApprovalError;
+
+  String? _approvingArtisanId;
+  bool isApprovingArtisan(String id) => _approvingArtisanId == id;
+
   // Active Verified Master Artisans State
   final List<ActiveArtisanMaster> _activeArtisanMasters = [];
 
@@ -46,14 +52,18 @@ class ModerationViewModel extends ChangeNotifier {
 
   List<ActiveArtisanMaster> get filteredActiveArtisans {
     return _activeArtisanMasters.where((artisan) {
-      final matchesSearch = _searchQuery.isEmpty ||
+      final matchesSearch =
+          _searchQuery.isEmpty ||
           artisan.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           artisan.category.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           artisan.state.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          artisan.licenseNo.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          artisan.licenseNo.toLowerCase().contains(
+            _searchQuery.toLowerCase(),
+          ) ||
           artisan.email.toLowerCase().contains(_searchQuery.toLowerCase());
 
-      final matchesCategory = _selectedCategory == 'All Categories' ||
+      final matchesCategory =
+          _selectedCategory == 'All Categories' ||
           artisan.category == _selectedCategory;
 
       return matchesSearch && matchesCategory;
@@ -62,7 +72,6 @@ class ModerationViewModel extends ChangeNotifier {
 
   // User Management State
   final List<UserModel> _registeredUsers = [];
-
 
   void updateUserProfileInState({
     required String email,
@@ -78,7 +87,9 @@ class ModerationViewModel extends ChangeNotifier {
     final cleanEmail = email.trim().toLowerCase();
     final targetName = studioName ?? displayName ?? username;
 
-    final userIdx = _registeredUsers.indexWhere((u) => u.email.toLowerCase() == cleanEmail);
+    final userIdx = _registeredUsers.indexWhere(
+      (u) => u.email.toLowerCase() == cleanEmail,
+    );
     if (userIdx != -1) {
       final user = _registeredUsers[userIdx];
       _registeredUsers[userIdx] = user.copyWith(
@@ -93,7 +104,9 @@ class ModerationViewModel extends ChangeNotifier {
       );
     }
 
-    final artisanIdx = _activeArtisanMasters.indexWhere((a) => a.email.toLowerCase() == cleanEmail);
+    final artisanIdx = _activeArtisanMasters.indexWhere(
+      (a) => a.email.toLowerCase() == cleanEmail,
+    );
     if (artisanIdx != -1) {
       final artisan = _activeArtisanMasters[artisanIdx];
       _activeArtisanMasters[artisanIdx] = artisan.copyWith(
@@ -132,9 +145,11 @@ class ModerationViewModel extends ChangeNotifier {
   ];
 
   List<UserModel> get registeredUsers => _registeredUsers
-      .where((u) =>
-          u.status.toUpperCase() != 'DELETED' &&
-          !u.email.toLowerCase().startsWith('deleted_'))
+      .where(
+        (u) =>
+            u.status.toUpperCase() != 'DELETED' &&
+            !u.email.toLowerCase().startsWith('deleted_'),
+      )
       .toList();
 
   List<UserModel> get filteredUsers {
@@ -144,74 +159,104 @@ class ModerationViewModel extends ChangeNotifier {
         return false;
       }
 
-      final matchesSearch = _userSearchQuery.isEmpty ||
-          (user.displayName ?? '').toLowerCase().contains(_userSearchQuery.toLowerCase()) ||
-          (user.username ?? '').toLowerCase().contains(_userSearchQuery.toLowerCase()) ||
+      final matchesSearch =
+          _userSearchQuery.isEmpty ||
+          (user.displayName ?? '').toLowerCase().contains(
+            _userSearchQuery.toLowerCase(),
+          ) ||
+          (user.username ?? '').toLowerCase().contains(
+            _userSearchQuery.toLowerCase(),
+          ) ||
           user.email.toLowerCase().contains(_userSearchQuery.toLowerCase());
 
       final r = user.role.toLowerCase();
-      final matchesRole = _userRoleFilter == 'All Roles' ||
-          ((_userRoleFilter == 'Tourist' || _userRoleFilter == 'Cultural Tourist') && (r.contains('tourist') || user.isTourist)) ||
-          ((_userRoleFilter == 'Artisan' || _userRoleFilter == 'Master Artisan') && (r.contains('artisan') || user.isArtisan)) ||
+      final matchesRole =
+          _userRoleFilter == 'All Roles' ||
+          ((_userRoleFilter == 'Tourist' ||
+                  _userRoleFilter == 'Cultural Tourist') &&
+              (r.contains('tourist') || user.isTourist)) ||
+          ((_userRoleFilter == 'Artisan' ||
+                  _userRoleFilter == 'Master Artisan') &&
+              (r.contains('artisan') || user.isArtisan)) ||
           (_userRoleFilter == 'Admin' && r.contains('admin'));
 
-      final matchesStatus = _userStatusFilter == 'All Statuses' ||
-          (_userStatusFilter == 'Active' && !user.isSuspended && user.status.toUpperCase() != 'SUSPENDED') ||
-          (_userStatusFilter == 'Suspended' && (user.isSuspended || user.status.toUpperCase() == 'SUSPENDED'));
+      final matchesStatus =
+          _userStatusFilter == 'All Statuses' ||
+          (_userStatusFilter == 'Active' &&
+              !user.isSuspended &&
+              user.status.toUpperCase() != 'SUSPENDED') ||
+          (_userStatusFilter == 'Suspended' &&
+              (user.isSuspended || user.status.toUpperCase() == 'SUSPENDED'));
 
       return matchesSearch && matchesRole && matchesStatus;
     }).toList();
   }
 
   void removeUserByEmailOrId({String? email, String? id}) {
-    _registeredUsers.removeWhere((u) =>
-        (email != null && u.email.toLowerCase() == email.toLowerCase()) ||
-        (id != null && u.id == id));
-    _activeArtisanMasters.removeWhere((a) =>
-        (email != null && a.email.toLowerCase() == email.toLowerCase()) ||
-        (id != null && a.id == id));
-    _pendingArtisans.removeWhere((p) =>
-        (email != null && p.email.toLowerCase() == email.toLowerCase()) ||
-        (id != null && p.id == id));
+    _registeredUsers.removeWhere(
+      (u) =>
+          (email != null && u.email.toLowerCase() == email.toLowerCase()) ||
+          (id != null && u.id == id),
+    );
+    _activeArtisanMasters.removeWhere(
+      (a) =>
+          (email != null && a.email.toLowerCase() == email.toLowerCase()) ||
+          (id != null && a.id == id),
+    );
+    _pendingArtisans.removeWhere(
+      (p) =>
+          (email != null && p.email.toLowerCase() == email.toLowerCase()) ||
+          (id != null && p.id == id),
+    );
     notifyListeners();
   }
 
   List<PendingArtisanProfile> get filteredArtisans {
     return _pendingArtisans.where((artisan) {
-      // Strictly exclude rejected or approved profiles from the approval queue
       final matchingUsers = _registeredUsers.where(
         (u) => u.email.toLowerCase() == artisan.email.toLowerCase(),
       );
       if (matchingUsers.isNotEmpty) {
-        final regUser = matchingUsers.first;
-        if (regUser.status.toUpperCase() == 'REJECTED' ||
-            regUser.artisanStatus?.toUpperCase() == 'REJECTED' ||
-            regUser.artisanStatus?.toUpperCase() == 'APPROVED') {
+        final registeredUser = matchingUsers.first;
+        final artisanStatus = registeredUser.artisanStatus?.toUpperCase();
+        if (registeredUser.status.toUpperCase() == 'REJECTED' ||
+            artisanStatus == 'REJECTED' ||
+            artisanStatus == 'APPROVED') {
           return false;
         }
       }
 
-      final matchesSearch = _searchQuery.isEmpty ||
+      final matchesSearch =
+          _searchQuery.isEmpty ||
           artisan.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          artisan.craftCategory.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          artisan.craftCategory.toLowerCase().contains(
+            _searchQuery.toLowerCase(),
+          ) ||
           artisan.state.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           artisan.email.toLowerCase().contains(_searchQuery.toLowerCase());
 
-      final matchesCategory = _selectedCategory == 'All Categories' ||
+      final matchesCategory =
+          _selectedCategory == 'All Categories' ||
           artisan.craftCategory == _selectedCategory;
 
-      final matchesType = _applicationTypeFilter == 'All' ||
-          (_applicationTypeFilter == 'New Profiles' && !artisan.isRelocationRequest) ||
-          (_applicationTypeFilter == 'Relocations' && artisan.isRelocationRequest);
+      final matchesType =
+          _applicationTypeFilter == 'All' ||
+          (_applicationTypeFilter == 'New Profiles' &&
+              !artisan.isRelocationRequest) ||
+          (_applicationTypeFilter == 'Relocations' &&
+              artisan.isRelocationRequest);
 
       return matchesSearch && matchesCategory && matchesType;
     }).toList();
   }
 
-  List<PendingArtisanProfile> get pendingArtisans => List.unmodifiable(_pendingArtisans);
-  int get totalPendingCount => filteredArtisans.length;
-  int get pendingRelocationCount => filteredArtisans.where((p) => p.isRelocationRequest).length;
-  int get pendingNewProfilesCount => filteredArtisans.where((p) => !p.isRelocationRequest).length;
+  List<PendingArtisanProfile> get pendingArtisans =>
+      List.unmodifiable(_pendingArtisans);
+  int get totalPendingCount => _pendingArtisans.length;
+  int get pendingRelocationCount =>
+      _pendingArtisans.where((p) => p.isRelocationRequest).length;
+  int get pendingNewProfilesCount =>
+      _pendingArtisans.where((p) => !p.isRelocationRequest).length;
 
   int _sessionApprovedToday = 0;
   final List<Duration> _reviewDurations = [];
@@ -229,15 +274,20 @@ class ModerationViewModel extends ChangeNotifier {
     } catch (_) {}
   }
 
-  Future<void> _recordApproval(DateTime? submittedDate) async {
+  void _recordApproval(DateTime? submittedDate) {
     _sessionApprovedToday++;
     if (submittedDate != null) {
       final diff = DateTime.now().difference(submittedDate);
-      _reviewDurations.add(diff.isNegative ? const Duration(minutes: 30) : diff);
+      _reviewDurations.add(
+        diff.isNegative ? const Duration(minutes: 30) : diff,
+      );
     } else {
       _reviewDurations.add(const Duration(minutes: 45));
     }
     notifyListeners();
+  }
+
+  Future<void> _persistApprovalCount() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final now = DateTime.now();
@@ -250,13 +300,27 @@ class ModerationViewModel extends ChangeNotifier {
     if (raw.trim().isEmpty) return null;
     final parsed = DateTime.tryParse(raw);
     if (parsed != null) return parsed;
-    if (raw.toLowerCase().contains('today') || raw.toLowerCase().contains('just')) {
+    if (raw.toLowerCase().contains('today') ||
+        raw.toLowerCase().contains('just')) {
       return DateTime.now();
     }
     final parts = raw.trim().split(RegExp(r'\s+'));
     if (parts.length == 3) {
       final day = int.tryParse(parts[0]);
-      const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+      const months = [
+        'jan',
+        'feb',
+        'mar',
+        'apr',
+        'may',
+        'jun',
+        'jul',
+        'aug',
+        'sep',
+        'oct',
+        'nov',
+        'dec',
+      ];
       final monthIdx = months.indexOf(parts[1].toLowerCase());
       final year = int.tryParse(parts[2]);
       if (day != null && monthIdx != -1 && year != null) {
@@ -268,12 +332,17 @@ class ModerationViewModel extends ChangeNotifier {
 
   int get approvedTodayCount {
     final now = DateTime.now();
-    final todayIso = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final todayIso =
+        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
     final activeToday = _activeArtisanMasters.where((a) {
       final vd = a.verifiedDate.toLowerCase();
-      return vd.contains(todayIso) || vd.contains('today') || vd.contains('just approved');
+      return vd.contains(todayIso) ||
+          vd.contains('today') ||
+          vd.contains('just approved');
     }).length;
-    return activeToday > _sessionApprovedToday ? activeToday : _sessionApprovedToday;
+    return activeToday > _sessionApprovedToday
+        ? activeToday
+        : _sessionApprovedToday;
   }
 
   String get approvedTodaySubtitle {
@@ -363,7 +432,8 @@ class ModerationViewModel extends ChangeNotifier {
 
   Future<void> fetchPendingArtisans() async {
     try {
-      final List<Map<String, dynamic>> dbPending = await _repository.getPendingArtisans();
+      final List<Map<String, dynamic>> dbPending = await _repository
+          .getPendingArtisans();
 
       final List<PendingArtisanProfile> fetched = [];
 
@@ -372,49 +442,68 @@ class ModerationViewModel extends ChangeNotifier {
         if (email.isEmpty) continue;
 
         final rawStatus = (raw['status'] ?? '').toString().toUpperCase();
-        final rawArtisanStatus = (raw['artisan_status'] ?? raw['artisanStatus'] ?? '').toString().toUpperCase();
-
-        Map<String, dynamic>? apMap;
+        final rawArtisanStatus =
+            (raw['artisan_status'] ?? raw['artisanStatus'] ?? '')
+                .toString()
+                .toUpperCase();
+        Map<String, dynamic>? artisanProfile;
         if (raw['artisan_profiles'] is Map) {
-          apMap = Map<String, dynamic>.from(raw['artisan_profiles']);
-        } else if (raw['artisan_profiles'] is List && (raw['artisan_profiles'] as List).isNotEmpty) {
-          apMap = Map<String, dynamic>.from((raw['artisan_profiles'] as List).first);
+          artisanProfile = Map<String, dynamic>.from(raw['artisan_profiles']);
+        } else if (raw['artisan_profiles'] is List &&
+            (raw['artisan_profiles'] as List).isNotEmpty) {
+          artisanProfile = Map<String, dynamic>.from(
+            (raw['artisan_profiles'] as List).first,
+          );
         }
-        final apStatus = (apMap?['status'] ?? '').toString().toUpperCase();
-
+        final profileStatus = (artisanProfile?['status'] ?? '')
+            .toString()
+            .toUpperCase();
+        const terminalStatuses = {'REJECTED', 'APPROVED', 'CLOSED'};
         if (rawStatus == 'REJECTED' ||
-            rawArtisanStatus == 'REJECTED' ||
-            rawArtisanStatus == 'APPROVED' ||
-            rawArtisanStatus == 'CLOSED' ||
-            apStatus == 'REJECTED' ||
-            apStatus == 'APPROVED' ||
-            apStatus == 'CLOSED') {
+            terminalStatuses.contains(rawArtisanStatus) ||
+            terminalStatuses.contains(profileStatus)) {
           continue;
         }
 
-        // Also check if existing registered user is already marked REJECTED
         final matchingRegistered = _registeredUsers.where(
           (u) => u.email.toLowerCase() == email.toLowerCase(),
         );
         if (matchingRegistered.isNotEmpty) {
           final existingUser = matchingRegistered.first;
+          final existingArtisanStatus = existingUser.artisanStatus
+              ?.toUpperCase();
           if (existingUser.status.toUpperCase() == 'REJECTED' ||
-              existingUser.artisanStatus?.toUpperCase() == 'REJECTED' ||
-              existingUser.artisanStatus?.toUpperCase() == 'APPROVED') {
+              existingArtisanStatus == 'REJECTED' ||
+              existingArtisanStatus == 'APPROVED') {
             continue;
           }
         }
 
         final id = raw['id']?.toString() ?? 'p_${email.hashCode}';
-        final name = (raw['studio_name'] ?? raw['studioName'] ?? raw['full_name'] ?? raw['displayName'] ?? raw['username'] ?? 'Artisan Studio').toString();
-        final craft = (raw['craft_category'] ?? raw['craftCategory'] ?? 'Handicraft & Heritage').toString();
+        final name =
+            (raw['studio_name'] ??
+                    raw['studioName'] ??
+                    raw['full_name'] ??
+                    raw['displayName'] ??
+                    raw['username'] ??
+                    'Artisan Studio')
+                .toString();
+        final craft =
+            (raw['craft_category'] ??
+                    raw['craftCategory'] ??
+                    'Handicraft & Heritage')
+                .toString();
         final state = (raw['state'] ?? 'Malaysia').toString();
         final role = (raw['role'] ?? '').toString();
         final isUpgrade = role.contains('Tourist') || role.contains('Both');
 
         // Resolve the avatar/image URL from the DB row
-        final resolvedImageUrl = (raw['imageUrl'] ?? raw['avatar_url'] ?? 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600').toString();
-        
+        final resolvedImageUrl =
+            (raw['imageUrl'] ??
+                    raw['avatar_url'] ??
+                    'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600')
+                .toString();
+
         // Resolve photos - must be actual URLs, not filenames
         List<String> resolvedPhotos;
         if (raw['photos'] is List && (raw['photos'] as List).isNotEmpty) {
@@ -429,15 +518,27 @@ class ModerationViewModel extends ChangeNotifier {
           name: name,
           craftCategory: craft,
           state: state,
-          dateSubmitted: raw['dateSubmitted']?.toString() ?? raw['created_at']?.toString() ?? 'Today',
+          dateSubmitted:
+              raw['dateSubmitted']?.toString() ??
+              raw['created_at']?.toString() ??
+              'Today',
           imageUrl: resolvedImageUrl,
           email: email,
           experience: (raw['experience'] ?? 'Verified Studio').toString(),
-          phone: (raw['phone'] ?? raw['phone_number'] ?? '').toString(),
-          ssmNumber: (raw['ssm_number'] ?? raw['ssmNumber'] ?? '202601004821 (SSM Verified)').toString(),
-          ssmFileName: (raw['ssm_file'] ?? raw['ssm_file_name'] ?? raw['ssmFileName'])?.toString(),
+          phone: (raw['phone'] ?? raw['phone_number'] ?? '+60 12-345 6789')
+              .toString(),
+          ssmNumber:
+              (raw['ssm_number'] ??
+                      raw['ssmNumber'] ??
+                      '202601004821 (SSM Verified)')
+                  .toString(),
+          ssmFileName:
+              (raw['ssm_file'] ?? raw['ssm_file_name'] ?? raw['ssmFileName'])
+                  ?.toString(),
           ssmFileUrl: raw['ssm_file_url']?.toString(),
-          certFileName: (raw['cert_file'] ?? raw['cert_file_name'] ?? raw['certFileName'])?.toString(),
+          certFileName:
+              (raw['cert_file'] ?? raw['cert_file_name'] ?? raw['certFileName'])
+                  ?.toString(),
           certFileUrl: raw['cert_file_url']?.toString(),
           photos: resolvedPhotos,
           bio: raw['bio']?.toString(),
@@ -453,28 +554,40 @@ class ModerationViewModel extends ChangeNotifier {
         for (final u in allUsers) {
           if (u.hasPendingRelocation) {
             final relocId = 'reloc_${u.id}';
-            if (!fetched.any((p) => p.email.toLowerCase() == u.email.toLowerCase() && p.isRelocationRequest)) {
-              fetched.insert(0, PendingArtisanProfile(
-                id: relocId,
-                name: u.studioName ?? u.displayName ?? 'Artisan Studio',
-                craftCategory: u.craftCategory ?? 'Handicraft & Heritage',
-                state: u.state ?? 'Melaka',
-                dateSubmitted: u.pendingRelocationDate ?? 'Recent',
-                imageUrl: u.avatarUrl ?? 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600',
-                email: u.email,
-                experience: (u.experience != null && u.experience!.trim().isNotEmpty) ? u.experience! : 'Accredited Studio',
-                phone: u.phone ?? '',
-                ssmNumber: u.ssmNumber ?? 'Verified Studio',
-                bio: u.bio,
-                isUpgradeFromTourist: false,
-                isRelocationRequest: true,
-                currentAddress: u.address,
-                proposedAddress: u.pendingRelocationAddress,
-                proposedLatitude: u.pendingRelocationLatitude,
-                proposedLongitude: u.pendingRelocationLongitude,
-                proposedState: u.pendingRelocationState,
-                relocationReason: u.pendingRelocationReason,
-              ));
+            if (!fetched.any(
+              (p) =>
+                  p.email.toLowerCase() == u.email.toLowerCase() &&
+                  p.isRelocationRequest,
+            )) {
+              fetched.insert(
+                0,
+                PendingArtisanProfile(
+                  id: relocId,
+                  name: u.studioName ?? u.displayName ?? 'Artisan Studio',
+                  craftCategory: u.craftCategory ?? 'Handicraft & Heritage',
+                  state: u.state ?? 'Melaka',
+                  dateSubmitted: u.pendingRelocationDate ?? 'Recent',
+                  imageUrl:
+                      u.avatarUrl ??
+                      'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600',
+                  email: u.email,
+                  experience:
+                      (u.experience != null && u.experience!.trim().isNotEmpty)
+                      ? u.experience!
+                      : 'Accredited Studio',
+                  phone: u.phone ?? '+60 12-345 6789',
+                  ssmNumber: u.ssmNumber ?? 'Verified Studio',
+                  bio: u.bio,
+                  isUpgradeFromTourist: false,
+                  isRelocationRequest: true,
+                  currentAddress: u.address,
+                  proposedAddress: u.pendingRelocationAddress,
+                  proposedLatitude: u.pendingRelocationLatitude,
+                  proposedLongitude: u.pendingRelocationLongitude,
+                  proposedState: u.pendingRelocationState,
+                  relocationReason: u.pendingRelocationReason,
+                ),
+              );
             }
           }
         }
@@ -521,9 +634,13 @@ class ModerationViewModel extends ChangeNotifier {
   }
 
   void addPendingArtisan(PendingArtisanProfile profile) {
-    _pendingArtisans.removeWhere((p) => p.email.toLowerCase() == profile.email.toLowerCase());
+    _pendingArtisans.removeWhere(
+      (p) => p.email.toLowerCase() == profile.email.toLowerCase(),
+    );
     _pendingArtisans.insert(0, profile);
-    final userIdx = _registeredUsers.indexWhere((u) => u.email.toLowerCase() == profile.email.toLowerCase());
+    final userIdx = _registeredUsers.indexWhere(
+      (u) => u.email.toLowerCase() == profile.email.toLowerCase(),
+    );
     if (userIdx != -1) {
       _registeredUsers[userIdx] = _registeredUsers[userIdx].copyWith(
         status: 'PENDING_APPROVAL',
@@ -539,24 +656,30 @@ class ModerationViewModel extends ChangeNotifier {
   }
 
   void addRelocationRequest(PendingArtisanProfile profile) {
-    _pendingArtisans.removeWhere((p) => p.email.toLowerCase() == profile.email.toLowerCase() && p.isRelocationRequest);
+    _pendingArtisans.removeWhere(
+      (p) =>
+          p.email.toLowerCase() == profile.email.toLowerCase() &&
+          p.isRelocationRequest,
+    );
     _pendingArtisans.insert(0, profile);
     notifyListeners();
   }
 
-  Future<void> approveArtisan(String id) async {
-    int idx = _pendingArtisans.indexWhere((item) => item.id == id);
-    if (idx == -1) {
-      idx = _pendingArtisans.indexWhere((item) => item.email.toLowerCase() == id.toLowerCase());
-    }
-    if (idx != -1) {
-      final artisan = _pendingArtisans[idx];
-      _pendingArtisans.removeWhere(
-        (p) => p.id == id || p.email.toLowerCase() == artisan.email.toLowerCase(),
-      );
-      final submittedDate = _parseSubmissionDate(artisan.dateSubmitted);
-      _recordApproval(submittedDate);
+  Future<bool> approveArtisan(String id) async {
+    if (_approvingArtisanId != null) return false;
+    final idx = _pendingArtisans.indexWhere((item) => item.id == id);
+    if (idx == -1) return false;
 
+    final artisan = _pendingArtisans[idx];
+    final submittedDate = _parseSubmissionDate(artisan.dateSubmitted);
+    final previousApprovalCount = _sessionApprovedToday;
+    final previousReviewDurationCount = _reviewDurations.length;
+    _recordApproval(submittedDate);
+    _approvingArtisanId = id;
+    _artisanApprovalError = null;
+    notifyListeners();
+
+    try {
       if (artisan.isRelocationRequest) {
         await _repository.approveRelocationRequest(
           email: artisan.email,
@@ -566,9 +689,13 @@ class ModerationViewModel extends ChangeNotifier {
           newLng: artisan.proposedLongitude,
         );
         _pendingArtisans.removeWhere(
-          (p) => p.email.toLowerCase() == artisan.email.toLowerCase() && p.isRelocationRequest,
+          (p) =>
+              p.email.toLowerCase() == artisan.email.toLowerCase() &&
+              p.isRelocationRequest,
         );
-        final userIdx = _registeredUsers.indexWhere((u) => u.email.toLowerCase() == artisan.email.toLowerCase());
+        final userIdx = _registeredUsers.indexWhere(
+          (u) => u.email.toLowerCase() == artisan.email.toLowerCase(),
+        );
         if (userIdx != -1) {
           final u = _registeredUsers[userIdx];
           _registeredUsers[userIdx] = u.copyWith(
@@ -579,27 +706,58 @@ class ModerationViewModel extends ChangeNotifier {
             clearPendingRelocation: true,
           );
         }
-        final aIdx = _activeArtisanMasters.indexWhere((a) => a.email.toLowerCase() == artisan.email.toLowerCase());
+        final aIdx = _activeArtisanMasters.indexWhere(
+          (a) => a.email.toLowerCase() == artisan.email.toLowerCase(),
+        );
         if (aIdx != -1) {
           final a = _activeArtisanMasters[aIdx];
           _activeArtisanMasters[aIdx] = a.copyWith(
             state: artisan.proposedState ?? a.state,
           );
         }
+        await _persistApprovalCount();
         notifyListeners();
-        return;
+        return true;
       }
 
       // Determine target role
-      final userIdx = _registeredUsers.indexWhere((u) => u.email.toLowerCase() == artisan.email.toLowerCase());
+      final userIdx = _registeredUsers.indexWhere(
+        (u) => u.email.toLowerCase() == artisan.email.toLowerCase(),
+      );
       final isUpgrade = userIdx != -1 || artisan.isUpgradeFromTourist;
       const targetRole = 'Artisan';
+
+      // Persist first. The repository guarantees that the artisan's usable
+      // quest has both canonical system tasks before approval can succeed.
+      try {
+        await _repository.updateArtisanStatus(
+          email: artisan.email,
+          newStatus: 'ACTIVE',
+          newRole: targetRole,
+          ensureSystemTasks: true,
+        );
+      } catch (error) {
+        final isLegacyUpgradeWithoutProfile =
+            isUpgrade &&
+            error.toString().toLowerCase().contains(
+              'artisan profile could not be found',
+            );
+        if (!isLegacyUpgradeWithoutProfile) rethrow;
+        await _repository.updateArtisanStatus(
+          email: artisan.email,
+          newStatus: 'ACTIVE',
+          newRole: targetRole,
+        );
+      }
+
+      _pendingArtisans.removeAt(idx);
+      await _persistApprovalCount();
 
       if (isUpgrade) {
         if (userIdx != -1) {
           _registeredUsers[userIdx] = _registeredUsers[userIdx].copyWith(
             role: targetRole,
-            roles: const ['Artisan'],
+            roles: ['Artisan'],
             status: 'ACTIVE',
             artisanStatus: 'APPROVED',
             studioName: artisan.name,
@@ -608,11 +766,31 @@ class ModerationViewModel extends ChangeNotifier {
             experience: artisan.experience,
           );
         } else {
-          _registeredUsers.add(UserModel(
+          _registeredUsers.add(
+            UserModel(
+              id: 'u_${DateTime.now().millisecondsSinceEpoch}',
+              email: artisan.email,
+              displayName: artisan.name,
+              role: targetRole,
+              roles: const ['Artisan'],
+              status: 'ACTIVE',
+              artisanStatus: 'APPROVED',
+              studioName: artisan.name,
+              craftCategory: artisan.craftCategory,
+              ssmNumber: artisan.ssmNumber,
+              state: artisan.state,
+              experience: artisan.experience,
+            ),
+          );
+        }
+      } else {
+        // Purely new Artisan
+        _registeredUsers.add(
+          UserModel(
             id: 'u_${DateTime.now().millisecondsSinceEpoch}',
             email: artisan.email,
             displayName: artisan.name,
-            role: targetRole,
+            role: 'Artisan',
             roles: const ['Artisan'],
             status: 'ACTIVE',
             artisanStatus: 'APPROVED',
@@ -621,28 +799,14 @@ class ModerationViewModel extends ChangeNotifier {
             ssmNumber: artisan.ssmNumber,
             state: artisan.state,
             experience: artisan.experience,
-          ));
-        }
-      } else {
-        // Purely new Artisan
-        _registeredUsers.add(UserModel(
-          id: 'u_${DateTime.now().millisecondsSinceEpoch}',
-          email: artisan.email,
-          displayName: artisan.name,
-          role: targetRole,
-          roles: const ['Artisan'],
-          status: 'ACTIVE',
-          artisanStatus: 'APPROVED',
-          studioName: artisan.name,
-          craftCategory: artisan.craftCategory,
-          ssmNumber: artisan.ssmNumber,
-          state: artisan.state,
-          experience: artisan.experience,
-        ));
+          ),
+        );
       }
 
       // Insert into Active Verified Masters
-      _activeArtisanMasters.removeWhere((a) => a.email.toLowerCase() == artisan.email.toLowerCase());
+      _activeArtisanMasters.removeWhere(
+        (a) => a.email.toLowerCase() == artisan.email.toLowerCase(),
+      );
       _activeArtisanMasters.insert(
         0,
         ActiveArtisanMaster(
@@ -657,29 +821,54 @@ class ModerationViewModel extends ChangeNotifier {
           licenseNo: artisan.ssmNumber ?? '202601004821 (SSM Verified)',
           verifiedDate: 'Just Approved',
           imageUrl: artisan.imageUrl,
-          bio: artisan.bio ?? 'Verified heritage master preserving traditional ${artisan.craftCategory}.',
+          bio:
+              artisan.bio ??
+              'Verified heritage master preserving traditional ${artisan.craftCategory}.',
           phone: artisan.phone,
           isDualRole: isUpgrade,
           isSuspended: false,
         ),
       );
 
-      // Persist to DB
-      await _repository.updateArtisanStatus(
-        email: artisan.email,
-        newStatus: 'ACTIVE',
-        newRole: targetRole,
-      );
-
+      notifyListeners();
+      return true;
+    } catch (error, stackTrace) {
+      _sessionApprovedToday = previousApprovalCount;
+      if (_reviewDurations.length > previousReviewDurationCount) {
+        _reviewDurations.removeRange(
+          previousReviewDurationCount,
+          _reviewDurations.length,
+        );
+      }
+      await _persistApprovalCount();
+      debugPrint('Artisan approval failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      _artisanApprovalError = _friendlyApprovalError(error);
+      return false;
+    } finally {
+      _approvingArtisanId = null;
       notifyListeners();
     }
+  }
+
+  String _friendlyApprovalError(Object error) {
+    final message = error
+        .toString()
+        .replaceFirst('Bad state: ', '')
+        .replaceFirst('StateError: ', '')
+        .trim();
+    return message.isEmpty
+        ? 'The artisan could not be approved. Please try again.'
+        : message;
   }
 
   void toggleActiveArtisanLiveStatus(String id) {
     final idx = _activeArtisanMasters.indexWhere((a) => a.id == id);
     if (idx != -1) {
       final current = _activeArtisanMasters[idx];
-      _activeArtisanMasters[idx] = current.copyWith(isLiveOpen: !current.isLiveOpen);
+      _activeArtisanMasters[idx] = current.copyWith(
+        isLiveOpen: !current.isLiveOpen,
+      );
       notifyListeners();
     }
   }
@@ -688,21 +877,24 @@ class ModerationViewModel extends ChangeNotifier {
     final idx = _activeArtisanMasters.indexWhere((a) => a.id == id);
     if (idx != -1) {
       final artisan = _activeArtisanMasters[idx];
-      _activeArtisanMasters[idx] = artisan.copyWith(isSuspended: true, isLiveOpen: false);
+      _activeArtisanMasters[idx] = artisan.copyWith(
+        isSuspended: true,
+        isLiveOpen: false,
+      );
 
       // Suspend only the Artisan Studio Profile in DB; user account remains ACTIVE as Tourist
       await _repository.updateArtisanStatus(
         email: artisan.email,
         newStatus: 'SUSPENDED',
-        newRole: 'Tourist',
+        newRole: 'Artisan & Tourist',
         updateArtisanProfileOnly: true,
       );
 
-      final uIdx = _registeredUsers.indexWhere((u) => u.email.toLowerCase() == artisan.email.toLowerCase());
+      final uIdx = _registeredUsers.indexWhere(
+        (u) => u.email.toLowerCase() == artisan.email.toLowerCase(),
+      );
       if (uIdx != -1) {
         _registeredUsers[uIdx] = _registeredUsers[uIdx].copyWith(
-          role: 'Tourist',
-          roles: const ['Tourist'],
           artisanStatus: 'SUSPENDED',
         );
       }
@@ -715,20 +907,23 @@ class ModerationViewModel extends ChangeNotifier {
     final idx = _activeArtisanMasters.indexWhere((a) => a.id == id);
     if (idx != -1) {
       final artisan = _activeArtisanMasters[idx];
-      _activeArtisanMasters[idx] = artisan.copyWith(isSuspended: false, isLiveOpen: true);
+      _activeArtisanMasters[idx] = artisan.copyWith(
+        isSuspended: false,
+        isLiveOpen: true,
+      );
 
       await _repository.updateArtisanStatus(
         email: artisan.email,
         newStatus: 'APPROVED',
-        newRole: 'Artisan',
+        newRole: 'Artisan & Tourist',
         updateArtisanProfileOnly: true,
       );
 
-      final uIdx = _registeredUsers.indexWhere((u) => u.email.toLowerCase() == artisan.email.toLowerCase());
+      final uIdx = _registeredUsers.indexWhere(
+        (u) => u.email.toLowerCase() == artisan.email.toLowerCase(),
+      );
       if (uIdx != -1) {
         _registeredUsers[uIdx] = _registeredUsers[uIdx].copyWith(
-          role: 'Artisan',
-          roles: const ['Artisan'],
           artisanStatus: 'APPROVED',
         );
       }
@@ -740,26 +935,35 @@ class ModerationViewModel extends ChangeNotifier {
   Future<void> rejectArtisan(String id, {String? reason}) async {
     int idx = _pendingArtisans.indexWhere((item) => item.id == id);
     if (idx == -1) {
-      idx = _pendingArtisans.indexWhere((item) => item.email.toLowerCase() == id.toLowerCase());
+      idx = _pendingArtisans.indexWhere(
+        (item) => item.email.toLowerCase() == id.toLowerCase(),
+      );
     }
 
     if (idx != -1) {
       final artisan = _pendingArtisans[idx];
       _pendingArtisans.removeWhere(
-        (p) => p.id == id || p.email.toLowerCase() == artisan.email.toLowerCase(),
+        (p) =>
+            p.id == id || p.email.toLowerCase() == artisan.email.toLowerCase(),
       );
       final submittedDate = _parseSubmissionDate(artisan.dateSubmitted);
       if (submittedDate != null) {
         final diff = DateTime.now().difference(submittedDate);
-        _reviewDurations.add(diff.isNegative ? const Duration(minutes: 30) : diff);
+        _reviewDurations.add(
+          diff.isNegative ? const Duration(minutes: 30) : diff,
+        );
       }
 
       if (artisan.isRelocationRequest) {
         await _repository.rejectRelocationRequest(email: artisan.email);
         _pendingArtisans.removeWhere(
-          (p) => p.email.toLowerCase() == artisan.email.toLowerCase() && p.isRelocationRequest,
+          (p) =>
+              p.email.toLowerCase() == artisan.email.toLowerCase() &&
+              p.isRelocationRequest,
         );
-        final userIdx = _registeredUsers.indexWhere((u) => u.email.toLowerCase() == artisan.email.toLowerCase());
+        final userIdx = _registeredUsers.indexWhere(
+          (u) => u.email.toLowerCase() == artisan.email.toLowerCase(),
+        );
         if (userIdx != -1) {
           _registeredUsers[userIdx] = _registeredUsers[userIdx].copyWith(
             clearPendingRelocation: true,
@@ -769,21 +973,27 @@ class ModerationViewModel extends ChangeNotifier {
         return;
       }
 
-      final userIdx = _registeredUsers.indexWhere((u) => u.email.toLowerCase() == artisan.email.toLowerCase());
+      final userIdx = _registeredUsers.indexWhere(
+        (u) => u.email.toLowerCase() == artisan.email.toLowerCase(),
+      );
       final isExistingTourist = userIdx != -1 || artisan.isUpgradeFromTourist;
 
       if (userIdx != -1) {
         final existingUser = _registeredUsers[userIdx];
         if (isExistingTourist) {
-          // Keep tourist account active, but record artisan application as REJECTED
           _registeredUsers[userIdx] = existingUser.copyWith(
             role: 'Tourist',
             roles: const ['Tourist'],
             status: 'ACTIVE',
             artisanStatus: 'REJECTED',
-            studioName: artisan.name.isNotEmpty ? artisan.name : existingUser.studioName,
-            craftCategory: artisan.craftCategory.isNotEmpty ? artisan.craftCategory : existingUser.craftCategory,
-            ssmNumber: (artisan.ssmNumber != null && artisan.ssmNumber!.isNotEmpty)
+            studioName: artisan.name.isNotEmpty
+                ? artisan.name
+                : existingUser.studioName,
+            craftCategory: artisan.craftCategory.isNotEmpty
+                ? artisan.craftCategory
+                : existingUser.craftCategory,
+            ssmNumber:
+                artisan.ssmNumber != null && artisan.ssmNumber!.isNotEmpty
                 ? artisan.ssmNumber
                 : existingUser.ssmNumber,
           );
@@ -791,9 +1001,14 @@ class ModerationViewModel extends ChangeNotifier {
           _registeredUsers[userIdx] = existingUser.copyWith(
             status: 'REJECTED',
             artisanStatus: 'REJECTED',
-            studioName: artisan.name.isNotEmpty ? artisan.name : existingUser.studioName,
-            craftCategory: artisan.craftCategory.isNotEmpty ? artisan.craftCategory : existingUser.craftCategory,
-            ssmNumber: (artisan.ssmNumber != null && artisan.ssmNumber!.isNotEmpty)
+            studioName: artisan.name.isNotEmpty
+                ? artisan.name
+                : existingUser.studioName,
+            craftCategory: artisan.craftCategory.isNotEmpty
+                ? artisan.craftCategory
+                : existingUser.craftCategory,
+            ssmNumber:
+                artisan.ssmNumber != null && artisan.ssmNumber!.isNotEmpty
                 ? artisan.ssmNumber
                 : existingUser.ssmNumber,
           );
@@ -807,14 +1022,13 @@ class ModerationViewModel extends ChangeNotifier {
         updateArtisanProfileOnly: isExistingTourist,
       );
 
-      // Final sweep to guarantee removal from pending approvals
       _pendingArtisans.removeWhere(
-        (p) => p.id == id || p.email.toLowerCase() == artisan.email.toLowerCase(),
+        (p) =>
+            p.id == id || p.email.toLowerCase() == artisan.email.toLowerCase(),
       );
 
       notifyListeners();
     } else {
-      // Fallback: search by id or email in _registeredUsers
       final userIdx = _registeredUsers.indexWhere(
         (u) => u.id == id || u.email.toLowerCase() == id.toLowerCase(),
       );
@@ -834,7 +1048,9 @@ class ModerationViewModel extends ChangeNotifier {
           updateArtisanProfileOnly: isTourist,
         );
         _pendingArtisans.removeWhere(
-          (p) => p.id == id || p.email.toLowerCase() == existingUser.email.toLowerCase(),
+          (p) =>
+              p.id == id ||
+              p.email.toLowerCase() == existingUser.email.toLowerCase(),
         );
         notifyListeners();
       }
@@ -852,7 +1068,9 @@ class ModerationViewModel extends ChangeNotifier {
         debugPrint('Cannot suspend an Administrator account.');
         return;
       }
-      final trimmedReason = (reason != null && reason.trim().isNotEmpty) ? reason.trim() : null;
+      final trimmedReason = (reason != null && reason.trim().isNotEmpty)
+          ? reason.trim()
+          : null;
       _registeredUsers[idx] = user.copyWith(
         isSuspended: true,
         status: 'SUSPENDED',

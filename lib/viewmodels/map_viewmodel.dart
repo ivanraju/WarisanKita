@@ -8,6 +8,7 @@ import 'package:warisan_kita/data/repositories/gamification_repository.dart';
 import 'package:warisan_kita/data/repositories/location_repository.dart';
 
 import 'package:warisan_kita/domain/models/nearby_artisan.dart';
+import 'package:warisan_kita/domain/models/quest_location_validation.dart';
 import 'package:warisan_kita/domain/models/user_location.dart';
 import 'package:warisan_kita/domain/models/workshop_location.dart';
 import 'package:warisan_kita/domain/models/workshop_quest_journey.dart';
@@ -35,6 +36,12 @@ class MapViewModel extends ChangeNotifier {
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
+
+  bool _isRefreshing = false;
+  bool get isRefreshing => _isRefreshing;
+
+  String? _workshopError;
+  String? get refreshError => _workshopError ?? _journeyError;
 
   List<WorkshopLocation> _workshops = [];
   List<WorkshopLocation> get workshops => _workshops;
@@ -84,6 +91,8 @@ class MapViewModel extends ChangeNotifier {
   // nearby-workshop search radius and GPS accuracy.
   static const double _questInteractionRadiusMeters = 50.0;
   double get questInteractionRadiusMeters => _questInteractionRadiusMeters;
+  static const Duration maximumQuestLocationAge = Duration(seconds: 30);
+  static const double maximumQuestLocationAccuracyMeters = 35.0;
 
   // ============================================================
   // LIVE GPS STATE
@@ -112,15 +121,12 @@ class MapViewModel extends ChangeNotifier {
 
   Future<void> loadWorkshops() async {
     _isLoading = true;
+    _workshopError = null;
     notifyListeners();
 
     try {
       _workshops = await _artisanRepository.getWorkshopLocations();
-
-      if (_selectedWorkshop != null &&
-          !_workshops.any((item) => item.id == _selectedWorkshop!.id)) {
-        _selectedWorkshop = null;
-      }
+      _reconcileSelectedWorkshop();
 
       debugPrint('Loaded workshops: ${_workshops.length}');
 
@@ -128,6 +134,7 @@ class MapViewModel extends ChangeNotifier {
       _updateArtisanDistances();
     } catch (e) {
       debugPrint('MapViewModel loadWorkshops error: $e');
+      _workshopError = 'Studio information is temporarily unavailable.';
       _workshops = [];
       _nearbyArtisans = [];
       _otherArtisans = [];
@@ -160,10 +167,7 @@ class MapViewModel extends ChangeNotifier {
     _workshopSubscription = _artisanRepository.watchWorkshopLocations().listen(
       (workshops) {
         _workshops = workshops;
-        if (_selectedWorkshop != null &&
-            !_workshops.any((item) => item.id == _selectedWorkshop!.id)) {
-          _selectedWorkshop = null;
-        }
+        _reconcileSelectedWorkshop();
         _updateArtisanDistances();
         notifyListeners();
       },
@@ -295,6 +299,7 @@ class MapViewModel extends ChangeNotifier {
       longitude: next.longitude,
       accuracy: next.accuracy,
       heading: heading,
+      recordedAt: next.recordedAt,
     );
   }
 
@@ -324,8 +329,50 @@ class MapViewModel extends ChangeNotifier {
       longitude: location.longitude,
       accuracy: location.accuracy,
       heading: heading,
+      recordedAt: location.recordedAt,
     );
     notifyListeners();
+  }
+
+  Future<QuestLocationValidationResult> validateFreshQuestLocation({
+    required WorkshopLocation workshop,
+    required double radiusMeters,
+  }) async {
+    try {
+      await _locationRepository.requestLocationAccess();
+      _hasLocationPermission = true;
+      final reading = _withReliableHeading(
+        await _locationRepository.getCurrentLocation(),
+      );
+      _userLocation = reading;
+      _locationError = null;
+      _updateArtisanDistances();
+      notifyListeners();
+
+      final distance = _locationRepository.calculateDistance(
+        startLatitude: reading.latitude,
+        startLongitude: reading.longitude,
+        endLatitude: workshop.latitude,
+        endLongitude: workshop.longitude,
+      );
+      return QuestLocationValidator.validate(
+        reading: reading,
+        distanceMeters: distance,
+        radiusMeters: radiusMeters,
+        nowUtc: DateTime.now().toUtc(),
+        maximumAge: maximumQuestLocationAge,
+        maximumAccuracyMeters: maximumQuestLocationAccuracyMeters,
+      );
+    } catch (error) {
+      _hasLocationPermission = false;
+      _locationError = error.toString();
+      notifyListeners();
+      return const QuestLocationValidationResult.invalid(
+        failure: QuestLocationFailure.unavailable,
+        message:
+            'Current location is unavailable. Please enable location and try again.',
+      );
+    }
   }
 
   double _smallestHeadingDifference(double first, double second) =>
@@ -466,8 +513,32 @@ class MapViewModel extends ChangeNotifier {
   // REFRESH
   // ============================================================
 
-  Future<void> refreshWorkshops() async {
-    await Future.wait([loadWorkshops(), loadJourneyData()]);
+  Future<bool> refreshWorkshops() async {
+    if (_isRefreshing) return false;
+
+    _isRefreshing = true;
+    notifyListeners();
+    try {
+      await Future.wait([loadWorkshops(), loadJourneyData()]);
+      return _workshopError == null && _journeyError == null;
+    } finally {
+      _isRefreshing = false;
+      notifyListeners();
+    }
+  }
+
+  void _reconcileSelectedWorkshop() {
+    final selectedId = _selectedWorkshop?.id;
+    if (selectedId == null) return;
+
+    WorkshopLocation? refreshedSelection;
+    for (final workshop in _workshops) {
+      if (workshop.id == selectedId) {
+        refreshedSelection = workshop;
+        break;
+      }
+    }
+    _selectedWorkshop = refreshedSelection;
   }
 
   // ============================================================

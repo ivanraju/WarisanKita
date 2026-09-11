@@ -26,10 +26,7 @@ class TouristDashboardScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      body: IndexedStack(
-        index: navState.currentIndex,
-        children: _pages,
-      ),
+      body: IndexedStack(index: navState.currentIndex, children: _pages),
       bottomNavigationBar: _buildBottomNav(context, navState),
     );
   }
@@ -143,7 +140,10 @@ class TouristHomeContent extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.only(right: 16.0),
           child: IconButton(
-            icon: const Icon(Icons.notifications_none_rounded, color: Color(0xFF004D40)),
+            icon: const Icon(
+              Icons.notifications_none_rounded,
+              color: Color(0xFF004D40),
+            ),
             onPressed: () {},
           ),
         ),
@@ -170,7 +170,7 @@ class TouristHomeContent extends StatelessWidget {
             color: const Color(0xFF004D40).withOpacity(0.3),
             blurRadius: 25,
             offset: const Offset(0, 15),
-          )
+          ),
         ],
       ),
       child: Stack(
@@ -178,7 +178,11 @@ class TouristHomeContent extends StatelessWidget {
           Positioned(
             right: -20,
             bottom: -20,
-            child: Icon(Icons.auto_awesome_mosaic_rounded, size: 200, color: Colors.white.withOpacity(0.05)),
+            child: Icon(
+              Icons.auto_awesome_mosaic_rounded,
+              size: 200,
+              color: Colors.white.withOpacity(0.05),
+            ),
           ),
           Padding(
             padding: const EdgeInsets.all(32),
@@ -189,12 +193,18 @@ class TouristHomeContent extends StatelessWidget {
                   isQuizCompleted && personality != null
                       ? 'Your Craft Soul:\n${personality.title}'
                       : 'Discovery\nBegins Here',
-                  style: GoogleFonts.dmSerifDisplay(color: Colors.white, fontSize: 30, height: 1.1),
+                  style: GoogleFonts.dmSerifDisplay(
+                    color: Colors.white,
+                    fontSize: 30,
+                    height: 1.1,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Text(
                   isQuizCompleted && personality != null
-                      ? (personality.tagline.isNotEmpty ? personality.tagline : 'Matched with authentic Malaysian heritage masters.')
+                      ? (personality.tagline.isNotEmpty
+                            ? personality.tagline
+                            : 'Matched with authentic Malaysian heritage masters.')
                       : 'Match your soul with nearby Malaysian artisans.',
                   style: const TextStyle(color: Colors.white70, fontSize: 14),
                 ),
@@ -222,15 +232,34 @@ class TouristHomeContent extends StatelessWidget {
                       ),
                     ),
                     OutlinedButton.icon(
-                      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TouristMatchmakerView())),
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const TouristMatchmakerView(),
+                        ),
+                      ),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.white,
-                        side: const BorderSide(color: Colors.white70, width: 1.5),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                        side: const BorderSide(
+                          color: Colors.white70,
+                          width: 1.5,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 14,
+                          horizontal: 16,
+                        ),
                       ),
                       icon: const Icon(Icons.map_rounded, size: 18),
-                      label: const Text('MAP MATCHMAKER', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                      label: const Text(
+                        'MAP MATCHMAKER',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -246,8 +275,22 @@ class TouristHomeContent extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: GoogleFonts.dmSerifDisplay(fontSize: 22, color: const Color(0xFF004D40))),
-        Text(subtitle, style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.black26, fontWeight: FontWeight.w800, letterSpacing: 0.5)),
+        Text(
+          title,
+          style: GoogleFonts.dmSerifDisplay(
+            fontSize: 22,
+            color: const Color(0xFF004D40),
+          ),
+        ),
+        Text(
+          subtitle,
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 12,
+            color: Colors.black26,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.5,
+          ),
+        ),
       ],
     );
   }
@@ -266,7 +309,11 @@ class TouristHomeContent extends StatelessWidget {
             color: Colors.white,
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 20, offset: const Offset(0, 10))
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
             ],
           ),
           child: Column(
@@ -274,7 +321,9 @@ class TouristHomeContent extends StatelessWidget {
             children: [
               Expanded(
                 child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(24),
+                  ),
                   child: Image.network(
                     'https://images.unsplash.com/photo-1544967082-d9d25d867d66?w=400&idx=$index',
                     fit: BoxFit.cover,
@@ -283,7 +332,10 @@ class TouristHomeContent extends StatelessWidget {
               ),
               Padding(
                 padding: const EdgeInsets.all(16),
-                child: Text('Silk Songket', style: GoogleFonts.dmSerifDisplay(fontSize: 16)),
+                child: Text(
+                  'Silk Songket',
+                  style: GoogleFonts.dmSerifDisplay(fontSize: 16),
+                ),
               ),
             ],
           ),
@@ -313,7 +365,10 @@ class TouristHomeContent extends StatelessWidget {
         child: Center(
           child: Text(
             states[index],
-            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, color: const Color(0xFF004D40)),
+            style: GoogleFonts.plusJakartaSans(
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF004D40),
+            ),
           ),
         ),
       ),

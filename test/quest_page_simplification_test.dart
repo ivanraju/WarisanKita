@@ -66,7 +66,8 @@ void main() {
         expect(taskCard, contains("'DELETE PENDING'"));
         expect(taskCard, contains("'REJECTED'"));
         expect(taskCard, contains("'Edit & Resubmit'"));
-        expect(taskCard, contains("'Keep Original'"));
+        expect(taskCard, contains("'Dismiss Request'"));
+        expect(taskCard, contains("'Cancel Request'"));
       },
     );
   });
@@ -136,7 +137,7 @@ void main() {
         expect(location, contains("'Within quest zone'"));
         expect(location, contains("'Outside quest zone'"));
         expect(location, contains('Location required'));
-        expect(activities, contains("title: 'Heritage Journey'"));
+        expect(activities, contains("title: 'Heritage Quest'"));
         expect(source, contains("'QR REQUIRED'"));
         expect(source, contains("'WAITING FOR ARRIVAL'"));
         expect(source, contains("'PAUSED'"));
@@ -148,10 +149,10 @@ void main() {
           'Start Quest',
           'Move Within Quest Zone',
           'Resume Quest',
-          'Continue Journey',
+          'Quest In Progress',
           'Return to Quest Area',
           'Quest Completed',
-          'Another Journey Active',
+          'Another Quest Active',
         ]) {
           expect(action, contains(label));
         }

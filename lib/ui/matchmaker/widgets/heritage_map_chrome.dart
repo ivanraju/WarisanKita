@@ -8,11 +8,13 @@ String heritageJourneySummary(int quests) =>
 
 class HeritageMapControls extends StatelessWidget {
   final MapTranslate translate;
-  final VoidCallback onSettings;
+  final VoidCallback? onRefresh;
+  final bool isRefreshing;
   const HeritageMapControls({
     super.key,
     required this.translate,
-    required this.onSettings,
+    required this.onRefresh,
+    required this.isRefreshing,
   });
   @override
   Widget build(BuildContext context) => Row(
@@ -38,11 +40,21 @@ class HeritageMapControls extends StatelessWidget {
         ),
       ),
       const Spacer(),
-      IconButton.filledTonal(
-        key: const Key('map-settings'),
-        tooltip: translate('Map filters and settings'),
-        onPressed: onSettings,
-        icon: const Icon(Icons.tune_rounded, size: 20),
+      Semantics(
+        label: 'Refresh studios',
+        button: true,
+        enabled: onRefresh != null,
+        child: IconButton.filledTonal(
+          key: const Key('map-refresh-studios'),
+          tooltip: 'Refresh studios',
+          onPressed: onRefresh,
+          icon: isRefreshing
+              ? const SizedBox.square(
+                  dimension: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2.2),
+                )
+              : const Icon(Icons.refresh_rounded, size: 20),
+        ),
       ),
     ],
   );

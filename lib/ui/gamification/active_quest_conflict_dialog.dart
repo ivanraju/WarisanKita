@@ -11,12 +11,12 @@ Future<bool> showActiveQuestConflictDialog(
         context: context,
         builder: (dialogContext) => AlertDialog(
           title: Text(
-            'Another Journey Is Active',
+            'Another Quest Is Active',
             style: GoogleFonts.dmSerifDisplay(color: const Color(0xFF004D40)),
           ),
           content: Text(
             'You are currently exploring “${activeQuest.questTitle}” at '
-            '${activeQuest.studioName}. Complete that journey before starting '
+            '${activeQuest.studioName}. Complete that quest before starting '
             'a new one.${integrityWarning == null ? '' : '\n\n$integrityWarning'}',
             style: GoogleFonts.plusJakartaSans(height: 1.45),
           ),

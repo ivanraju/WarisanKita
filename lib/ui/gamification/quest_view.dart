@@ -179,9 +179,9 @@ class _QuestViewState extends State<QuestView> {
     final isActive = gamificationViewModel.isActiveQuest(quest.id);
     final isBlocked = gamificationViewModel.hasActiveQuest && !isActive;
     final stateLabel = isActive
-        ? 'Continue Journey'
+        ? 'Continue Quest'
         : isBlocked
-        ? 'Another Journey Active'
+        ? 'Another Quest Active'
         : 'Start Quest';
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
