@@ -135,13 +135,6 @@ class AdminSidebar extends StatelessWidget {
                     label: 'Community Forum',
                     badgeText: 'FLAGGED',
                   ),
-                  const SizedBox(height: 4),
-                  _buildNavItem(
-                    context,
-                    icon: Icons.settings_rounded,
-                    tabId: 'Settings',
-                    label: 'System Settings',
-                  ),
                 ],
               ),
             ),
