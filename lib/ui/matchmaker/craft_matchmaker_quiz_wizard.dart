@@ -112,13 +112,19 @@ class _CraftMatchmakerQuizWizardState extends State<CraftMatchmakerQuizWizard> {
     final langVM = context.watch<LanguageViewModel>();
     final matchmakerVM = context.watch<MatchmakerViewModel>();
     final isUpdating = matchmakerVM.isQuizCompleted;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? const Color(0xFF0D2825) : Colors.white,
       child: Container(
         padding: const EdgeInsets.all(24),
         constraints: const BoxConstraints(maxWidth: 550),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF0D2825) : Colors.white,
+          borderRadius: BorderRadius.circular(28),
+          border: isDark ? Border.all(color: const Color(0xFF1E3A34)) : null,
+        ),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -134,10 +140,16 @@ class _CraftMatchmakerQuizWizardState extends State<CraftMatchmakerQuizWizard> {
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF004D40).withOpacity(0.1),
+                            color: isDark
+                                ? const Color(0xFF1E3A34)
+                                : const Color(0xFF004D40).withOpacity(0.1),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: const Icon(Icons.auto_awesome_rounded, color: Color(0xFF004D40), size: 20),
+                          child: Icon(
+                            Icons.auto_awesome_rounded,
+                            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                            size: 20,
+                          ),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
@@ -146,14 +158,17 @@ class _CraftMatchmakerQuizWizardState extends State<CraftMatchmakerQuizWizard> {
                                 ? langVM.translate('Update Craft Matchmaker')
                                 : langVM.translate('Craft Matchmaker Wizard'),
                             softWrap: true,
-                            style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40)),
+                            style: GoogleFonts.dmSerifDisplay(
+                              fontSize: 20,
+                              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close, color: Colors.grey),
+                    icon: Icon(Icons.close, color: isDark ? Colors.white70 : Colors.grey),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
@@ -162,8 +177,8 @@ class _CraftMatchmakerQuizWizardState extends State<CraftMatchmakerQuizWizard> {
               const SizedBox(height: 10),
               LinearProgressIndicator(
                 value: (_currentStep + 1) / 4,
-                backgroundColor: const Color(0xFFE2E8F0),
-                color: const Color(0xFF004D40),
+                backgroundColor: isDark ? const Color(0xFF1E3A34) : const Color(0xFFE2E8F0),
+                color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
                 minHeight: 6,
                 borderRadius: BorderRadius.circular(3),
               ),
@@ -171,10 +186,10 @@ class _CraftMatchmakerQuizWizardState extends State<CraftMatchmakerQuizWizard> {
               const SizedBox(height: 20),
 
               // Wizard Questions Step View
-              if (_currentStep == 0) _buildQuestion1(),
-              if (_currentStep == 1) _buildQuestion2(),
-              if (_currentStep == 2) _buildQuestion3(),
-              if (_currentStep == 3) _buildQuestion4(),
+              if (_currentStep == 0) _buildQuestion1(isDark),
+              if (_currentStep == 1) _buildQuestion2(isDark),
+              if (_currentStep == 2) _buildQuestion3(isDark),
+              if (_currentStep == 3) _buildQuestion4(isDark),
 
               const SizedBox(height: 24),
 
@@ -186,8 +201,10 @@ class _CraftMatchmakerQuizWizardState extends State<CraftMatchmakerQuizWizard> {
                     OutlinedButton(
                       onPressed: () => setState(() => _currentStep--),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF004D40),
-                        side: const BorderSide(color: Color(0xFF004D40)),
+                        foregroundColor: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                        side: BorderSide(
+                          color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                        ),
                       ),
                       child: Text(langVM.translate('Back')),
                     )
@@ -197,13 +214,22 @@ class _CraftMatchmakerQuizWizardState extends State<CraftMatchmakerQuizWizard> {
                   if (_currentStep < 3)
                     FilledButton(
                       onPressed: () => setState(() => _currentStep++),
-                      style: FilledButton.styleFrom(backgroundColor: const Color(0xFF004D40)),
-                      child: Text(langVM.translate('Next Question')),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                        foregroundColor: isDark ? const Color(0xFF041412) : Colors.white,
+                      ),
+                      child: Text(
+                        langVM.translate('Next Question'),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     )
                   else
                     FilledButton(
                       onPressed: _submitQuiz,
-                      style: FilledButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: isDark ? const Color(0xFF34D399) : const Color(0xFF10B981),
+                        foregroundColor: isDark ? const Color(0xFF041412) : Colors.white,
+                      ),
                       child: Text(
                         isUpdating
                             ? langVM.translate('UPDATE PREFERENCES')
@@ -220,21 +246,29 @@ class _CraftMatchmakerQuizWizardState extends State<CraftMatchmakerQuizWizard> {
     );
   }
 
-  Widget _buildQuestion1() {
+  Widget _buildQuestion1(bool isDark) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Question 1 of 4',
-          style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey[500]),
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            color: isDark ? Colors.white54 : Colors.grey[500],
+          ),
         ),
         const SizedBox(height: 4),
         Text(
           'What type of craft experience do you prefer?',
-          style: GoogleFonts.dmSerifDisplay(fontSize: 18, color: const Color(0xFF0F172A)),
+          style: GoogleFonts.dmSerifDisplay(
+            fontSize: 18,
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
+          ),
         ),
         const SizedBox(height: 14),
         _buildChoiceTile(
+          isDark: isDark,
           title: '🛠️ Hands-on Workshop',
           subtitle: 'I want to craft my own pottery or dye batik fabric',
           value: 'Hands-on Workshop',
@@ -242,6 +276,7 @@ class _CraftMatchmakerQuizWizardState extends State<CraftMatchmakerQuizWizard> {
           onSelect: (val) => setState(() => _q1ExperienceType = val),
         ),
         _buildChoiceTile(
+          isDark: isDark,
           title: '👁️ Observing Master Artisans',
           subtitle: 'I prefer watching skilled masters demonstrate traditional heritage techniques',
           value: 'Observing Master Artisans',
@@ -252,21 +287,29 @@ class _CraftMatchmakerQuizWizardState extends State<CraftMatchmakerQuizWizard> {
     );
   }
 
-  Widget _buildQuestion2() {
+  Widget _buildQuestion2(bool isDark) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Question 2 of 4',
-          style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey[500]),
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            color: isDark ? Colors.white54 : Colors.grey[500],
+          ),
         ),
         const SizedBox(height: 4),
         Text(
           'Which studio setting do you enjoy most?',
-          style: GoogleFonts.dmSerifDisplay(fontSize: 18, color: const Color(0xFF0F172A)),
+          style: GoogleFonts.dmSerifDisplay(
+            fontSize: 18,
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
+          ),
         ),
         const SizedBox(height: 14),
         _buildChoiceTile(
+          isDark: isDark,
           title: '🏠 Indoor Art Studio',
           subtitle: 'Air-conditioned gallery and structured indoor workshop setting',
           value: 'Indoor Studio',
@@ -274,6 +317,7 @@ class _CraftMatchmakerQuizWizardState extends State<CraftMatchmakerQuizWizard> {
           onSelect: (val) => setState(() => _q2Environment = val),
         ),
         _buildChoiceTile(
+          isDark: isDark,
           title: '🌿 Outdoor Heritage Village',
           subtitle: 'Open-air traditional wooden kampong workshop setup',
           value: 'Outdoor Village',
@@ -284,22 +328,30 @@ class _CraftMatchmakerQuizWizardState extends State<CraftMatchmakerQuizWizard> {
     );
   }
 
-  Widget _buildQuestion3() {
+  Widget _buildQuestion3(bool isDark) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Question 3 of 4',
-          style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey[500]),
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            color: isDark ? Colors.white54 : Colors.grey[500],
+          ),
         ),
         const SizedBox(height: 4),
         Text(
           'What is your favorite craft material?',
-          style: GoogleFonts.dmSerifDisplay(fontSize: 18, color: const Color(0xFF0F172A)),
+          style: GoogleFonts.dmSerifDisplay(
+            fontSize: 18,
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
+          ),
         ),
         const SizedBox(height: 14),
         ..._materialsList.map(
           (mat) => _buildChoiceTile(
+            isDark: isDark,
             title: mat,
             subtitle: 'Crafts made with authentic $mat',
             value: mat,
@@ -311,21 +363,29 @@ class _CraftMatchmakerQuizWizardState extends State<CraftMatchmakerQuizWizard> {
     );
   }
 
-  Widget _buildQuestion4() {
+  Widget _buildQuestion4(bool isDark) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Question 4 of 4',
-          style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey[500]),
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            color: isDark ? Colors.white54 : Colors.grey[500],
+          ),
         ),
         const SizedBox(height: 4),
         Text(
           'Which Malaysian heritage region interests you?',
-          style: GoogleFonts.dmSerifDisplay(fontSize: 18, color: const Color(0xFF0F172A)),
+          style: GoogleFonts.dmSerifDisplay(
+            fontSize: 18,
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
+          ),
         ),
         const SizedBox(height: 14),
         _buildChoiceTile(
+          isDark: isDark,
           title: '🌊 East Coast Heritage (Kelantan & Terengganu)',
           subtitle: 'Famous for Songket weaving, Wau kites, and Batik canting',
           value: 'East Coast Heritage',
@@ -333,6 +393,7 @@ class _CraftMatchmakerQuizWizardState extends State<CraftMatchmakerQuizWizard> {
           onSelect: (val) => setState(() => _q4CraftOrigin = val),
         ),
         _buildChoiceTile(
+          isDark: isDark,
           title: '🏛️ West Coast Historic Cities (Melaka & Perak)',
           subtitle: 'Famous for Clay Labu Sayong pottery and wood carvings',
           value: 'West Coast Historic',
@@ -344,6 +405,7 @@ class _CraftMatchmakerQuizWizardState extends State<CraftMatchmakerQuizWizard> {
   }
 
   Widget _buildChoiceTile({
+    required bool isDark,
     required String title,
     required String subtitle,
     required String value,
@@ -355,11 +417,15 @@ class _CraftMatchmakerQuizWizardState extends State<CraftMatchmakerQuizWizard> {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       child: Material(
-        color: isSelected ? const Color(0xFF004D40).withOpacity(0.06) : Colors.white,
+        color: isSelected
+            ? (isDark ? const Color(0xFF1E3A34) : const Color(0xFF004D40).withOpacity(0.06))
+            : (isDark ? const Color(0xFF041412) : Colors.white),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(
-            color: isSelected ? const Color(0xFF004D40) : Colors.black.withOpacity(0.08),
+            color: isSelected
+                ? (isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40))
+                : (isDark ? const Color(0xFF1E3A34) : Colors.black.withOpacity(0.08)),
             width: isSelected ? 1.8 : 1.0,
           ),
         ),
@@ -370,16 +436,27 @@ class _CraftMatchmakerQuizWizardState extends State<CraftMatchmakerQuizWizard> {
             style: GoogleFonts.plusJakartaSans(
               fontSize: 14,
               fontWeight: FontWeight.bold,
-              color: isSelected ? const Color(0xFF004D40) : const Color(0xFF1E293B),
+              color: isSelected
+                  ? (isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40))
+                  : (isDark ? Colors.white : const Color(0xFF1E293B)),
             ),
           ),
           subtitle: Text(
             subtitle,
-            style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[600]),
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 11,
+              color: isDark ? Colors.white70 : Colors.grey[600],
+            ),
           ),
           trailing: isSelected
-              ? const Icon(Icons.check_circle_rounded, color: Color(0xFF004D40))
-              : const Icon(Icons.radio_button_unchecked_rounded, color: Colors.grey),
+              ? Icon(
+                  Icons.check_circle_rounded,
+                  color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                )
+              : Icon(
+                  Icons.radio_button_unchecked_rounded,
+                  color: isDark ? Colors.white38 : Colors.grey,
+                ),
         ),
       ),
     );

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -55,6 +56,8 @@ class ArtisanDetailScreen extends StatefulWidget {
 class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
   final PageController _pageController = PageController();
   int _currentCarouselIndex = 0;
+  Timer? _rotationTimer;
+  bool _isInteracting = false;
   GoogleMapController? _mapController;
   late final LatLng? _workshopPin;
   late final LatLng _mapTarget;
@@ -78,14 +81,23 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
     'Labuan': LatLng(5.2831, 115.2308),
   };
 
-  late final List<String> _carouselImages =
-      widget.imageUrls != null && widget.imageUrls!.isNotEmpty
-      ? widget.imageUrls!
-      : [
-          widget.imageUrl,
-          'https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=600&auto=format&fit=crop&q=80',
-          'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80',
-        ];
+  late final List<String> _carouselImages = () {
+    if (widget.imageUrls != null && widget.imageUrls!.isNotEmpty) {
+      if (widget.imageUrls!.length > 1) {
+        return widget.imageUrls!;
+      }
+      return [
+        widget.imageUrls!.first,
+        'https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=600&auto=format&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80',
+      ];
+    }
+    return [
+      widget.imageUrl,
+      'https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80',
+    ];
+  }();
 
   @override
   void initState() {
@@ -98,10 +110,49 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
       _mapTarget =
           _stateCenters[widget.state] ?? const LatLng(2.1896, 102.2501);
     }
+    _startAutoRotation();
+  }
+
+  void _startAutoRotation() {
+    _stopAutoRotation();
+    if (_carouselImages.length <= 1) return;
+
+    _rotationTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (!mounted || _isInteracting) return;
+      if (!_pageController.hasClients) return;
+
+      final nextPage = (_currentCarouselIndex + 1) % _carouselImages.length;
+      _pageController.animateToPage(
+        nextPage,
+        duration: const Duration(milliseconds: 650),
+        curve: Curves.easeInOutCubic,
+      );
+    });
+  }
+
+  void _stopAutoRotation() {
+    _rotationTimer?.cancel();
+    _rotationTimer = null;
+  }
+
+  void _onUserTouchStart() {
+    _isInteracting = true;
+    _stopAutoRotation();
+  }
+
+  void _onUserTouchEnd() {
+    _isInteracting = false;
+    _stopAutoRotation();
+    _rotationTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted && !_isInteracting) {
+        _startAutoRotation();
+      }
+    });
   }
 
   @override
   void dispose() {
+    _stopAutoRotation();
     _pageController.dispose();
     _mapController?.dispose();
     super.dispose();
@@ -211,56 +262,105 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
               background: Stack(
                 fit: StackFit.expand,
                 children: [
-                  PageView.builder(
-                    controller: _pageController,
-                    onPageChanged: (idx) =>
-                        setState(() => _currentCarouselIndex = idx),
-                    itemCount: _carouselImages.length,
-                    itemBuilder: (context, index) {
-                      return Image.network(
-                        _carouselImages[index],
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          color: isDark
-                              ? const Color(0xFF0D2825)
-                              : const Color(0xFF004D40),
-                        ),
-                      );
-                    },
+                  Listener(
+                    onPointerDown: (_) => _onUserTouchStart(),
+                    onPointerUp: (_) => _onUserTouchEnd(),
+                    onPointerCancel: (_) => _onUserTouchEnd(),
+                    child: PageView.builder(
+                      controller: _pageController,
+                      physics: const BouncingScrollPhysics(),
+                      onPageChanged: (idx) =>
+                          setState(() => _currentCarouselIndex = idx),
+                      itemCount: _carouselImages.length,
+                      itemBuilder: (context, index) {
+                        return Image.network(
+                          _carouselImages[index],
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            color: isDark
+                                ? const Color(0xFF0D2825)
+                                : const Color(0xFF004D40),
+                          ),
+                        );
+                      },
+                    ),
                   ),
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.black.withValues(alpha: 0.3),
-                          Colors.transparent,
-                          Colors.black.withValues(alpha: 0.8),
-                        ],
+                  IgnorePointer(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black.withValues(alpha: 0.35),
+                            Colors.transparent,
+                            Colors.black.withValues(alpha: 0.85),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                  Positioned(
-                    top: 50,
-                    right: 20,
-                    child: Row(
-                      children: List.generate(
-                        _carouselImages.length,
-                        (index) => Container(
-                          width: 8,
-                          height: 8,
-                          margin: const EdgeInsets.symmetric(horizontal: 3),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: _currentCarouselIndex == index
-                                ? const Color(0xFFFFD54F)
-                                : Colors.white.withValues(alpha: 0.5),
+                  if (_carouselImages.length > 1)
+                    Positioned(
+                      top: 48,
+                      right: 68,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.55),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.25),
+                            width: 0.8,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.photo_library_rounded,
+                              size: 11,
+                              color: Color(0xFFFFD54F),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${_currentCarouselIndex + 1}/${_carouselImages.length}',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  if (_carouselImages.length > 1)
+                    Positioned(
+                      bottom: 8,
+                      left: 0,
+                      right: 0,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(
+                          _carouselImages.length,
+                          (index) => AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            width: _currentCarouselIndex == index ? 18 : 6,
+                            height: 6,
+                            margin: const EdgeInsets.symmetric(horizontal: 2.5),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(3),
+                              color: _currentCarouselIndex == index
+                                  ? const Color(0xFFFFD54F)
+                                  : Colors.white.withValues(alpha: 0.45),
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
                   Positioned(
                     bottom: 20,
                     left: 24,

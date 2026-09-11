@@ -14,6 +14,7 @@ class DirectoryViewModel extends ChangeNotifier {
   List<ArtisanModel> _filteredArtisans = [];
   
   List<ArtisanModel> get artisans => _filteredArtisans;
+  List<ArtisanModel> get allArtisans => _allArtisans;
   
   // Neo-Traditional UX: Provide a curated list for high-impact home sections
   List<ArtisanModel> get featuredArtisans => 
@@ -71,6 +72,11 @@ class DirectoryViewModel extends ChangeNotifier {
     final craftQ = _selectedCraft.toLowerCase().trim();
     final stateQ = _selectedState.toLowerCase().trim();
 
+    final craftTokens = craftQ
+        .split(RegExp(r'[\s&/,\-]+'))
+        .where((t) => t.length >= 3 && !{'and', 'the', 'crafts', 'craft'}.contains(t))
+        .toList();
+
     _filteredArtisans = _allArtisans.where((artisan) {
       final name = artisan.name.toLowerCase();
       final craft = artisan.craftType.toLowerCase();
@@ -89,7 +95,9 @@ class DirectoryViewModel extends ChangeNotifier {
           craft == craftQ ||
           craft.contains(craftQ) ||
           craftQ.contains(craft) ||
-          tags.any((t) => t.contains(craftQ) || craftQ.contains(t));
+          tags.any((t) => t.contains(craftQ) || craftQ.contains(t)) ||
+          (craftTokens.isNotEmpty &&
+              craftTokens.any((t) => craft.contains(t) || tags.any((tag) => tag.contains(t))));
 
       final matchesState = stateQ == 'all states' || state == stateQ;
 

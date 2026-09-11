@@ -225,8 +225,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
               onPressed: () => Navigator.pop(ctx),
               style: FilledButton.styleFrom(
                 backgroundColor: const Color(0xFF004D40),
+                foregroundColor: Colors.white,
               ),
-              child: const Text('UNDERSTOOD'),
+              child: const Text('UNDERSTOOD', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -338,7 +339,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                 'Report / Flag Content',
                 style: GoogleFonts.dmSerifDisplay(
                   fontSize: 20,
-                  color: const Color(0xFF004D40),
+                  color: Theme.of(dialogContext).brightness == Brightness.dark
+                      ? const Color(0xFFFFD54F)
+                      : const Color(0xFF004D40),
                 ),
               ),
             ],
@@ -496,7 +499,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                   'Report Reply',
                   style: GoogleFonts.dmSerifDisplay(
                     fontSize: 20,
-                    color: const Color(0xFF004D40),
+                    color: Theme.of(dialogContext).brightness == Brightness.dark
+                        ? const Color(0xFFFFD54F)
+                        : const Color(0xFF004D40),
                   ),
                 ),
               ),
@@ -728,7 +733,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                 softWrap: true,
                 style: GoogleFonts.dmSerifDisplay(
                   fontSize: 18,
-                  color: const Color(0xFF004D40),
+                  color: Theme.of(dialogContext).brightness == Brightness.dark
+                      ? const Color(0xFFFFD54F)
+                      : const Color(0xFF004D40),
                 ),
               ),
             ),
@@ -779,7 +786,12 @@ class _LiveForumTabState extends State<LiveForumTab> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Row(
           children: [
-            const Icon(Icons.edit_rounded, color: Color(0xFF004D40)),
+            Icon(
+              Icons.edit_rounded,
+              color: Theme.of(dialogContext).brightness == Brightness.dark
+                  ? const Color(0xFFFFD54F)
+                  : const Color(0xFF004D40),
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -787,7 +799,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                 softWrap: true,
                 style: GoogleFonts.dmSerifDisplay(
                   fontSize: 20,
-                  color: const Color(0xFF004D40),
+                  color: Theme.of(dialogContext).brightness == Brightness.dark
+                      ? const Color(0xFFFFD54F)
+                      : const Color(0xFF004D40),
                 ),
               ),
             ),
@@ -856,9 +870,10 @@ class _LiveForumTabState extends State<LiveForumTab> {
             },
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFF004D40),
+              foregroundColor: Colors.white,
             ),
-            icon: const Icon(Icons.check_rounded, size: 16),
-            label: const Text('SAVE CHANGES'),
+            icon: const Icon(Icons.check_rounded, size: 16, color: Color(0xFFFFD54F)),
+            label: const Text('SAVE CHANGES', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -877,7 +892,12 @@ class _LiveForumTabState extends State<LiveForumTab> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Row(
           children: [
-            const Icon(Icons.edit_rounded, color: Color(0xFF004D40)),
+            Icon(
+              Icons.edit_rounded,
+              color: Theme.of(dialogContext).brightness == Brightness.dark
+                  ? const Color(0xFFFFD54F)
+                  : const Color(0xFF004D40),
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -885,7 +905,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                 softWrap: true,
                 style: GoogleFonts.dmSerifDisplay(
                   fontSize: 18,
-                  color: const Color(0xFF004D40),
+                  color: Theme.of(dialogContext).brightness == Brightness.dark
+                      ? const Color(0xFFFFD54F)
+                      : const Color(0xFF004D40),
                 ),
               ),
             ),
@@ -950,9 +972,10 @@ class _LiveForumTabState extends State<LiveForumTab> {
             },
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFF004D40),
+              foregroundColor: Colors.white,
             ),
-            icon: const Icon(Icons.check_rounded, size: 16),
-            label: const Text('SAVE CHANGES'),
+            icon: const Icon(Icons.check_rounded, size: 16, color: Color(0xFFFFD54F)),
+            label: const Text('SAVE CHANGES', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -1208,9 +1231,12 @@ class _LiveForumTabState extends State<LiveForumTab> {
                                   FilledButton(
                                     onPressed: () => Navigator.pop(ctx),
                                     style: FilledButton.styleFrom(
-                                      backgroundColor: const Color(0xFF004D40),
+                                      backgroundColor: isDark
+                                          ? const Color(0xFF1E3A34)
+                                          : const Color(0xFF004D40),
+                                      foregroundColor: Colors.white,
                                     ),
-                                    child: const Text('UNDERSTOOD'),
+                                    child: const Text('UNDERSTOOD', style: TextStyle(color: Colors.white)),
                                   ),
                                 ],
                               ),
@@ -1238,17 +1264,21 @@ class _LiveForumTabState extends State<LiveForumTab> {
                           );
                         },
                         style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFF004D40),
+                          backgroundColor: isDark
+                              ? const Color(0xFF1E3A34)
+                              : const Color(0xFF004D40),
+                          foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
                         ),
-                        icon: const Icon(Icons.send_rounded, size: 18),
+                        icon: const Icon(Icons.send_rounded, size: 18, color: Color(0xFFFFD54F)),
                         label: Text(
                           'Post Question to Community',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
+                            color: Colors.white,
                           ),
                         ),
                       ),
@@ -1374,7 +1404,8 @@ class _LiveForumTabState extends State<LiveForumTab> {
               child: FilledButton.icon(
                 onPressed: () => _showCreateThreadModal(langVM),
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF004D40),
+                  backgroundColor: isDark ? const Color(0xFF1E3A34) : const Color(0xFF004D40),
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
                     vertical: 6,
@@ -1393,6 +1424,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
                 ),
               ),
@@ -1415,7 +1447,8 @@ class _LiveForumTabState extends State<LiveForumTab> {
       floatingActionButton: _activeThread == null
           ? FloatingActionButton.extended(
               onPressed: () => _showCreateThreadModal(langVM),
-              backgroundColor: const Color(0xFF004D40),
+              backgroundColor: isDark ? const Color(0xFF1E3A34) : const Color(0xFF004D40),
+              foregroundColor: Colors.white,
               icon: const Icon(
                 Icons.edit_note_rounded,
                 color: Color(0xFFFFD54F),
@@ -1963,7 +1996,10 @@ class _LiveForumTabState extends State<LiveForumTab> {
                             FilledButton.icon(
                               onPressed: () => _showCreateThreadModal(langVM),
                               style: FilledButton.styleFrom(
-                                backgroundColor: const Color(0xFF004D40),
+                                backgroundColor: isDark
+                                    ? const Color(0xFF1E3A34)
+                                    : const Color(0xFF004D40),
+                                foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -1982,6 +2018,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 13,
                                   fontWeight: FontWeight.bold,
+                                  color: Colors.white,
                                 ),
                               ),
                             ),
@@ -2814,7 +2851,10 @@ class _LiveForumTabState extends State<LiveForumTab> {
                       child: FilledButton.icon(
                         onPressed: () => _sendMessage(context),
                         style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFF004D40),
+                          backgroundColor: isDark
+                              ? const Color(0xFF1E3A34)
+                              : const Color(0xFF004D40),
+                          foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(horizontal: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
@@ -2830,6 +2870,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
+                            color: Colors.white,
                           ),
                         ),
                       ),
