@@ -26,7 +26,6 @@ class ArtisanDetailScreen extends StatefulWidget {
   final int? workshopsHosted;
   final String? ssmNumber;
   final List<Map<String, dynamic>> documents;
-  final String? phoneNumber;
 
   const ArtisanDetailScreen({
     super.key,
@@ -48,7 +47,6 @@ class ArtisanDetailScreen extends StatefulWidget {
     this.workshopsHosted,
     this.ssmNumber,
     this.documents = const [],
-    this.phoneNumber,
   });
 
   @override
@@ -185,20 +183,6 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Could not open map directions')),
-        );
-      }
-    }
-  }
-
-  Future<void> _makePhoneCall(String phone) async {
-    final clean = phone.replaceAll(RegExp(r'[^\d+]'), '');
-    final uri = Uri.parse('tel:$clean');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not call $phone')),
         );
       }
     }
@@ -395,8 +379,6 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                           ),
                           child: Text(
                             tr(widget.craftCategory),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                             style: GoogleFonts.plusJakartaSans(
                               fontWeight: FontWeight.bold,
                               fontSize: 11,
@@ -407,8 +389,6 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                         const SizedBox(height: 6),
                         Text(
                           widget.artisanName,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.dmSerifDisplay(
                             fontSize: 28,
                             color: Colors.white,
@@ -515,21 +495,14 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                                 )
                               : null,
                         ),
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(
-                            maxWidth: MediaQuery.of(context).size.width * 0.4,
-                          ),
-                          child: Text(
-                            widget.experience,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 11,
-                              color: isDark
-                                  ? const Color(0xFFFFD54F)
-                                  : const Color(0xFFB45309),
-                            ),
+                        child: Text(
+                          widget.experience,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                            color: isDark
+                                ? const Color(0xFFFFD54F)
+                                : const Color(0xFFB45309),
                           ),
                         ),
                       ),
@@ -557,105 +530,67 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                         ),
                       ],
                     ),
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        final demoBadge = Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 9,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: widget.isLiveOpen
-                                ? (isDark
-                                    ? const Color(0xFF064E3B)
-                                    : const Color(0xFFDCFCE7))
-                                : (isDark
-                                    ? const Color(0xFF450A0A)
-                                    : const Color(0xFFFEE2E2)),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 7,
-                                height: 7,
-                                decoration: BoxDecoration(
-                                  color: widget.isLiveOpen
-                                      ? const Color(0xFF16A34A)
-                                      : const Color(0xFFEF4444),
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              const SizedBox(width: 5),
-                              Text(
-                                widget.isLiveOpen
-                                    ? tr('OPEN DEMOS')
-                                    : tr('DEMOS PAUSED'),
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 10.5,
-                                  fontWeight: FontWeight.bold,
-                                  color: widget.isLiveOpen
-                                      ? (isDark
-                                          ? const Color(0xFF34D399)
-                                          : const Color(0xFF15803D))
-                                      : (isDark
-                                          ? const Color(0xFFF87171)
-                                          : const Color(0xFFB91C1C)),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-
-                        final verifiedRow = Row(
-                          mainAxisSize: MainAxisSize.min,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
                           children: [
                             Icon(
                               Icons.verified_rounded,
                               color: isDark
                                   ? const Color(0xFF34D399)
                                   : const Color(0xFF004D40),
-                              size: 20,
+                              size: 22,
                             ),
                             const SizedBox(width: 6),
-                            Flexible(
-                              child: Text(
-                                tr('Verified Artisan Studio'),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: isDark
-                                      ? const Color(0xFF34D399)
-                                      : const Color(0xFF004D40),
-                                ),
+                            Text(
+                              tr('Verified Artisan Studio'),
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: isDark
+                                    ? const Color(0xFF34D399)
+                                    : const Color(0xFF004D40),
                               ),
                             ),
                           ],
-                        );
-
-                        if (constraints.maxWidth < 290) {
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? const Color(0xFF064E3B)
+                                : const Color(0xFFDCFCE7),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(
                             children: [
-                              verifiedRow,
-                              const SizedBox(height: 8),
-                              demoBadge,
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF16A34A),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                tr('OPEN DEMOS'),
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark
+                                      ? const Color(0xFF34D399)
+                                      : const Color(0xFF15803D),
+                                ),
+                              ),
                             ],
-                          );
-                        }
-
-                        return Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(child: verifiedRow),
-                            const SizedBox(width: 8),
-                            demoBadge,
-                          ],
-                        );
-                      },
+                          ),
+                        ),
+                      ],
                     ),
                   ),
 
@@ -971,127 +906,6 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                       ),
                     ],
                   ),
-
-                  if (widget.phoneNumber != null &&
-                      widget.phoneNumber!.trim().isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.phone_rounded,
-                          size: 16,
-                          color: isDark
-                              ? const Color(0xFF34D399)
-                              : const Color(0xFF004D40),
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            widget.phoneNumber!.trim(),
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: isDark
-                                  ? Colors.white70
-                                  : const Color(0xFF334155),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF0D2825) : Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: isDark
-                              ? const Color(0xFF1E3A34)
-                              : const Color(0xFFE2E8F0),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.04),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: isDark
-                                  ? const Color(0xFF34D399).withValues(alpha: 0.15)
-                                  : const Color(0xFF004D40).withValues(alpha: 0.08),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              Icons.phone_in_talk_rounded,
-                              color: isDark
-                                  ? const Color(0xFF34D399)
-                                  : const Color(0xFF004D40),
-                              size: 18,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  tr('Studio Contact & Inquiries'),
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 11,
-                                    color: isDark
-                                        ? Colors.white60
-                                        : Colors.grey[600],
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  widget.phoneNumber!.trim(),
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                    color: isDark
-                                        ? Colors.white
-                                        : const Color(0xFF1E293B),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          FilledButton.tonalIcon(
-                            icon: const Icon(Icons.call_rounded, size: 16),
-                            label: Text(tr('Call')),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: isDark
-                                  ? const Color(0xFF1E3A34)
-                                  : const Color(0xFFDCFCE7),
-                              foregroundColor: isDark
-                                  ? const Color(0xFF34D399)
-                                  : const Color(0xFF15803D),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 8,
-                              ),
-                              visualDensity: VisualDensity.compact,
-                            ),
-                            onPressed: () =>
-                                _makePhoneCall(widget.phoneNumber!),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
 
                   SizedBox(height: widget.onViewQuest == null ? 24 : 100),
                 ],

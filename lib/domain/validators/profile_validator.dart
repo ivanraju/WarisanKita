@@ -196,18 +196,13 @@ class ProfileValidator {
   /// Validates years of craft experience.
   static String? validateExperience(String? value, {bool isRequired = true}) {
     if (value == null || value.trim().isEmpty) {
-      return isRequired ? 'Please enter your craft experience (e.g. 15)' : null;
+      return isRequired ? 'Please enter your craft experience (e.g. 15 Years)' : null;
     }
 
     final clean = value.trim();
-    final parsed = int.tryParse(clean);
-    if (parsed != null) {
-      if (parsed < 1 || parsed > 99) {
-        return 'Years of experience must be between 1 and 99';
-      }
-      return null;
+    if (clean.length < 2) {
+      return 'Experience description is too short';
     }
-
     if (clean.length > 60) {
       return 'Experience description cannot exceed 60 characters';
     }

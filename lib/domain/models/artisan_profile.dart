@@ -16,7 +16,6 @@ class ArtisanModel {
   final bool isLiveOpen;
   final String? ssmNumber;
   final List<Map<String, dynamic>> documents;
-  final String? phone;
 
   ArtisanModel({
     required this.id,
@@ -36,50 +35,7 @@ class ArtisanModel {
     this.isLiveOpen = true,
     this.ssmNumber,
     this.documents = const [],
-    this.phone,
   });
-
-  ArtisanModel copyWith({
-    String? id,
-    String? name,
-    String? craftType,
-    String? state,
-    String? description,
-    String? imageUrl,
-    double? rating,
-    String? experience,
-    int? workshopCount,
-    List<String>? tags,
-    List<String>? images,
-    String? address,
-    double? latitude,
-    double? longitude,
-    bool? isLiveOpen,
-    String? ssmNumber,
-    List<Map<String, dynamic>>? documents,
-    String? phone,
-  }) {
-    return ArtisanModel(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      craftType: craftType ?? this.craftType,
-      state: state ?? this.state,
-      description: description ?? this.description,
-      imageUrl: imageUrl ?? this.imageUrl,
-      rating: rating ?? this.rating,
-      experience: experience ?? this.experience,
-      workshopCount: workshopCount ?? this.workshopCount,
-      tags: tags ?? this.tags,
-      images: images ?? this.images,
-      address: address ?? this.address,
-      latitude: latitude ?? this.latitude,
-      longitude: longitude ?? this.longitude,
-      isLiveOpen: isLiveOpen ?? this.isLiveOpen,
-      ssmNumber: ssmNumber ?? this.ssmNumber,
-      documents: documents ?? this.documents,
-      phone: phone ?? this.phone,
-    );
-  }
 
   factory ArtisanModel.fromMap(Map<String, dynamic> map) {
     // Extract a nice image from the artisan_documents or users if available
@@ -128,27 +84,14 @@ class ArtisanModel {
       }
     }
 
-    final List<String> rawTags = map['tags'] != null
-        ? List<String>.from(map['tags'])
-        : [map['craft_category']?.toString() ?? 'Heritage'];
-    final bool isClosedTag = rawTags.contains('__LIVE_DEMO_CLOSED__');
-
     final bool isLive = map['is_live_open'] ??
         map['isLiveOpen'] ??
         (map['users'] != null ? map['users']['is_live_open'] : null) ??
-        !isClosedTag;
+        true;
 
     final String? ssm = (map['ssm_number'] ??
             map['ssmNumber'] ??
             (map['users'] != null ? map['users']['ssm_number'] : null))
-        ?.toString();
-
-    final String? phone = (map['phone'] ??
-            map['phone_number'] ??
-            map['phoneNumber'] ??
-            (map['users'] != null
-                ? (map['users']['phone_number'] ?? map['users']['phone'])
-                : null))
         ?.toString();
 
     List<Map<String, dynamic>> docsList = [];
@@ -173,7 +116,7 @@ class ArtisanModel {
           (map['workshops_hosted'] as num?)?.toInt() ??
           (map['workshopCount'] as num?)?.toInt() ??
           0,
-      tags: rawTags.where((t) => !t.startsWith('__')).toList(),
+      tags: map['tags'] != null ? List<String>.from(map['tags']) : [map['craft_category'] ?? 'Heritage'],
       images: allImages,
       address: map['address'] as String?,
       latitude: lat,
@@ -181,7 +124,6 @@ class ArtisanModel {
       isLiveOpen: isLive,
       ssmNumber: ssm,
       documents: docsList,
-      phone: phone,
     );
   }
 }

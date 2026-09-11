@@ -34,6 +34,15 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
     });
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final user = context.watch<AuthViewModel>().currentUser;
+    if (user != null) {
+      _isStudioOpen = user.isLiveOpen;
+    }
+  }
+
   Future<void> _toggleStudioStatus(bool isOpen) async {
     setState(() => _isStudioOpen = isOpen);
     try {
@@ -86,7 +95,6 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
     final handle = user?.handle ?? (user?.effectiveUsername ?? '');
     final craft = user?.craftCategory ?? 'Heritage Craft';
     final initials = user?.initials ?? 'AS';
-    final isStudioOpen = user != null ? user.isLiveOpen : _isStudioOpen;
 
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
@@ -269,14 +277,14 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
                                   ),
                                 ),
                                 Text(
-                                  isStudioOpen
+                                  _isStudioOpen
                                       ? '🟢 OPEN FOR EDUCATIONAL DEMOS'
                                       : '🔴 LIVE DEMOS PAUSED (CLOSED TO VISITORS)',
                                   softWrap: true,
                                   style: GoogleFonts.plusJakartaSans(
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
-                                    color: isStudioOpen
+                                    color: _isStudioOpen
                                         ? const Color(0xFF34D399)
                                         : const Color(0xFFFCA5A5),
                                   ),
@@ -286,7 +294,7 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
                           ),
                           const SizedBox(width: 8),
                           Switch(
-                            value: isStudioOpen,
+                            value: _isStudioOpen,
                             onChanged: _toggleStudioStatus,
                             activeThumbColor: const Color(0xFFFFD54F),
                             activeTrackColor: const Color(0xFF10B981),

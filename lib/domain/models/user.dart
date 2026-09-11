@@ -347,7 +347,6 @@ class UserModel {
       'phone': phone,
       'experience': experience,
       'artisanProfileId': artisanProfileId,
-      'artisan_profile_id': artisanProfileId,
       'artisanStatus': artisanStatus,
       'latitude': latitude,
       'longitude': longitude,
@@ -409,11 +408,9 @@ class UserModel {
     }
 
     final rawTags = artisanMap?['tags'] ?? map['tags'];
-    final allTagsList = rawTags is List
+    final tagsList = rawTags is List
         ? List<String>.from(rawTags.map((t) => t.toString()))
         : const <String>[];
-    final bool isClosedTag = allTagsList.contains('__LIVE_DEMO_CLOSED__');
-    final tagsList = allTagsList.where((t) => !t.startsWith('__')).toList();
 
     // Parse lat/lon
     final latRaw = artisanMap?['latitude'] ?? map['latitude'];
@@ -539,11 +536,7 @@ class UserModel {
       longitude: lon,
       phone: map['phone'] ?? map['phone_number'] ?? artisanMap?['phone'],
       experience: resolvedExp,
-      artisanProfileId: artisanMap?['id'] ??
-          map['artisanProfileId'] ??
-          map['artisan_profile_id'] ??
-          map['artisanId'] ??
-          map['artisan_id'],
+      artisanProfileId: artisanMap?['id'],
       artisanStatus: isClosedArtisan
           ? 'CLOSED'
           : (isPendingArtisanStatus
@@ -558,7 +551,7 @@ class UserModel {
       pendingRelocationReason: map['pending_relocation_reason'] ?? map['pendingRelocationReason'] ?? artisanMap?['pending_relocation_reason'],
       pendingRelocationDate: map['pending_relocation_date'] ?? map['pendingRelocationDate'] ?? artisanMap?['pending_relocation_date'],
       rejectionReason: map['rejectionReason'] ?? map['rejection_reason'] ?? artisanMap?['rejection_reason'],
-      isLiveOpen: map['is_live_open'] ?? map['isLiveOpen'] ?? artisanMap?['is_live_open'] ?? !isClosedTag,
+      isLiveOpen: map['is_live_open'] ?? map['isLiveOpen'] ?? artisanMap?['is_live_open'] ?? true,
       workshopCount: resolvedWorkshops,
     );
   }

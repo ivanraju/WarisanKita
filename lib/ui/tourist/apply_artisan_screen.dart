@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
@@ -531,8 +530,8 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
     }
     if (!mounted) return;
     final studioName = _studioNameController.text.trim();
-    final expDigits = _experienceController.text.trim().replaceAll(RegExp(r'[^0-9]'), '');
-    final experience = expDigits.isNotEmpty ? '$expDigits Years' : null;
+    final expText = _experienceController.text.trim();
+    final experience = expText.isNotEmpty ? expText : null;
     final bio = _bioController.text.trim();
     final phoneText = _phoneController.text.trim();
     final phone = phoneText.isNotEmpty ? phoneText : null;
@@ -594,7 +593,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
           dateSubmitted: 'Just Now',
           imageUrl: updatedUser?.avatarUrl ?? '',
           email: updatedUser?.email ?? '',
-          experience: (experience != null && experience.isNotEmpty) ? experience : 'Craft Artisan',
+          experience: expText.isNotEmpty ? expText : 'Craft Artisan',
           phone: phone ?? '',
           ssmNumber: ssm,
           ssmFileName: _ssmFile?.name ?? updatedUser?.ssmFileName,
@@ -932,27 +931,17 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                   // Years of Craft Experience
                   TextFormField(
                     controller: _experienceController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                      LengthLimitingTextInputFormatter(2),
-                    ],
                     autovalidateMode: AutovalidateMode.onUserInteraction,
                     decoration: InputDecoration(
                       labelText: 'Years of Craft Experience *',
-                      hintText: 'e.g. 15',
-                      suffixText: 'Years',
-                      suffixStyle: GoogleFonts.plusJakartaSans(
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF004D40),
-                      ),
+                      hintText: 'e.g. 15 Years Experience or 10+ Years',
                       prefixIcon: const Icon(
                         Icons.workspace_premium_outlined,
                         color: Color(0xFF004D40),
                       ),
                       filled: true,
                       fillColor: const Color(0xFFF8F9FA),
-                      helperText: 'Enter your years of craft heritage experience in numbers (e.g. 15)',
+                      helperText: 'e.g. 15 Years or 25+ Years Experience',
                       helperStyle: GoogleFonts.plusJakartaSans(
                         fontSize: 11,
                         color: Colors.grey[600],

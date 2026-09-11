@@ -105,8 +105,7 @@ class ActiveArtisanMaster {
       state: state,
       experience: exp,
       plaques: (map['plaques'] as int?) ?? (ap?['workshop_count'] as int?) ?? 1,
-      isLiveOpen: map['is_live_open'] ??
-          (ap?['tags'] is List && (ap!['tags'] as List).contains('__LIVE_DEMO_CLOSED__') ? false : true),
+      isLiveOpen: map['is_live_open'] ?? true,
       licenseNo: license,
       verifiedDate: verifiedDate,
       imageUrl: (map['avatar_url'] ?? map['imageUrl'] ?? 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600').toString(),
