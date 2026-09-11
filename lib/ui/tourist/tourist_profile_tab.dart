@@ -1111,7 +1111,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                               ),
                               child: Text(
                                 langVM.translate('Apply'),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 11,
                                   color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
