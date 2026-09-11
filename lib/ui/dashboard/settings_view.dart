@@ -21,11 +21,6 @@ class SettingsScreen extends StatelessWidget {
             onTap: () {},
           ),
           _buildSettingsTile(
-            icon: Icons.notifications_none,
-            title: 'Notifications',
-            onTap: () {},
-          ),
-          _buildSettingsTile(
             icon: Icons.security,
             title: 'Privacy & Security',
             onTap: () {},
