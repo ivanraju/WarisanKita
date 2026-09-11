@@ -28,21 +28,29 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
   bool _journeyRestoreScheduled = false;
   bool _isRejectionBannerDismissed = false;
 
+  bool _rejectionDialogShowing = false;
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (mounted) {
-        context.read<AuthViewModel>().refreshCurrentUser();
-        _checkRejectionBannerDismissed();
+        await context.read<AuthViewModel>().refreshCurrentUser();
+        if (mounted) {
+          _checkRejectionBannerDismissed();
+          _checkAndShowRejectionDialog();
+        }
       }
     });
     if (widget.enableLivePolling) {
-      _statusPollTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      _statusPollTimer = Timer.periodic(const Duration(seconds: 4), (_) async {
         if (mounted) {
           final auth = context.read<AuthViewModel>();
           if (auth.currentUser != null && !auth.currentUser!.isSuspended) {
-            auth.refreshCurrentUser();
+            await auth.refreshCurrentUser();
+            if (mounted) {
+              _checkAndShowRejectionDialog();
+            }
           }
         }
       });
@@ -56,6 +64,148 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
       final dismissed = prefs.getBool('dismissed_rejection_banner_${user.id}') ?? false;
       if (mounted && dismissed) {
         setState(() => _isRejectionBannerDismissed = true);
+      }
+    }
+  }
+
+  Future<void> _checkAndShowRejectionDialog() async {
+    if (_rejectionDialogShowing || !mounted) return;
+    final user = context.read<AuthViewModel>().currentUser;
+    if (user != null && user.isRejectedArtisan) {
+      final prefs = await SharedPreferences.getInstance();
+      final shown = prefs.getBool('shown_rejection_dialog_${user.id}') ?? false;
+      if (!shown && mounted) {
+        _rejectionDialogShowing = true;
+        await showDialog<void>(
+          context: context,
+          barrierDismissible: false,
+          builder: (dialogContext) {
+            final isDark = Theme.of(dialogContext).brightness == Brightness.dark;
+            final studioName = (user.studioName != null && user.studioName!.trim().isNotEmpty)
+                ? user.studioName!.trim()
+                : 'your studio';
+            return AlertDialog(
+              backgroundColor: isDark ? const Color(0xFF0D2825) : Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+              titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+              actionsPadding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
+              title: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEF4444).withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.assignment_late_outlined,
+                      color: Color(0xFFEF4444),
+                      size: 36,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Application Update',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.dmSerifDisplay(
+                      fontSize: 22,
+                      color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF3F161A) : const Color(0xFFFEE2E2),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFEF4444)),
+                    ),
+                    child: const Text(
+                      'REQUIRES REVISION',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFFEF4444),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              content: Text(
+                'Your Master Artisan application for "$studioName" was reviewed by Kraftangan Malaysia. Some documents or details require revision before your studio can be approved.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 13,
+                  color: isDark ? Colors.white70 : const Color(0xFF4B5563),
+                  height: 1.4,
+                ),
+              ),
+              actions: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () async {
+                          await prefs.setBool('shown_rejection_dialog_${user.id}', true);
+                          if (dialogContext.mounted) {
+                            Navigator.of(dialogContext).pop();
+                          }
+                        },
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        child: Text(
+                          'Later',
+                          style: TextStyle(
+                            color: isDark ? Colors.white60 : Colors.grey[600],
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: FilledButton(
+                        onPressed: () async {
+                          await prefs.setBool('shown_rejection_dialog_${user.id}', true);
+                          if (dialogContext.mounted) {
+                            Navigator.of(dialogContext).pop();
+                          }
+                          if (mounted) {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => ArtisanApplicationPendingScreen(
+                                  studioName: user.studioName ?? 'Your Craft Studio',
+                                  craftCategory: user.craftCategory ?? 'Malaysian Heritage Craft',
+                                  ssmNumber: user.ssmNumber ?? 'Pending Document Verification',
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF004D40),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Review & Re-apply',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
+        );
+        _rejectionDialogShowing = false;
       }
     }
   }
@@ -95,8 +245,14 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
 
     final langVM = context.watch<LanguageViewModel>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
     final isArtisanRejected = user.isRejectedArtisan;
+    if (isArtisanRejected) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _checkAndShowRejectionDialog();
+        }
+      });
+    }
 
     return Scaffold(
       backgroundColor: isDark

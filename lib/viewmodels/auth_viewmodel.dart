@@ -841,6 +841,7 @@ class AuthViewModel extends ChangeNotifier {
       try {
         final prefs = await SharedPreferences.getInstance();
         await prefs.remove('dismissed_rejection_banner_${user.id}');
+        await prefs.remove('shown_rejection_dialog_${user.id}');
       } catch (_) {}
       _statusMessage = 'ARTISAN PROFILE LINKED: Status set to PENDING_APPROVAL';
       _isLoading = false;
