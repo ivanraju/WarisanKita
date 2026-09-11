@@ -356,9 +356,11 @@ class UserModel {
     }
 
     final rawTags = artisanMap?['tags'] ?? map['tags'];
-    final tagsList = rawTags is List
+    final allTagsList = rawTags is List
         ? List<String>.from(rawTags.map((t) => t.toString()))
         : const <String>[];
+    final bool isClosedTag = allTagsList.contains('__LIVE_DEMO_CLOSED__');
+    final tagsList = allTagsList.where((t) => !t.startsWith('__')).toList();
 
     // Parse lat/lon
     final latRaw = artisanMap?['latitude'] ?? map['latitude'];
@@ -454,7 +456,7 @@ class UserModel {
       pendingRelocationLongitude: pLon,
       pendingRelocationReason: map['pending_relocation_reason'] ?? map['pendingRelocationReason'] ?? artisanMap?['pending_relocation_reason'],
       pendingRelocationDate: map['pending_relocation_date'] ?? map['pendingRelocationDate'] ?? artisanMap?['pending_relocation_date'],
-      isLiveOpen: map['is_live_open'] ?? map['isLiveOpen'] ?? artisanMap?['is_live_open'] ?? true,
+      isLiveOpen: map['is_live_open'] ?? map['isLiveOpen'] ?? artisanMap?['is_live_open'] ?? !isClosedTag,
       workshopCount: resolvedWorkshops,
     );
   }

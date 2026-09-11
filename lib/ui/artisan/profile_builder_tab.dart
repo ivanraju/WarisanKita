@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../tourist/widgets/workshop_map_picker.dart';
@@ -110,9 +111,9 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     if (currentCraft != initialCraft) return true;
 
     // 4. Experience
-    final initialExp = _isDefaultOrEmptyExperience(user.experience) ? '' : (user.experience ?? '').trim();
-    final currentExp = _experienceController.text.trim();
-    if (currentExp != initialExp) return true;
+    final initialExpDigits = _extractExperienceNumber(user.experience);
+    final currentExpDigits = _experienceController.text.trim();
+    if (currentExpDigits != initialExpDigits) return true;
 
     // 5. Bio
     final initialBio = (user.bio ?? '').trim();
@@ -168,6 +169,13 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     return false;
   }
 
+  static String _extractExperienceNumber(String? exp) {
+    if (exp == null) return '';
+    if (_isDefaultOrEmptyExperience(exp)) return '';
+    final digits = exp.replaceAll(RegExp(r'[^0-9]'), '');
+    return digits;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -195,7 +203,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
       _selectedWorkshopPin = _resolveStateCenter(user.state);
     }
     _experienceController = TextEditingController(
-      text: _isDefaultOrEmptyExperience(user?.experience) ? '' : (user!.experience ?? ''),
+      text: _extractExperienceNumber(user?.experience),
     );
     _experienceController.addListener(_onFormChanged);
     _phoneController = TextEditingController(text: user?.phone ?? '');
@@ -219,7 +227,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
 
     if (force || _experienceController.text.isEmpty) {
       if (!_isDefaultOrEmptyExperience(user.experience)) {
-        _experienceController.text = user.experience!;
+        _experienceController.text = _extractExperienceNumber(user.experience);
       } else if (force) {
         _experienceController.text = '';
       }
@@ -685,8 +693,8 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     final username = _usernameController.text.trim().replaceAll('@', '');
     final studio = _studioNameController.text.trim();
     final craft = _craftCategoryController.text.trim();
-    final rawExp = _experienceController.text.trim();
-    final experience = rawExp.isNotEmpty ? rawExp : null;
+    final rawExp = _experienceController.text.trim().replaceAll(RegExp(r'[^0-9]'), '');
+    final experience = rawExp.isNotEmpty ? '$rawExp Years' : null;
     final bio = _bioController.text.trim();
     final state = _stateController.text.trim();
     final phone = _phoneController.text.trim();
@@ -801,7 +809,9 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
           craftCategory: _craftCategoryController.text.trim().isEmpty ? 'Heritage Craft' : _craftCategoryController.text.trim(),
           state: _stateController.text.trim().isEmpty ? 'Malaysia' : _stateController.text.trim(),
           bio: _bioController.text.trim(),
-          experience: _experienceController.text.trim(),
+          experience: _experienceController.text.trim().isNotEmpty
+              ? '${_experienceController.text.trim().replaceAll(RegExp(r'[^0-9]'), '')} Years'
+              : '10+ Years',
           ssmNumber: user?.ssmNumber,
           documents: user?.artisanDocuments ?? const [],
           imageUrl: _portfolioImages.isNotEmpty
@@ -866,6 +876,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     bool isDark, {
     required String labelText,
     String? hintText,
+    String? suffixText,
     IconData? prefixIcon,
     Widget? suffixIcon,
     String? helperText,
@@ -883,6 +894,11 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
       hintStyle: TextStyle(
         color: isDark ? Colors.white38 : const Color(0xFF94A3B8),
         fontSize: 13,
+      ),
+      suffixText: suffixText,
+      suffixStyle: TextStyle(
+        color: isDark ? Colors.white70 : const Color(0xFF475569),
+        fontWeight: FontWeight.w600,
       ),
       helperText: helperText,
       helperStyle: TextStyle(
@@ -1629,15 +1645,21 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
             // Experience Input
             TextFormField(
               controller: _experienceController,
+              keyboardType: TextInputType.number,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(2),
+              ],
               autovalidateMode: AutovalidateMode.onUserInteraction,
               validator: (v) => ProfileValidator.validateExperience(v, isRequired: false),
               style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
               decoration: _inputDecoration(
                 isDark,
                 labelText: 'Years of Craft Experience',
-                hintText: 'e.g. 15 Years Experience or 10+ Years',
+                hintText: 'e.g. 15',
+                suffixText: 'Years',
                 prefixIcon: Icons.workspace_premium_outlined,
-                helperText: 'Optional: share your craft heritage experience (e.g. 15 Years)',
+                helperText: 'Enter your years of craft heritage experience in numbers (e.g. 15)',
               ),
             ),
 

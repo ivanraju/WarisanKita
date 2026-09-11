@@ -37,6 +37,46 @@ class ArtisanModel {
     this.documents = const [],
   });
 
+  ArtisanModel copyWith({
+    String? id,
+    String? name,
+    String? craftType,
+    String? state,
+    String? description,
+    String? imageUrl,
+    double? rating,
+    String? experience,
+    int? workshopCount,
+    List<String>? tags,
+    List<String>? images,
+    String? address,
+    double? latitude,
+    double? longitude,
+    bool? isLiveOpen,
+    String? ssmNumber,
+    List<Map<String, dynamic>>? documents,
+  }) {
+    return ArtisanModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      craftType: craftType ?? this.craftType,
+      state: state ?? this.state,
+      description: description ?? this.description,
+      imageUrl: imageUrl ?? this.imageUrl,
+      rating: rating ?? this.rating,
+      experience: experience ?? this.experience,
+      workshopCount: workshopCount ?? this.workshopCount,
+      tags: tags ?? this.tags,
+      images: images ?? this.images,
+      address: address ?? this.address,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      isLiveOpen: isLiveOpen ?? this.isLiveOpen,
+      ssmNumber: ssmNumber ?? this.ssmNumber,
+      documents: documents ?? this.documents,
+    );
+  }
+
   factory ArtisanModel.fromMap(Map<String, dynamic> map) {
     // Extract a nice image from the artisan_documents or users if available
     String extractedImageUrl = 'https://placehold.co/800x600/004D40/FFFFFF.png?text=Artisan+Studio';
@@ -84,10 +124,15 @@ class ArtisanModel {
       }
     }
 
+    final List<String> rawTags = map['tags'] != null
+        ? List<String>.from(map['tags'])
+        : [map['craft_category']?.toString() ?? 'Heritage'];
+    final bool isClosedTag = rawTags.contains('__LIVE_DEMO_CLOSED__');
+
     final bool isLive = map['is_live_open'] ??
         map['isLiveOpen'] ??
         (map['users'] != null ? map['users']['is_live_open'] : null) ??
-        true;
+        !isClosedTag;
 
     final String? ssm = (map['ssm_number'] ??
             map['ssmNumber'] ??
@@ -116,7 +161,7 @@ class ArtisanModel {
           (map['workshops_hosted'] as num?)?.toInt() ??
           (map['workshopCount'] as num?)?.toInt() ??
           0,
-      tags: map['tags'] != null ? List<String>.from(map['tags']) : [map['craft_category'] ?? 'Heritage'],
+      tags: rawTags.where((t) => !t.startsWith('__')).toList(),
       images: allImages,
       address: map['address'] as String?,
       latitude: lat,
