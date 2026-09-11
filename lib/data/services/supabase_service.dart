@@ -411,6 +411,10 @@ class SupabaseService {
           } else if (artisan['years_experience'] != null && (artisan['years_experience'] as num) > 1) {
             row['experience'] = '${artisan['years_experience']} Years';
           }
+          final prefs = await SharedPreferences.getInstance();
+          final savedLive = prefs.getBool('artisan_live_open_${artisan['id']}') ??
+              prefs.getBool('artisan_live_open_${row['id']}');
+          row['is_live_open'] = savedLive ?? artisan['is_live_open'] ?? true;
           if (currentRole.isEmpty) {
             row['role'] = 'Artisan';
           }
@@ -470,6 +474,10 @@ class SupabaseService {
             } else if (artisan['years_experience'] != null && (artisan['years_experience'] as num) > 1) {
               row['experience'] = '${artisan['years_experience']} Years';
             }
+            final prefs = await SharedPreferences.getInstance();
+            final savedLive = prefs.getBool('artisan_live_open_${artisan['id']}') ??
+                prefs.getBool('artisan_live_open_${row['id']}');
+            row['is_live_open'] = savedLive ?? artisan['is_live_open'] ?? true;
             if (currentRole.isEmpty) {
               row['role'] = 'Artisan';
             }
@@ -1294,6 +1302,7 @@ class SupabaseService {
     String? craftCategory,
     List<String>? toolsAndMaterials,
     String? avatarUrl,
+    bool? isLiveOpen,
   }) async {
     final cleanEmail = email.trim().toLowerCase();
     await Future.delayed(const Duration(milliseconds: 300));
@@ -1387,6 +1396,23 @@ class SupabaseService {
     if (phone != null) userRecord['phone'] = phone;
     if (experience != null) userRecord['experience'] = experience;
     if (toolsAndMaterials != null) userRecord['tags'] = toolsAndMaterials;
+    if (isLiveOpen != null) {
+      userRecord['is_live_open'] = isLiveOpen;
+      userRecord['isLiveOpen'] = isLiveOpen;
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final artisanId = userRecord['id']?.toString() ?? userRecord['user_id']?.toString();
+        if (artisanId != null && artisanId.isNotEmpty) {
+          await prefs.setBool('artisan_live_open_$artisanId', isLiveOpen);
+        }
+        final uid = userRecord['id']?.toString() ?? userRecord['user_id']?.toString();
+        if (uid != null && uid.isNotEmpty) {
+          await prefs.setBool('artisan_live_open_$uid', isLiveOpen);
+        }
+      } catch (e) {
+        debugPrint('Note saving artisan_live_open to SharedPreferences: $e');
+      }
+    }
 
     Map<String, dynamic> apMap;
     if (userRecord['artisan_profiles'] is Map) {
@@ -1411,15 +1437,15 @@ class SupabaseService {
     if (longitude != null) apMap['longitude'] = longitude;
     if (craftCategory != null) apMap['craft_category'] = craftCategory;
     if (toolsAndMaterials != null) apMap['tags'] = toolsAndMaterials;
+    if (isLiveOpen != null) apMap['is_live_open'] = isLiveOpen;
     userRecord['artisan_profiles'] = apMap;
 
     if (isArtisanAccount || studioName != null || craftCategory != null) {
-      if (userRecord['role'] != 'Artisan' && userRecord['role'] != 'Master Artisan') {
-        userRecord['role'] = 'Artisan';
-      }
-      if (userRecord['roles'] is List && !(userRecord['roles'] as List).contains('Artisan')) {
-        (userRecord['roles'] as List).add('Artisan');
-      }
+      userRecord['role'] = 'Artisan';
+      userRecord['roles'] = <String>{
+        ...List<String>.from(userRecord['roles'] ?? <String>[]),
+        'Artisan'
+      }.toList();
     }
 
     _userStore[cleanEmail] = userRecord;
@@ -1429,9 +1455,7 @@ class SupabaseService {
       try {
         final updateMap = <String, dynamic>{};
         if (username != null) {
-          final cleanHandle = username.trim().replaceAll('@', '');
-          updateMap['username'] = cleanHandle;
-          updateMap['full_name'] = displayName ?? cleanHandle;
+          updateMap['username'] = username.trim().replaceAll('@', '');
         }
         if (displayName != null) {
           updateMap['display_name'] = displayName.trim();
@@ -2852,8 +2876,18 @@ class SupabaseService {
           .eq('status', 'APPROVED');
 
       debugPrint('Supabase response: $response');
+      final prefs = await SharedPreferences.getInstance();
       final list = List<Map<String, dynamic>>.from(response);
-      final mapped = list.map((map) => ArtisanModel.fromMap(map)).toList();
+      final mapped = list.map((map) {
+        final profileId = map['id']?.toString() ?? '';
+        final userId = map['user_id']?.toString() ?? '';
+        final savedLive = prefs.getBool('artisan_live_open_$profileId') ??
+            prefs.getBool('artisan_live_open_$userId');
+        if (savedLive != null) {
+          map['is_live_open'] = savedLive;
+        }
+        return ArtisanModel.fromMap(map);
+      }).toList();
       debugPrint('Mapped artisans count: ${mapped.length}');
       return mapped;
     } catch (e) {

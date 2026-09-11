@@ -153,6 +153,7 @@ class UserRepository {
     String? craftCategory,
     List<String>? toolsAndMaterials,
     String? avatarUrl,
+    bool? isLiveOpen,
   }) {
     return _service.updateUserProfile(
       email: email,
@@ -169,6 +170,7 @@ class UserRepository {
       craftCategory: craftCategory,
       toolsAndMaterials: toolsAndMaterials,
       avatarUrl: avatarUrl,
+      isLiveOpen: isLiveOpen,
     );
   }
 

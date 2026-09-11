@@ -78,8 +78,6 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     return _resolveStateCenter(state);
   }
 
-  bool _isOpenForDemos = true;
-
   List<String> _toolsAndMaterials = [];
 
   List<String> _portfolioImages = [];
@@ -695,6 +693,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
           address: _workshopAddress,
           latitude: _selectedWorkshopPin?.latitude,
           longitude: _selectedWorkshopPin?.longitude,
+          isLiveOpen: context.read<AuthViewModel>().currentUser?.isLiveOpen ?? true,
         ),
       ),
     );
@@ -1029,46 +1028,6 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-
-            // Live Cultural Demo Switch
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                color: _isOpenForDemos
-                    ? (isDark ? const Color(0xFF0D2825) : const Color(0xFFECFDF5))
-                    : (isDark ? const Color(0xFF2A1215) : const Color(0xFFFEF2F2)),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: _isOpenForDemos
-                      ? (isDark ? const Color(0xFF1E3A34) : const Color(0xFF10B981))
-                      : (isDark ? const Color(0xFF5C1D24) : const Color(0xFFEF4444)),
-                ),
-              ),
-              child: SwitchListTile(
-                value: _isOpenForDemos,
-                onChanged: (val) => setState(() => _isOpenForDemos = val),
-                activeThumbColor: const Color(0xFF10B981),
-                title: Text(
-                  _isOpenForDemos ? '🟢 STUDIO STATUS: OPEN FOR EDUCATIONAL DEMOS' : '🔴 STUDIO STATUS: IN KILN SESSION / CLOSED',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: _isOpenForDemos
-                        ? (isDark ? const Color(0xFF34D399) : const Color(0xFF047857))
-                        : (isDark ? const Color(0xFFF87171) : const Color(0xFFB91C1C)),
-                  ),
-                ),
-                subtitle: Text(
-                  'Toggling this updates your live availability banner on the Tourist Studio detail page.',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 10,
-                    color: isDark ? Colors.white60 : Colors.grey[700],
-                  ),
-                ),
-              ),
-            ),
-
             const SizedBox(height: 16),
 
             // Account Username / Handle Input

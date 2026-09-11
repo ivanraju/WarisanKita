@@ -35,6 +35,7 @@ class UserModel {
   final double? pendingRelocationLongitude;
   final String? pendingRelocationReason;
   final String? pendingRelocationDate;
+  final bool isLiveOpen;
 
   const UserModel({
     required this.id,
@@ -68,6 +69,7 @@ class UserModel {
     this.pendingRelocationLongitude,
     this.pendingRelocationReason,
     this.pendingRelocationDate,
+    this.isLiveOpen = true,
   });
 
   bool get hasPendingRelocation =>
@@ -213,6 +215,7 @@ class UserModel {
     String? pendingRelocationReason,
     String? pendingRelocationDate,
     bool clearPendingRelocation = false,
+    bool? isLiveOpen,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -246,6 +249,7 @@ class UserModel {
       pendingRelocationLongitude: clearPendingRelocation ? null : (pendingRelocationLongitude ?? this.pendingRelocationLongitude),
       pendingRelocationReason: clearPendingRelocation ? null : (pendingRelocationReason ?? this.pendingRelocationReason),
       pendingRelocationDate: clearPendingRelocation ? null : (pendingRelocationDate ?? this.pendingRelocationDate),
+      isLiveOpen: isLiveOpen ?? this.isLiveOpen,
     );
   }
 
@@ -285,6 +289,8 @@ class UserModel {
       'pending_relocation_lng': pendingRelocationLongitude,
       'pending_relocation_reason': pendingRelocationReason,
       'pending_relocation_date': pendingRelocationDate,
+      'is_live_open': isLiveOpen,
+      'isLiveOpen': isLiveOpen,
     };
   }
 
@@ -371,6 +377,16 @@ class UserModel {
       resolvedJoinedDate = '${months[now.month - 1]} ${now.year}';
     }
 
+    final artisanExp = artisanMap?['experience']?.toString().trim();
+    final artisanYears = artisanMap?['years_experience'];
+    final String? resolvedExp = (map['experience'] != null && map['experience'].toString().trim().isNotEmpty)
+        ? map['experience'].toString().trim()
+        : ((artisanExp != null && artisanExp.isNotEmpty)
+            ? artisanExp
+            : (artisanYears != null && (artisanYears as num) > 1
+                ? '$artisanYears Years'
+                : null));
+
     return UserModel(
       id: map['id'] ?? '',
       email: map['email'] ?? '',
@@ -396,13 +412,7 @@ class UserModel {
       latitude: lat,
       longitude: lon,
       phone: map['phone'] ?? map['phone_number'] ?? artisanMap?['phone'],
-      experience: (map['experience'] != null && map['experience'].toString().trim().isNotEmpty)
-          ? map['experience'].toString().trim()
-          : ((artisanMap?['experience'] != null && artisanMap!['experience'].toString().trim().isNotEmpty)
-              ? artisanMap!['experience'].toString().trim()
-              : (artisanMap?['years_experience'] != null && (artisanMap!['years_experience'] as num) > 1
-                  ? '${artisanMap!['years_experience']} Years'
-                  : null)),
+      experience: resolvedExp,
       artisanProfileId: artisanMap?['id'],
       artisanStatus: artisanMap?['status'] ?? map['artisanStatus'] ?? map['artisan_status'],
       artisanDocuments: docs,
@@ -413,6 +423,7 @@ class UserModel {
       pendingRelocationLongitude: pLon,
       pendingRelocationReason: map['pending_relocation_reason'] ?? map['pendingRelocationReason'] ?? artisanMap?['pending_relocation_reason'],
       pendingRelocationDate: map['pending_relocation_date'] ?? map['pendingRelocationDate'] ?? artisanMap?['pending_relocation_date'],
+      isLiveOpen: map['is_live_open'] ?? map['isLiveOpen'] ?? artisanMap?['is_live_open'] ?? true,
     );
   }
 }

@@ -19,6 +19,7 @@ class ArtisanDetailScreen extends StatefulWidget {
   final double? latitude;
   final double? longitude;
   final VoidCallback? onViewQuest;
+  final bool isLiveOpen;
 
   const ArtisanDetailScreen({
     super.key,
@@ -36,6 +37,7 @@ class ArtisanDetailScreen extends StatefulWidget {
     this.latitude,
     this.longitude,
     this.onViewQuest,
+    this.isLiveOpen = true,
   });
 
   @override
@@ -311,6 +313,48 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Live Demo Availability Banner
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: widget.isLiveOpen
+                          ? (isDark ? const Color(0xFF0D2825) : const Color(0xFFECFDF5))
+                          : (isDark ? const Color(0xFF2A1215) : const Color(0xFFFEF2F2)),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: widget.isLiveOpen
+                            ? (isDark ? const Color(0xFF1E3A34) : const Color(0xFF10B981))
+                            : (isDark ? const Color(0xFF5C1D24) : const Color(0xFFEF4444)),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          widget.isLiveOpen ? Icons.check_circle_rounded : Icons.pause_circle_filled_rounded,
+                          color: widget.isLiveOpen ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            widget.isLiveOpen
+                                ? 'LIVE: OPEN FOR EDUCATIONAL DEMOS & WORKSHOPS'
+                                : 'DEMOS TEMPORARILY PAUSED / NOT ACCEPTING VISITORS',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.3,
+                              color: widget.isLiveOpen
+                                  ? (isDark ? const Color(0xFF34D399) : const Color(0xFF047857))
+                                  : (isDark ? const Color(0xFFF87171) : const Color(0xFFB91C1C)),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
                   // Location & Experience Row
                   Row(
                     children: [

@@ -13,6 +13,7 @@ class ArtisanModel {
   final String? address;
   final double? latitude;
   final double? longitude;
+  final bool isLiveOpen;
 
   ArtisanModel({
     required this.id,
@@ -29,6 +30,7 @@ class ArtisanModel {
     this.address,
     this.latitude,
     this.longitude,
+    this.isLiveOpen = true,
   });
 
   factory ArtisanModel.fromMap(Map<String, dynamic> map) {
@@ -78,6 +80,11 @@ class ArtisanModel {
       }
     }
 
+    final bool isLive = map['is_live_open'] ??
+        map['isLiveOpen'] ??
+        (map['users'] != null ? map['users']['is_live_open'] : null) ??
+        true;
+
     return ArtisanModel(
       id: map['id'] ?? '',
       name: map['studio_name'] ?? 'Unknown Studio',
@@ -95,6 +102,7 @@ class ArtisanModel {
       address: map['address'] as String?,
       latitude: lat,
       longitude: lng,
+      isLiveOpen: isLive,
     );
   }
 }

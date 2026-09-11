@@ -12,6 +12,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:warisan_kita/data/repositories/user_repository.dart';
 import 'package:warisan_kita/data/services/supabase_service.dart';
 import 'package:warisan_kita/domain/models/active_artisan_master.dart';
+import 'package:warisan_kita/domain/models/artisan_profile.dart';
 import 'package:warisan_kita/domain/models/pending_artisan_profile.dart';
 import 'package:warisan_kita/domain/models/user.dart';
 import 'package:warisan_kita/domain/validators/document_validator.dart';
@@ -1142,6 +1143,86 @@ void main() {
       final names = updated.artisanDocuments.map((d) => d['file_name']).toSet();
       expect(names, contains('my_ssm.pdf'));
       expect(names, contains('my_cert.pdf'));
+    });
+
+    test('isLiveOpen toggle defaults to true and correctly updates, serializes, and toggles', () async {
+      SharedPreferences.setMockInitialValues({});
+      final service = SupabaseService();
+
+      // Sign in or link artisan
+      final user = await service.linkArtisanRoleToTourist(
+        email: 'artisan_demo@warisankita.my',
+        studioName: 'Demo Studio',
+        craftCategory: 'Wood carving',
+        ssmNumber: '202601007788',
+      );
+
+      // Default should be true
+      expect(user.isLiveOpen, isTrue);
+
+      // Update to false (artisan turns off demo availability)
+      final closedUser = await service.updateUserProfile(
+        email: 'artisan_demo@warisankita.my',
+        isLiveOpen: false,
+      );
+      expect(closedUser.isLiveOpen, isFalse);
+
+      // Verify toMap & fromMap roundtrip
+      final map = closedUser.toMap();
+      expect(map['is_live_open'], isFalse);
+      expect(map['isLiveOpen'], isFalse);
+
+      final reloadedUser = UserModel.fromMap(map);
+      expect(reloadedUser.isLiveOpen, isFalse);
+
+      // Reopen demo availability
+      final reopenedUser = await service.updateUserProfile(
+        email: 'artisan_demo@warisankita.my',
+        isLiveOpen: true,
+      );
+      expect(reopenedUser.isLiveOpen, isTrue);
+
+      // Verify ArtisanModel.fromMap extracts is_live_open
+      final artisanModelFromRoot = ArtisanModel.fromMap({
+        'id': 'artisan-1',
+        'studio_name': 'Demo Studio',
+        'craft_category': 'Wood carving',
+        'is_live_open': false,
+      });
+      expect(artisanModelFromRoot.isLiveOpen, isFalse);
+
+      final artisanModelFromUserJoin = ArtisanModel.fromMap({
+        'id': 'artisan-2',
+        'studio_name': 'Demo Studio',
+        'craft_category': 'Wood carving',
+        'users': {'is_live_open': true},
+      });
+      expect(artisanModelFromUserJoin.isLiveOpen, isTrue);
+    });
+
+    test('AuthViewModel.updateProfile synchronizes isLiveOpen state cleanly', () async {
+      SharedPreferences.setMockInitialValues({});
+      final service = SupabaseService();
+      final userRepo = UserRepository(service: service);
+      final authVM = AuthViewModel(repository: userRepo);
+
+      final user = await service.linkArtisanRoleToTourist(
+        email: 'sync_artisan@warisankita.my',
+        studioName: 'Sync Studio',
+        craftCategory: 'Batik',
+        ssmNumber: '202601009911',
+      );
+      authVM.setCurrentUserForTesting(user);
+
+      expect(authVM.currentUser?.isLiveOpen, isTrue);
+
+      // Toggled from dashboard
+      await authVM.updateProfile(isLiveOpen: false);
+      expect(authVM.currentUser?.isLiveOpen, isFalse);
+
+      // Toggled back from profile builder
+      await authVM.updateProfile(isLiveOpen: true);
+      expect(authVM.currentUser?.isLiveOpen, isTrue);
     });
   });
 }

@@ -5,6 +5,7 @@ import 'package:warisan_kita/ui/tourist/artisan_detail_screen.dart';
 import 'package:warisan_kita/ui/tourist/quest_completion_screen.dart';
 import 'package:warisan_kita/ui/core/widgets/translation_language_dialog.dart';
 import 'package:warisan_kita/ui/tourist/widgets/rotating_artisan_image_carousel.dart';
+import 'package:warisan_kita/ui/tourist/widgets/shimmer_directory_loading.dart';
 import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/directory_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/matchmaker_viewmodel.dart';
@@ -99,12 +100,17 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
   String _selectedCategoryKey = 'ALL';
   bool _hasPreferences = true;
 
-  static List<CraftCategoryFilterItem> get craftFilters => TouristDirectoryTab.craftFilters;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<DirectoryViewModel>().fetchArtisans();
+      }
+    });
+  }
 
-  String get _selectedCategory => craftFilters
-      .firstWhere((c) => c.key == _selectedCategoryKey,
-          orElse: () => craftFilters.first)
-      .englishName;
+  static List<CraftCategoryFilterItem> get craftFilters => TouristDirectoryTab.craftFilters;
 
   bool get _isFilterActive =>
       _searchController.text.trim().isNotEmpty ||
@@ -330,6 +336,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
       'address': a.address,
       'latitude': a.latitude,
       'longitude': a.longitude,
+      'isLiveOpen': a.isLiveOpen,
       'artisanModel': a, // pass the model for the detail screen
     }).toList();
 
@@ -823,7 +830,14 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
         ),
 
         // Trip.com Inspired Experience Cards Grid / List or Empty State Fallback UI
-        if (filtered.isEmpty)
+        if (dirVM.isLoading && filtered.isEmpty)
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+              child: ShimmerDirectoryLoading(),
+            ),
+          )
+        else if (filtered.isEmpty)
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
@@ -964,6 +978,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                     address: artisan['address'] as String?,
                     latitude: (artisan['latitude'] as num?)?.toDouble(),
                     longitude: (artisan['longitude'] as num?)?.toDouble(),
+                    isLiveOpen: artisan['isLiveOpen'] ?? true,
                   ),
                 ),
               );
@@ -1170,6 +1185,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                                 address: artisan['address'] as String?,
                                 latitude: (artisan['latitude'] as num?)?.toDouble(),
                                 longitude: (artisan['longitude'] as num?)?.toDouble(),
+                                isLiveOpen: artisan['isLiveOpen'] ?? true,
                               ),
                             ),
                           );
@@ -1288,6 +1304,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                   address: address,
                   latitude: latitude,
                   longitude: longitude,
+                  isLiveOpen: artisan['isLiveOpen'] ?? true,
                 ),
               ),
             );

@@ -6,6 +6,7 @@ import 'package:warisan_kita/ui/artisan/profile_builder_tab.dart';
 import 'package:warisan_kita/ui/core/live_forum_tab.dart';
 import 'package:warisan_kita/ui/artisan/artisan_settings_screen.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
+import 'package:warisan_kita/viewmodels/directory_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/gamification_viewmodel.dart';
 import 'package:warisan_kita/domain/models/artisan_heritage_analytics.dart';
 
@@ -22,6 +23,10 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
   @override
   void initState() {
     super.initState();
+    final user = context.read<AuthViewModel>().currentUser;
+    if (user != null) {
+      _isStudioOpen = user.isLiveOpen;
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         context.read<GamificationViewModel>().loadArtisanHeritageAnalytics();
@@ -29,14 +34,46 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
     });
   }
 
-  void _toggleStudioStatus(bool isOpen) {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final user = context.watch<AuthViewModel>().currentUser;
+    if (user != null) {
+      _isStudioOpen = user.isLiveOpen;
+    }
+  }
+
+  Future<void> _toggleStudioStatus(bool isOpen) async {
     setState(() => _isStudioOpen = isOpen);
+    try {
+      await context.read<AuthViewModel>().updateProfile(isLiveOpen: isOpen);
+      if (mounted) {
+        context.read<DirectoryViewModel>().fetchArtisans();
+      }
+    } catch (e) {
+      if (mounted) {
+        final user = context.read<AuthViewModel>().currentUser;
+        setState(() => _isStudioOpen = user?.isLiveOpen ?? !isOpen);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Failed to update live demo status: ${e.toString().replaceAll("Exception: ", "")}',
+            ),
+            backgroundColor: const Color(0xFFEF4444),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
+
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
           isOpen
               ? '🟢 Studio Live Status: OPEN FOR EDUCATIONAL WALK-INS & DEMOS'
-              : '🔴 Studio Live Status: IN KILN SESSION (DEMOS PAUSED)',
+              : '🔴 Studio Live Status: CLOSED FOR DEMOS (VISITORS PAUSED)',
         ),
         backgroundColor: isOpen
             ? const Color(0xFF004D40)
@@ -242,7 +279,7 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
                                 Text(
                                   _isStudioOpen
                                       ? '🟢 OPEN FOR EDUCATIONAL DEMOS'
-                                      : '🔴 IN KILN SESSION (DEMOS PAUSED)',
+                                      : '🔴 LIVE DEMOS PAUSED (CLOSED TO VISITORS)',
                                   softWrap: true,
                                   style: GoogleFonts.plusJakartaSans(
                                     fontSize: 11,
