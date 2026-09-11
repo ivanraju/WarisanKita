@@ -441,6 +441,14 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
         }
       }
 
+      if (chosenMaterial.isNotEmpty) {
+        for (final w in chosenMaterial.toLowerCase().split(RegExp(r'[\s&/,\-]+'))) {
+          if (w.length >= 3 && !{'and', 'the', 'arts', 'making', 'crafts', 'craft', 'textiles', 'textile'}.contains(w)) {
+            materialKeywords.add(w);
+          }
+        }
+      }
+
       // Target states from user's chosen region in quiz
       final regLower = chosenRegion.toLowerCase();
       final Set<String> targetStates;
@@ -475,9 +483,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
             ? tags.map((t) => t.toString().toLowerCase()).toList()
             : (tags is String ? [tags.toLowerCase()] : <String>[]);
 
-        int score = 0;
-
-        // 1. Material / Craft match (Weight: 60)
+        // 1. Material / Craft match (Strict prerequisite)
         bool matchesMaterial = false;
         for (final kw in materialKeywords) {
           if (craft.contains(kw) || cat.contains(kw) || name.contains(kw) || tagList.any((t) => t.contains(kw))) {
@@ -485,43 +491,42 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
             break;
           }
         }
+
+        // Only recommend artisans that match the chosen craft/material from the quiz
         if (matchesMaterial) {
-          score += 60;
-        }
+          int score = 60; // Base score for matching craft
 
-        // 2. Region / State match (Weight: 30)
-        if (targetStates.contains(state)) {
-          score += 30;
-        }
+          // 2. Region / State match bonus (Weight: 40)
+          if (targetStates.contains(state)) {
+            score += 40;
+          }
 
-        // 3. Experience style match (Weight: 10)
-        final expLower = chosenExp.toLowerCase();
-        final workshopCount = (a['workshopCount'] as num?)?.toInt() ?? 0;
-        if (expLower.contains('hands-on')) {
-          if (workshopCount > 0 || tagList.any((t) => t.contains('workshop') || t.contains('hands-on') || t.contains('class'))) {
-            score += 10;
+          // 3. Experience style match bonus (Weight: 10)
+          final expLower = chosenExp.toLowerCase();
+          final workshopCount = (a['workshopCount'] as num?)?.toInt() ?? 0;
+          if (expLower.contains('hands-on')) {
+            if (workshopCount > 0 || tagList.any((t) => t.contains('workshop') || t.contains('hands-on') || t.contains('class'))) {
+              score += 10;
+            }
+          } else if (expLower.contains('observing')) {
+            final expYears = a['experienceYears']?.toString().toLowerCase() ?? '';
+            if (expYears.contains('10+') || expYears.contains('20+') || tagList.any((t) => t.contains('master') || t.contains('heritage'))) {
+              score += 10;
+            }
           }
-        } else if (expLower.contains('observing')) {
-          final expYears = a['experienceYears']?.toString().toLowerCase() ?? '';
-          if (expYears.contains('10+') || expYears.contains('20+') || tagList.any((t) => t.contains('master') || t.contains('heritage'))) {
-            score += 10;
-          }
-        }
 
-        // 4. Studio setting / environment match (Weight: 10)
-        final envLower = chosenEnv.toLowerCase();
-        if (envLower.contains('indoor')) {
-          if (tagList.any((t) => t.contains('studio') || t.contains('gallery') || t.contains('indoor')) || bio.contains('studio') || bio.contains('gallery')) {
-            score += 10;
+          // 4. Studio setting / environment match bonus (Weight: 10)
+          final envLower = chosenEnv.toLowerCase();
+          if (envLower.contains('indoor')) {
+            if (tagList.any((t) => t.contains('studio') || t.contains('gallery') || t.contains('indoor')) || bio.contains('studio') || bio.contains('gallery')) {
+              score += 10;
+            }
+          } else if (envLower.contains('outdoor') || envLower.contains('village')) {
+            if (tagList.any((t) => t.contains('village') || t.contains('kampong') || t.contains('outdoor')) || bio.contains('village') || bio.contains('kampong')) {
+              score += 10;
+            }
           }
-        } else if (envLower.contains('outdoor') || envLower.contains('village')) {
-          if (tagList.any((t) => t.contains('village') || t.contains('kampong') || t.contains('outdoor')) || bio.contains('village') || bio.contains('kampong')) {
-            score += 10;
-          }
-        }
 
-        // Only recommend artisans that match what user chose (score > 0)
-        if (score > 0) {
           scoredArtisans[a] = score;
         }
       }
@@ -1001,7 +1006,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                           ),
                           const SizedBox(height: 12),
                           SizedBox(
-                            height: 94,
+                            height: 98,
                             child: ListView.builder(
                               scrollDirection: Axis.horizontal,
                               itemCount: recommendedArtisans.length,
@@ -1050,7 +1055,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  '${langVM.translate("No artisans match")} "${matchmakerVM.material ?? "Craft"}" ${langVM.translate("in")} "${matchmakerVM.region ?? "Region"}".',
+                                  '${langVM.translate("No artisans currently match your quiz choice for")} "${matchmakerVM.material ?? "Craft"}". ${langVM.translate("Tap below to retake the quiz or browse all crafts.")}',
                                   style: GoogleFonts.plusJakartaSans(
                                     fontSize: 10,
                                     color: isDark ? Colors.white60 : const Color(0xFF92400E),

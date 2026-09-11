@@ -402,5 +402,97 @@ void main() {
       expect(find.textContaining('The Royal Textile Connoisseur'), findsOneWidget);
       expect(find.text('Mak Jah'), findsWidgets);
     });
+
+    testWidgets('Strict craft filtering: does not suggest artisans of different crafts even if state matches', (tester) async {
+      tester.view.physicalSize = const Size(1200, 1000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      SharedPreferences.setMockInitialValues({});
+      final authVM = AuthViewModel();
+      final matchmakerVM = MatchmakerViewModel();
+      final langVM = LanguageViewModel();
+      final dirVM = DirectoryViewModel(repository: _MockArtisanRepository(mockArtisans));
+      await dirVM.fetchArtisans();
+
+      // User chooses Pottery & Clay in East Coast
+      // Uncle Lim is Pottery in Perak (West Coast)
+      // Mak Jah is Batik in Kelantan (East Coast)
+      await matchmakerVM.saveQuizResults(
+        experienceType: 'Hands-on Workshop',
+        environment: 'Outdoor Village',
+        material: 'Pottery & Clay',
+        region: 'East Coast Heritage',
+        userEmail: 'tourist@warisankita.my',
+      );
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: authVM),
+            ChangeNotifierProvider.value(value: matchmakerVM),
+            ChangeNotifierProvider.value(value: langVM),
+            ChangeNotifierProvider.value(value: dirVM),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(
+              body: TouristDirectoryTab(),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      // Mak Jah is in East Coast, but she does Batik, not Pottery -> Must NOT be in the recommendation header card
+      // Uncle Lim is Pottery -> IS suggested!
+      expect(find.textContaining('The Clay & Terra Sculptor'), findsOneWidget);
+      expect(find.text('Uncle Lim'), findsWidgets);
+    });
+
+    testWidgets('Displays empty state when no artisans match chosen craft', (tester) async {
+      tester.view.physicalSize = const Size(1200, 1000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      SharedPreferences.setMockInitialValues({});
+      final authVM = AuthViewModel();
+      final matchmakerVM = MatchmakerViewModel();
+      final langVM = LanguageViewModel();
+      final dirVM = DirectoryViewModel(repository: _MockArtisanRepository(mockArtisans));
+      await dirVM.fetchArtisans();
+
+      // User chooses Wood Carving (neither Mak Jah nor Uncle Lim do Wood)
+      await matchmakerVM.saveQuizResults(
+        experienceType: 'Observing Master Artisans',
+        environment: 'Indoor Studio',
+        material: 'Carved Timber & Wood',
+        region: 'East Coast Heritage',
+        userEmail: 'tourist@warisankita.my',
+      );
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: authVM),
+            ChangeNotifierProvider.value(value: matchmakerVM),
+            ChangeNotifierProvider.value(value: langVM),
+            ChangeNotifierProvider.value(value: dirVM),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(
+              body: TouristDirectoryTab(),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(find.text('No artisans match your quiz choices'), findsOneWidget);
+      expect(find.text('Retake Quiz'), findsOneWidget);
+    });
   });
 }
