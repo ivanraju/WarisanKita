@@ -273,26 +273,72 @@ class _ArtisanApplicationPendingScreenState
 
                 const SizedBox(height: 28),
 
-                if (isRejected)
-                  // Rejection Notice
+                if (isRejected) ...[
+                  // Rejection Official Feedback Notice
                   Container(
-                    padding: const EdgeInsets.all(14),
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF2A1215) : const Color(0xFFFEF2F2),
-                      borderRadius: BorderRadius.circular(14),
+                      color: isDark ? const Color(0xFF2A1215) : const Color(0xFFFFF1F2),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: const Color(0xFFEF4444),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.feedback_outlined, color: Color(0xFFEF4444), size: 18),
+                            const SizedBox(width: 8),
+                            Text(
+                              'OFFICIAL REVIEW FEEDBACK',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w900,
+                                color: const Color(0xFFEF4444),
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          (user?.rejectionReason != null && user!.rejectionReason!.trim().isNotEmpty)
+                              ? user.rejectionReason!.trim()
+                              : 'Your uploaded credentials did not pass verification. Please ensure valid Kraftangan documents are attached.',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.white : const Color(0xFF881337),
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF1E1012) : const Color(0xFFFEF2F2),
+                      borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: isDark ? const Color(0xFF5C1D24) : const Color(0xFFFCA5A5),
                       ),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.error_outline_rounded, color: Color(0xFFEF4444), size: 24),
-                        const SizedBox(width: 12),
+                        const Icon(Icons.info_outline_rounded, color: Color(0xFFEF4444), size: 18),
+                        const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            'Please double-check your credentials and submit a new application when ready.',
+                            'Please update your details and resubmit below.',
                             style: GoogleFonts.plusJakartaSans(
-                              fontSize: 12,
+                              fontSize: 11,
                               fontWeight: FontWeight.bold,
                               color: const Color(0xFFEF4444),
                             ),
@@ -300,7 +346,8 @@ class _ArtisanApplicationPendingScreenState
                         ),
                       ],
                     ),
-                  )
+                  ),
+                ]
                 else
                   // Locked Status Notice
                   Container(

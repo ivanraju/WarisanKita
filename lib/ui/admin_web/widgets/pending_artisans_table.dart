@@ -6,7 +6,7 @@ import 'package:warisan_kita/ui/admin_web/widgets/artisan_review_dialog.dart';
 class PendingArtisansTable extends StatelessWidget {
   final List<PendingArtisanProfile> artisans;
   final Function(PendingArtisanProfile) onApprove;
-  final Function(PendingArtisanProfile) onReject;
+  final Function(PendingArtisanProfile, String? reason) onReject;
 
   const PendingArtisansTable({
     super.key,
@@ -21,7 +21,7 @@ class PendingArtisansTable extends StatelessWidget {
       builder: (_) => ArtisanReviewDialog(
         artisan: artisan,
         onApprove: () => onApprove(artisan),
-        onReject: () => onReject(artisan),
+        onReject: (reason) => onReject(artisan, reason),
       ),
     );
   }
@@ -366,7 +366,7 @@ class PendingArtisansTable extends StatelessWidget {
 
               // Red Reject Outline Button
               OutlinedButton.icon(
-                onPressed: () => onReject(artisan),
+                onPressed: () => _openReviewDialog(context, artisan),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: const Color(0xFFEF4444),
                   side: const BorderSide(color: Color(0xFFEF4444), width: 1.5),

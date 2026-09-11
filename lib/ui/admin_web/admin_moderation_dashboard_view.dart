@@ -97,9 +97,9 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
     }
   }
 
-  Future<void> _handleReject(BuildContext context, PendingArtisanProfile artisan) async {
+  Future<void> _handleReject(BuildContext context, PendingArtisanProfile artisan, [String? reason]) async {
     final vm = context.read<ModerationViewModel>();
-    await vm.rejectArtisan(artisan.id);
+    await vm.rejectArtisan(artisan.id, reason: reason);
 
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -108,13 +108,21 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
           children: [
             const Icon(Icons.error_outline, color: Colors.white, size: 20),
             const SizedBox(width: 10),
-            Text('PROFILE REJECTED (${artisan.name})'),
+            Expanded(
+              child: Text(
+                reason != null && reason.trim().isNotEmpty
+                    ? 'PROFILE REJECTED (${artisan.name}): "$reason"'
+                    : 'PROFILE REJECTED (${artisan.name})',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
         backgroundColor: const Color(0xFFEF4444),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        width: 480,
+        width: 520,
       ),
     );
   }
@@ -387,7 +395,7 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
                                           : PendingArtisansTable(
                                               artisans: viewModel.filteredArtisans,
                                               onApprove: (artisan) => _handleApprove(context, artisan),
-                                              onReject: (artisan) => _handleReject(context, artisan),
+                                              onReject: (artisan, reason) => _handleReject(context, artisan, reason),
                                             ),
                                     ],
                                   ),
