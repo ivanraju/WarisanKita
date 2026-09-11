@@ -552,6 +552,61 @@ CREATE POLICY "Public update artisan_documents" ON public.artisan_documents FOR 
 DROP POLICY IF EXISTS "Public delete artisan_documents" ON public.artisan_documents;
 CREATE POLICY "Public delete artisan_documents" ON public.artisan_documents FOR DELETE USING (true);
 
+-- 6. RPC Function for Closing / Deactivating Artisan Studio
+CREATE OR REPLACE FUNCTION public.deactivate_artisan_studio(p_user_id uuid)
+RETURNS JSONB AS $$
+DECLARE
+    v_artisan_profile_id uuid;
+BEGIN
+    -- 1. Get artisan profile id
+    SELECT id INTO v_artisan_profile_id
+    FROM public.artisan_profiles
+    WHERE user_id = p_user_id;
+
+    -- 2. Delete artisan documents
+    IF v_artisan_profile_id IS NOT NULL THEN
+        DELETE FROM public.artisan_documents WHERE artisan_id = v_artisan_profile_id;
+        
+        -- Retire active quests
+        UPDATE public.quests SET status = 'RETIRED' WHERE artisan_id = v_artisan_profile_id;
+        
+        -- Mark artisan profile as CLOSED
+        UPDATE public.artisan_profiles SET status = 'CLOSED', updated_at = now() WHERE id = v_artisan_profile_id;
+    END IF;
+
+    -- 3. Demote public.users to Tourist and clear studio columns
+    UPDATE public.users
+    SET 
+        role = 'Tourist',
+        roles = ARRAY['Tourist']::TEXT[],
+        studio_name = NULL,
+        craft_category = NULL,
+        ssm_number = NULL,
+        ssm_file_url = NULL,
+        cert_file_url = NULL,
+        is_live_open = FALSE,
+        updated_at = now()
+    WHERE id = p_user_id;
+
+    -- 4. Update auth.users metadata
+    UPDATE auth.users
+    SET raw_user_meta_data = raw_user_meta_data || 
+        jsonb_build_object(
+            'role', 'Tourist',
+            'roles', json_build_array('Tourist'),
+            'studio_name', null,
+            'craft_category', null,
+            'ssm_number', null,
+            'artisan_status', 'CLOSED'
+        )
+    WHERE id = p_user_id;
+
+    RETURN jsonb_build_object('success', true, 'user_id', p_user_id);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+GRANT EXECUTE ON FUNCTION public.deactivate_artisan_studio(uuid) TO anon, authenticated;
+
 -- ==============================================================================
 -- 7. Forum Module Tables, Voting, & Stored Procedures
 -- ==============================================================================
@@ -929,26 +984,43 @@ AS $$
 DECLARE
     v_uid UUID;
 BEGIN
-    v_uid := COALESCE(p_user_id, auth.uid());
+    -- Security assertion: Callers can only delete their own account unless they are an Administrator
+    IF p_user_id IS NOT NULL AND p_user_id != auth.uid() THEN
+        IF NOT EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'Admin') THEN
+            RETURN jsonb_build_object('success', false, 'error', 'Unauthorized: You can only delete your own account.');
+        END IF;
+        v_uid := p_user_id;
+    ELSE
+        v_uid := auth.uid();
+    END IF;
+
     IF v_uid IS NULL THEN
         RETURN jsonb_build_object('success', false, 'error', 'No user ID provided or authenticated');
     END IF;
 
-    -- 1. Delete associated artisan profiles
+    -- 1. Delete associated artisan documents and profiles
     BEGIN
+        DELETE FROM public.artisan_documents WHERE artisan_id IN (SELECT id FROM public.artisan_profiles WHERE user_id = v_uid);
         DELETE FROM public.artisan_profiles WHERE user_id = v_uid;
     EXCEPTION WHEN OTHERS THEN
         NULL;
     END;
 
-    -- 2. Delete from public.users table
+    -- 2. Delete user quest progress records
+    BEGIN
+        DELETE FROM public.user_quests WHERE user_id = v_uid;
+    EXCEPTION WHEN OTHERS THEN
+        NULL;
+    END;
+
+    -- 3. Delete from public.users table
     BEGIN
         DELETE FROM public.users WHERE id = v_uid;
     EXCEPTION WHEN OTHERS THEN
         NULL;
     END;
 
-    -- 3. Delete from auth.users (Supabase Authentication user list)
+    -- 4. Delete from auth.users (Supabase Authentication user list)
     BEGIN
         DELETE FROM auth.users WHERE id = v_uid;
     EXCEPTION WHEN OTHERS THEN

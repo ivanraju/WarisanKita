@@ -45,7 +45,12 @@ class AuthViewModel extends ChangeNotifier {
       }
       return error.message;
     }
-    return error.toString().replaceFirst('Exception: ', '');
+    final raw = error.toString();
+    final match = RegExp(r'message:\s*([^,\)]+)').firstMatch(raw);
+    if (match != null) {
+      return match.group(1)!.trim();
+    }
+    return raw.replaceFirst('Exception: ', '').replaceFirst('AuthException: ', '');
   }
 
   bool _isLoading = false;
@@ -782,6 +787,17 @@ class AuthViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
+      String targetEmail = email.trim();
+      if (targetEmail.isEmpty && _currentUser != null && _currentUser!.email.trim().isNotEmpty) {
+        targetEmail = _currentUser!.email.trim();
+      }
+      if (targetEmail.isEmpty) {
+        final restored = await restoreSession();
+        if (restored != null && restored.email.trim().isNotEmpty) {
+          targetEmail = restored.email.trim();
+        }
+      }
+
       final cleanSsm = ssmNumber.trim();
       final ssmError = SsmValidator.validate(cleanSsm);
       if (ssmError != null) {
@@ -793,7 +809,7 @@ class AuthViewModel extends ChangeNotifier {
 
       final isSsmDuplicate = await _repository.isSsmRegistered(
         cleanSsm,
-        excludeEmail: email.trim(),
+        excludeEmail: targetEmail,
         excludeUserId: _currentUser?.id,
       );
       if (isSsmDuplicate) {
@@ -805,7 +821,7 @@ class AuthViewModel extends ChangeNotifier {
       }
 
       final user = await _repository.linkArtisanRoleToTourist(
-        email: email,
+        email: targetEmail,
         studioName: studioName,
         craftCategory: craftCategory,
         ssmNumber: cleanSsm,
@@ -1017,7 +1033,39 @@ class AuthViewModel extends ChangeNotifier {
     }
   }
 
-  Future<AuthResult> deleteCurrentAccount() async {
+  Future<AuthResult> deactivateArtisanStudio() async {
+    if (_currentUser == null) {
+      return const AuthResult(
+        success: false,
+        message: 'No active user session found.',
+      );
+    }
+
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final updatedUser = await _repository.deactivateArtisanStudio();
+      _currentUser = updatedUser;
+      _activeRole = 'Tourist';
+      _requiresRoleSelection = false;
+      _errorMessage = null;
+      _isLoading = false;
+      notifyListeners();
+      return const AuthResult(
+        success: true,
+        message: 'Your artisan studio has been deactivated. You are now exploring as a Cultural Explorer.',
+      );
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage = _friendlyError(e);
+      notifyListeners();
+      return AuthResult(success: false, message: _errorMessage);
+    }
+  }
+
+  Future<AuthResult> deleteCurrentAccount({String? password}) async {
     if (_currentUser == null) {
       return const AuthResult(
         success: false,
@@ -1037,6 +1085,7 @@ class AuthViewModel extends ChangeNotifier {
         userId: userId,
         email: email,
         username: username,
+        password: password,
       );
 
       _currentUser = null;
@@ -1051,7 +1100,7 @@ class AuthViewModel extends ChangeNotifier {
       );
     } catch (e) {
       _isLoading = false;
-      _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      _errorMessage = _friendlyError(e);
       notifyListeners();
       return AuthResult(success: false, message: _errorMessage);
     }

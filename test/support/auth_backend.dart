@@ -142,8 +142,51 @@ class AuthBackend {
       accounts.removeWhere((_, row) => row['id'] == body['p_user_id']);
       return _json({'success': true});
     }
-    if (path.endsWith('/rpc/admin_update_user_status')) return _json({});
+    if (path.endsWith('/rpc/deactivate_artisan_studio')) {
+      final uid = body['p_user_id'];
+      for (final row in accounts.values) {
+        if (row['id'] == uid) {
+          row['role'] = 'Tourist';
+          row['roles'] = ['Tourist'];
+          row['studio_name'] = null;
+          row['craft_category'] = null;
+          row['ssm_number'] = null;
+          row['artisan_status'] = 'CLOSED';
+        }
+      }
+      return _json({'success': true});
+    }
+    if (path.endsWith('/rpc/admin_update_user_status')) {
+      final email = body['p_email'];
+      final role = body['p_role'];
+      if (email != null && role != null) {
+        final row = accounts[email.toString().toLowerCase()];
+        if (row != null) {
+          row['role'] = role;
+          row['roles'] = [role];
+          if (role == 'Tourist') {
+            row['studio_name'] = null;
+            row['craft_category'] = null;
+            row['ssm_number'] = null;
+            row['artisan_status'] = 'CLOSED';
+          }
+        }
+      }
+      return _json({});
+    }
     if (path == '/rest/v1/users') {
+      if (request.method == 'PATCH') {
+        final query = request.url.queryParameters;
+        final idFilter = query['id']?.replaceFirst('eq.', '');
+        if (idFilter != null) {
+          for (final row in accounts.values) {
+            if (row['id'] == idFilter) {
+              row.addAll(body);
+            }
+          }
+        }
+        return _json([]);
+      }
       final query = request.url.queryParameters;
       // Match the deployed schema: explicit selection of this optional column
       // must fail instead of being silently accepted by our test backend.
@@ -178,7 +221,17 @@ class AuthBackend {
           .toList();
       return _json(rows);
     }
-    if (path == '/rest/v1/artisan_profiles') return _json([]);
+    if (path == '/rest/v1/artisan_profiles') {
+      if (request.method == 'POST') {
+        if (request.headers['accept']?.contains('vnd.pgrst.object') == true) {
+          return _json({'id': 'ap-test-1', ...body});
+        }
+        return _json([{'id': 'ap-test-1', ...body}]);
+      }
+      return _json([]);
+    }
+    if (path == '/rest/v1/artisan_documents' ||
+        path == '/rest/v1/quests') return _json([]);
     throw StateError('Unexpected request: ${request.method} ${request.url}');
   }
 }

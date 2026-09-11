@@ -54,68 +54,165 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final authVM = context.read<AuthViewModel>();
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final passwordController = TextEditingController();
+    bool obscurePassword = true;
+    String? localError;
+    bool isSubmitting = false;
 
     showDialog(
       context: context,
-      builder: (dialogCtx) => AlertDialog(
-        backgroundColor: isDark ? const Color(0xFF0D2825) : Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          langVM.translate('Delete Account'),
-          style: GoogleFonts.dmSerifDisplay(color: const Color(0xFFEF4444)),
-        ),
-        content: Text(
-          langVM.translate(
-            'This action is permanent and will remove all your data, unlocked heritage badges, and craft profile records.',
+      barrierDismissible: false,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: isDark ? const Color(0xFF0D2825) : Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              const Icon(Icons.warning_amber_rounded, color: Color(0xFFEF4444), size: 28),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  langVM.translate('Delete Account Permanently'),
+                  style: GoogleFonts.dmSerifDisplay(color: const Color(0xFFEF4444), fontSize: 20),
+                ),
+              ),
+            ],
           ),
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 13,
-            color: isDark ? Colors.white70 : const Color(0xFF334155),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogCtx).pop(),
-            child: Text(
-              langVM.translate('Cancel'),
-              style: TextStyle(color: isDark ? Colors.white60 : null),
-            ),
-          ),
-          FilledButton(
-            onPressed: () async {
-              Navigator.of(dialogCtx).pop();
-              final result = await authVM.deleteCurrentAccount();
-              if (!mounted) return;
-              if (result.success) {
-                scaffoldMessenger.showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      langVM.translate(
-                        'Your account has been permanently deleted.',
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  langVM.translate(
+                    'This action is irreversible. All your cultural passport stamps, earned XP, itineraries, and credentials will be permanently erased.',
+                  ),
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 13,
+                    color: isDark ? Colors.white70 : const Color(0xFF334155),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  langVM.translate('Please enter your password to confirm deletion:'),
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: passwordController,
+                  obscureText: obscurePassword,
+                  enabled: !isSubmitting,
+                  style: GoogleFonts.plusJakartaSans(
+                    color: isDark ? Colors.white : Colors.black87,
+                    fontSize: 14,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: langVM.translate('Current Password'),
+                    hintStyle: GoogleFonts.plusJakartaSans(
+                      color: isDark ? Colors.white38 : Colors.grey[500],
+                      fontSize: 13,
+                    ),
+                    filled: true,
+                    fillColor: isDark ? const Color(0xFF041412) : const Color(0xFFF1F5F9),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: isDark ? const Color(0xFF1E3A34) : Colors.grey[300]!,
                       ),
                     ),
-                    backgroundColor: const Color(0xFF004D40),
-                  ),
-                );
-                nav.pushNamedAndRemoveUntil('/login', (route) => false);
-              } else {
-                scaffoldMessenger.showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      result.message ??
-                          langVM.translate('Failed to delete account.'),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        obscurePassword ? Icons.visibility_off : Icons.visibility,
+                        color: isDark ? Colors.white54 : Colors.grey[600],
+                      ),
+                      onPressed: () {
+                        setDialogState(() => obscurePassword = !obscurePassword);
+                      },
                     ),
-                    backgroundColor: const Color(0xFFEF4444),
                   ),
-                );
-              }
-            },
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFEF4444),
+                ),
+                if (localError != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    localError!,
+                    style: GoogleFonts.plusJakartaSans(
+                      color: const Color(0xFFEF4444),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ],
             ),
-            child: Text(langVM.translate('PERMANENTLY DELETE')),
           ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: isSubmitting ? null : () => Navigator.of(dialogCtx).pop(),
+              child: Text(
+                langVM.translate('Cancel'),
+                style: TextStyle(color: isDark ? Colors.white60 : null),
+              ),
+            ),
+            FilledButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      final pwd = passwordController.text.trim();
+                      if (pwd.isEmpty) {
+                        setDialogState(() {
+                          localError = langVM.translate('Please enter your current password.');
+                        });
+                        return;
+                      }
+                      setDialogState(() {
+                        isSubmitting = true;
+                        localError = null;
+                      });
+                      final result = await authVM.deleteCurrentAccount(password: pwd);
+                      if (!mounted) return;
+                      if (result.success) {
+                        Navigator.of(dialogCtx).pop();
+                        scaffoldMessenger.showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              langVM.translate('Your account has been permanently deleted.'),
+                            ),
+                            backgroundColor: const Color(0xFF004D40),
+                          ),
+                        );
+                        nav.pushNamedAndRemoveUntil('/login', (route) => false);
+                      } else {
+                        setDialogState(() {
+                          isSubmitting = false;
+                          String? msg = result.message;
+                          if (msg != null) {
+                            final match = RegExp(r'message:\s*([^,\)]+)').firstMatch(msg);
+                            if (match != null) {
+                              msg = match.group(1)!.trim();
+                            }
+                            msg = msg.replaceAll(RegExp(r'^AuthException:\s*|^Exception:\s*'), '').trim();
+                          }
+                          localError = (msg != null && msg.isNotEmpty) ? msg : langVM.translate('Failed to delete account.');
+                        });
+                      }
+                    },
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFEF4444),
+              ),
+              child: isSubmitting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    )
+                  : Text(langVM.translate('DELETE ACCOUNT')),
+            ),
+          ],
+        ),
       ),
     );
   }
