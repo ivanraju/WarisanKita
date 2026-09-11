@@ -375,9 +375,10 @@ class SupabaseService {
       if (artisan != null) {
         final artisanStatus = (artisan['status'] ?? '').toString().toUpperCase();
         row['artisan_status'] = artisanStatus;
-        final currentRole = (row['role'] ?? '').toString();
 
-        if (artisanStatus == 'APPROVED' && currentRole != 'Tourist') {
+        if (artisanStatus == 'APPROVED') {
+          row['role'] = 'Artisan';
+          row['roles'] = ['Artisan'];
           row['artisan_profiles'] = artisan;
           if (artisan['bio'] != null && (artisan['bio'] as String).trim().isNotEmpty) {
             row['bio'] = artisan['bio'];
@@ -410,9 +411,6 @@ class SupabaseService {
             row['experience'] = artisan['experience'].toString().trim();
           } else if (artisan['years_experience'] != null && (artisan['years_experience'] as num) > 1) {
             row['experience'] = '${artisan['years_experience']} Years';
-          }
-          if (currentRole.isEmpty) {
-            row['role'] = 'Artisan';
           }
         } else if (artisanStatus == 'REJECTED' ||
             artisanStatus == 'PENDING_APPROVAL' ||
@@ -2280,10 +2278,14 @@ class SupabaseService {
     String? suspensionReason,
   }) async {
     final cleanEmail = email.trim().toLowerCase();
+    final resolvedArtisanStatus = (newStatus.toUpperCase() == 'ACTIVE' ||
+            newStatus.toUpperCase() == 'APPROVED')
+        ? 'APPROVED'
+        : newStatus;
     if (_userStore.containsKey(cleanEmail)) {
       if (updateArtisanProfileOnly) {
-        _userStore[cleanEmail]!['artisanStatus'] = newStatus;
-        _userStore[cleanEmail]!['artisan_status'] = newStatus;
+        _userStore[cleanEmail]!['artisanStatus'] = resolvedArtisanStatus;
+        _userStore[cleanEmail]!['artisan_status'] = resolvedArtisanStatus;
         _userStore[cleanEmail]!['status'] = 'ACTIVE';
         _userStore[cleanEmail]!['isSuspended'] = false;
         _userStore[cleanEmail]!['suspensionReason'] = null;
@@ -2293,8 +2295,8 @@ class SupabaseService {
         }
       } else {
         _userStore[cleanEmail]!['status'] = newStatus;
-        _userStore[cleanEmail]!['artisanStatus'] = newStatus;
-        _userStore[cleanEmail]!['artisan_status'] = newStatus;
+        _userStore[cleanEmail]!['artisanStatus'] = resolvedArtisanStatus;
+        _userStore[cleanEmail]!['artisan_status'] = resolvedArtisanStatus;
         _userStore[cleanEmail]!['role'] = newRole;
         _userStore[cleanEmail]!['isSuspended'] = (newStatus == 'SUSPENDED');
         if (newStatus == 'SUSPENDED') {
@@ -2318,8 +2320,8 @@ class SupabaseService {
           final map = jsonDecode(rawUser) as Map<String, dynamic>;
           if ((map['email'] as String?)?.toLowerCase() == cleanEmail) {
             if (updateArtisanProfileOnly) {
-              map['artisanStatus'] = newStatus;
-              map['artisan_status'] = newStatus;
+              map['artisanStatus'] = resolvedArtisanStatus;
+              map['artisan_status'] = resolvedArtisanStatus;
               map['status'] = 'ACTIVE';
               map['isSuspended'] = false;
               map['suspensionReason'] = null;
@@ -2329,8 +2331,8 @@ class SupabaseService {
               }
             } else {
               map['status'] = newStatus;
-              map['artisanStatus'] = newStatus;
-              map['artisan_status'] = newStatus;
+              map['artisanStatus'] = resolvedArtisanStatus;
+              map['artisan_status'] = resolvedArtisanStatus;
               map['isSuspended'] = (newStatus == 'SUSPENDED');
               if (newStatus == 'SUSPENDED') {
                 map['suspensionReason'] = suspensionReason;
@@ -2404,6 +2406,7 @@ class SupabaseService {
           final updatePayload = <String, dynamic>{
             'status': newStatus,
             'role': newRole,
+            'artisan_status': resolvedArtisanStatus,
             'updated_at': DateTime.now().toIso8601String(),
           };
           if (newStatus == 'SUSPENDED') {

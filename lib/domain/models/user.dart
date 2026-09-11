@@ -110,7 +110,8 @@ class UserModel {
       (role == 'Artisan' ||
        role == 'Master Artisan' ||
        roles.contains('Artisan') ||
-       roles.contains('Master Artisan')) &&
+       roles.contains('Master Artisan') ||
+       artisanStatus?.toUpperCase() == 'APPROVED') &&
       isApproved &&
       !isArtisanStudioSuspended;
 
