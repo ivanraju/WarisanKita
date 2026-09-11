@@ -1438,6 +1438,13 @@ class SupabaseService {
     } else {
       apMap = <String, dynamic>{};
     }
+    if (apMap['id'] == null) {
+      if (userRecord['artisanProfileId'] != null) {
+        apMap['id'] = userRecord['artisanProfileId'];
+      } else if (userRecord['artisan_profile_id'] != null) {
+        apMap['id'] = userRecord['artisan_profile_id'];
+      }
+    }
     if (studioName != null && studioName.trim().isNotEmpty) {
       apMap['studio_name'] = studioName.trim();
     }
@@ -1599,6 +1606,11 @@ class SupabaseService {
                       .maybeSingle();
 
                   if (existingProfile != null) {
+                    if (existingProfile['id'] != null) {
+                      apMap['id'] = existingProfile['id'];
+                      userRecord['artisanProfileId'] = existingProfile['id'];
+                      userRecord['artisan_profile_id'] = existingProfile['id'];
+                    }
                     try {
                       await client
                           .from('artisan_profiles')
@@ -1662,7 +1674,16 @@ class SupabaseService {
                     newProfile['tags'] = effectiveTags;
 
                     try {
-                      await client.from('artisan_profiles').insert(newProfile);
+                      final inserted = await client
+                          .from('artisan_profiles')
+                          .insert(newProfile)
+                          .select('id')
+                          .maybeSingle();
+                      if (inserted != null && inserted['id'] != null) {
+                        apMap['id'] = inserted['id'];
+                        userRecord['artisanProfileId'] = inserted['id'];
+                        userRecord['artisan_profile_id'] = inserted['id'];
+                      }
                     } catch (insertErr) {
                       debugPrint(
                         'Direct artisan_profiles insert note: $insertErr',
@@ -1672,9 +1693,16 @@ class SupabaseService {
                           final fallbackProfile = Map<String, dynamic>.from(
                             newProfile,
                           )..remove('experience');
-                          await client
+                          final fallbackInserted = await client
                               .from('artisan_profiles')
-                              .insert(fallbackProfile);
+                              .insert(fallbackProfile)
+                              .select('id')
+                              .maybeSingle();
+                          if (fallbackInserted != null && fallbackInserted['id'] != null) {
+                            apMap['id'] = fallbackInserted['id'];
+                            userRecord['artisanProfileId'] = fallbackInserted['id'];
+                            userRecord['artisan_profile_id'] = fallbackInserted['id'];
+                          }
                         } catch (fallbackInsertErr) {
                           debugPrint(
                             'Fallback artisan_profiles insert note: $fallbackInsertErr',
@@ -1683,6 +1711,7 @@ class SupabaseService {
                       }
                     }
                   }
+                  userRecord['artisan_profiles'] = apMap;
                 }
               }
             } catch (e) {
@@ -3095,6 +3124,106 @@ class SupabaseService {
     }
   }
 
+  Future<String?> ensureArtisanProfileId(String userId, {String? email}) async {
+    try {
+      final cleanEmail = email?.trim().toLowerCase();
+      // 1. Check in-memory store
+      if (cleanEmail != null && _userStore.containsKey(cleanEmail)) {
+        final storeData = _userStore[cleanEmail]!;
+        if (storeData['artisanProfileId'] != null &&
+            storeData['artisanProfileId'].toString().trim().isNotEmpty) {
+          return storeData['artisanProfileId'].toString().trim();
+        }
+        if (storeData['artisan_profile_id'] != null &&
+            storeData['artisan_profile_id'].toString().trim().isNotEmpty) {
+          return storeData['artisan_profile_id'].toString().trim();
+        }
+        if (storeData['artisan_profiles'] is Map &&
+            storeData['artisan_profiles']['id'] != null &&
+            storeData['artisan_profiles']['id'].toString().trim().isNotEmpty) {
+          return storeData['artisan_profiles']['id'].toString().trim();
+        }
+      }
+
+      final client = _client;
+      if (client != null && userId.isNotEmpty) {
+        // 2. Query artisan_profiles for existing record
+        try {
+          final existing = await client
+              .from('artisan_profiles')
+              .select('id')
+              .eq('user_id', userId)
+              .maybeSingle();
+          if (existing != null && existing['id'] != null) {
+            final pid = existing['id'].toString();
+            if (cleanEmail != null && _userStore.containsKey(cleanEmail)) {
+              _userStore[cleanEmail]!['artisanProfileId'] = pid;
+              _userStore[cleanEmail]!['artisan_profile_id'] = pid;
+              if (_userStore[cleanEmail]!['artisan_profiles'] is Map) {
+                _userStore[cleanEmail]!['artisan_profiles']['id'] = pid;
+              }
+            }
+            return pid;
+          }
+        } catch (e) {
+          debugPrint('ensureArtisanProfileId query note: $e');
+        }
+
+        // 3. If no row exists yet, create one so artisan documents and portfolio can attach
+        try {
+          final userRow = await client
+              .from('users')
+              .select('full_name, username')
+              .eq('id', userId)
+              .maybeSingle();
+          final name = userRow?['full_name'] ??
+              userRow?['username'] ??
+              'Artisan Studio';
+
+          final newProfile = {
+            'user_id': userId,
+            'studio_name': name,
+            'craft_category': 'Traditional Crafts',
+            'bio': 'Master artisan dedicated to traditional Malaysian craft.',
+            'status': 'APPROVED',
+            'created_at': DateTime.now().toIso8601String(),
+            'updated_at': DateTime.now().toIso8601String(),
+          };
+
+          final inserted = await client
+              .from('artisan_profiles')
+              .insert(newProfile)
+              .select('id')
+              .maybeSingle();
+          if (inserted != null && inserted['id'] != null) {
+            final pid = inserted['id'].toString();
+            if (cleanEmail != null && _userStore.containsKey(cleanEmail)) {
+              _userStore[cleanEmail]!['artisanProfileId'] = pid;
+              _userStore[cleanEmail]!['artisan_profile_id'] = pid;
+            }
+            return pid;
+          }
+        } catch (e) {
+          debugPrint('ensureArtisanProfileId insert note: $e');
+        }
+      }
+
+      // 4. In-memory / offline mock fallback
+      final fallbackId = 'artisan-$userId';
+      if (cleanEmail != null && _userStore.containsKey(cleanEmail)) {
+        _userStore[cleanEmail]!['artisanProfileId'] = fallbackId;
+        _userStore[cleanEmail]!['artisan_profile_id'] = fallbackId;
+        if (_userStore[cleanEmail]!['artisan_profiles'] is Map) {
+          _userStore[cleanEmail]!['artisan_profiles']['id'] = fallbackId;
+        }
+      }
+      return fallbackId;
+    } catch (e) {
+      debugPrint('ensureArtisanProfileId note: $e');
+      return 'artisan-$userId';
+    }
+  }
+
   Future<Map<String, String>?> uploadArtisanDocument(
     String artisanId,
     PlatformFile file,
@@ -3103,6 +3232,19 @@ class SupabaseService {
     try {
       final client = _client;
       if (client == null) return null;
+
+      String effectiveArtisanId = artisanId.trim();
+      if (effectiveArtisanId.isEmpty) {
+        final currentUid = client.auth.currentUser?.id;
+        if (currentUid != null) {
+          final resolved = await ensureArtisanProfileId(currentUid);
+          if (resolved != null) effectiveArtisanId = resolved;
+        }
+      }
+      if (effectiveArtisanId.isEmpty) {
+        debugPrint('uploadArtisanDocument error: No valid artisan ID available.');
+        return null;
+      }
 
       Uint8List bytes;
       if (file.path != null) {
@@ -3114,7 +3256,7 @@ class SupabaseService {
       final bucket = docType == 'STUDIO_PHOTO' || docType == 'PORTFOLIO_IMAGE'
           ? 'artisan_public_media'
           : 'artisan_private_docs';
-      final folder = '$artisanId/$docType';
+      final folder = '$effectiveArtisanId/$docType';
       final fileName =
           '${DateTime.now().millisecondsSinceEpoch}_${file.name.replaceAll(' ', '_')}';
       String finalFileName = fileName;
@@ -3171,7 +3313,7 @@ class SupabaseService {
 
       // Update DB
       await client.from('artisan_documents').insert({
-        'artisan_id': artisanId,
+        'artisan_id': effectiveArtisanId,
         'doc_type': docType,
         'file_name': finalFileName,
         'file_url': url,

@@ -838,16 +838,50 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     );
     if (result.isNotEmpty) {
       final file = result.first;
+      if (!mounted) return;
       final authVM = context.read<AuthViewModel>();
+      final supabaseService = context.read<SupabaseService>();
       final user = authVM.currentUser;
-      if (user == null || user.artisanProfileId == null) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not find artisan profile ID.')));
+      if (user == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('User session not found. Please log in again.')),
+        );
+        return;
+      }
+
+      String? artisanProfileId = user.artisanProfileId;
+      if (artisanProfileId == null || artisanProfileId.trim().isEmpty) {
+        artisanProfileId = await supabaseService.ensureArtisanProfileId(
+          user.id,
+          email: user.email,
+        );
+        if (artisanProfileId != null && mounted) {
+          unawaited(authVM.refreshCurrentUser());
+        }
+      }
+
+      if (artisanProfileId == null || artisanProfileId.trim().isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not find or initialize artisan profile ID.')),
+          );
+        }
         return;
       }
       
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Uploading document...')));
-      final uploadRes = await context.read<SupabaseService>().uploadArtisanDocument(user.artisanProfileId!, file, docType);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Uploading document...')),
+        );
+      }
+      final uploadRes = await supabaseService.uploadArtisanDocument(
+        artisanProfileId,
+        file,
+        docType,
+      );
       
+      if (!mounted) return;
+
       if (uploadRes != null) {
         setState(() {
           if (docType == 'PORTFOLIO_IMAGE' || docType == 'STUDIO_PHOTO') {
@@ -856,10 +890,14 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
             _documents[docType] = uploadRes['url']!;
           }
         });
-        unawaited(context.read<AuthViewModel>().refreshCurrentUser());
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Document uploaded successfully!')));
+        unawaited(authVM.refreshCurrentUser());
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Document uploaded successfully!')),
+        );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Upload failed.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Upload failed.')),
+        );
       }
     }
   }

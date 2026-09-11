@@ -297,6 +297,7 @@ class UserModel {
       'phone': phone,
       'experience': experience,
       'artisanProfileId': artisanProfileId,
+      'artisan_profile_id': artisanProfileId,
       'artisanStatus': artisanStatus,
       'latitude': latitude,
       'longitude': longitude,
@@ -446,7 +447,11 @@ class UserModel {
       longitude: lon,
       phone: map['phone'] ?? map['phone_number'] ?? artisanMap?['phone'],
       experience: resolvedExp,
-      artisanProfileId: artisanMap?['id'],
+      artisanProfileId: artisanMap?['id'] ??
+          map['artisanProfileId'] ??
+          map['artisan_profile_id'] ??
+          map['artisanId'] ??
+          map['artisan_id'],
       artisanStatus: artisanMap?['status'] ?? map['artisanStatus'] ?? map['artisan_status'],
       artisanDocuments: docs,
       tags: tagsList,
