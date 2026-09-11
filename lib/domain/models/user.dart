@@ -103,12 +103,11 @@ class UserModel {
 
   bool get isApprovedArtisan {
     if (artisanStatus?.toUpperCase() == 'CLOSED') return false;
-    if (role == 'Tourist' && artisanStatus?.toUpperCase() != 'APPROVED') return false;
+    if (role == 'Tourist') return false;
     return (role == 'Artisan' ||
         role == 'Master Artisan' ||
         roles.contains('Artisan') ||
-        roles.contains('Master Artisan') ||
-        artisanStatus?.toUpperCase() == 'APPROVED') &&
+        roles.contains('Master Artisan')) &&
        isApproved &&
        !isArtisanStudioSuspended;
   }
@@ -470,7 +469,10 @@ class UserModel {
 
     final rawArtisanStatus = artisanMap?['status'] ?? map['artisanStatus'] ?? map['artisan_status'];
     final String? resolvedArtisanStatus = rawArtisanStatus?.toString();
-    final bool isApprovedArtisanStatus = resolvedArtisanStatus?.toUpperCase() == 'APPROVED';
+    final bool isClosedArtisan = resolvedArtisanStatus?.toUpperCase() == 'CLOSED' ||
+        map['artisan_status']?.toString().toUpperCase() == 'CLOSED' ||
+        map['artisanStatus']?.toString().toUpperCase() == 'CLOSED';
+    final bool isApprovedArtisanStatus = !isClosedArtisan && resolvedArtisanStatus?.toUpperCase() == 'APPROVED';
 
     final String resolvedRole;
     final List<String> resolvedRoles;
@@ -479,6 +481,9 @@ class UserModel {
           ? map['role'] as String
           : 'Admin';
       resolvedRoles = roleList;
+    } else if (isClosedArtisan) {
+      resolvedRole = 'Tourist';
+      resolvedRoles = const ['Tourist'];
     } else if (isApprovedArtisanStatus) {
       resolvedRole = 'Artisan';
       resolvedRoles = const ['Artisan'];
@@ -510,7 +515,7 @@ class UserModel {
       phone: map['phone'] ?? map['phone_number'] ?? artisanMap?['phone'],
       experience: resolvedExp,
       artisanProfileId: artisanMap?['id'],
-      artisanStatus: artisanMap?['status'] ?? map['artisanStatus'] ?? map['artisan_status'],
+      artisanStatus: isClosedArtisan ? 'CLOSED' : (artisanMap?['status'] ?? map['artisanStatus'] ?? map['artisan_status']),
       artisanDocuments: docs,
       tags: tagsList,
       pendingRelocationAddress: map['pending_relocation_address'] ?? map['pendingRelocationAddress'] ?? artisanMap?['pending_relocation_address'],

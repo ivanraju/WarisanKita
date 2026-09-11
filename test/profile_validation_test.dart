@@ -1789,5 +1789,23 @@ void main() {
         expect(user.certFileUrl, contains('kraftangan.png'));
         expect(user.certFileName, 'kraftangan.png');
       });
+
+      test('UserModel with CLOSED status cleanly resolves to Tourist and not approved artisan', () {
+        final closedUser = UserModel.fromMap({
+          'id': 'closed-user-1',
+          'email': 'closed@warisankita.my',
+          'role': 'Tourist',
+          'artisan_status': 'CLOSED',
+          'status': 'ACTIVE',
+        });
+
+        expect(closedUser.role, 'Tourist');
+        expect(closedUser.artisanStatus, 'CLOSED');
+        expect(closedUser.isApprovedArtisan, isFalse);
+        expect(closedUser.isPendingArtisan, isFalse);
+        expect(closedUser.isRejectedArtisan, isFalse);
+        expect(closedUser.isDualRole, isFalse);
+      });
     });
 }
+

@@ -458,7 +458,11 @@ class SupabaseService {
         if (artisan['status'] != null) {
           final artisanStatus = artisan['status'].toString().toUpperCase();
           row['artisan_status'] = artisanStatus;
-          if (artisanStatus == 'APPROVED') {
+          if (artisanStatus == 'CLOSED') {
+            row['role'] = 'Tourist';
+            row['roles'] = ['Tourist'];
+            row['artisan_status'] = 'CLOSED';
+          } else if (artisanStatus == 'APPROVED') {
             row['role'] = 'Artisan';
             row['roles'] = ['Artisan'];
             row['artisan_status'] = 'APPROVED';
@@ -530,7 +534,11 @@ class SupabaseService {
           if (artisan['status'] != null) {
             final artisanStatus = artisan['status'].toString().toUpperCase();
             row['artisan_status'] = artisanStatus;
-            if (artisanStatus == 'APPROVED') {
+            if (artisanStatus == 'CLOSED') {
+              row['role'] = 'Tourist';
+              row['roles'] = ['Tourist'];
+              row['artisan_status'] = 'CLOSED';
+            } else if (artisanStatus == 'APPROVED') {
               row['role'] = 'Artisan';
               row['roles'] = ['Artisan'];
               row['artisan_status'] = 'APPROVED';
@@ -552,7 +560,11 @@ class SupabaseService {
     }
 
     final userArtisanStatus = (row['artisan_status'] ?? '').toString().toUpperCase();
-    if (userArtisanStatus == 'APPROVED') {
+    if (userArtisanStatus == 'CLOSED') {
+      row['role'] = 'Tourist';
+      row['roles'] = ['Tourist'];
+      row['artisan_status'] = 'CLOSED';
+    } else if (userArtisanStatus == 'APPROVED') {
       row['role'] = 'Artisan';
       row['roles'] = ['Artisan'];
       row['artisan_status'] = 'APPROVED';
@@ -2991,6 +3003,7 @@ class SupabaseService {
       ..['roles'] = <String>['Tourist']
       ..['status'] = 'ACTIVE'
       ..['artisan_status'] = 'CLOSED'
+      ..['artisanStatus'] = 'CLOSED'
       ..['is_live_open'] = false
       ..remove('artisan_profiles');
     _userStore[email] = existing;
@@ -3005,6 +3018,17 @@ class SupabaseService {
         );
       } catch (e) {
         debugPrint('deactivate_artisan_studio RPC note: $e');
+      }
+      try {
+        await client
+            .from('artisan_profiles')
+            .update({
+              'status': 'CLOSED',
+              'updated_at': DateTime.now().toIso8601String(),
+            })
+            .eq('user_id', userId);
+      } catch (e) {
+        debugPrint('deactivateArtisanStudio profile status note: $e');
       }
       try {
         await client.from('artisan_profiles').delete().eq('user_id', userId);

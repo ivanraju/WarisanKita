@@ -505,12 +505,14 @@ class ModerationViewModel extends ChangeNotifier {
                 .toString();
 
         // Resolve photos - must be actual URLs, not filenames
-        List<String> resolvedPhotos;
+        final List<String> resolvedPhotos = [];
         if (raw['photos'] is List && (raw['photos'] as List).isNotEmpty) {
-          resolvedPhotos = List<String>.from(raw['photos']);
-        } else {
-          // Fallback: use the user's avatar as a portfolio image if available
-          resolvedPhotos = [resolvedImageUrl];
+          for (final p in (raw['photos'] as List)) {
+            final str = p?.toString();
+            if (str != null && str.isNotEmpty && !resolvedPhotos.contains(str)) {
+              resolvedPhotos.add(str);
+            }
+          }
         }
 
         String? resolvedSsmUrl = raw['ssm_file_url']?.toString();
@@ -542,6 +544,10 @@ class ModerationViewModel extends ChangeNotifier {
                 type == 'CERT') {
               resolvedCertUrl ??= url;
               resolvedCertName ??= name ?? url?.split('/').last;
+            } else if (type == 'STUDIO_PHOTO' || type == 'PORTFOLIO_IMAGE') {
+              if (url != null && url.isNotEmpty && !resolvedPhotos.contains(url)) {
+                resolvedPhotos.add(url);
+              }
             }
           }
         }
@@ -619,12 +625,7 @@ class ModerationViewModel extends ChangeNotifier {
                   certFileUrl: u.certFileUrl,
                   bio: u.bio,
                   isUpgradeFromTourist: u.role == 'Tourist',
-                  photos: photos.isNotEmpty
-                      ? photos
-                      : [
-                          u.avatarUrl ??
-                              'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600',
-                        ],
+                  photos: photos,
                 ),
               );
             }
