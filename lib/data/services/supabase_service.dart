@@ -2323,7 +2323,7 @@ class SupabaseService {
 
     final artisanProfile = await client
         .from('artisan_profiles')
-        .select('id')
+        .select('id, studio_name, craft_category')
         .eq('user_id', userId)
         .maybeSingle();
     final artisanId = artisanProfile?['id']?.toString().trim() ?? '';
@@ -2331,13 +2331,42 @@ class SupabaseService {
       throw StateError('The artisan profile could not be found.');
     }
 
-    final questRows = List<Map<String, dynamic>>.from(
+    List<Map<String, dynamic>> questRows = List<Map<String, dynamic>>.from(
       await client
           .from('quests')
           .select('id, status')
           .eq('artisan_id', artisanId)
           .inFilter('status', const ['PENDING_APPROVAL', 'APPROVED']),
     );
+    if (questRows.isEmpty) {
+      final studioName =
+          artisanProfile?['studio_name']?.toString().trim().isNotEmpty == true
+              ? artisanProfile!['studio_name'].toString().trim()
+              : 'Heritage Workshop';
+      final craftCategory =
+          artisanProfile?['craft_category']?.toString().trim().isNotEmpty == true
+              ? artisanProfile!['craft_category'].toString().trim()
+              : 'Malaysian craft';
+      try {
+        final createdQuest = await client
+            .from('quests')
+            .insert({
+              'artisan_id': artisanId,
+              'title': '$studioName Quest',
+              'category': 'Demonstration & Lore',
+              'description':
+                  'Visit $studioName and experience the heritage of $craftCategory.',
+              'status': 'APPROVED',
+            })
+            .select('id, status')
+            .maybeSingle();
+        if (createdQuest != null) {
+          questRows = [createdQuest];
+        }
+      } catch (questInsertErr) {
+        debugPrint('Auto-provisioning quest for approved artisan note: $questInsertErr');
+      }
+    }
     if (questRows.isEmpty) {
       throw StateError(
         'Approval cannot continue because this artisan has no current cultural quest.',
