@@ -1031,29 +1031,51 @@ class SupabaseService {
             userRecord['id'] ??
             '00000000-0000-4000-8000-000000000001';
 
+        final userPayload = <String, dynamic>{
+          'status': 'ACTIVE',
+          'role': 'Tourist',
+          'artisan_status': 'PENDING_APPROVAL',
+          'studio_name': studioName,
+          'craft_category': craftCategory,
+          'ssm_number': ssmNumber,
+          if (experience != null && experience.trim().isNotEmpty)
+            'experience': experience.trim(),
+          if (bio != null && bio.trim().isNotEmpty) 'bio': bio.trim(),
+          if (state != null && state.trim().isNotEmpty) 'state': state.trim(),
+          if (address != null && address.trim().isNotEmpty)
+            'address': address.trim(),
+          if (phone != null && phone.trim().isNotEmpty)
+            'phone_number': phone.trim(),
+          'updated_at': DateTime.now().toIso8601String(),
+        };
+
         if (existing != null) {
-          await client
-              .from('users')
-              .update({
-                'status': 'ACTIVE',
-                'role': 'Tourist',
-                'artisan_status': 'PENDING_APPROVAL',
-                if (phone != null) 'phone_number': phone,
-                'updated_at': DateTime.now().toIso8601String(),
-              })
-              .ilike('email', cleanEmail);
+          try {
+            await client
+                .from('users')
+                .update(userPayload)
+                .ilike('email', cleanEmail);
+          } catch (uErr) {
+            debugPrint('users table full update note: $uErr');
+            await client
+                .from('users')
+                .update({
+                  'status': 'ACTIVE',
+                  'role': 'Tourist',
+                  'artisan_status': 'PENDING_APPROVAL',
+                  if (phone != null) 'phone_number': phone,
+                  'updated_at': DateTime.now().toIso8601String(),
+                })
+                .ilike('email', cleanEmail);
+          }
         } else {
           await client.from('users').insert({
             'id': userId,
             'email': cleanEmail,
             'username': userRecord['username'] ?? cleanEmail.split('@').first,
             'full_name': userRecord['displayName'] ?? studioName,
-            'status': 'ACTIVE',
-            'role': 'Tourist',
-            'artisan_status': 'PENDING_APPROVAL',
-            if (phone != null) 'phone_number': phone,
+            ...userPayload,
             'created_at': DateTime.now().toIso8601String(),
-            'updated_at': DateTime.now().toIso8601String(),
           });
         }
 
@@ -1063,6 +1085,16 @@ class SupabaseService {
               .select('id')
               .eq('user_id', userId)
               .maybeSingle();
+
+          final resolvedBio = (bio != null && bio.trim().isNotEmpty)
+              ? bio.trim()
+              : 'Master artisan dedicated to traditional Malaysian craft.';
+          final resolvedState = (state != null && state.trim().isNotEmpty)
+              ? state.trim()
+              : 'Melaka';
+          final resolvedAddress = (address != null && address.trim().isNotEmpty)
+              ? address.trim()
+              : resolvedState;
 
           final profileData = {
             'studio_name': studioName,
@@ -1075,11 +1107,9 @@ class SupabaseService {
                   RegExp(r'\d+').firstMatch(experience)!.group(0)!,
                 ),
             },
-            'bio':
-                bio ??
-                'Master artisan dedicated to traditional Malaysian craft.',
-            'address': address ?? state ?? 'Malaysia',
-            'state': state ?? 'Malaysia',
+            'bio': resolvedBio,
+            'address': resolvedAddress,
+            'state': resolvedState,
             if (latitude != null) 'latitude': latitude,
             if (longitude != null) 'longitude': longitude,
             'status': 'PENDING_APPROVAL',
@@ -2002,18 +2032,25 @@ class SupabaseService {
               .select(
                 '*, artisan_profiles!artisan_profiles_user_id_fkey(*, artisan_documents(*))',
               )
-              .ilike('status', '%PENDING%');
+              .or('status.ilike.%PENDING%,artisan_status.ilike.%PENDING%');
         } catch (_) {
           try {
             res = await client
                 .from('users')
                 .select('*, artisan_profiles(*, artisan_documents(*))')
-                .ilike('status', '%PENDING%');
+                .or('status.ilike.%PENDING%,artisan_status.ilike.%PENDING%');
           } catch (_) {
-            res = await client
-                .from('users')
-                .select()
-                .ilike('status', '%PENDING%');
+            try {
+              res = await client
+                  .from('users')
+                  .select()
+                  .or('status.ilike.%PENDING%,artisan_status.ilike.%PENDING%');
+            } catch (_) {
+              res = await client
+                  .from('users')
+                  .select()
+                  .ilike('status', '%PENDING%');
+            }
           }
         }
         if (res is List && res.isNotEmpty) {
@@ -2091,6 +2128,66 @@ class SupabaseService {
             results.add(rowMap);
           }
         }
+
+        // Also query artisan_profiles table directly to catch any pending applications
+        try {
+          final pendingProfiles = await client
+              .from('artisan_profiles')
+              .select('*, users(*), artisan_documents(*)')
+              .ilike('status', '%PENDING%');
+          if (pendingProfiles is List) {
+            for (final p in pendingProfiles) {
+              final pMap = Map<String, dynamic>.from(p);
+              final u = pMap['users'] is Map
+                  ? Map<String, dynamic>.from(pMap['users'])
+                  : <String, dynamic>{};
+              final email = (u['email'] ?? pMap['email'] ?? '').toString().toLowerCase();
+              if (email.isNotEmpty &&
+                  !results.any(
+                    (r) =>
+                        (r['email'] ?? '').toString().toLowerCase() == email,
+                  )) {
+                final combined = <String, dynamic>{
+                  ...u,
+                  'id': u['id'] ?? pMap['user_id'] ?? pMap['id'],
+                  'email': email,
+                  'studio_name': pMap['studio_name'] ?? u['studio_name'],
+                  'craft_category': pMap['craft_category'] ?? u['craft_category'],
+                  'ssm_number': pMap['ssm_number'] ?? u['ssm_number'],
+                  'bio': pMap['bio'] ?? u['bio'],
+                  'state': pMap['state'] ?? u['state'],
+                  'address': pMap['address'] ?? u['address'],
+                  'experience': pMap['experience'] ?? u['experience'],
+                  'artisan_status': 'PENDING_APPROVAL',
+                  'artisan_profiles': pMap,
+                };
+                if (pMap['artisan_documents'] is List) {
+                  final docs = pMap['artisan_documents'] as List;
+                  List<String> photos = [];
+                  for (var d in docs) {
+                    final doc = d as Map;
+                    final type = doc['doc_type']?.toString();
+                    final url = doc['file_url']?.toString();
+                    final name = doc['file_name']?.toString();
+                    if ((type == 'PORTFOLIO_IMAGE' || type == 'STUDIO_PHOTO') && url != null) {
+                      photos.add(url);
+                    } else if (type == 'SSM_BUSINESS_CERT') {
+                      if (name != null) combined['ssm_file_name'] = name;
+                      if (url != null) combined['ssm_file_url'] = url;
+                    } else if (type == 'KRAFTANGAN_MASTER_CERT') {
+                      if (name != null) combined['cert_file_name'] = name;
+                      if (url != null) combined['cert_file_url'] = url;
+                    }
+                  }
+                  if (photos.isNotEmpty) combined['photos'] = photos;
+                }
+                results.add(combined);
+              }
+            }
+          }
+        } catch (apErr) {
+          debugPrint('Supabase getPendingArtisans artisan_profiles direct query note: $apErr');
+        }
       } catch (e) {
         debugPrint('Supabase getPendingArtisans note: $e');
       }
@@ -2100,7 +2197,10 @@ class SupabaseService {
     for (final entry in _userStore.entries) {
       final user = entry.value;
       final status = (user['status'] ?? '').toString().toUpperCase();
-      if (status.contains('PENDING')) {
+      final artisanStatus = (user['artisan_status'] ?? user['artisanStatus'] ?? '')
+          .toString()
+          .toUpperCase();
+      if (status.contains('PENDING') || artisanStatus.contains('PENDING')) {
         final userEmail = (user['email'] ?? entry.key).toString().toLowerCase();
         if (!results.any(
           (r) => (r['email'] ?? '').toString().toLowerCase() == userEmail,
