@@ -255,6 +255,34 @@ void main() {
       expect(cleared.pendingRelocationAddress, isNull);
     });
 
+    test('UserModel serialization preserves artisanProfileId across toMap and fromMap', () {
+      const user = UserModel(
+        id: 'u_artisan_400',
+        email: 'artisan400@warisankita.my',
+        displayName: 'Pak Mat',
+        role: 'Artisan',
+        artisanProfileId: 'ap_profile_999',
+      );
+
+      final map = user.toMap();
+      expect(map['artisanProfileId'], 'ap_profile_999');
+      expect(map['artisan_profile_id'], 'ap_profile_999');
+
+      final restored = UserModel.fromMap(map);
+      expect(restored.artisanProfileId, 'ap_profile_999');
+    });
+
+    test('SupabaseService.ensureArtisanProfileId initializes and returns valid artisan ID when null', () async {
+      final service = SupabaseService();
+      final resolvedId = await service.ensureArtisanProfileId('user_no_profile_id', email: 'no_id@warisankita.my');
+      expect(resolvedId, isNotNull);
+      expect(resolvedId!.isNotEmpty, isTrue);
+
+      // Subsequent calls return the same cached/persisted ID
+      final secondCall = await service.ensureArtisanProfileId('user_no_profile_id', email: 'no_id@warisankita.my');
+      expect(secondCall, resolvedId);
+    });
+
     test('UserModel dynamically resolves joinedDate from created_at and formats to Mmm yyyy', () {
       final userWithTimestamp = UserModel.fromMap({
         'id': 'u456',
