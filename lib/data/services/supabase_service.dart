@@ -416,8 +416,6 @@ class SupabaseService {
           final savedLive = prefs.getBool('artisan_live_open_${artisan['id']}') ??
               prefs.getBool('artisan_live_open_${row['id']}');
           row['is_live_open'] = savedLive ?? artisan['is_live_open'] ?? true;
-          if (currentRole.isEmpty) {
-            row['role'] = 'Artisan';
         } else if (artisanStatus == 'REJECTED' ||
             artisanStatus == 'PENDING_APPROVAL' ||
             artisanStatus == 'PENDING') {
