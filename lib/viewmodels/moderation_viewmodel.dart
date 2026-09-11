@@ -1035,6 +1035,7 @@ class ModerationViewModel extends ChangeNotifier {
             roles: const ['Tourist'],
             status: 'ACTIVE',
             artisanStatus: 'REJECTED',
+            rejectionReason: reason,
             studioName: artisan.name.isNotEmpty
                 ? artisan.name
                 : existingUser.studioName,
@@ -1050,6 +1051,7 @@ class ModerationViewModel extends ChangeNotifier {
           _registeredUsers[userIdx] = existingUser.copyWith(
             status: 'REJECTED',
             artisanStatus: 'REJECTED',
+            rejectionReason: reason,
             studioName: artisan.name.isNotEmpty
                 ? artisan.name
                 : existingUser.studioName,
@@ -1069,6 +1071,7 @@ class ModerationViewModel extends ChangeNotifier {
         newStatus: 'REJECTED',
         newRole: isExistingTourist ? 'Tourist' : 'Artisan',
         updateArtisanProfileOnly: isExistingTourist,
+        rejectionReason: reason,
       );
 
       _pendingArtisans.removeWhere(
@@ -1089,12 +1092,14 @@ class ModerationViewModel extends ChangeNotifier {
           roles: isTourist ? const ['Tourist'] : existingUser.roles,
           status: isTourist ? 'ACTIVE' : 'REJECTED',
           artisanStatus: 'REJECTED',
+          rejectionReason: reason,
         );
         await _repository.updateArtisanStatus(
           email: existingUser.email,
           newStatus: 'REJECTED',
           newRole: isTourist ? 'Tourist' : 'Artisan',
           updateArtisanProfileOnly: isTourist,
+          rejectionReason: reason,
         );
         _pendingArtisans.removeWhere(
           (p) =>

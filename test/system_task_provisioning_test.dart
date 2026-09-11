@@ -188,6 +188,7 @@ class _ApprovalRepository extends UserRepository {
     bool updateArtisanProfileOnly = false,
     bool ensureSystemTasks = false,
     String? suspensionReason,
+    String? rejectionReason,
   }) async {
     updateCalls++;
     if (failure != null) throw failure!;

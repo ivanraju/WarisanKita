@@ -987,7 +987,14 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      'Kraftangan review requires document updates. Tap to revise and resubmit your application.',
+                                      (authVM.currentUser?.rejectionReason != null &&
+                                              authVM.currentUser!.rejectionReason!
+                                                  .trim()
+                                                  .isNotEmpty)
+                                          ? 'Feedback: "${authVM.currentUser!.rejectionReason!.trim()}" - Tap to revise and resubmit.'
+                                          : 'Kraftangan review requires document updates. Tap to revise and resubmit your application.',
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
                                       style: GoogleFonts.plusJakartaSans(
                                         fontSize: 11,
                                         color: isDark

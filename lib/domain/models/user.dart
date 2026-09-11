@@ -35,6 +35,7 @@ class UserModel {
   final double? pendingRelocationLongitude;
   final String? pendingRelocationReason;
   final String? pendingRelocationDate;
+  final String? rejectionReason;
   final bool isLiveOpen;
   final int? workshopCount;
 
@@ -70,6 +71,7 @@ class UserModel {
     this.pendingRelocationLongitude,
     this.pendingRelocationReason,
     this.pendingRelocationDate,
+    this.rejectionReason,
     this.isLiveOpen = true,
     this.workshopCount,
   });
@@ -222,6 +224,8 @@ class UserModel {
     String? pendingRelocationReason,
     String? pendingRelocationDate,
     bool clearPendingRelocation = false,
+    String? rejectionReason,
+    bool clearRejectionReason = false,
     bool? isLiveOpen,
     int? workshopCount,
     bool clearStudioDetails = false,
@@ -258,6 +262,7 @@ class UserModel {
       pendingRelocationLongitude: clearPendingRelocation ? null : (pendingRelocationLongitude ?? this.pendingRelocationLongitude),
       pendingRelocationReason: clearPendingRelocation ? null : (pendingRelocationReason ?? this.pendingRelocationReason),
       pendingRelocationDate: clearPendingRelocation ? null : (pendingRelocationDate ?? this.pendingRelocationDate),
+      rejectionReason: clearRejectionReason ? null : (rejectionReason ?? this.rejectionReason),
       isLiveOpen: isLiveOpen ?? this.isLiveOpen,
       workshopCount: workshopCount ?? this.workshopCount,
     );
@@ -299,6 +304,8 @@ class UserModel {
       'pending_relocation_lng': pendingRelocationLongitude,
       'pending_relocation_reason': pendingRelocationReason,
       'pending_relocation_date': pendingRelocationDate,
+      'rejectionReason': rejectionReason,
+      'rejection_reason': rejectionReason,
       'is_live_open': isLiveOpen,
       'isLiveOpen': isLiveOpen,
       'workshop_count': workshopCount,
@@ -459,6 +466,7 @@ class UserModel {
       pendingRelocationLongitude: pLon,
       pendingRelocationReason: map['pending_relocation_reason'] ?? map['pendingRelocationReason'] ?? artisanMap?['pending_relocation_reason'],
       pendingRelocationDate: map['pending_relocation_date'] ?? map['pendingRelocationDate'] ?? artisanMap?['pending_relocation_date'],
+      rejectionReason: map['rejectionReason'] ?? map['rejection_reason'] ?? artisanMap?['rejection_reason'],
       isLiveOpen: map['is_live_open'] ?? map['isLiveOpen'] ?? artisanMap?['is_live_open'] ?? true,
       workshopCount: resolvedWorkshops,
     );

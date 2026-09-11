@@ -132,14 +132,63 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
                   ),
                 ],
               ),
-              content: Text(
-                'Your Master Artisan application for "$studioName" was reviewed by Kraftangan Malaysia. Some documents or details require revision before your studio can be approved.',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 13,
-                  color: isDark ? Colors.white70 : const Color(0xFF4B5563),
-                  height: 1.4,
-                ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Your Master Artisan application for "$studioName" was reviewed by Kraftangan Malaysia. Some documents or details require revision before your studio can be approved.',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 13,
+                      color: isDark ? Colors.white70 : const Color(0xFF4B5563),
+                      height: 1.4,
+                    ),
+                  ),
+                  if (user.rejectionReason != null && user.rejectionReason!.trim().isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF2A1215) : const Color(0xFFFFF1F2),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isDark ? const Color(0xFF5C1D24) : const Color(0xFFFECDD3),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.feedback_outlined, size: 14, color: Color(0xFFEF4444)),
+                              const SizedBox(width: 6),
+                              Text(
+                                'OFFICIAL FEEDBACK',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w900,
+                                  color: const Color(0xFFEF4444),
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            user.rejectionReason!.trim(),
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? Colors.white : const Color(0xFF881337),
+                              height: 1.3,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
               ),
               actions: [
                 Row(
@@ -302,7 +351,11 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
                               ),
                             ),
                             Text(
-                              'Kraftangan review required document updates.',
+                              (user.rejectionReason != null && user.rejectionReason!.trim().isNotEmpty)
+                                  ? user.rejectionReason!.trim()
+                                  : 'Kraftangan review required document updates.',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 11,
                                 color: isDark ? Colors.white70 : const Color(0xFF7F1D1D),

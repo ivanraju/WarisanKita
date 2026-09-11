@@ -6,7 +6,7 @@ import 'package:warisan_kita/domain/models/pending_artisan_profile.dart';
 class ArtisanReviewDialog extends StatefulWidget {
   final PendingArtisanProfile artisan;
   final VoidCallback onApprove;
-  final VoidCallback onReject;
+  final void Function(String? reason) onReject;
 
   const ArtisanReviewDialog({
     super.key,
@@ -310,8 +310,29 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
                 children: [
                   OutlinedButton.icon(
                     onPressed: () {
+                      final reason = _feedbackController.text.trim();
+                      if (reason.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Row(
+                              children: [
+                                Icon(Icons.warning_amber_rounded, color: Colors.white, size: 20),
+                                SizedBox(width: 10),
+                                Expanded(
+                                  child: Text('Please enter rejection feedback explaining the reason to the applicant.'),
+                                ),
+                              ],
+                            ),
+                            backgroundColor: const Color(0xFFEF4444),
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            width: 500,
+                          ),
+                        );
+                        return;
+                      }
                       Navigator.of(context).pop();
-                      widget.onReject();
+                      widget.onReject(reason);
                     },
                     style: OutlinedButton.styleFrom(
                       foregroundColor: const Color(0xFFEF4444),
@@ -341,7 +362,7 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
                     label: Text(
                       isRelocation
                           ? 'Approve Relocation & Update Map'
-                          : (widget.artisan.isUpgradeFromTourist ? 'Approve & Upgrade to Dual Role' : 'Approve Artisan Studio'),
+                          : (widget.artisan.isUpgradeFromTourist ? 'Approve & Upgrade to Artisan Role' : 'Approve Artisan Studio'),
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),

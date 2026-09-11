@@ -464,6 +464,9 @@ class SupabaseService {
             row['artisan_status'] = 'APPROVED';
           } else if (artisanStatus == 'REJECTED') {
             row['artisan_status'] = 'REJECTED';
+            if (artisan['rejection_reason'] != null) {
+              row['rejection_reason'] = artisan['rejection_reason'];
+            }
           }
         }
       }
@@ -529,6 +532,9 @@ class SupabaseService {
               row['artisan_status'] = 'APPROVED';
             } else if (artisanStatus == 'REJECTED') {
               row['artisan_status'] = 'REJECTED';
+              if (artisan['rejection_reason'] != null) {
+                row['rejection_reason'] = artisan['rejection_reason'];
+              }
             }
           }
         }
@@ -2602,6 +2608,7 @@ class SupabaseService {
     bool updateArtisanProfileOnly = false,
     bool ensureSystemTasks = false,
     String? suspensionReason,
+    String? rejectionReason,
   }) async {
     final cleanEmail = email.trim().toLowerCase();
     final client = _client;
@@ -2622,6 +2629,13 @@ class SupabaseService {
     }
 
     if (_userStore.containsKey(cleanEmail)) {
+      if (resolvedArtisanStatus == 'REJECTED') {
+        _userStore[cleanEmail]!['rejectionReason'] = rejectionReason;
+        _userStore[cleanEmail]!['rejection_reason'] = rejectionReason;
+      } else if (resolvedArtisanStatus == 'APPROVED') {
+        _userStore[cleanEmail]!['rejectionReason'] = null;
+        _userStore[cleanEmail]!['rejection_reason'] = null;
+      }
       if (updateArtisanProfileOnly) {
         _userStore[cleanEmail]!['artisanStatus'] = resolvedArtisanStatus;
         _userStore[cleanEmail]!['artisan_status'] = resolvedArtisanStatus;
@@ -2683,6 +2697,13 @@ class SupabaseService {
                 map['roles'] = [newRole];
               }
             }
+            if (resolvedArtisanStatus == 'REJECTED') {
+              map['rejectionReason'] = rejectionReason;
+              map['rejection_reason'] = rejectionReason;
+            } else if (resolvedArtisanStatus == 'APPROVED') {
+              map['rejectionReason'] = null;
+              map['rejection_reason'] = null;
+            }
             await prefs.setString(_keyAuthUser, jsonEncode(map));
           }
         }
@@ -2694,16 +2715,20 @@ class SupabaseService {
     if (client != null) {
       // 1. Try invoking PostgreSQL SECURITY DEFINER RPC
       try {
+        final rpcParams = <String, dynamic>{
+          'p_email': cleanEmail,
+          'p_status': newStatus,
+          'p_role':
+              (newStatus.toUpperCase() == 'REJECTED' && newRole == 'Tourist')
+                  ? null
+                  : newRole,
+        };
+        if (rejectionReason != null) {
+          rpcParams['p_rejection_reason'] = rejectionReason;
+        }
         await client.rpc(
           'admin_update_user_status',
-          params: {
-            'p_email': cleanEmail,
-            'p_status': newStatus,
-            'p_role':
-                (newStatus.toUpperCase() == 'REJECTED' && newRole == 'Tourist')
-                    ? null
-                    : newRole,
-          },
+          params: rpcParams,
         );
         debugPrint(
           'Supabase RPC admin_update_user_status succeeded for $cleanEmail',
@@ -2765,12 +2790,18 @@ class SupabaseService {
               .eq('user_id', userRow['id'])
               .maybeSingle();
           if (artisanProfileBeforeUpdate != null) {
+            final profileUpdatePayload = <String, dynamic>{
+              'status': resolvedArtisanStatus,
+              'updated_at': DateTime.now().toIso8601String(),
+            };
+            if (resolvedArtisanStatus == 'REJECTED' && rejectionReason != null) {
+              profileUpdatePayload['rejection_reason'] = rejectionReason;
+            } else if (resolvedArtisanStatus == 'APPROVED') {
+              profileUpdatePayload['rejection_reason'] = null;
+            }
             await client
                 .from('artisan_profiles')
-                .update({
-                  'status': resolvedArtisanStatus,
-                  'updated_at': DateTime.now().toIso8601String(),
-                })
+                .update(profileUpdatePayload)
                 .eq('user_id', userRow['id']);
           }
 

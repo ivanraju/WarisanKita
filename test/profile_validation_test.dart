@@ -636,7 +636,7 @@ void main() {
             body: ArtisanReviewDialog(
               artisan: relocationProfile,
               onApprove: () => approved = true,
-              onReject: () => rejected = true,
+              onReject: (_) => rejected = true,
             ),
           ),
         ),
@@ -916,18 +916,19 @@ void main() {
       expect(modVM.filteredArtisans.any((p) => p.email == applicantEmail), isTrue);
       expect(modVM.totalPendingCount, greaterThanOrEqualTo(1));
 
-      // 2. Admin rejects the artisan application
-      await modVM.rejectArtisan(applicantId);
+      // 2. Admin rejects the artisan application with custom reason
+      await modVM.rejectArtisan(applicantId, reason: 'Invalid Kraftangan certificate');
 
       // Immediately removed from in-memory lists
       expect(modVM.filteredArtisans.any((p) => p.email == applicantEmail), isFalse);
       expect(modVM.pendingArtisans.any((p) => p.email == applicantEmail), isFalse);
 
-      // Registered user state preserved as active Tourist with artisanStatus REJECTED
+      // Registered user state preserved as active Tourist with artisanStatus REJECTED and rejectionReason saved
       final userAfterReject = modVM.registeredUsers.firstWhere((u) => u.email == applicantEmail);
       expect(userAfterReject.status, 'ACTIVE');
       expect(userAfterReject.role, 'Tourist');
       expect(userAfterReject.artisanStatus, 'REJECTED');
+      expect(userAfterReject.rejectionReason, 'Invalid Kraftangan certificate');
 
       // 3. Admin refreshes or fetches data again
       await modVM.refreshAllData();
