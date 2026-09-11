@@ -782,6 +782,18 @@ class AuthViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
+      final cleanEmail = email.trim().isNotEmpty
+          ? email.trim()
+          : (_currentUser?.email.trim() ?? '');
+
+      if (cleanEmail.isEmpty) {
+        _errorMessage =
+            'Authentication required: Please sign in with your tourist account or enter your account email to submit an artisan application.';
+        _isLoading = false;
+        notifyListeners();
+        return AuthResult(success: false, message: _errorMessage);
+      }
+
       final cleanSsm = ssmNumber.trim();
       final ssmError = SsmValidator.validate(cleanSsm);
       if (ssmError != null) {
@@ -793,7 +805,7 @@ class AuthViewModel extends ChangeNotifier {
 
       final isSsmDuplicate = await _repository.isSsmRegistered(
         cleanSsm,
-        excludeEmail: email.trim(),
+        excludeEmail: cleanEmail,
         excludeUserId: _currentUser?.id,
       );
       if (isSsmDuplicate) {
@@ -805,7 +817,7 @@ class AuthViewModel extends ChangeNotifier {
       }
 
       final user = await _repository.linkArtisanRoleToTourist(
-        email: email,
+        email: cleanEmail,
         studioName: studioName,
         craftCategory: craftCategory,
         ssmNumber: cleanSsm,

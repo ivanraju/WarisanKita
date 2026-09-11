@@ -753,6 +753,8 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     String? helperText,
     Color? helperColor,
     String? errorText,
+    Color? fillColor,
+    bool readOnly = false,
   }) {
     return InputDecoration(
       labelText: labelText,
@@ -779,18 +781,25 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
       errorText: errorText,
       errorMaxLines: 2,
       filled: true,
-      fillColor: isDark ? const Color(0xFF0D2825) : Colors.white,
+      fillColor: fillColor ??
+          (readOnly
+              ? (isDark ? const Color(0xFF0B1F1C) : const Color(0xFFF1F5F9))
+              : (isDark ? const Color(0xFF0D2825) : Colors.white)),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide(
-          color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFCBD5E1),
+          color: readOnly
+              ? (isDark ? const Color(0xFF1E3A34) : const Color(0xFFE2E8F0))
+              : (isDark ? const Color(0xFF1E3A34) : const Color(0xFFCBD5E1)),
         ),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide(
-          color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
-          width: 1.8,
+          color: readOnly
+              ? (isDark ? const Color(0xFF1E3A34) : const Color(0xFFCBD5E1))
+              : (isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40)),
+          width: readOnly ? 1.0 : 1.8,
         ),
       ),
       errorBorder: OutlineInputBorder(
@@ -934,7 +943,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0284C7).withOpacity(isDark ? 0.25 : 0.15),
+                        color: const Color(0xFF0284C7).withValues(alpha: isDark ? 0.25 : 0.15),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(Icons.explore_rounded, color: Color(0xFF38BDF8), size: 24),
@@ -1039,7 +1048,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
               child: SwitchListTile(
                 value: _isOpenForDemos,
                 onChanged: (val) => setState(() => _isOpenForDemos = val),
-                activeColor: const Color(0xFF10B981),
+                activeThumbColor: const Color(0xFF10B981),
                 title: Text(
                   _isOpenForDemos ? '🟢 STUDIO STATUS: OPEN FOR EDUCATIONAL DEMOS' : '🔴 STUDIO STATUS: IN KILN SESSION / CLOSED',
                   style: GoogleFonts.plusJakartaSans(
@@ -1112,41 +1121,47 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
 
             const SizedBox(height: 14),
 
-            Row(
-              children: [
-                // Craft Category Input
-                Expanded(
-                  child: TextFormField(
-                    controller: _craftCategoryController,
-                    autovalidateMode: AutovalidateMode.onUserInteraction,
-                    validator: ProfileValidator.validateCraftCategory,
-                    style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
-                    decoration: _inputDecoration(
-                      isDark,
-                      labelText: 'Craft Category',
-                      prefixIcon: Icons.palette_outlined,
-                    ),
+            // Accredited Heritage Craft Category (Full-Width, Locked / Read-Only)
+            TextFormField(
+              controller: _craftCategoryController,
+              readOnly: true,
+              style: TextStyle(
+                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                fontWeight: FontWeight.w600,
+              ),
+              decoration: _inputDecoration(
+                isDark,
+                readOnly: true,
+                labelText: 'Accredited Heritage Craft Category',
+                prefixIcon: Icons.palette_outlined,
+                suffixIcon: Tooltip(
+                  message: 'Kraftangan Malaysia Accredited Craft Category (Locked)',
+                  child: Icon(
+                    Icons.lock_outline_rounded,
+                    size: 20,
+                    color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
                   ),
                 ),
-                const SizedBox(width: 12),
-                
-                // Phone Number Input
-                Expanded(
-                  child: TextFormField(
-                    controller: _phoneController,
-                    keyboardType: TextInputType.phone,
-                    autovalidateMode: AutovalidateMode.onUserInteraction,
-                    validator: (v) => ProfileValidator.validatePhone(v, isRequired: true),
-                    style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
-                    decoration: _inputDecoration(
-                      isDark,
-                      labelText: 'Phone / WhatsApp',
-                      prefixIcon: Icons.phone_outlined,
-                      helperText: 'e.g. +60 12-345 6789',
-                    ),
-                  ),
-                ),
-              ],
+                helperText: 'Official Kraftangan Malaysia accredited craft category (Locked)',
+                helperColor: isDark ? const Color(0xFF34D399) : const Color(0xFF059669),
+              ),
+            ),
+
+            const SizedBox(height: 14),
+
+            // Phone Number Input (Full-Width)
+            TextFormField(
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+              validator: (v) => ProfileValidator.validatePhone(v, isRequired: true),
+              style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
+              decoration: _inputDecoration(
+                isDark,
+                labelText: 'Phone / WhatsApp',
+                prefixIcon: Icons.phone_outlined,
+                helperText: 'Public workshop contact for tourist inquiries (e.g. +60 12-345 6789)',
+              ),
             ),
 
             const SizedBox(height: 24),
@@ -1165,7 +1180,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF10B981).withOpacity(0.12),
+                    color: const Color(0xFF10B981).withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: const Color(0xFF10B981)),
                   ),
@@ -1304,7 +1319,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.7),
+                        color: Colors.black.withValues(alpha: 0.7),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Row(

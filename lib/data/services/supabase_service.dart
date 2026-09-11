@@ -816,6 +816,16 @@ class SupabaseService {
       cleanEmail = client.auth.currentUser!.email?.toLowerCase() ?? '';
     }
     if (cleanEmail.isEmpty) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final rawUser = prefs.getString(_keyAuthUser);
+        if (rawUser != null && rawUser.isNotEmpty) {
+          final cachedUser = jsonDecode(rawUser) as Map<String, dynamic>;
+          cleanEmail = (cachedUser['email'] ?? '').toString().trim().toLowerCase();
+        }
+      } catch (_) {}
+    }
+    if (cleanEmail.isEmpty) {
       throw Exception('User email is required to submit artisan application.');
     }
 
@@ -887,6 +897,59 @@ class SupabaseService {
     userRecord['status'] = 'PENDING_APPROVAL';
     userRecord['role'] = 'Artisan & Tourist';
     userRecord['roles'] = ['Tourist', 'Artisan'];
+
+    // In-memory document preservation & type-safe merging for local session:
+    final List<Map<String, dynamic>> existingLocalDocs = [];
+    if (userRecord['artisan_documents'] is List) {
+      existingLocalDocs.addAll(
+        List<Map<String, dynamic>>.from(userRecord['artisan_documents'] as List),
+      );
+    } else if (userRecord['artisanDocuments'] is List) {
+      existingLocalDocs.addAll(
+        List<Map<String, dynamic>>.from(userRecord['artisanDocuments'] as List),
+      );
+    }
+
+    final List<Map<String, dynamic>> newLocalDocs = [];
+    if (ssmFile != null) {
+      newLocalDocs.add({
+        'artisan_id': userRecord['id'],
+        'doc_type': 'SSM_BUSINESS_CERT',
+        'file_url': 'local://ssm/${ssmFile.name}',
+        'file_name': ssmFile.name,
+      });
+    }
+    if (certFile != null) {
+      newLocalDocs.add({
+        'artisan_id': userRecord['id'],
+        'doc_type': 'KRAFTANGAN_MASTER_CERT',
+        'file_url': 'local://cert/${certFile.name}',
+        'file_name': certFile.name,
+      });
+    }
+    if (photos != null && photos.isNotEmpty) {
+      for (var p in photos) {
+        newLocalDocs.add({
+          'artisan_id': userRecord['id'],
+          'doc_type': 'STUDIO_PHOTO',
+          'file_url': 'local://studio/${p.name}',
+          'file_name': p.name,
+        });
+      }
+    }
+
+    if (newLocalDocs.isNotEmpty) {
+      final replacedTypes = newLocalDocs.map((d) => d['doc_type'] as String).toSet();
+      final mergedLocalDocs = [
+        ...existingLocalDocs.where((d) => !replacedTypes.contains(d['doc_type'])),
+        ...newLocalDocs,
+      ];
+      userRecord['artisan_documents'] = mergedLocalDocs;
+      userRecord['artisanDocuments'] = mergedLocalDocs;
+    } else if (existingLocalDocs.isNotEmpty) {
+      userRecord['artisan_documents'] = existingLocalDocs;
+      userRecord['artisanDocuments'] = existingLocalDocs;
+    }
 
     if (client != null) {
       try {
@@ -1057,6 +1120,20 @@ class SupabaseService {
             }
 
             try {
+              // 1. Fetch backup of existing artisan documents BEFORE any mutation
+              final List<Map<String, dynamic>> backupDocs = [];
+              try {
+                final existingRes = await client
+                    .from('artisan_documents')
+                    .select()
+                    .eq('artisan_id', artisanId);
+                for (final item in existingRes) {
+                  backupDocs.add(Map<String, dynamic>.from(item));
+                }
+              } catch (backupErr) {
+                debugPrint('Supabase backup existing artisan_documents note: $backupErr');
+              }
+
               final ssmUpload = await uploadDoc(
                 ssmFile,
                 'artisan_private_docs',
@@ -1106,12 +1183,49 @@ class SupabaseService {
                 }
               }
 
-              await client
-                  .from('artisan_documents')
-                  .delete()
-                  .eq('artisan_id', artisanId);
+              // 2. Only delete and replace the document types that have valid new uploads ready
               if (docsToInsert.isNotEmpty) {
-                await client.from('artisan_documents').insert(docsToInsert);
+                final Set<String> typesToReplace = docsToInsert
+                    .map((d) => d['doc_type'] as String)
+                    .toSet();
+
+                // Keep track of which documents are about to be replaced for rollback
+                final deletedBackup = backupDocs
+                    .where((d) => typesToReplace.contains(d['doc_type']))
+                    .toList();
+
+                try {
+                  // Selectively delete only the document types being replaced
+                  for (final type in typesToReplace) {
+                    await client
+                        .from('artisan_documents')
+                        .delete()
+                        .eq('artisan_id', artisanId)
+                        .eq('doc_type', type);
+                  }
+
+                  // Insert new documents
+                  await client.from('artisan_documents').insert(docsToInsert);
+                } catch (insertErr) {
+                  debugPrint(
+                    'Supabase insert failed, initiating rollback: $insertErr',
+                  );
+                  // ROLLBACK: restore previous documents from deletedBackup
+                  if (deletedBackup.isNotEmpty) {
+                    try {
+                      final restoreList = deletedBackup.map((d) {
+                        final copy = Map<String, dynamic>.from(d);
+                        copy.remove('id');
+                        return copy;
+                      }).toList();
+                      await client.from('artisan_documents').insert(restoreList);
+                      debugPrint('Supabase rollback succeeded: restored previous documents.');
+                    } catch (rollbackErr) {
+                      debugPrint('Supabase rollback failed: $rollbackErr');
+                    }
+                  }
+                  rethrow;
+                }
               }
             } catch (docErr) {
               debugPrint(

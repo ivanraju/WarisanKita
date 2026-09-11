@@ -1,6 +1,9 @@
 import 'support/auth_backend.dart';
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -15,8 +18,33 @@ import 'package:warisan_kita/domain/validators/document_validator.dart';
 import 'package:warisan_kita/domain/validators/profile_validator.dart';
 import 'package:warisan_kita/ui/admin_web/widgets/artisan_review_dialog.dart';
 import 'package:warisan_kita/ui/artisan/profile_builder_tab.dart';
+import 'package:cross_file/cross_file.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/moderation_viewmodel.dart';
+
+final class _TestPlatformFile extends PlatformFile {
+  @override
+  final String name;
+  final Uint8List _data;
+
+  _TestPlatformFile({required this.name, required Uint8List data})
+      : _data = data;
+
+  @override
+  Uri get uri => Uri.parse('file:///$name');
+
+  @override
+  XFile get xFile => XFile.fromData(_data, name: name);
+
+  @override
+  Future<int> length() async => _data.length;
+
+  @override
+  Future<Uint8List> readAsBytes() async => _data;
+
+  @override
+  Stream<Uint8List> readAsByteStream() => Stream.value(_data);
+}
 
 class _MockHttpOverrides extends HttpOverrides {
   @override
@@ -110,7 +138,6 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   HttpOverrides.global = _MockHttpOverrides();
   SharedPreferences.setMockInitialValues({});
-  GoogleFonts.config.allowRuntimeFetching = false;
 
   group('ProfileValidator Domain Tests', () {
     test('validateUsername accepts valid handles and rejects invalid ones', () {
@@ -473,6 +500,57 @@ void main() {
       }, createHttpClient: (context) => _MockHttpClient());
     });
 
+    testWidgets('ProfileBuilderTab displays full craft category as read-only / locked', (tester) async {
+      await HttpOverrides.runZoned(() async {
+        tester.view.physicalSize = const Size(1080, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+
+        final service = SupabaseService();
+        final userRepo = UserRepository(service: service);
+        final authVM = AuthViewModel(repository: userRepo);
+        final modVM = ModerationViewModel(repository: userRepo);
+
+        authVM.setCurrentUserForTesting(
+          const UserModel(
+            id: 'artisan_tester_craft',
+            email: 'puppet_master@warisankita.my',
+            displayName: 'Pak Dollah Wayang Kulit',
+            role: 'Artisan',
+            craftCategory: 'Wayang Kulit & Puppetry',
+            state: 'Kelantan',
+          ),
+        );
+
+        await tester.pumpWidget(
+          MultiProvider(
+            providers: [
+              ChangeNotifierProvider.value(value: authVM),
+              ChangeNotifierProvider.value(value: modVM),
+            ],
+            child: const MaterialApp(
+              home: ProfileBuilderTab(),
+            ),
+          ),
+        );
+        await tester.pump();
+        while (tester.takeException() != null) {}
+
+        // Find the Craft Category field
+        final craftFieldFinder = find.widgetWithText(TextFormField, 'Accredited Heritage Craft Category');
+        expect(craftFieldFinder, findsOneWidget);
+
+        final TextField textField = tester.widget<TextField>(
+          find.descendant(of: craftFieldFinder, matching: find.byType(TextField)),
+        );
+        expect(textField.controller?.text, equals('Wayang Kulit & Puppetry'));
+        expect(textField.readOnly, isTrue);
+
+        // Verify helper text
+        expect(find.text('Official Kraftangan Malaysia accredited craft category (Locked)'), findsOneWidget);
+      }, createHttpClient: (context) => _MockHttpClient());
+    });
+
     testWidgets('ProfileBuilderTab displays pending relocation request banner when relocation requested', (tester) async {
       await HttpOverrides.runZoned(() async {
         tester.view.physicalSize = const Size(1080, 2400);
@@ -805,6 +883,265 @@ void main() {
       final reactivatedMaster = modVM.activeArtisanMasters.firstWhere((a) => a.id == artisanId);
       expect(reactivatedMaster.isSuspended, isFalse);
       expect(reactivatedMaster.isLiveOpen, isTrue);
+    });
+  });
+
+  group('Artisan Profile & Experience Persistence Tests', () {
+    test('updateUserProfile creates artisan_profiles and preserves bio, tags, and documents when row initially missing', () async {
+      final service = SupabaseService();
+      SharedPreferences.setMockInitialValues({});
+
+      // Update profile for an artisan account whose artisan_profiles row was never created
+      final updated = await service.updateUserProfile(
+        email: 'newartisan@warisankita.my',
+        username: 'master_kamal',
+        displayName: 'Kamal Woodcraft',
+        studioName: 'Kamal Ukiran Kayu',
+        craftCategory: 'Traditional Woodcarving',
+        bio: 'Specialist in Kelantan floral woodcarving with 25 years experience.',
+        state: 'Kelantan',
+        address: 'Lot 102, Kampung Laut, Tumpat',
+        latitude: 6.1955,
+        longitude: 102.2355,
+        phone: '+60123456789',
+        toolsAndMaterials: ['Chedung', 'Ketam Kayu', 'Kayu Cengal'],
+      );
+
+      expect(updated.username, equals('master_kamal'));
+      expect(updated.studioName, equals('Kamal Ukiran Kayu'));
+      expect(updated.craftCategory, equals('Traditional Woodcarving'));
+      expect(updated.bio, equals('Specialist in Kelantan floral woodcarving with 25 years experience.'));
+      expect(updated.state, equals('Kelantan'));
+      expect(updated.address, equals('Lot 102, Kampung Laut, Tumpat'));
+      expect(updated.latitude, equals(6.1955));
+      expect(updated.longitude, equals(102.2355));
+      expect(updated.phone, equals('+60123456789'));
+      expect(updated.tags, containsAll(['Chedung', 'Ketam Kayu', 'Kayu Cengal']));
+      expect(updated.role, equals('Artisan'));
+
+      // Verify that getCurrentUser recovers the updated profile and does not drop any field
+      final retrieved = await service.getCurrentUser();
+      expect(retrieved, isNotNull);
+      expect(retrieved!.bio, equals('Specialist in Kelantan floral woodcarving with 25 years experience.'));
+      expect(retrieved.studioName, equals('Kamal Ukiran Kayu'));
+      expect(retrieved.craftCategory, equals('Traditional Woodcarving'));
+      expect(retrieved.tags, containsAll(['Chedung', 'Ketam Kayu', 'Kayu Cengal']));
+      expect(retrieved.latitude, equals(6.1955));
+      expect(retrieved.longitude, equals(102.2355));
+    });
+
+    test('updateUserProfile and UserModel persist and retrieve experience without rank title', () async {
+      final service = SupabaseService();
+      SharedPreferences.setMockInitialValues({});
+
+      final updated = await service.updateUserProfile(
+        email: 'experience_test@warisankita.my',
+        username: 'master_azman',
+        studioName: 'Azman Pottery Studio',
+        craftCategory: 'Pottery & Ceramics',
+        experience: '20+ Years Experience',
+        bio: 'Practicing traditional Labu Sayong pottery craftsmanship for over two decades.',
+        state: 'Perak',
+      );
+
+      expect(updated.experience, equals('20+ Years Experience'));
+
+      // Verify serialization / deserialization
+      final map = updated.toMap();
+      expect(map['experience'], equals('20+ Years Experience'));
+      final restored = UserModel.fromMap(map);
+      expect(restored.experience, equals('20+ Years Experience'));
+
+      // Test ProfileValidator for experience
+      expect(ProfileValidator.validateExperience(null, isRequired: true), isNotNull);
+      expect(ProfileValidator.validateExperience('', isRequired: true), isNotNull);
+      expect(ProfileValidator.validateExperience('20+ Years Experience', isRequired: true), isNull);
+      // Optional mode for profile builder
+      expect(ProfileValidator.validateExperience(null, isRequired: false), isNull);
+      expect(ProfileValidator.validateExperience('', isRequired: false), isNull);
+
+      // Verify that default 1 year from database does NOT force '1 Years' onto user
+      final defaultMap = {
+        'id': 'u_default_1',
+        'email': 'default@artisan.my',
+        'role': 'Artisan',
+        'artisan_profiles': {
+          'years_experience': 1,
+          'experience': null,
+        }
+      };
+      final defaultUser = UserModel.fromMap(defaultMap);
+      expect(defaultUser.experience, isNull);
+    });
+
+    test('Artisan experience persists on getCurrentUser (reload) and displays in admin getActiveArtisans and getAllUsers', () async {
+      final service = SupabaseService();
+      SharedPreferences.setMockInitialValues({});
+
+      // 1. Artisan saves custom experience
+      final updated = await service.updateUserProfile(
+        email: 'reload_test_artisan@warisankita.my',
+        username: 'batik_master_amin',
+        studioName: 'Amin Batik House',
+        craftCategory: 'Batik & Textiles',
+        experience: '15 Years Craft Experience',
+        bio: 'Preserving Terengganu silk batik heritage.',
+        state: 'Terengganu',
+      );
+
+      expect(updated.experience, equals('15 Years Craft Experience'));
+
+      // 2. Simulate app reload via getCurrentUser
+      final reloaded = await service.getCurrentUser();
+      expect(reloaded, isNotNull);
+      expect(reloaded!.email, equals('reload_test_artisan@warisankita.my'));
+      expect(reloaded.experience, equals('15 Years Craft Experience'));
+
+      // 3. Verify Admin gets this artisan in getActiveArtisans with experience
+      final activeArtisans = await service.getActiveArtisans();
+      final foundActive = activeArtisans.firstWhere(
+        (a) => a.email.toLowerCase() == 'reload_test_artisan@warisankita.my',
+      );
+      expect(foundActive.experience, equals('15 Years Craft Experience'));
+
+      // 4. Verify Admin gets this artisan in getAllUsers with experience
+      final allUsers = await service.getAllUsers();
+      final foundUser = allUsers.firstWhere(
+        (u) => u.email.toLowerCase() == 'reload_test_artisan@warisankita.my',
+      );
+      expect(foundUser.experience, equals('15 Years Craft Experience'));
+    });
+  });
+
+  group('Artisan Document Preservation & Rollback Security', () {
+    test('UC100: linkArtisanToExistingTourist returns clean failure and does not crash when session dropped and email missing', () async {
+      final service = SupabaseService();
+      final repo = UserRepository(service: service);
+      final authVM = AuthViewModel(repository: repo);
+      SharedPreferences.setMockInitialValues({});
+
+      // Calling linkArtisanToExistingTourist with empty email and no active user session
+      final result = await authVM.linkArtisanToExistingTourist(
+        email: '',
+        studioName: 'Mystery Studio',
+        craftCategory: 'Woodwork',
+        ssmNumber: '202601009988',
+      );
+
+      expect(result.success, isFalse);
+      expect(result.message, contains('Authentication required'));
+    });
+
+    test('UC100: linkArtisanRoleToTourist restores email from SharedPreferences if session dropped', () async {
+      final service = SupabaseService();
+      // Setup existing tourist session in SharedPreferences
+      SharedPreferences.setMockInitialValues({
+        'wk_last_auth_user': jsonEncode({
+          'id': 'u_cached_tourist',
+          'email': 'cached_tourist@warisankita.my',
+          'role': 'Tourist',
+          'status': 'ACTIVE',
+        }),
+      });
+
+      // Calling with empty email - service recovers email from SharedPreferences session
+      final linked = await service.linkArtisanRoleToTourist(
+        email: '',
+        studioName: 'Cached Artisan Workshop',
+        craftCategory: 'Textiles',
+        ssmNumber: '202601007744',
+        experience: '8 Years',
+      );
+
+      expect(linked.email, equals('cached_tourist@warisankita.my'));
+      expect(linked.status, equals('PENDING_APPROVAL'));
+      expect(linked.experience, equals('8 Years'));
+    });
+
+    test('UC100: ProfileValidator.validateEmail validates applicant email correctly', () {
+      expect(ProfileValidator.validateEmail(null), equals('Email address cannot be empty'));
+      expect(ProfileValidator.validateEmail(''), equals('Email address cannot be empty'));
+      expect(ProfileValidator.validateEmail('invalid_email'), equals('Please enter a valid email address'));
+      expect(ProfileValidator.validateEmail('valid.artisan@student.tarc.edu.my'), isNull);
+    });
+
+    test('UC100: re-application preserves existing document types when updating a single document', () async {
+      final service = SupabaseService();
+      SharedPreferences.setMockInitialValues({});
+
+      // 1. Initial application with SSM and Kraftangan cert
+      final user1 = await service.linkArtisanRoleToTourist(
+        email: 'reapply_artisan@warisankita.my',
+        studioName: 'Reapply Studio',
+        craftCategory: 'Woodwork',
+        ssmNumber: '202601005511',
+        ssmFile: _TestPlatformFile(
+          name: 'ssm_initial.pdf',
+          data: Uint8List.fromList([1, 2, 3]),
+        ),
+        certFile: _TestPlatformFile(
+          name: 'cert_initial.pdf',
+          data: Uint8List.fromList([4, 5, 6]),
+        ),
+      );
+
+      expect(user1.artisanDocuments.length, equals(2));
+      final docTypes1 = user1.artisanDocuments.map((d) => d['doc_type']).toSet();
+      expect(docTypes1, contains('SSM_BUSINESS_CERT'));
+      expect(docTypes1, contains('KRAFTANGAN_MASTER_CERT'));
+
+      // 2. Re-application with ONLY a new SSM file (e.g. after rejected SSM was corrected)
+      final user2 = await service.linkArtisanRoleToTourist(
+        email: 'reapply_artisan@warisankita.my',
+        studioName: 'Reapply Studio',
+        craftCategory: 'Woodwork',
+        ssmNumber: '202601005511',
+        ssmFile: _TestPlatformFile(
+          name: 'ssm_updated_v2.pdf',
+          data: Uint8List.fromList([7, 8, 9]),
+        ),
+        // certFile is omitted/null
+      );
+
+      // Verify: SSM_BUSINESS_CERT was updated, but KRAFTANGAN_MASTER_CERT was NOT deleted!
+      expect(user2.artisanDocuments.length, equals(2));
+      final ssmDoc = user2.artisanDocuments.firstWhere((d) => d['doc_type'] == 'SSM_BUSINESS_CERT');
+      expect(ssmDoc['file_name'], equals('ssm_updated_v2.pdf'));
+      final certDoc = user2.artisanDocuments.firstWhere((d) => d['doc_type'] == 'KRAFTANGAN_MASTER_CERT');
+      expect(certDoc['file_name'], equals('cert_initial.pdf'));
+    });
+
+    test('UC100: re-application preserves all previous documents when no new files are provided', () async {
+      final service = SupabaseService();
+      SharedPreferences.setMockInitialValues({});
+
+      await service.linkArtisanRoleToTourist(
+        email: 'preserve_docs@warisankita.my',
+        studioName: 'Preserve Studio',
+        craftCategory: 'Pottery',
+        ssmNumber: '202601005522',
+        ssmFile: _TestPlatformFile(
+          name: 'my_ssm.pdf',
+          data: Uint8List.fromList([1, 2]),
+        ),
+        certFile: _TestPlatformFile(
+          name: 'my_cert.pdf',
+          data: Uint8List.fromList([3, 4]),
+        ),
+      );
+
+      // Re-apply or update metadata without files
+      final updated = await service.linkArtisanRoleToTourist(
+        email: 'preserve_docs@warisankita.my',
+        studioName: 'Preserve Studio Renamed',
+        craftCategory: 'Pottery',
+        ssmNumber: '202601005522',
+      );
+
+      expect(updated.artisanDocuments.length, equals(2));
+      final names = updated.artisanDocuments.map((d) => d['file_name']).toSet();
+      expect(names, contains('my_ssm.pdf'));
+      expect(names, contains('my_cert.pdf'));
     });
   });
 }

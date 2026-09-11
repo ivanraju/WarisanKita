@@ -42,6 +42,11 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
   void initState() {
     super.initState();
     _ssmController.addListener(_onSsmChanged);
+
+    Future.microtask(() async {
+      if (!mounted) return;
+      await context.read<AuthViewModel>().refreshCurrentUser();
+    });
   }
 
   @override
@@ -483,7 +488,13 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
     });
 
     final authVM = context.read<AuthViewModel>();
-    final user = authVM.currentUser;
+    var user = authVM.currentUser;
+    if (user == null || user.email.trim().isEmpty) {
+      await authVM.refreshCurrentUser();
+      user = authVM.currentUser;
+    }
+    if (!mounted) return;
+
     final studioName = _studioNameController.text.trim();
     final ssm = _ssmController.text.trim();
     final expText = _experienceController.text.trim();
@@ -492,10 +503,19 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
     final phoneText = _phoneController.text.trim();
     final phone = phoneText.isNotEmpty ? phoneText : null;
 
-    final effectiveEmail =
-        (user?.email != null && user!.email.trim().isNotEmpty)
-        ? user.email.trim()
-        : '';
+    final effectiveEmail = user?.email.trim() ?? '';
+
+    if (effectiveEmail.isEmpty) {
+      setState(() => _isSubmitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please sign in with your tourist account to apply.'),
+          backgroundColor: Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
 
     final result = await authVM.linkArtisanToExistingTourist(
       email: effectiveEmail,
@@ -539,7 +559,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
           dateSubmitted: 'Just Now',
           imageUrl:
               'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600',
-          email: user?.email ?? '',
+          email: effectiveEmail,
           experience: expText.isNotEmpty ? expText : 'Craft Artisan',
           phone: phone ?? '',
           ssmNumber: ssm,
@@ -707,7 +727,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
 
                   // Craft Category Dropdown
                   DropdownButtonFormField<String>(
-                    value: _selectedCraftCategory,
+                    initialValue: _selectedCraftCategory,
                     decoration: InputDecoration(
                       labelText: 'Heritage Craft Category *',
                       prefixIcon: const Icon(
@@ -740,7 +760,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
 
                   // State / Location Dropdown
                   DropdownButtonFormField<String>(
-                    value: _selectedState,
+                    initialValue: _selectedState,
                     decoration: InputDecoration(
                       labelText: 'Workshop State / Region *',
                       prefixIcon: const Icon(
