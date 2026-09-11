@@ -2,9 +2,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:warisan_kita/data/services/google_map_service.dart';
 import 'package:warisan_kita/ui/tourist/widgets/workshop_map_picker.dart';
+import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
 
 class ArtisanDetailScreen extends StatefulWidget {
   final String artisanName;
@@ -189,6 +191,11 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    LanguageViewModel? langVM;
+    try {
+      langVM = context.watch<LanguageViewModel>();
+    } catch (_) {}
+    String tr(String text) => langVM?.translate(text) ?? text;
 
     return Scaffold(
       backgroundColor: isDark
@@ -216,7 +223,7 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                 backgroundColor: Colors.black.withValues(alpha: 0.4),
                 child: IconButton(
                   icon: const Icon(Icons.share_rounded, color: Colors.white),
-                  tooltip: 'Share Artisan Profile',
+                  tooltip: tr('Share Artisan Profile'),
                   onPressed: () {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
@@ -371,7 +378,7 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
-                            widget.craftCategory,
+                            tr(widget.craftCategory),
                             style: GoogleFonts.plusJakartaSans(
                               fontWeight: FontWeight.bold,
                               fontSize: 11,
@@ -429,8 +436,8 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                         Expanded(
                           child: Text(
                             widget.isLiveOpen
-                                ? 'LIVE: OPEN FOR EDUCATIONAL DEMOS & WORKSHOPS'
-                                : 'DEMOS TEMPORARILY PAUSED / NOT ACCEPTING VISITORS',
+                                ? tr('LIVE: OPEN FOR EDUCATIONAL DEMOS & WORKSHOPS')
+                                : tr('DEMOS TEMPORARILY PAUSED / NOT ACCEPTING VISITORS'),
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
@@ -537,7 +544,7 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              'Verified Artisan Studio',
+                              tr('Verified Artisan Studio'),
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
@@ -571,7 +578,7 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                               ),
                               const SizedBox(width: 6),
                               Text(
-                                'OPEN DEMOS',
+                                tr('OPEN DEMOS'),
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold,
@@ -591,7 +598,7 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
 
                   // Master Bio Card
                   Text(
-                    'Artisan Biography',
+                    tr('Artisan Biography'),
                     style: GoogleFonts.dmSerifDisplay(
                       fontSize: 20,
                       color: isDark
@@ -601,7 +608,7 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    widget.bio,
+                    tr(widget.bio),
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 13,
                       color: isDark ? Colors.white70 : const Color(0xFF475569),
@@ -613,7 +620,7 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
 
                   // 🏆 AUTHENTICITY & CERTIFICATION CREDENTIALS
                   Text(
-                    'Master Authenticity & Credentials',
+                    tr('Master Authenticity & Credentials'),
                     style: GoogleFonts.dmSerifDisplay(
                       fontSize: 20,
                       color: isDark
@@ -625,36 +632,36 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
 
                   _buildCredentialTile(
                     icon: Icons.verified_rounded,
-                    title: 'Kraftangan Malaysia Accredited Master',
+                    title: tr('Kraftangan Malaysia Accredited Master'),
                     subtitle: widget.documents.any((d) {
                       final t = d['doc_type']?.toString().toUpperCase() ?? '';
                       return t == 'KRAFTANGAN_MASTER_CERT' || t == 'KRAFTANGAN_CERT';
                     })
-                        ? 'Accredited in ${widget.craftCategory} (${widget.state}) • Official Certificate Verified'
-                        : 'Accredited in ${widget.craftCategory} (${widget.state}) • Verified Master Craftsman',
+                        ? tr('Accredited in ${widget.craftCategory} (${widget.state}) • Official Certificate Verified')
+                        : tr('Accredited in ${widget.craftCategory} (${widget.state}) • Verified Master Craftsman'),
                     isDark: isDark,
                   ),
                   _buildCredentialTile(
                     icon: Icons.business_rounded,
-                    title: 'SSM Business Registration',
+                    title: tr('SSM Business Registration'),
                     subtitle: (widget.ssmNumber != null && widget.ssmNumber!.trim().isNotEmpty)
-                        ? 'Registration #${widget.ssmNumber!.trim()} • Official Registered Heritage Studio'
-                        : 'Official Registered Heritage Studio Premise',
+                        ? tr('Registration #${widget.ssmNumber!.trim()} • Official Registered Heritage Studio')
+                        : tr('Official Registered Heritage Studio Premise'),
                     isDark: isDark,
                   ),
                   _buildCredentialTile(
                     icon: Icons.workspace_premium_rounded,
-                    title: 'Heritage Craft Practitioner',
+                    title: tr('Heritage Craft Practitioner'),
                     subtitle: widget.experience.trim().isNotEmpty
-                        ? '${widget.experience.trim()} of authentic ${widget.craftCategory} heritage mastery in ${widget.state}'
-                        : 'Dedicated authentic ${widget.craftCategory} practitioner in ${widget.state}',
+                        ? tr('${widget.experience.trim()} of authentic ${widget.craftCategory} heritage mastery in ${widget.state}')
+                        : tr('Dedicated authentic ${widget.craftCategory} practitioner in ${widget.state}'),
                     isDark: isDark,
                   ),
 
                   if (widget.tags.isNotEmpty) ...[
                     const SizedBox(height: 24),
                     Text(
-                      'Materials & Traditional Tools Used',
+                      tr('Materials & Traditional Tools Used'),
                       style: GoogleFonts.dmSerifDisplay(
                         fontSize: 20,
                         color: isDark
@@ -681,7 +688,7 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                                 color: isDark ? const Color(0xFF34D399) : null,
                               ),
                               label: Text(
-                                tag,
+                                tr(tag),
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 12,
                                   color: isDark ? Colors.white70 : null,
@@ -697,10 +704,10 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                   // Craft Experience Highlight Chip
                   _buildHighlightChip(
                     icon: Icons.workspace_premium_rounded,
-                    title: 'Craft Experience',
+                    title: tr('Craft Experience'),
                     value: widget.experience.trim().isNotEmpty
-                        ? widget.experience.trim()
-                        : '10+ Years',
+                        ? tr(widget.experience.trim())
+                        : tr('10+ Years'),
                     isDark: isDark,
                   ),
 
@@ -712,7 +719,7 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                     children: [
                       Expanded(
                         child: Text(
-                          'Studio Location & Workshop Map',
+                          tr('Studio Location & Workshop Map'),
                           style: GoogleFonts.dmSerifDisplay(
                             fontSize: 19,
                             color: isDark
@@ -741,7 +748,7 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                                 : const Color(0xFF004D40),
                           ),
                           label: Text(
-                            'Directions',
+                            tr('Directions'),
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
@@ -850,7 +857,7 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                                     ),
                                     const SizedBox(width: 6),
                                     Text(
-                                      'Open Large Map',
+                                      tr('Open Large Map'),
                                       style: GoogleFonts.plusJakartaSans(
                                         color: isDark
                                             ? const Color(0xFFFFD54F)
@@ -949,7 +956,7 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                       size: 18,
                     ),
                     label: Text(
-                      'VIEW QUEST',
+                      tr('VIEW QUEST'),
                       style: GoogleFonts.plusJakartaSans(
                         fontWeight: FontWeight.w900,
                         letterSpacing: 0.5,
