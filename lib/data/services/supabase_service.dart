@@ -376,7 +376,7 @@ class SupabaseService {
         final artisanStatus = (artisan['status'] ?? '').toString().toUpperCase();
         row['artisan_status'] = artisanStatus;
 
-        if (artisanStatus == 'APPROVED') {
+        if (artisanStatus == 'APPROVED' && row['artisan_status'] != 'CLOSED' && row['role'] != 'Tourist') {
           row['role'] = 'Artisan';
           row['roles'] = ['Artisan'];
           row['artisan_profiles'] = artisan;
@@ -427,11 +427,21 @@ class SupabaseService {
           }
         } else {
           // Studio is closed or user reverted to Tourist
+          row['role'] = 'Tourist';
+          row['roles'] = ['Tourist'];
+          row['artisan_status'] = 'CLOSED';
           row['artisan_profiles'] = null;
           row['studio_name'] = null;
           row['craft_category'] = null;
           row['ssm_number'] = null;
         }
+      } else if (row['artisan_status'] == 'CLOSED' || row['role'] == 'Tourist') {
+        row['role'] = 'Tourist';
+        row['roles'] = ['Tourist'];
+        row['artisan_profiles'] = null;
+        row['studio_name'] = null;
+        row['craft_category'] = null;
+        row['ssm_number'] = null;
       }
     } catch (e) {
       debugPrint('Error loading artisan_profiles join: $e');
@@ -446,7 +456,7 @@ class SupabaseService {
           row['artisan_status'] = artisanStatus;
           final currentRole = (row['role'] ?? '').toString();
 
-          if (artisanStatus == 'APPROVED' && currentRole != 'Tourist') {
+          if (artisanStatus == 'APPROVED' && row['artisan_status'] != 'CLOSED' && currentRole != 'Tourist') {
             try {
               final docs = await client
                   .from('artisan_documents')
@@ -498,6 +508,9 @@ class SupabaseService {
               row['ssm_number'] = artisan['ssm_number'];
             }
           } else {
+            row['role'] = 'Tourist';
+            row['roles'] = ['Tourist'];
+            row['artisan_status'] = 'CLOSED';
             row['artisan_profiles'] = null;
             row['studio_name'] = null;
             row['craft_category'] = null;
@@ -2674,35 +2687,26 @@ class SupabaseService {
         }
       }
 
-      // 4. Delete or mark artisan_profiles as CLOSED
-      bool apDeleted = false;
+      // 4. Mark artisan_profiles as CLOSED and attempt delete
+      try {
+        await client.from('artisan_profiles').update({
+          'status': 'CLOSED',
+          'updated_at': DateTime.now().toIso8601String(),
+        }).eq('user_id', userId);
+      } catch (e) {
+        debugPrint('deactivateArtisanStudio artisan_profiles status update note: $e');
+      }
       try {
         await client.from('artisan_profiles').delete().eq('user_id', userId);
-        apDeleted = true;
       } catch (e) {
         debugPrint('deactivateArtisanStudio artisan_profiles delete note: $e');
       }
-      if (!apDeleted) {
-        try {
-          await client.from('artisan_profiles').update({
-            'status': 'CLOSED',
-            'updated_at': DateTime.now().toIso8601String(),
-          }).eq('user_id', userId);
-        } catch (e) {
-          debugPrint('deactivateArtisanStudio artisan_profiles status update note: $e');
-        }
-      }
 
-      // 5. Demote user role in public.users to Tourist and clear studio columns
+      // 5. Demote user role in public.users to Tourist and clear artisan_status
       final updateMap = {
         'role': 'Tourist',
-        'roles': ['Tourist'],
-        'studio_name': null,
-        'craft_category': null,
-        'ssm_number': null,
-        'is_approved_artisan': false,
         'artisan_status': 'CLOSED',
-        'is_live_open': false,
+        'status': 'ACTIVE',
         'updated_at': DateTime.now().toIso8601String(),
       };
       try {
@@ -2717,6 +2721,9 @@ class SupabaseService {
           'p_email': email,
           'p_status': 'ACTIVE',
           'p_role': 'Tourist',
+          'p_studio_name': null,
+          'p_craft_category': null,
+          'p_ssm_number': null,
         });
       } catch (rpcErr) {
         debugPrint('deactivateArtisanStudio admin_update_user_status RPC note: $rpcErr');
@@ -2729,10 +2736,8 @@ class SupabaseService {
             data: {
               'role': 'Tourist',
               'roles': ['Tourist'],
-              'studio_name': null,
-              'craft_category': null,
-              'ssm_number': null,
               'artisan_status': 'CLOSED',
+              'status': 'ACTIVE',
             },
           ),
         );
@@ -2754,14 +2759,14 @@ class SupabaseService {
 
       // 9. Reload and save updated authenticated profile
       var updatedUser = await _loadAuthenticatedProfile();
-      if (updatedUser.role == 'Tourist' && updatedUser.studioName != null) {
-        updatedUser = updatedUser.copyWith(
-          studioName: null,
-          craftCategory: null,
-          ssmNumber: null,
-          artisanStatus: 'CLOSED',
-        );
-      }
+      updatedUser = updatedUser.copyWith(
+        role: 'Tourist',
+        roles: const ['Tourist'],
+        studioName: null,
+        craftCategory: null,
+        ssmNumber: null,
+        artisanStatus: 'CLOSED',
+      );
       await _saveAuthSession(updatedUser);
       return updatedUser;
     }

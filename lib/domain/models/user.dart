@@ -106,16 +106,19 @@ class UserModel {
   bool get isArtisanStudioSuspended =>
       artisanStatus?.toUpperCase() == 'SUSPENDED';
 
-  bool get isApprovedArtisan =>
-      (role == 'Artisan' ||
-       role == 'Master Artisan' ||
-       roles.contains('Artisan') ||
-       roles.contains('Master Artisan') ||
-       artisanStatus?.toUpperCase() == 'APPROVED') &&
-      isApproved &&
-      !isArtisanStudioSuspended;
+  bool get isApprovedArtisan {
+    if (artisanStatus?.toUpperCase() == 'CLOSED' || role == 'Tourist') return false;
+    return (role == 'Artisan' ||
+        role == 'Master Artisan' ||
+        roles.contains('Artisan') ||
+        roles.contains('Master Artisan') ||
+        artisanStatus?.toUpperCase() == 'APPROVED') &&
+       isApproved &&
+       !isArtisanStudioSuspended;
+  }
 
   bool get isRejectedArtisan {
+    if (artisanStatus?.toUpperCase() == 'CLOSED') return false;
     if (isApprovedArtisan) return false;
     final artStatus = artisanStatus?.toUpperCase();
     if (artStatus == 'PENDING_APPROVAL' || artStatus == 'PENDING') return false;
@@ -126,6 +129,7 @@ class UserModel {
   bool get isPendingArtisan =>
       !isApprovedArtisan &&
       !isRejectedArtisan &&
+      artisanStatus?.toUpperCase() != 'CLOSED' &&
       (artisanStatus?.toUpperCase() == 'PENDING_APPROVAL' ||
        artisanStatus?.toUpperCase() == 'PENDING' ||
        isPendingApproval ||
