@@ -2026,14 +2026,14 @@ class SupabaseService {
             }
 
             final userStatus = (rowMap['status'] ?? '').toString().toUpperCase();
-            final artisanStatus = (rowMap['artisan_status'] ?? rowMap['artisanStatus'] ?? ap?['status'] ?? '').toString().toUpperCase();
+            // Use artisan_profiles.status as the authoritative source for artisan state.
+            // users.artisan_status can lag (e.g. admin cache set it to REJECTED but
+            // user has since re-applied and artisan_profiles is now PENDING_APPROVAL).
             final apStatus = (ap?['status'] ?? '').toString().toUpperCase();
 
             // Strictly exclude any rejected, approved, or closed applications
+            // but trust artisan_profiles.status over users.artisan_status.
             if (userStatus == 'REJECTED' ||
-                artisanStatus == 'REJECTED' ||
-                artisanStatus == 'APPROVED' ||
-                artisanStatus == 'CLOSED' ||
                 apStatus == 'REJECTED' ||
                 apStatus == 'APPROVED' ||
                 apStatus == 'CLOSED') {
@@ -2071,22 +2071,11 @@ class SupabaseService {
       }
     }
 
-    // Safety purge: ensure any profiles marked REJECTED, APPROVED, or CLOSED in _userStore are excluded
-    results.removeWhere((r) {
-      final email = (r['email'] ?? '').toString().toLowerCase();
-      if (_userStore.containsKey(email)) {
-        final cached = _userStore[email]!;
-        final cStatus = (cached['status'] ?? '').toString().toUpperCase();
-        final cArtisanStatus = (cached['artisan_status'] ?? cached['artisanStatus'] ?? '').toString().toUpperCase();
-        if (cStatus == 'REJECTED' ||
-            cArtisanStatus == 'REJECTED' ||
-            cArtisanStatus == 'APPROVED' ||
-            cArtisanStatus == 'CLOSED') {
-          return true;
-        }
-      }
-      return false;
-    });
+    // Note: Do NOT purge based on _userStore here. The DB query already
+    // filters to users WHERE status ILIKE '%PENDING%', so any row that
+    // came from the DB is authoritative. The _userStore may be stale
+    // (e.g. admin's cache still shows REJECTED for a user who has since
+    // re-applied), which would incorrectly exclude legitimate re-applications.
 
     return results;
   }
