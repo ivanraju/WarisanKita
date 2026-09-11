@@ -116,7 +116,7 @@ class _ArtisanMainScaffoldState extends State<ArtisanMainScaffold> {
       return const ArtisanStudioSuspendedScreen();
     }
 
-    if (user != null && !user.isApprovedArtisan && (user.isPendingArtisan || user.status == 'PENDING_APPROVAL' || user.status == 'PENDING' || user.status == 'REJECTED')) {
+    if (user != null && !user.isApprovedArtisan && (user.isPendingArtisan || user.isRejectedArtisan || user.status == 'PENDING_APPROVAL' || user.status == 'PENDING' || user.status == 'REJECTED' || user.artisanStatus?.toUpperCase() == 'REJECTED')) {
       return const ArtisanApplicationPendingScreen();
     }
     

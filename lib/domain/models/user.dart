@@ -114,7 +114,13 @@ class UserModel {
       isApproved &&
       !isArtisanStudioSuspended;
 
+  bool get isRejectedArtisan =>
+      (status.toUpperCase() == 'REJECTED' ||
+       artisanStatus?.toUpperCase() == 'REJECTED') &&
+      !isApprovedArtisan;
+
   bool get isPendingArtisan =>
+      !isRejectedArtisan &&
       (artisanStatus == 'PENDING_APPROVAL' ||
        artisanStatus == 'PENDING' ||
        isPendingApproval ||

@@ -414,6 +414,19 @@ class SupabaseService {
           if (currentRole.isEmpty) {
             row['role'] = 'Artisan';
           }
+        } else if (artisanStatus == 'REJECTED' ||
+            artisanStatus == 'PENDING_APPROVAL' ||
+            artisanStatus == 'PENDING') {
+          row['artisan_profiles'] = artisan;
+          if (artisan['studio_name'] != null && (artisan['studio_name'] as String).trim().isNotEmpty) {
+            row['studio_name'] = artisan['studio_name'];
+          }
+          if (artisan['craft_category'] != null && (artisan['craft_category'] as String).trim().isNotEmpty) {
+            row['craft_category'] = artisan['craft_category'];
+          }
+          if (artisan['ssm_number'] != null && (artisan['ssm_number'] as String).trim().isNotEmpty) {
+            row['ssm_number'] = artisan['ssm_number'];
+          }
         } else {
           // Studio is closed or user reverted to Tourist
           row['artisan_profiles'] = null;
@@ -472,6 +485,19 @@ class SupabaseService {
             }
             if (currentRole.isEmpty) {
               row['role'] = 'Artisan';
+            }
+          } else if (artisanStatus == 'REJECTED' ||
+              artisanStatus == 'PENDING_APPROVAL' ||
+              artisanStatus == 'PENDING') {
+            row['artisan_profiles'] = artisan;
+            if (artisan['studio_name'] != null && (artisan['studio_name'] as String).trim().isNotEmpty) {
+              row['studio_name'] = artisan['studio_name'];
+            }
+            if (artisan['craft_category'] != null && (artisan['craft_category'] as String).trim().isNotEmpty) {
+              row['craft_category'] = artisan['craft_category'];
+            }
+            if (artisan['ssm_number'] != null && (artisan['ssm_number'] as String).trim().isNotEmpty) {
+              row['ssm_number'] = artisan['ssm_number'];
             }
           } else {
             row['artisan_profiles'] = null;

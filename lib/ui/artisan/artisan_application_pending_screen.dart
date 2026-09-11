@@ -1,10 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:warisan_kita/ui/tourist/apply_artisan_screen.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 
-class ArtisanApplicationPendingScreen extends StatelessWidget {
+class ArtisanApplicationPendingScreen extends StatefulWidget {
   final String studioName;
   final String craftCategory;
   final String ssmNumber;
@@ -17,6 +18,39 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
   });
 
   @override
+  State<ArtisanApplicationPendingScreen> createState() =>
+      _ArtisanApplicationPendingScreenState();
+}
+
+class _ArtisanApplicationPendingScreenState
+    extends State<ArtisanApplicationPendingScreen> {
+  Timer? _pollTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<AuthViewModel>().refreshCurrentUser();
+      }
+    });
+    _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (mounted) {
+        final auth = context.read<AuthViewModel>();
+        if (auth.currentUser != null && !auth.currentUser!.isSuspended) {
+          auth.refreshCurrentUser();
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width > 800;
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -24,13 +58,13 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
     final user = authVM.currentUser;
     final String effectiveStudio = (user?.studioName != null && user!.studioName!.isNotEmpty)
         ? user.studioName!
-        : ((studioName.isNotEmpty) ? studioName : 'Traditional Craft Studio');
+        : ((widget.studioName.isNotEmpty) ? widget.studioName : 'Traditional Craft Studio');
     final String effectiveCraft = (user?.craftCategory != null && user!.craftCategory!.isNotEmpty)
         ? user.craftCategory!
-        : ((craftCategory.isNotEmpty) ? craftCategory : 'Heritage Craft');
+        : ((widget.craftCategory.isNotEmpty) ? widget.craftCategory : 'Heritage Craft');
     final String effectiveSsm = (user?.ssmNumber != null && user!.ssmNumber!.isNotEmpty)
         ? user.ssmNumber!
-        : ((ssmNumber.isNotEmpty) ? ssmNumber : 'Under Verification');
+        : ((widget.ssmNumber.isNotEmpty) ? widget.ssmNumber : 'Under Verification');
 
     final bool isRejected = user?.status.toUpperCase() == 'REJECTED' ||
         user?.artisanStatus?.toUpperCase() == 'REJECTED';

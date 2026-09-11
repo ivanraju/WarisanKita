@@ -128,15 +128,25 @@ class RoleSelectionScreen extends StatelessWidget {
 
               const SizedBox(height: 16),
 
+              final isArtisanRejected = user?.isRejectedArtisan == true ||
+                  user?.status.toUpperCase() == 'REJECTED' ||
+                  user?.artisanStatus?.toUpperCase() == 'REJECTED';
+
               // Card 2: Artisan Portal
               _buildRoleCard(
                 context: context,
                 title: 'Heritage Master Artisan',
                 subtitle: isArtisanSuspended
                     ? '⚠️ Studio license suspended by admin. Please explore as a Cultural Tourist.'
-                    : 'Register your studio, manage your craft portfolio, track application status, and engage with heritage enthusiasts in the live forum.',
-                icon: isArtisanSuspended ? Icons.block_rounded : Icons.palette_rounded,
-                accentColor: isArtisanSuspended ? const Color(0xFFDC2626) : const Color(0xFFD97706),
+                    : (isArtisanRejected
+                        ? '❌ Application Not Approved. Tap to review Kraftangan feedback and update documents.'
+                        : 'Register your studio, manage your craft portfolio, track application status, and engage with heritage enthusiasts in the live forum.'),
+                icon: isArtisanSuspended
+                    ? Icons.block_rounded
+                    : (isArtisanRejected ? Icons.error_outline_rounded : Icons.palette_rounded),
+                accentColor: (isArtisanSuspended || isArtisanRejected)
+                    ? const Color(0xFFDC2626)
+                    : const Color(0xFFD97706),
                 onTap: () {
                   if (user != null) {
                     if (isArtisanSuspended) {
@@ -159,7 +169,7 @@ class RoleSelectionScreen extends StatelessWidget {
                     }
                     if (user.isApprovedArtisan) {
                       Navigator.of(context).pushReplacementNamed('/artisan');
-                    } else if (user.isPendingArtisan || user.artisanStatus?.toUpperCase() == 'REJECTED') {
+                    } else if (user.isPendingArtisan || isArtisanRejected) {
                       Navigator.of(context).pushReplacement(
                         MaterialPageRoute(
                           builder: (_) => ArtisanApplicationPendingScreen(
