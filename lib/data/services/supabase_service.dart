@@ -2366,17 +2366,17 @@ class SupabaseService {
         final rpcRole = updateArtisanProfileOnly ? newRole : newRole;
         // Fetch cached studio info to seed the artisan_profiles upsert
         final cached = _userStore[cleanEmail];
+        final studioName = cached?['studioName'] ?? cached?['studio_name'];
+        final craftCategory = cached?['craftCategory'] ?? cached?['craft_category'];
+        final ssmNumber = cached?['ssmNumber'] ?? cached?['ssm_number'];
         final rpcParams = <String, dynamic>{
           'p_email': cleanEmail,
           'p_status': rpcStatus,
           'p_role': rpcRole,
+          'p_studio_name': studioName,
+          'p_craft_category': craftCategory,
+          'p_ssm_number': ssmNumber,
         };
-        final studioName = cached?['studioName'] ?? cached?['studio_name'];
-        final craftCategory = cached?['craftCategory'] ?? cached?['craft_category'];
-        final ssmNumber = cached?['ssmNumber'] ?? cached?['ssm_number'];
-        if (studioName != null) rpcParams['p_studio_name'] = studioName;
-        if (craftCategory != null) rpcParams['p_craft_category'] = craftCategory;
-        if (ssmNumber != null) rpcParams['p_ssm_number'] = ssmNumber;
         await client.rpc('admin_update_user_status', params: rpcParams);
         debugPrint('Supabase RPC admin_update_user_status succeeded for $cleanEmail');
         // For tourist-upgrade rejections the RPC sets users.status=REJECTED
@@ -2409,28 +2409,13 @@ class SupabaseService {
             'artisan_status': resolvedArtisanStatus,
             'updated_at': DateTime.now().toIso8601String(),
           };
-          if (newStatus == 'SUSPENDED') {
-            updatePayload['is_suspended'] = true;
-            if (suspensionReason != null) {
-              updatePayload['suspension_reason'] = suspensionReason;
-            }
-          } else if (newStatus == 'ACTIVE') {
-            updatePayload['is_suspended'] = false;
-            updatePayload['suspension_reason'] = null;
-          }
           try {
             await client
                 .from('users')
                 .update(updatePayload)
                 .ilike('email', cleanEmail);
           } catch (updateErr) {
-            // Fallback if remote table does not yet have suspension_reason column
             debugPrint('Direct user table update note: $updateErr');
-            updatePayload.remove('suspension_reason');
-            await client
-                .from('users')
-                .update(updatePayload)
-                .ilike('email', cleanEmail);
           }
         } else {
           // When updateArtisanProfileOnly is true (e.g. tourist whose artisan request was rejected),

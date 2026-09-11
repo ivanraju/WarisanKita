@@ -266,6 +266,9 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- 9. Public Security-Definer RPC Function for Moderation (Approve / Reject / Suspend)
+-- Drop ambiguous 3-parameter overload to resolve PGRST203 function resolution error
+DROP FUNCTION IF EXISTS public.admin_update_user_status(text, text, text);
+
 CREATE OR REPLACE FUNCTION public.admin_update_user_status(
     p_email text,
     p_status text,
@@ -322,11 +325,11 @@ BEGIN
         )
     WHERE id = v_user_id;
 
-    -- 5. Fetch existing studio details from users table for fallback
+    -- 5. Fetch existing studio details from artisan_profiles table for fallback
     SELECT studio_name, craft_category
     INTO v_existing_studio, v_existing_craft
-    FROM public.users
-    WHERE id = v_user_id;
+    FROM public.artisan_profiles
+    WHERE user_id = v_user_id;
 
     -- 6. Upsert artisan_profiles (insert if missing, update status if exists)
     INSERT INTO public.artisan_profiles (
