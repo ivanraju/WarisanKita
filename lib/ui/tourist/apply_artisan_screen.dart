@@ -8,6 +8,7 @@ import 'package:warisan_kita/domain/models/pending_artisan_profile.dart';
 import 'package:warisan_kita/domain/validators/profile_validator.dart';
 import 'package:warisan_kita/domain/validators/ssm_validator.dart';
 import 'package:warisan_kita/domain/validators/document_validator.dart';
+import 'package:warisan_kita/domain/models/user.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import 'widgets/workshop_map_picker.dart';
 import 'package:warisan_kita/viewmodels/moderation_viewmodel.dart';
@@ -483,7 +484,10 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
     });
 
     final authVM = context.read<AuthViewModel>();
-    final user = authVM.currentUser;
+    UserModel? user = authVM.currentUser;
+    if (user == null || user.email.trim().isEmpty) {
+      user = await authVM.restoreSession();
+    }
     final studioName = _studioNameController.text.trim();
     final ssm = _ssmController.text.trim();
     final expText = _experienceController.text.trim();
@@ -492,10 +496,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
     final phoneText = _phoneController.text.trim();
     final phone = phoneText.isNotEmpty ? phoneText : null;
 
-    final effectiveEmail =
-        (user?.email != null && user!.email.trim().isNotEmpty)
-        ? user.email.trim()
-        : '';
+    final effectiveEmail = user?.email.trim() ?? '';
 
     final result = await authVM.linkArtisanToExistingTourist(
       email: effectiveEmail,

@@ -536,4 +536,94 @@ void main() {
     expect(vm.currentUser!.isSuspended, isTrue);
     expect(vm.errorMessage, contains('ACCOUNT SUSPENDED'));
   });
+
+  test('deactivateArtisanStudio demotes artisan to tourist while preserving user identity', () async {
+    backend.add(
+      'artisan_close@test.com',
+      username: 'master_potter',
+      role: 'Artisan',
+      password: 'Password123!',
+    );
+    await service.signIn('artisan_close@test.com', 'Password123!');
+    final vm = AuthViewModel(repository: UserRepository(service: service));
+    await vm.restoreSession();
+    expect(vm.currentUser, isNotNull);
+    expect(vm.currentUser!.role, 'Artisan');
+
+    final result = await vm.deactivateArtisanStudio();
+    expect(result.success, isTrue);
+    expect(vm.currentUser, isNotNull);
+    expect(vm.currentUser!.role, 'Tourist');
+    expect(vm.activeRole, 'Tourist');
+    expect(vm.currentUser!.studioName, isNull);
+  });
+
+  test('deleteCurrentAccount rejects incorrect password and protects account', () async {
+    backend.add(
+      'delete_guard@test.com',
+      username: 'delete_tester',
+      role: 'Tourist',
+      password: 'Password123!',
+    );
+    await service.signIn('delete_guard@test.com', 'Password123!');
+    final vm = AuthViewModel(repository: UserRepository(service: service));
+    await vm.restoreSession();
+    expect(vm.currentUser, isNotNull);
+
+    // Attempt deletion with wrong password
+    final failResult = await vm.deleteCurrentAccount(password: 'WrongPassword!');
+    expect(failResult.success, isFalse);
+    expect(failResult.message?.toLowerCase(), contains('incorrect password'));
+    expect(failResult.message, isNot(contains('AuthException')));
+    expect(vm.currentUser, isNotNull); // Account still exists
+  });
+
+  test('deleteCurrentAccount deletes account cleanly when correct password is provided', () async {
+    backend.add(
+      'delete_success@test.com',
+      username: 'delete_target',
+      role: 'Tourist',
+      password: 'Password123!',
+    );
+    await service.signIn('delete_success@test.com', 'Password123!');
+    final vm = AuthViewModel(repository: UserRepository(service: service));
+    await vm.restoreSession();
+    expect(vm.currentUser, isNotNull);
+
+    // Successful deletion with correct password
+    final successResult = await vm.deleteCurrentAccount(password: 'Password123!');
+    expect(successResult.success, isTrue);
+    expect(vm.currentUser, isNull);
+    expect(vm.activeRole, isNull);
+  });
+
+  test('after deactivating studio, user can successfully re-apply for artisan studio without email error', () async {
+    backend.add(
+      'reapply_artisan@test.com',
+      username: 'reapply_artisan',
+      role: 'Artisan',
+      password: 'Password123!',
+    );
+    await service.signIn('reapply_artisan@test.com', 'Password123!');
+    final vm = AuthViewModel(repository: UserRepository(service: service));
+    await vm.restoreSession();
+    expect(vm.currentUser, isNotNull);
+    expect(vm.currentUser!.role, 'Artisan');
+
+    // 1. Close studio
+    final closeResult = await vm.deactivateArtisanStudio();
+    expect(closeResult.success, isTrue);
+    expect(vm.currentUser!.role, 'Tourist');
+
+    // 2. Re-apply for artisan studio (passing empty string or relying on session)
+    final applyResult = await vm.linkArtisanToExistingTourist(
+      email: '',
+      studioName: 'New Reborn Studio',
+      craftCategory: 'Batik',
+      ssmNumber: '202301099999',
+    );
+    expect(applyResult.success, isTrue);
+    expect(vm.currentUser!.status, 'PENDING_APPROVAL');
+    expect(vm.currentUser!.studioName, 'New Reborn Studio');
+  });
 }

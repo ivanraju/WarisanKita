@@ -248,14 +248,18 @@ class UserRepository {
 
   Future<void> signOut() => _service.signOut();
 
+  Future<UserModel> deactivateArtisanStudio() => _service.deactivateArtisanStudio();
+
   Future<void> deleteAccount({
     required String userId,
     required String email,
     String? username,
+    String? password,
   }) =>
       _service.deleteAccount(
         userId: userId,
         email: email,
         username: username,
+        password: password,
       );
 }
