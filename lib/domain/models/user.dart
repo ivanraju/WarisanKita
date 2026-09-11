@@ -132,8 +132,8 @@ class UserModel {
       artisanStatus?.toUpperCase() != 'CLOSED' &&
       (artisanStatus?.toUpperCase() == 'PENDING_APPROVAL' ||
        artisanStatus?.toUpperCase() == 'PENDING' ||
-       isPendingApproval ||
-       (studioName != null && studioName!.trim().isNotEmpty)) &&
+       (isPendingApproval && role != 'Tourist') ||
+       (role != 'Tourist' && studioName != null && studioName!.trim().isNotEmpty)) &&
       !isArtisanStudioSuspended;
 
   String get handle {
@@ -228,6 +228,7 @@ class UserModel {
     String? pendingRelocationReason,
     String? pendingRelocationDate,
     bool clearPendingRelocation = false,
+    bool clearStudioDetails = false,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -241,20 +242,20 @@ class UserModel {
       joinedDate: joinedDate ?? this.joinedDate,
       isSuspended: isSuspended ?? this.isSuspended,
       suspensionReason: clearSuspensionReason ? null : (suspensionReason ?? this.suspensionReason),
-      studioName: studioName ?? this.studioName,
-      ssmNumber: ssmNumber ?? this.ssmNumber,
-      craftCategory: craftCategory ?? this.craftCategory,
-      bio: bio ?? this.bio,
+      studioName: clearStudioDetails ? null : (studioName ?? this.studioName),
+      ssmNumber: clearStudioDetails ? null : (ssmNumber ?? this.ssmNumber),
+      craftCategory: clearStudioDetails ? null : (craftCategory ?? this.craftCategory),
+      bio: clearStudioDetails ? null : (bio ?? this.bio),
       address: address ?? this.address,
       state: state ?? this.state,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       phone: phone ?? this.phone,
       experience: experience ?? this.experience,
-      artisanProfileId: artisanProfileId ?? this.artisanProfileId,
+      artisanProfileId: clearStudioDetails ? null : (artisanProfileId ?? this.artisanProfileId),
       artisanStatus: artisanStatus ?? this.artisanStatus,
-      artisanDocuments: artisanDocuments ?? this.artisanDocuments,
-      tags: tags ?? this.tags,
+      artisanDocuments: clearStudioDetails ? const [] : (artisanDocuments ?? this.artisanDocuments),
+      tags: clearStudioDetails ? const [] : (tags ?? this.tags),
       pendingRelocationAddress: clearPendingRelocation ? null : (pendingRelocationAddress ?? this.pendingRelocationAddress),
       pendingRelocationState: clearPendingRelocation ? null : (pendingRelocationState ?? this.pendingRelocationState),
       pendingRelocationLatitude: clearPendingRelocation ? null : (pendingRelocationLatitude ?? this.pendingRelocationLatitude),

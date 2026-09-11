@@ -872,14 +872,17 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                           ],
                         ),
                       ),
-                    ] else if (authVM.currentUser?.isRejectedArtisan == true ||
-                        authVM.currentUser?.status.toUpperCase() == 'REJECTED' ||
-                        authVM.currentUser?.artisanStatus?.toUpperCase() == 'REJECTED' ||
-                        authVM.currentUser?.isPendingArtisan == true ||
-                        authVM.currentUser?.isPendingApproval == true ||
-                        (authVM.currentUser?.studioName != null &&
-                            authVM.currentUser!.studioName!.trim().isNotEmpty &&
-                            authVM.currentUser?.isApprovedArtisan != true)) ...[
+                    ] else if (authVM.currentUser?.artisanStatus?.toUpperCase() != 'CLOSED' &&
+                        (authVM.currentUser?.isRejectedArtisan == true ||
+                         authVM.currentUser?.artisanStatus?.toUpperCase() == 'REJECTED' ||
+                         authVM.currentUser?.isPendingArtisan == true ||
+                         authVM.currentUser?.artisanStatus?.toUpperCase() == 'PENDING_APPROVAL' ||
+                         authVM.currentUser?.artisanStatus?.toUpperCase() == 'PENDING' ||
+                         (authVM.currentUser?.role != 'Tourist' &&
+                             (authVM.currentUser?.isPendingApproval == true ||
+                              (authVM.currentUser?.studioName != null &&
+                               authVM.currentUser!.studioName!.trim().isNotEmpty &&
+                               authVM.currentUser?.isApprovedArtisan != true))))) ...[
                       const SizedBox(height: 16),
                       Builder(
                         builder: (context) {

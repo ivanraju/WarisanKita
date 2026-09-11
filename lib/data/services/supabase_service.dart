@@ -2762,10 +2762,9 @@ class SupabaseService {
       updatedUser = updatedUser.copyWith(
         role: 'Tourist',
         roles: const ['Tourist'],
-        studioName: null,
-        craftCategory: null,
-        ssmNumber: null,
+        status: 'ACTIVE',
         artisanStatus: 'CLOSED',
+        clearStudioDetails: true,
       );
       await _saveAuthSession(updatedUser);
       return updatedUser;
@@ -2778,9 +2777,12 @@ class SupabaseService {
       final map = jsonDecode(rawUser) as Map<String, dynamic>;
       map['role'] = 'Tourist';
       map['roles'] = ['Tourist'];
+      map['status'] = 'ACTIVE';
       map['studio_name'] = null;
       map['craft_category'] = null;
       map['ssm_number'] = null;
+      map['bio'] = null;
+      map['artisan_profiles'] = null;
       map['is_approved_artisan'] = false;
       map['artisan_status'] = 'CLOSED';
       map['is_live_open'] = false;
@@ -2788,9 +2790,12 @@ class SupabaseService {
       if (_userStore.containsKey(email)) {
         _userStore[email]!['role'] = 'Tourist';
         _userStore[email]!['roles'] = ['Tourist'];
+        _userStore[email]!['status'] = 'ACTIVE';
         _userStore[email]!['studio_name'] = null;
         _userStore[email]!['craft_category'] = null;
         _userStore[email]!['ssm_number'] = null;
+        _userStore[email]!['bio'] = null;
+        _userStore[email]!['artisan_profiles'] = null;
         _userStore[email]!['is_approved_artisan'] = false;
         _userStore[email]!['artisan_status'] = 'CLOSED';
         _userStore[email]!['is_live_open'] = false;
