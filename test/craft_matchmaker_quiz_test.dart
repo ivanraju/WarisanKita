@@ -1,16 +1,109 @@
+import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:warisan_kita/data/repositories/artisan_repository.dart';
 import 'package:warisan_kita/data/repositories/matchmaker_repository.dart';
+import 'package:warisan_kita/domain/models/artisan_profile.dart';
 import 'package:warisan_kita/ui/matchmaker/craft_matchmaker_quiz_wizard.dart';
+import 'package:warisan_kita/ui/tourist/tourist_directory_tab.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/directory_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/matchmaker_viewmodel.dart';
 
+class _MockHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) => _MockHttpClient();
+}
+
+class _MockHttpClient implements HttpClient {
+  @override
+  bool autoUncompress = false;
+  @override
+  Duration? connectionTimeout;
+  @override
+  Duration idleTimeout = const Duration(seconds: 15);
+  @override
+  int? maxConnectionsPerHost;
+  @override
+  String? userAgent;
+
+  @override
+  Future<HttpClientRequest> getUrl(Uri url) async => _MockHttpClientRequest();
+  @override
+  Future<HttpClientRequest> openUrl(String method, Uri url) async => _MockHttpClientRequest();
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _MockHttpClientRequest implements HttpClientRequest {
+  @override
+  final HttpHeaders headers = _MockHttpHeaders();
+
+  @override
+  Future<HttpClientResponse> close() async => _MockHttpClientResponse();
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _MockHttpHeaders implements HttpHeaders {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _MockHttpClientResponse extends Stream<List<int>> implements HttpClientResponse {
+  static final _transparentImage = [
+    0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D,
+    0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+    0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00, 0x00, 0x00,
+    0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00,
+    0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49,
+    0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
+  ];
+
+  @override
+  int get statusCode => 200;
+  @override
+  int get contentLength => _transparentImage.length;
+  @override
+  HttpClientResponseCompressionState get compressionState =>
+      HttpClientResponseCompressionState.notCompressed;
+
+  @override
+  StreamSubscription<List<int>> listen(
+    void Function(List<int> event)? onData, {
+    Function? onError,
+    void Function()? onDone,
+    bool? cancelOnError,
+  }) {
+    return Stream<List<int>>.fromIterable([_transparentImage]).listen(
+      onData,
+      onError: onError,
+      onDone: onDone,
+      cancelOnError: cancelOnError,
+    );
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _MockArtisanRepository extends ArtisanRepository {
+  final List<ArtisanModel> _mockList;
+  _MockArtisanRepository(this._mockList);
+
+  @override
+  Future<List<ArtisanModel>> getArtisans() async => _mockList;
+}
+
 void main() {
   setUp(() {
+    HttpOverrides.global = _MockHttpOverrides();
     SharedPreferences.setMockInitialValues({});
   });
 
@@ -204,6 +297,110 @@ void main() {
       expect(completedTags!.length, 4);
       expect(matchmakerVM.isQuizCompleted, isTrue);
       expect(matchmakerVM.currentPersonality?.title, 'The Royal Textile Connoisseur');
+    });
+  });
+
+  group('TouristDirectoryTab Quiz-Based Suggestions Tests', () {
+    final mockArtisans = [
+      ArtisanModel(
+        id: 'artisan_1',
+        name: 'Mak Jah',
+        craftType: 'Batik Wax Painting',
+        state: 'Kelantan',
+        description: 'Authentic East Coast hand-drawn batik canting',
+        imageUrl: 'https://example.com/jah.png',
+        rating: 4.9,
+        tags: const ['canting', 'silk', 'kain batik', 'workshop'],
+      ),
+      ArtisanModel(
+        id: 'artisan_2',
+        name: 'Uncle Lim',
+        craftType: 'Clay Pottery & Ceramics',
+        state: 'Perak',
+        description: 'Traditional labu sayong pottery',
+        imageUrl: 'https://example.com/lim.png',
+        rating: 4.8,
+        tags: const ['labu sayong', 'pottery', 'clay'],
+      ),
+    ];
+
+    testWidgets('Shows quiz invitation banner when quiz is not completed', (tester) async {
+      tester.view.physicalSize = const Size(1200, 1000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      SharedPreferences.setMockInitialValues({});
+      final authVM = AuthViewModel();
+      final matchmakerVM = MatchmakerViewModel();
+      final langVM = LanguageViewModel();
+      final dirVM = DirectoryViewModel(repository: _MockArtisanRepository(mockArtisans));
+      await dirVM.fetchArtisans();
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: authVM),
+            ChangeNotifierProvider.value(value: matchmakerVM),
+            ChangeNotifierProvider.value(value: langVM),
+            ChangeNotifierProvider.value(value: dirVM),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(
+              body: TouristDirectoryTab(),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(find.text('Take the Craft Matchmaker Quiz'), findsOneWidget);
+      expect(find.text('START QUIZ'), findsOneWidget);
+    });
+
+    testWidgets('Shows personalized recommendations matching quiz choices after quiz completion', (tester) async {
+      tester.view.physicalSize = const Size(1200, 1000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      SharedPreferences.setMockInitialValues({});
+      final authVM = AuthViewModel();
+      final matchmakerVM = MatchmakerViewModel();
+      final langVM = LanguageViewModel();
+      final dirVM = DirectoryViewModel(repository: _MockArtisanRepository(mockArtisans));
+      await dirVM.fetchArtisans();
+
+      await matchmakerVM.saveQuizResults(
+        experienceType: 'Hands-on Workshop',
+        environment: 'Indoor Studio',
+        material: 'Batik & Songket Textiles',
+        region: 'East Coast Heritage',
+        userEmail: 'tourist@warisankita.my',
+      );
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: authVM),
+            ChangeNotifierProvider.value(value: matchmakerVM),
+            ChangeNotifierProvider.value(value: langVM),
+            ChangeNotifierProvider.value(value: dirVM),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(
+              body: TouristDirectoryTab(),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(find.textContaining('Suggested for You'), findsOneWidget);
+      expect(find.textContaining('The Royal Textile Connoisseur'), findsOneWidget);
+      expect(find.text('Mak Jah'), findsWidgets);
     });
   });
 }

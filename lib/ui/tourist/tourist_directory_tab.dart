@@ -9,6 +9,7 @@ import 'package:warisan_kita/ui/tourist/widgets/shimmer_directory_loading.dart';
 import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/directory_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/matchmaker_viewmodel.dart';
+import 'package:warisan_kita/ui/matchmaker/craft_matchmaker_quiz_wizard.dart';
 
 class CraftCategoryFilterItem {
   final String key;
@@ -406,144 +407,143 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
       return matchesQuery && matchesCategory && matchesState;
     }).toList();
 
-    // Multi-Tiered Matchmaker Recommendations (Tier 1: Craft -> Tier 2: Region/Material -> Tier 3: Top Masters)
+    // Recommendations strictly based on user's quiz choices (Material, Region, Experience, Setting)
     final matchmakerVM = context.watch<MatchmakerViewModel>();
     List<Map<String, dynamic>> recommendedArtisans = [];
-    String recommendationHeaderTitle = langVM.translate('Recommended for You (Based on Preferences)');
+    String recommendationHeaderTitle = langVM.translate('Suggested for You (Based on Quiz)');
     String? recommendationSubtitle;
 
-    if (matchmakerVM.isQuizCompleted && matchmakerVM.matchingCrafts.isNotEmpty) {
+    if (matchmakerVM.isQuizCompleted) {
       final personality = matchmakerVM.currentPersonality;
-      final matchingKeywords = <String>{};
-      for (final mc in matchmakerVM.matchingCrafts) {
-        final mcLower = mc.toLowerCase().trim();
-        matchingKeywords.add(mcLower);
-        final words = mcLower
-            .split(RegExp(r'[\s&/,\-]+'))
-            .where((w) => w.length >= 3 && !{'and', 'the', 'arts', 'making', 'crafts', 'craft'}.contains(w));
-        matchingKeywords.addAll(words);
-      }
+      final chosenMaterial = matchmakerVM.material ?? personality?.material ?? '';
+      final chosenRegion = matchmakerVM.region ?? personality?.region ?? '';
+      final chosenExp = matchmakerVM.experienceType ?? personality?.experienceType ?? '';
+      final chosenEnv = matchmakerVM.environment ?? personality?.environment ?? '';
 
-      for (final filter in craftFilters) {
-        if (filter.key == 'ALL') continue;
-        final filterNameLower = filter.englishName.toLowerCase();
-        if (matchingKeywords.any((k) => filterNameLower.contains(k) || filter.key.toLowerCase().contains(k))) {
-          matchingKeywords.addAll(filter.matchKeywords);
+      // Determine material keywords from what user chose in quiz
+      final materialKeywords = <String>{};
+      final matLower = chosenMaterial.toLowerCase();
+      if (matLower.contains('potter') || matLower.contains('clay') || matLower.contains('ceramic')) {
+        materialKeywords.addAll(['potter', 'ceramic', 'clay', 'tembikar', 'seramik', 'labu']);
+      } else if (matLower.contains('batik') || matLower.contains('songket') || matLower.contains('textile')) {
+        materialKeywords.addAll(['batik', 'songket', 'textile', 'canting', 'kain', 'tenun', 'silk', 'weav']);
+      } else if (matLower.contains('timber') || matLower.contains('wood')) {
+        materialKeywords.addAll(['wood', 'carv', 'ukir', 'kayu', 'timber']);
+      } else if (matLower.contains('pewter') || matLower.contains('metal')) {
+        materialKeywords.addAll(['metal', 'pewter', 'keris', 'besi', 'tembaga', 'silver', 'perak']);
+      }
+      for (final mc in matchmakerVM.matchingCrafts) {
+        materialKeywords.add(mc.toLowerCase().trim());
+        for (final w in mc.toLowerCase().split(RegExp(r'[\s&/,\-]+'))) {
+          if (w.length >= 3 && !{'and', 'the', 'arts', 'making', 'crafts', 'craft'}.contains(w)) {
+            materialKeywords.add(w);
+          }
         }
       }
 
-      // --- TIER 1: Direct & Category Craft Match ---
-      final tier1Matches = allDirectoryArtisans.where((a) {
+      // Target states from user's chosen region in quiz
+      final regLower = chosenRegion.toLowerCase();
+      final Set<String> targetStates;
+      if (regLower.contains('east coast')) {
+        targetStates = {'kelantan', 'terengganu', 'pahang'};
+      } else if (regLower.contains('west coast')) {
+        targetStates = {
+          'melaka',
+          'perak',
+          'selangor',
+          'penang',
+          'johor',
+          'kedah',
+          'perlis',
+          'kuala lumpur',
+          'negeri sembilan',
+        };
+      } else {
+        targetStates = {};
+      }
+
+      final scoredArtisans = <Map<String, dynamic>, int>{};
+
+      for (final a in allDirectoryArtisans) {
         final craft = a['craft']?.toString().toLowerCase() ?? '';
         final cat = a['category']?.toString().toLowerCase() ?? '';
         final name = a['name']?.toString().toLowerCase() ?? '';
+        final state = a['state']?.toString().toLowerCase() ?? '';
+        final bio = a['bio']?.toString().toLowerCase() ?? '';
         final tags = a['tags'];
         final tagList = tags is List
             ? tags.map((t) => t.toString().toLowerCase()).toList()
             : (tags is String ? [tags.toLowerCase()] : <String>[]);
 
-        // Exact or substring match with any matchingCrafts item
-        for (final mc in matchmakerVM.matchingCrafts) {
-          final mcLower = mc.toLowerCase().trim();
-          if (craft.contains(mcLower) || mcLower.contains(craft) || cat.contains(mcLower) || mcLower.contains(cat)) {
-            return true;
-          }
-        }
+        int score = 0;
 
-        // Token / Keyword match against craft, cat, name, tags
-        for (final kw in matchingKeywords) {
+        // 1. Material / Craft match (Weight: 60)
+        bool matchesMaterial = false;
+        for (final kw in materialKeywords) {
           if (craft.contains(kw) || cat.contains(kw) || name.contains(kw) || tagList.any((t) => t.contains(kw))) {
-            return true;
+            matchesMaterial = true;
+            break;
+          }
+        }
+        if (matchesMaterial) {
+          score += 60;
+        }
+
+        // 2. Region / State match (Weight: 30)
+        if (targetStates.contains(state)) {
+          score += 30;
+        }
+
+        // 3. Experience style match (Weight: 10)
+        final expLower = chosenExp.toLowerCase();
+        final workshopCount = (a['workshopCount'] as num?)?.toInt() ?? 0;
+        if (expLower.contains('hands-on')) {
+          if (workshopCount > 0 || tagList.any((t) => t.contains('workshop') || t.contains('hands-on') || t.contains('class'))) {
+            score += 10;
+          }
+        } else if (expLower.contains('observing')) {
+          final expYears = a['experienceYears']?.toString().toLowerCase() ?? '';
+          if (expYears.contains('10+') || expYears.contains('20+') || tagList.any((t) => t.contains('master') || t.contains('heritage'))) {
+            score += 10;
           }
         }
 
-        // CraftFilter matching
-        for (final filter in craftFilters) {
-          if (filter.key == 'ALL') continue;
-          if (matchingKeywords.any((k) => filter.key.toLowerCase().contains(k) || filter.englishName.toLowerCase().contains(k))) {
-            if (filter.matches(cat, tagList) || filter.matches(craft, tagList)) {
-              return true;
-            }
+        // 4. Studio setting / environment match (Weight: 10)
+        final envLower = chosenEnv.toLowerCase();
+        if (envLower.contains('indoor')) {
+          if (tagList.any((t) => t.contains('studio') || t.contains('gallery') || t.contains('indoor')) || bio.contains('studio') || bio.contains('gallery')) {
+            score += 10;
+          }
+        } else if (envLower.contains('outdoor') || envLower.contains('village')) {
+          if (tagList.any((t) => t.contains('village') || t.contains('kampong') || t.contains('outdoor')) || bio.contains('village') || bio.contains('kampong')) {
+            score += 10;
           }
         }
 
-        return false;
-      }).toList();
-
-      if (tier1Matches.isNotEmpty) {
-        recommendedArtisans = tier1Matches;
-        recommendationHeaderTitle = personality != null
-            ? '${langVM.translate('Recommended for You')} • ${personality.title}'
-            : langVM.translate('Recommended for You (Based on Preferences)');
-        recommendationSubtitle = null;
-      } else {
-        // --- TIER 2: Regional & Material Family Match ---
-        final prefRegion = personality?.region?.toLowerCase() ?? '';
-        final prefMaterial = personality?.material?.toLowerCase() ?? '';
-        final materialTokens = prefMaterial
-            .split(RegExp(r'[\s&/,\-]+'))
-            .where((w) => w.length >= 3 && !{'and', 'the', 'crafts', 'craft'}.contains(w))
-            .toList();
-
-        final tier2Matches = allDirectoryArtisans.where((a) {
-          final state = a['state']?.toString().toLowerCase() ?? '';
-          final craft = a['craft']?.toString().toLowerCase() ?? '';
-          final tags = a['tags'];
-          final tagList = tags is List
-              ? tags.map((t) => t.toString().toLowerCase()).toList()
-              : (tags is String ? [tags.toLowerCase()] : <String>[]);
-
-          bool matchesRegion = false;
-          if (prefRegion.contains('east coast')) {
-            matchesRegion = {'kelantan', 'terengganu', 'pahang'}.contains(state);
-          } else if (prefRegion.contains('west coast')) {
-            matchesRegion = {
-              'melaka',
-              'perak',
-              'penang',
-              'selangor',
-              'johor',
-              'kedah',
-              'perlis',
-              'kuala lumpur',
-              'negeri sembilan',
-            }.contains(state);
-          }
-
-          final matchesMaterial = materialTokens.any((t) => craft.contains(t) || tagList.any((tag) => tag.contains(t)));
-
-          return matchesRegion || matchesMaterial;
-        }).toList();
-
-        if (tier2Matches.isNotEmpty) {
-          recommendedArtisans = tier2Matches.take(4).toList();
-          final regionName = prefRegion.contains('east') ? 'East Coast' : (prefRegion.contains('west') ? 'West Coast' : 'Regional');
-          recommendationHeaderTitle = 'Related $regionName Masters • ${personality?.title ?? "Preference Match"}';
-          recommendationSubtitle = 'Exploring authentic regional masters matching your cultural style';
-        } else {
-          // --- TIER 3: Curated Top-Rated Heritage Masters ---
-          final sortedMasters = List<Map<String, dynamic>>.from(allDirectoryArtisans)
-            ..sort((a, b) {
-              final rA = (a['rating'] as num?)?.toDouble() ?? 0.0;
-              final rB = (b['rating'] as num?)?.toDouble() ?? 0.0;
-              return rB.compareTo(rA);
-            });
-          recommendedArtisans = sortedMasters.take(4).toList();
-          recommendationHeaderTitle = 'Featured Malaysian Heritage Masters';
-          recommendationSubtitle = 'Curated top-rated master artisans across all disciplines';
+        // Only recommend artisans that match what user chose (score > 0)
+        if (score > 0) {
+          scoredArtisans[a] = score;
         }
       }
-    } else if (!matchmakerVM.isQuizCompleted && allDirectoryArtisans.isNotEmpty) {
-      // Guest or uncompleted quiz
-      final sortedMasters = List<Map<String, dynamic>>.from(allDirectoryArtisans)
-        ..sort((a, b) {
-          final rA = (a['rating'] as num?)?.toDouble() ?? 0.0;
-          final rB = (b['rating'] as num?)?.toDouble() ?? 0.0;
+
+      final sortedEntries = scoredArtisans.entries.toList()
+        ..sort((e1, e2) {
+          final scoreComparison = e2.value.compareTo(e1.value);
+          if (scoreComparison != 0) return scoreComparison;
+          final rA = (e1.key['rating'] as num?)?.toDouble() ?? 0.0;
+          final rB = (e2.key['rating'] as num?)?.toDouble() ?? 0.0;
           return rB.compareTo(rA);
         });
-      recommendedArtisans = sortedMasters.take(4).toList();
-      recommendationHeaderTitle = langVM.translate('Popular Heritage Masters');
-      recommendationSubtitle = null;
+
+      recommendedArtisans = sortedEntries.map((e) => e.key).toList();
+
+      final categoryName = personality?.primaryCategory ?? chosenMaterial;
+      recommendationHeaderTitle = personality != null
+          ? '${langVM.translate('Suggested for You')} • ${personality.title}'
+          : '${langVM.translate('Suggested for You')} • $categoryName';
+      recommendationSubtitle = chosenMaterial.isNotEmpty && chosenRegion.isNotEmpty
+          ? 'Matched with your quiz choices: $chosenMaterial ($chosenRegion)'
+          : (personality?.tagline.isNotEmpty == true ? personality!.tagline : null);
     }
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -942,68 +942,214 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                   ],
                 ),
 
-                if (_hasPreferences && recommendedArtisans.isNotEmpty) ...[
+                if (_hasPreferences) ...[
                   const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF0D2825) : const Color(0xFFF0FDF4),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: isDark ? const Color(0xFF1E3A34) : const Color(0xFF86EFAC)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(Icons.auto_awesome_rounded, color: isDark ? const Color(0xFF34D399) : const Color(0xFF15803D), size: 16),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    recommendationHeaderTitle,
-                                    softWrap: true,
-                                    style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: isDark ? const Color(0xFF34D399) : const Color(0xFF15803D),
-                                    ),
-                                  ),
-                                  if (recommendationSubtitle != null) ...[
-                                    const SizedBox(height: 2),
+                  if (matchmakerVM.isQuizCompleted && recommendedArtisans.isNotEmpty) ...[
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF0D2825) : const Color(0xFFF0FDF4),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: isDark ? const Color(0xFF1E3A34) : const Color(0xFF86EFAC)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.auto_awesome_rounded, color: isDark ? const Color(0xFF34D399) : const Color(0xFF15803D), size: 16),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
                                     Text(
-                                      recommendationSubtitle,
+                                      recommendationHeaderTitle,
+                                      softWrap: true,
                                       style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 10,
-                                        color: isDark ? Colors.white60 : const Color(0xFF166534),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: isDark ? const Color(0xFF34D399) : const Color(0xFF15803D),
                                       ),
                                     ),
+                                    if (recommendationSubtitle != null) ...[
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        recommendationSubtitle,
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 10,
+                                          color: isDark ? Colors.white60 : const Color(0xFF166534),
+                                        ),
+                                      ),
+                                    ],
                                   ],
-                                ],
+                                ),
                               ),
+                              IconButton(
+                                icon: Icon(Icons.tune_rounded, size: 18, color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40)),
+                                tooltip: 'Update Quiz Preferences',
+                                onPressed: () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (_) => CraftMatchmakerQuizWizard(
+                                      onCompleted: (_) => setState(() {}),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            height: 94,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: recommendedArtisans.length,
+                              itemBuilder: (context, index) {
+                                return _buildRecommendationCard(
+                                  context: context,
+                                  artisan: recommendedArtisans[index],
+                                  langVM: langVM,
+                                );
+                              },
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          height: 94,
-                          child: ListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: recommendedArtisans.length,
-                            itemBuilder: (context, index) {
-                              return _buildRecommendationCard(
+                          ),
+                        ],
+                      ),
+                    ),
+                  ] else if (matchmakerVM.isQuizCompleted && recommendedArtisans.isEmpty) ...[
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF0D2825) : const Color(0xFFFFFBEB),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFFDE68A)),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFFEF3C7),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(Icons.info_outline_rounded, color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFD97706), size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  langVM.translate('No artisans match your quiz choices'),
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFB45309),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '${langVM.translate("No artisans match")} "${matchmakerVM.material ?? "Craft"}" ${langVM.translate("in")} "${matchmakerVM.region ?? "Region"}".',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 10,
+                                    color: isDark ? Colors.white60 : const Color(0xFF92400E),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          OutlinedButton(
+                            onPressed: () {
+                              showDialog(
                                 context: context,
-                                artisan: recommendedArtisans[index],
-                                langVM: langVM,
+                                builder: (_) => CraftMatchmakerQuizWizard(
+                                  onCompleted: (_) => setState(() {}),
+                                ),
                               );
                             },
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFD97706)),
+                              foregroundColor: isDark ? const Color(0xFFFFD54F) : const Color(0xFFD97706),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                            child: Text(
+                              langVM.translate('Retake Quiz'),
+                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
+                  ] else ...[
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF0D2825) : const Color(0xFFF0FDF4),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: isDark ? const Color(0xFF1E3A34) : const Color(0xFF86EFAC)),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFDCFCE7),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(Icons.auto_awesome_rounded, color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF15803D), size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  langVM.translate('Take the Craft Matchmaker Quiz'),
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF15803D),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  langVM.translate('Answer 4 quick questions to get suggested artisans based on what you choose!'),
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 10,
+                                    color: isDark ? Colors.white70 : const Color(0xFF166534),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          FilledButton(
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (_) => CraftMatchmakerQuizWizard(
+                                  onCompleted: (_) => setState(() {}),
+                                ),
+                              );
+                            },
+                            style: FilledButton.styleFrom(
+                              backgroundColor: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                              foregroundColor: isDark ? const Color(0xFF041412) : Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                            child: Text(
+                              langVM.translate('START QUIZ'),
+                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
 
                 const SizedBox(height: 16),
@@ -1121,9 +1267,10 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
 
   Widget _buildArtisanCard(BuildContext context, Map<String, dynamic> artisan, LanguageViewModel langVM) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final List<String> rawImages = artisan['images'] != null
-        ? List<String>.from(artisan['images'])
-        : [artisan['image'] as String];
+    final rawImagesList = artisan['images'] is List ? List<String>.from(artisan['images']) : <String>[];
+    final defaultImage = artisan['image']?.toString() ??
+        'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&auto=format&fit=crop&q=80';
+    final List<String> rawImages = rawImagesList.isNotEmpty ? rawImagesList : [defaultImage];
     final List<String> images = rawImages.length > 1
         ? rawImages
         : [
