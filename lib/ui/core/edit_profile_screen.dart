@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:warisan_kita/domain/validators/profile_validator.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
+import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/moderation_viewmodel.dart';
 
 class EditProfileScreen extends StatefulWidget {
@@ -297,6 +298,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final authVM = context.watch<AuthViewModel>();
+    LanguageViewModel? langVM;
+    try {
+      langVM = context.watch<LanguageViewModel>();
+    } catch (_) {}
+    String tr(String text) => langVM?.translate(text) ?? text;
+
     final user = authVM.currentUser;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -305,7 +312,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
         appBar: AppBar(
           title: Text(
-            'Edit Profile',
+            tr('Edit Profile'),
             style: GoogleFonts.dmSerifDisplay(
               color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
               fontSize: 22,
@@ -325,7 +332,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
       appBar: AppBar(
         title: Text(
-          'Edit Profile',
+          tr('Edit Profile'),
           style: GoogleFonts.dmSerifDisplay(
             color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
             fontSize: 22,
@@ -367,7 +374,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               elevation: 0,
             ),
             child: Text(
-              'SAVE & SYNC PROFILE',
+              tr('SAVE & SYNC PROFILE'),
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
@@ -453,7 +460,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             const SizedBox(height: 28),
 
             Text(
-              'PERSONAL EXPLORER INFORMATION',
+              tr('PERSONAL EXPLORER INFORMATION'),
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 11,
                 fontWeight: FontWeight.w800,
@@ -471,7 +478,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               textCapitalization: TextCapitalization.words,
               style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
               decoration: InputDecoration(
-                labelText: 'Full Name',
+                labelText: tr('Full Name'),
                 hintText: 'e.g. Siti Nurhaliza',
                 prefixIcon: Icon(
                   Icons.badge_outlined,
@@ -490,7 +497,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               validator: ProfileValidator.validateUsername,
               style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
               decoration: InputDecoration(
-                labelText: 'Unique Username Handle',
+                labelText: tr('Unique Username Handle'),
                 hintText: 'e.g. siticrafts',
                 prefixText: '@',
                 helperText: _usernameStatusMessage,
@@ -540,7 +547,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
               style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
               decoration: InputDecoration(
-                labelText: 'Heritage Bio / Explorer Note',
+                labelText: tr('Heritage Bio / Explorer Note'),
                 prefixIcon: Icon(
                   Icons.description_outlined,
                   color: isDark ? const Color(0xFFFFD54F) : null,
@@ -572,7 +579,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'DUAL ROLE SYNC: ARTISAN STUDIO',
+                          tr('DUAL ROLE SYNC: ARTISAN STUDIO'),
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 12,
                             fontWeight: FontWeight.w800,
@@ -584,7 +591,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Changes here update your public Artisan Studio profile across the platform.',
+                      tr('Changes here update your public Artisan Studio profile across the platform.'),
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 11,
                         color: isDark ? Colors.white70 : const Color(0xFF92400E),
@@ -599,7 +606,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       validator: ProfileValidator.validateStudioName,
                       style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
                       decoration: InputDecoration(
-                        labelText: 'Artisan Studio Name',
+                        labelText: tr('Artisan Studio Name'),
                         prefixIcon: Icon(
                           Icons.storefront_outlined,
                           color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFB45309),
@@ -617,7 +624,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       value: _selectedCraftCategory,
                       dropdownColor: isDark ? const Color(0xFF0D2825) : Colors.white,
                       decoration: InputDecoration(
-                        labelText: 'Craft Specialization',
+                        labelText: tr('Craft Specialization'),
                         prefixIcon: Icon(
                           Icons.category_outlined,
                           color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFB45309),
@@ -629,7 +636,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       items: _craftCategories.map((craft) {
                         return DropdownMenuItem<String>(
                           value: craft,
-                          child: Text(craft, style: GoogleFonts.plusJakartaSans(fontSize: 13)),
+                          child: Text(tr(craft), style: GoogleFonts.plusJakartaSans(fontSize: 13)),
                         );
                       }).toList(),
                       onChanged: (val) {
@@ -644,7 +651,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       value: _selectedState,
                       dropdownColor: isDark ? const Color(0xFF0D2825) : Colors.white,
                       decoration: InputDecoration(
-                        labelText: 'Studio State / Location',
+                        labelText: tr('Studio State / Location'),
                         prefixIcon: Icon(
                           Icons.location_on_outlined,
                           color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFB45309),
@@ -656,7 +663,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       items: _malaysianStates.map((st) {
                         return DropdownMenuItem<String>(
                           value: st,
-                          child: Text(st, style: GoogleFonts.plusJakartaSans(fontSize: 13)),
+                          child: Text(tr(st), style: GoogleFonts.plusJakartaSans(fontSize: 13)),
                         );
                       }).toList(),
                       onChanged: (val) {
