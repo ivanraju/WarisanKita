@@ -118,6 +118,7 @@ class UserModel {
     if (isApprovedArtisan) return false;
     final artStatus = artisanStatus?.toUpperCase();
     if (artStatus == 'PENDING_APPROVAL' || artStatus == 'PENDING') return false;
+    if (status.toUpperCase() == 'PENDING_APPROVAL' || status.toUpperCase() == 'PENDING') return false;
     return artStatus == 'REJECTED' ||
         (status.toUpperCase() == 'REJECTED' && artStatus == null);
   }

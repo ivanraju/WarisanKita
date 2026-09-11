@@ -467,6 +467,10 @@ class SupabaseService {
             if (artisan['rejection_reason'] != null) {
               row['rejection_reason'] = artisan['rejection_reason'];
             }
+          } else if (artisanStatus == 'PENDING_APPROVAL' ||
+              artisanStatus == 'PENDING') {
+            row['artisan_status'] = 'PENDING_APPROVAL';
+            row['rejection_reason'] = null;
           }
         }
       }
@@ -535,6 +539,10 @@ class SupabaseService {
               if (artisan['rejection_reason'] != null) {
                 row['rejection_reason'] = artisan['rejection_reason'];
               }
+            } else if (artisanStatus == 'PENDING_APPROVAL' ||
+                artisanStatus == 'PENDING') {
+              row['artisan_status'] = 'PENDING_APPROVAL';
+              row['rejection_reason'] = null;
             }
           }
         }
@@ -550,6 +558,10 @@ class SupabaseService {
       row['artisan_status'] = 'APPROVED';
     } else if (userArtisanStatus == 'REJECTED') {
       row['artisan_status'] = 'REJECTED';
+    } else if (userArtisanStatus == 'PENDING_APPROVAL' ||
+        userArtisanStatus == 'PENDING') {
+      row['artisan_status'] = 'PENDING_APPROVAL';
+      row['rejection_reason'] = null;
     }
 
     if (row['experience'] == null &&
@@ -999,6 +1011,8 @@ class SupabaseService {
     userRecord['artisan_status'] = 'PENDING_APPROVAL';
     userRecord['role'] = 'Tourist';
     userRecord['roles'] = ['Tourist'];
+    userRecord['rejectionReason'] = null;
+    userRecord['rejection_reason'] = null;
 
     final preservedDocuments = userRecord['artisan_documents'] is List
         ? List<Map<String, dynamic>>.from(
@@ -1040,6 +1054,7 @@ class SupabaseService {
                 'status': 'ACTIVE',
                 'role': 'Tourist',
                 'artisan_status': 'PENDING_APPROVAL',
+                'rejection_reason': null,
                 'studio_name': studioName,
                 'craft_category': craftCategory,
                 'ssm_number': ssmNumber,
@@ -1063,6 +1078,7 @@ class SupabaseService {
           'status': 'ACTIVE',
           'role': 'Tourist',
           'artisan_status': 'PENDING_APPROVAL',
+          'rejection_reason': null,
           'studio_name': studioName,
           'craft_category': craftCategory,
           'ssm_number': ssmNumber,
@@ -1091,6 +1107,7 @@ class SupabaseService {
                   'status': 'ACTIVE',
                   'role': 'Tourist',
                   'artisan_status': 'PENDING_APPROVAL',
+                  'rejection_reason': null,
                   if (phone != null) 'phone_number': phone,
                   'updated_at': DateTime.now().toIso8601String(),
                 })
@@ -1128,36 +1145,57 @@ class SupabaseService {
             'studio_name': studioName,
             'craft_category': craftCategory,
             'ssm_number': ssmNumber,
-            if (experience != null && experience.trim().isNotEmpty) ...{
-              'experience': experience.trim(),
-              if (RegExp(r'\d+').firstMatch(experience) != null)
-                'years_experience': int.tryParse(
-                  RegExp(r'\d+').firstMatch(experience)!.group(0)!,
-                ),
-            },
+            if (experience != null &&
+                experience.trim().isNotEmpty &&
+                RegExp(r'\d+').firstMatch(experience) != null)
+              'years_experience': int.tryParse(
+                RegExp(r'\d+').firstMatch(experience)!.group(0)!,
+              ),
             'bio': resolvedBio,
             'address': resolvedAddress,
             'state': resolvedState,
             if (latitude != null) 'latitude': latitude,
             if (longitude != null) 'longitude': longitude,
             'status': 'PENDING_APPROVAL',
+            'rejection_reason': null,
             'tags': toolsAndMaterials,
             'updated_at': DateTime.now().toIso8601String(),
           };
 
           if (profileRes != null) {
-            await client
-                .from('artisan_profiles')
-                .update(profileData)
-                .eq('user_id', userId);
+            try {
+              await client
+                  .from('artisan_profiles')
+                  .update(profileData)
+                  .eq('user_id', userId);
+            } catch (err) {
+              debugPrint('artisan_profiles update note: $err');
+              final fallbackData = Map<String, dynamic>.from(profileData)
+                ..remove('rejection_reason');
+              await client
+                  .from('artisan_profiles')
+                  .update(fallbackData)
+                  .eq('user_id', userId);
+            }
           } else {
             profileData['user_id'] = userId;
             profileData['created_at'] = DateTime.now().toIso8601String();
-            profileRes = await client
-                .from('artisan_profiles')
-                .insert(profileData)
-                .select('id')
-                .maybeSingle();
+            try {
+              profileRes = await client
+                  .from('artisan_profiles')
+                  .insert(profileData)
+                  .select('id')
+                  .maybeSingle();
+            } catch (err) {
+              debugPrint('artisan_profiles insert note: $err');
+              final fallbackData = Map<String, dynamic>.from(profileData)
+                ..remove('rejection_reason');
+              profileRes = await client
+                  .from('artisan_profiles')
+                  .insert(fallbackData)
+                  .select('id')
+                  .maybeSingle();
+            }
           }
 
           if (profileRes != null) {
@@ -1307,7 +1345,10 @@ class SupabaseService {
       }
     }
 
-    return UserModel.fromMap(userRecord);
+    _userStore[cleanEmail] = userRecord;
+    final returnUser = UserModel.fromMap(userRecord);
+    await _saveAuthSession(returnUser);
+    return returnUser;
   }
 
   Future<UserModel> updateUserProfile({

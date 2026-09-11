@@ -1718,5 +1718,46 @@ void main() {
         expect(find.text('aiman_haziq'), findsNothing);
         expect(find.text('+60 12-345 6789'), findsNothing);
       });
+
+      test('Reapplication transitions user from rejected to pending approval and clears rejection reason', () {
+        final rejectedUser = UserModel(
+          id: 'user-reapply-test',
+          email: 'artisan.reapply@warisankita.my',
+          username: 'artisan_reapply',
+          role: 'Tourist',
+          status: 'ACTIVE',
+          artisanStatus: 'REJECTED',
+          rejectionReason: 'Kraftangan certificate was unreadable.',
+          studioName: 'Reapply Studio',
+          craftCategory: 'Batik',
+        );
+
+        expect(rejectedUser.isRejectedArtisan, isTrue);
+        expect(rejectedUser.isPendingArtisan, isFalse);
+
+        // Reapplying creates pending state and clears rejectionReason
+        final reappliedUser = rejectedUser.copyWith(
+          artisanStatus: 'PENDING_APPROVAL',
+          clearRejectionReason: true,
+        );
+
+        expect(reappliedUser.isRejectedArtisan, isFalse);
+        expect(reappliedUser.isPendingArtisan, isTrue);
+        expect(reappliedUser.rejectionReason, isNull);
+
+        // Even if status is PENDING_APPROVAL with residual rejectionReason, isRejectedArtisan must be false
+        final pendingUserWithResidualReason = UserModel(
+          id: 'user-residual-test',
+          email: 'artisan.residual@warisankita.my',
+          username: 'artisan_residual',
+          role: 'Tourist',
+          status: 'PENDING_APPROVAL',
+          artisanStatus: 'PENDING_APPROVAL',
+          rejectionReason: 'Previous rejection reason',
+        );
+
+        expect(pendingUserWithResidualReason.isRejectedArtisan, isFalse);
+        expect(pendingUserWithResidualReason.isPendingArtisan, isTrue);
+      });
     });
 }
