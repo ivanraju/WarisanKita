@@ -341,7 +341,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             isDark: isDark,
             icon: Icons.person_outline_rounded,
             title: langVM.translate('Edit Profile'),
-            subtitle: langVM.translate('Update avatar, name, and phone number'),
+            subtitle: langVM.translate('Update avatar, name, and heritage bio'),
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const EditProfileScreen()),

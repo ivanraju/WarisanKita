@@ -604,6 +604,25 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     final phone = _phoneController.text.trim();
 
     final authVM = context.read<AuthViewModel>();
+
+    if (username.isNotEmpty && username.toLowerCase() != _initialUsername?.toLowerCase()) {
+      final isAvailable = await authVM.isUsernameAvailable(
+        username,
+        excludeEmail: authVM.currentUser?.email,
+      );
+      if (!isAvailable) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('@$username is already taken. Please choose another username handle.'),
+            backgroundColor: const Color(0xFFEF4444),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+    }
+
     try {
       await authVM.updateProfile(
         username: username,

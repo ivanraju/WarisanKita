@@ -18,7 +18,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _fullNameController;
   late final TextEditingController _usernameController;
-  late final TextEditingController _phoneController;
   late final TextEditingController _bioController;
   late final TextEditingController _studioNameController;
   String _selectedCraftCategory = 'Pottery & Ceramics';
@@ -31,29 +30,25 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Timer? _usernameDebounce;
   String? _initialUsername;
 
-  final List<String> _craftCategories = const [
+  late final List<String> _craftCategories = [
     'Pottery & Ceramics',
     'Batik Weaving',
     'Wood Carving',
     'Songket Weaving',
     'Pewter Craft',
     'Handicraft & Heritage',
+    'Woodwork',
+    'Songket & Weaving',
+    'Batik & Textiles',
+    'Metalwork & Pewter',
+    'Heritage Food',
+    'Wayang Kulit & Puppetry',
+    'Rattan & Bamboo Craft',
+    'Wau & Kite Making',
+    'Metalwork & Kris',
   ];
 
-  final List<String> _malaysianStates = const [
-    'Melaka',
-    'Terengganu',
-    'Kelantan',
-    'Perak',
-    'Selangor',
-    'Johor',
-    'Penang',
-    'Kedah',
-    'Pahang',
-    'Sabah',
-    'Sarawak',
-    'Kuala Lumpur',
-  ];
+  late final List<String> _malaysianStates = List<String>.from(ProfileValidator.supportedStates);
 
   @override
   void initState() {
@@ -61,20 +56,27 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final authVM = context.read<AuthViewModel>();
     final user = authVM.currentUser;
     final initialFullName = user?.displayName ?? user?.effectiveUsername ?? '';
-    final initialUsername = (user?.username ?? user?.effectiveUsername ?? '').replaceAll('@', '');
+    final initialUsername = (user?.username ?? user?.effectiveUsername ?? user?.handle ?? '').replaceAll('@', '');
     _initialUsername = initialUsername;
     _fullNameController = TextEditingController(text: initialFullName);
     _usernameController = TextEditingController(text: initialUsername);
     _usernameController.addListener(_onUsernameChanged);
-    _phoneController = TextEditingController(text: user?.phone ?? '');
     _bioController = TextEditingController(text: user?.bio ?? '');
     _studioNameController = TextEditingController(text: user?.studioName ?? user?.displayName ?? '');
 
-    if (user?.craftCategory != null && _craftCategories.contains(user!.craftCategory)) {
-      _selectedCraftCategory = user.craftCategory!;
+    if (user?.craftCategory != null && user!.craftCategory!.trim().isNotEmpty) {
+      final craft = user.craftCategory!.trim();
+      if (!_craftCategories.contains(craft)) {
+        _craftCategories.add(craft);
+      }
+      _selectedCraftCategory = craft;
     }
-    if (user?.state != null && _malaysianStates.contains(user!.state)) {
-      _selectedState = user.state!;
+    if (user?.state != null && user!.state!.trim().isNotEmpty) {
+      final st = user.state!.trim();
+      if (!_malaysianStates.contains(st)) {
+        _malaysianStates.add(st);
+      }
+      _selectedState = st;
     }
   }
 
@@ -134,7 +136,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _usernameController.removeListener(_onUsernameChanged);
     _fullNameController.dispose();
     _usernameController.dispose();
-    _phoneController.dispose();
     _bioController.dispose();
     _studioNameController.dispose();
     super.dispose();
@@ -209,12 +210,30 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     final fullName = _fullNameController.text.trim();
     final username = _usernameController.text.trim().replaceAll('@', '');
-    final phone = _phoneController.text.trim();
     final bio = _bioController.text.trim();
     final studioName = _studioNameController.text.trim();
 
     final authVM = context.read<AuthViewModel>();
+
+    if (username.isNotEmpty && username.toLowerCase() != _initialUsername?.toLowerCase()) {
+      final isAvailable = await authVM.isUsernameAvailable(
+        username,
+        excludeEmail: authVM.currentUser?.email,
+      );
+      if (!isAvailable) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('@$username is already taken. Please choose another username handle.'),
+            backgroundColor: const Color(0xFFEF4444),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+    }
     final user = authVM.currentUser;
+    final phone = user?.phone;
     final isDualOrArtisan = user?.isDualRole == true || user?.isArtisan == true || (user?.role.toLowerCase().contains('artisan') ?? false);
 
     final finalStudioName = isDualOrArtisan
@@ -300,7 +319,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
 
     final initials = user.initials;
-    final isDual = user.isDualRole || user.role == 'Artisan';
+    final isDual = user.isDualRole || user.isArtisan || user.role == 'Artisan' || user.role.toLowerCase().contains('artisan');
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
@@ -379,14 +398,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       backgroundColor: isDark
                           ? const Color(0xFF1E3A34)
                           : const Color(0xFF004D40).withValues(alpha: 0.1),
-                      backgroundImage: user?.avatarImageProvider,
+                      backgroundImage: user.avatarImageProvider,
                       child: _isUploadingAvatar
                           ? CircularProgressIndicator(
                               valueColor: AlwaysStoppedAnimation<Color>(
                                 isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
                               ),
                             )
-                          : (user?.avatarImageProvider != null
+                          : (user.avatarImageProvider != null
                               ? null
                               : Text(
                                   initials,
@@ -504,25 +523,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
             ),
 
-            const SizedBox(height: 16),
 
-            // Phone Number Input Field
-            TextFormField(
-              controller: _phoneController,
-              keyboardType: TextInputType.phone,
-              autovalidateMode: AutovalidateMode.onUserInteraction,
-              validator: (v) => ProfileValidator.validatePhone(v, isRequired: false),
-              style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
-              decoration: InputDecoration(
-                labelText: 'Phone Number',
-                hintText: 'e.g. +60 12-345 6789',
-                prefixIcon: Icon(
-                  Icons.phone_outlined,
-                  color: isDark ? const Color(0xFFFFD54F) : null,
-                ),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-              ),
-            ),
 
             const SizedBox(height: 16),
 

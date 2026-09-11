@@ -90,7 +90,7 @@ class ActiveArtisanMaster {
                 : 'Verified Studio'));
     final String license = (ap?['ssm_number'] ?? map['ssm_number'] ?? map['ssmNumber'] ?? 'SSM Verified').toString();
     final String bio = (ap?['bio'] ?? map['bio'] ?? 'Master artisan dedicated to traditional Malaysian craft.').toString();
-    final String phone = (map['phone_number'] ?? map['phone'] ?? '+60 12-345 6789').toString();
+    final String phone = (map['phone_number'] ?? map['phone'] ?? '').toString();
     final String verifiedDate = (ap?['verified_at'] ?? map['created_at'] ?? '2026-01-01').toString().split('T').first;
     final String role = (map['role'] ?? '').toString();
     final String status = (map['status'] ?? '').toString().toUpperCase();
