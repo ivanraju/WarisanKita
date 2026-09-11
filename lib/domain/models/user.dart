@@ -36,6 +36,7 @@ class UserModel {
   final String? pendingRelocationReason;
   final String? pendingRelocationDate;
   final bool isLiveOpen;
+  final int? workshopCount;
 
   const UserModel({
     required this.id,
@@ -70,6 +71,7 @@ class UserModel {
     this.pendingRelocationReason,
     this.pendingRelocationDate,
     this.isLiveOpen = true,
+    this.workshopCount,
   });
 
   bool get hasPendingRelocation =>
@@ -216,6 +218,7 @@ class UserModel {
     String? pendingRelocationDate,
     bool clearPendingRelocation = false,
     bool? isLiveOpen,
+    int? workshopCount,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -250,6 +253,7 @@ class UserModel {
       pendingRelocationReason: clearPendingRelocation ? null : (pendingRelocationReason ?? this.pendingRelocationReason),
       pendingRelocationDate: clearPendingRelocation ? null : (pendingRelocationDate ?? this.pendingRelocationDate),
       isLiveOpen: isLiveOpen ?? this.isLiveOpen,
+      workshopCount: workshopCount ?? this.workshopCount,
     );
   }
 
@@ -291,6 +295,8 @@ class UserModel {
       'pending_relocation_date': pendingRelocationDate,
       'is_live_open': isLiveOpen,
       'isLiveOpen': isLiveOpen,
+      'workshop_count': workshopCount,
+      'workshopCount': workshopCount,
     };
   }
 
@@ -387,6 +393,15 @@ class UserModel {
                 ? '$artisanYears Years'
                 : null));
 
+    final rawWorkshops = map['workshop_count'] ??
+        map['workshops_hosted'] ??
+        map['workshopCount'] ??
+        artisanMap?['workshop_count'] ??
+        artisanMap?['workshops_hosted'];
+    final int? resolvedWorkshops = rawWorkshops is num
+        ? rawWorkshops.toInt()
+        : (rawWorkshops != null ? int.tryParse(rawWorkshops.toString()) : null);
+
     return UserModel(
       id: map['id'] ?? '',
       email: map['email'] ?? '',
@@ -424,6 +439,7 @@ class UserModel {
       pendingRelocationReason: map['pending_relocation_reason'] ?? map['pendingRelocationReason'] ?? artisanMap?['pending_relocation_reason'],
       pendingRelocationDate: map['pending_relocation_date'] ?? map['pendingRelocationDate'] ?? artisanMap?['pending_relocation_date'],
       isLiveOpen: map['is_live_open'] ?? map['isLiveOpen'] ?? artisanMap?['is_live_open'] ?? true,
+      workshopCount: resolvedWorkshops,
     );
   }
 }

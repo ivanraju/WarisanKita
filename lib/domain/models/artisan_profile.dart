@@ -96,7 +96,10 @@ class ArtisanModel {
       experience: (map['experience'] != null && map['experience'].toString().trim().isNotEmpty)
           ? map['experience'].toString().trim()
           : '${map['years_experience'] ?? 1} Years',
-      workshopCount: 0,
+      workshopCount: (map['workshop_count'] as num?)?.toInt() ??
+          (map['workshops_hosted'] as num?)?.toInt() ??
+          (map['workshopCount'] as num?)?.toInt() ??
+          0,
       tags: map['tags'] != null ? List<String>.from(map['tags']) : [map['craft_category'] ?? 'Heritage'],
       images: allImages,
       address: map['address'] as String?,

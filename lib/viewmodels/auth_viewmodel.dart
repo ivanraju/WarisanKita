@@ -194,6 +194,7 @@ class AuthViewModel extends ChangeNotifier {
     List<String>? toolsAndMaterials,
     String? avatarUrl,
     bool? isLiveOpen,
+    int? workshopCount,
   }) async {
     final email = _currentUser?.email ?? '';
     if (email.isEmpty) return;
@@ -227,6 +228,7 @@ class AuthViewModel extends ChangeNotifier {
         toolsAndMaterials: toolsAndMaterials,
         avatarUrl: newAvatarUrl,
         isLiveOpen: isLiveOpen,
+        workshopCount: workshopCount,
       );
       _currentUser = updated;
     } catch (e) {
@@ -245,6 +247,7 @@ class AuthViewModel extends ChangeNotifier {
           craftCategory: craftCategory ?? _currentUser!.craftCategory,
           avatarUrl: newAvatarUrl,
           isLiveOpen: isLiveOpen ?? _currentUser!.isLiveOpen,
+          workshopCount: workshopCount ?? _currentUser!.workshopCount,
         );
       }
     } finally {

@@ -1303,6 +1303,7 @@ class SupabaseService {
     List<String>? toolsAndMaterials,
     String? avatarUrl,
     bool? isLiveOpen,
+    int? workshopCount,
   }) async {
     final cleanEmail = email.trim().toLowerCase();
     await Future.delayed(const Duration(milliseconds: 300));
@@ -1414,11 +1415,32 @@ class SupabaseService {
       }
     }
 
+    if (workshopCount != null) {
+      userRecord['workshop_count'] = workshopCount;
+      userRecord['workshopCount'] = workshopCount;
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final artisanId = userRecord['id']?.toString() ?? userRecord['user_id']?.toString();
+        if (artisanId != null && artisanId.isNotEmpty) {
+          await prefs.setInt('artisan_workshop_count_$artisanId', workshopCount);
+        }
+        final uid = userRecord['id']?.toString() ?? userRecord['user_id']?.toString();
+        if (uid != null && uid.isNotEmpty) {
+          await prefs.setInt('artisan_workshop_count_$uid', workshopCount);
+        }
+      } catch (e) {
+        debugPrint('Note saving artisan_workshop_count to SharedPreferences: $e');
+      }
+    }
+
     Map<String, dynamic> apMap;
     if (userRecord['artisan_profiles'] is Map) {
       apMap = Map<String, dynamic>.from(userRecord['artisan_profiles'] as Map);
     } else {
       apMap = <String, dynamic>{};
+    }
+    if (workshopCount != null) {
+      apMap['workshop_count'] = workshopCount;
     }
     if (studioName != null && studioName.trim().isNotEmpty) {
       apMap['studio_name'] = studioName.trim();
@@ -1529,6 +1551,7 @@ class SupabaseService {
                   if (longitude != null) 'longitude': longitude,
                   if (craftCategory != null) 'craft_category': craftCategory,
                   if (toolsAndMaterials != null) 'tags': toolsAndMaterials,
+                  if (workshopCount != null) 'workshop_count': workshopCount,
                   'updated_at': DateTime.now().toIso8601String(),
                 };
                 if (artisanUpdates.isNotEmpty) {
@@ -1546,10 +1569,11 @@ class SupabaseService {
                           .eq('user_id', effectiveUid);
                     } catch (artisanErr) {
                       debugPrint('Direct artisan_profiles update note: $artisanErr');
-                      if (artisanUpdates.containsKey('experience')) {
+                      if (artisanUpdates.containsKey('experience') || artisanUpdates.containsKey('workshop_count')) {
                         try {
                           final fallbackUpdates = Map<String, dynamic>.from(artisanUpdates)
-                            ..remove('experience');
+                            ..remove('experience')
+                            ..remove('workshop_count');
                           await client
                               .from('artisan_profiles')
                               .update(fallbackUpdates)
@@ -1575,15 +1599,17 @@ class SupabaseService {
                     if (latitude != null) newProfile['latitude'] = latitude;
                     if (longitude != null) newProfile['longitude'] = longitude;
                     if (toolsAndMaterials != null) newProfile['tags'] = toolsAndMaterials;
+                    if (workshopCount != null) newProfile['workshop_count'] = workshopCount;
 
                     try {
                       await client.from('artisan_profiles').insert(newProfile);
                     } catch (insertErr) {
                       debugPrint('Direct artisan_profiles insert note: $insertErr');
-                      if (newProfile.containsKey('experience')) {
+                      if (newProfile.containsKey('experience') || newProfile.containsKey('workshop_count')) {
                         try {
                           final fallbackProfile = Map<String, dynamic>.from(newProfile)
-                            ..remove('experience');
+                            ..remove('experience')
+                            ..remove('workshop_count');
                           await client.from('artisan_profiles').insert(fallbackProfile);
                         } catch (fallbackInsertErr) {
                           debugPrint('Fallback artisan_profiles insert note: $fallbackInsertErr');
@@ -2885,6 +2911,11 @@ class SupabaseService {
             prefs.getBool('artisan_live_open_$userId');
         if (savedLive != null) {
           map['is_live_open'] = savedLive;
+        }
+        final savedWorkshops = prefs.getInt('artisan_workshop_count_$profileId') ??
+            prefs.getInt('artisan_workshop_count_$userId');
+        if (savedWorkshops != null) {
+          map['workshop_count'] = savedWorkshops;
         }
         return ArtisanModel.fromMap(map);
       }).toList();

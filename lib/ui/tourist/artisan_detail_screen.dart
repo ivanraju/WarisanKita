@@ -20,6 +20,7 @@ class ArtisanDetailScreen extends StatefulWidget {
   final double? longitude;
   final VoidCallback? onViewQuest;
   final bool isLiveOpen;
+  final int? workshopsHosted;
 
   const ArtisanDetailScreen({
     super.key,
@@ -38,6 +39,7 @@ class ArtisanDetailScreen extends StatefulWidget {
     this.longitude,
     this.onViewQuest,
     this.isLiveOpen = true,
+    this.workshopsHosted,
   });
 
   @override
@@ -582,27 +584,14 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                   ],
                   const SizedBox(height: 28),
 
-                  // Experience & Studio Highlights Chips
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildHighlightChip(
-                          icon: Icons.workspace_premium_rounded,
-                          title: 'Craft Experience',
-                          value: widget.experience,
-                          isDark: isDark,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildHighlightChip(
-                          icon: Icons.storefront_rounded,
-                          title: 'Workshops Hosted',
-                          value: '14 Completed',
-                          isDark: isDark,
-                        ),
-                      ),
-                    ],
+                  // Craft Experience Highlight Chip
+                  _buildHighlightChip(
+                    icon: Icons.workspace_premium_rounded,
+                    title: 'Craft Experience',
+                    value: widget.experience.trim().isNotEmpty
+                        ? widget.experience.trim()
+                        : '10+ Years',
+                    isDark: isDark,
                   ),
 
                   const SizedBox(height: 28),
@@ -923,39 +912,55 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
     required bool isDark,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF0D2825) : Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isDark
               ? const Color(0xFF1E3A34)
               : Colors.black.withValues(alpha: 0.06),
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Icon(
-            icon,
-            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
-            size: 22,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 11,
-              color: isDark ? Colors.white60 : Colors.grey[600],
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? const Color(0xFFFFD54F).withValues(alpha: 0.15)
+                  : const Color(0xFF004D40).withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              icon,
+              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+              size: 22,
             ),
           ),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : Colors.black,
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11,
+                    color: isDark ? Colors.white60 : Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
+                ),
+              ],
             ),
           ),
         ],

@@ -154,6 +154,7 @@ class UserRepository {
     List<String>? toolsAndMaterials,
     String? avatarUrl,
     bool? isLiveOpen,
+    int? workshopCount,
   }) {
     return _service.updateUserProfile(
       email: email,
@@ -171,6 +172,7 @@ class UserRepository {
       toolsAndMaterials: toolsAndMaterials,
       avatarUrl: avatarUrl,
       isLiveOpen: isLiveOpen,
+      workshopCount: workshopCount,
     );
   }
 
