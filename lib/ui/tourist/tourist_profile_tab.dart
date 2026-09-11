@@ -890,23 +890,35 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                           return Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: isAppRejected ? const Color(0xFFFEF2F2) : const Color(0xFFFFFBEB),
+                              color: isDark
+                                  ? (isAppRejected ? const Color(0xFF2A1215) : const Color(0xFF231F10))
+                                  : (isAppRejected ? const Color(0xFFFEF2F2) : const Color(0xFFFFFBEB)),
                               borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: isAppRejected ? const Color(0xFFFCA5A5) : const Color(0xFFFCD34D)),
+                              border: Border.all(
+                                color: isDark
+                                    ? (isAppRejected ? const Color(0xFF7F1D1D) : const Color(0xFF78350F))
+                                    : (isAppRejected ? const Color(0xFFFCA5A5) : const Color(0xFFFCD34D)),
+                              ),
                             ),
                             child: Row(
                               children: [
                                 Container(
                                   padding: const EdgeInsets.all(10),
                                   decoration: BoxDecoration(
-                                    color: isAppRejected
-                                        ? const Color(0xFFEF4444).withValues(alpha: 0.12)
-                                        : const Color(0xFFD97706).withValues(alpha: 0.15),
+                                    color: isDark
+                                        ? (isAppRejected
+                                            ? const Color(0xFFEF4444).withValues(alpha: 0.2)
+                                            : const Color(0xFFD97706).withValues(alpha: 0.25))
+                                        : (isAppRejected
+                                            ? const Color(0xFFEF4444).withValues(alpha: 0.12)
+                                            : const Color(0xFFD97706).withValues(alpha: 0.15)),
                                     shape: BoxShape.circle,
                                   ),
                                   child: Icon(
                                     isAppRejected ? Icons.cancel_outlined : Icons.hourglass_top_rounded,
-                                    color: isAppRejected ? const Color(0xFFDC2626) : const Color(0xFFB45309),
+                                    color: isDark
+                                        ? (isAppRejected ? const Color(0xFFFCA5A5) : const Color(0xFFFFD54F))
+                                        : (isAppRejected ? const Color(0xFFDC2626) : const Color(0xFFB45309)),
                                     size: 24,
                                   ),
                                 ),
@@ -924,7 +936,9 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                               style: GoogleFonts.plusJakartaSans(
                                                 fontWeight: FontWeight.bold,
                                                 fontSize: 13,
-                                                color: isAppRejected ? const Color(0xFF991B1B) : const Color(0xFF92400E),
+                                                color: isDark
+                                                    ? (isAppRejected ? const Color(0xFFFCA5A5) : const Color(0xFFFFD54F))
+                                                    : (isAppRejected ? const Color(0xFF991B1B) : const Color(0xFF92400E)),
                                               ),
                                             ),
                                           ),
@@ -935,10 +949,14 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                               vertical: 2,
                                             ),
                                             decoration: BoxDecoration(
-                                              color: isAppRejected ? const Color(0xFFFEE2E2) : const Color(0xFFFEF3C7),
+                                              color: isDark
+                                                  ? (isAppRejected ? const Color(0xFF451A1A) : const Color(0xFF3B2D10))
+                                                  : (isAppRejected ? const Color(0xFFFEE2E2) : const Color(0xFFFEF3C7)),
                                               borderRadius: BorderRadius.circular(6),
                                               border: Border.all(
-                                                color: isAppRejected ? const Color(0xFFF87171) : const Color(0xFFF59E0B),
+                                                color: isDark
+                                                    ? (isAppRejected ? const Color(0xFF991B1B) : const Color(0xFFB45309))
+                                                    : (isAppRejected ? const Color(0xFFF87171) : const Color(0xFFF59E0B)),
                                               ),
                                             ),
                                             child: Text(
@@ -946,7 +964,9 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                               style: GoogleFonts.plusJakartaSans(
                                                 fontSize: 8,
                                                 fontWeight: FontWeight.w900,
-                                                color: isAppRejected ? const Color(0xFFDC2626) : const Color(0xFF92400E),
+                                                color: isDark
+                                                    ? (isAppRejected ? const Color(0xFFFCA5A5) : const Color(0xFFFFE082))
+                                                    : (isAppRejected ? const Color(0xFFDC2626) : const Color(0xFF92400E)),
                                               ),
                                             ),
                                           ),
@@ -959,7 +979,9 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                             : langVM.translate('Your Master Artisan registration is undergoing Kraftangan Malaysia verification. Studio access unlocks upon approval.'),
                                         style: GoogleFonts.plusJakartaSans(
                                           fontSize: 11,
-                                          color: isAppRejected ? const Color(0xFF7F1D1D) : const Color(0xFF78350F),
+                                          color: isDark
+                                              ? Colors.white70
+                                              : (isAppRejected ? const Color(0xFF7F1D1D) : const Color(0xFF78350F)),
                                           height: 1.3,
                                         ),
                                       ),
@@ -990,6 +1012,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                   },
                                   style: FilledButton.styleFrom(
                                     backgroundColor: isAppRejected ? const Color(0xFFDC2626) : const Color(0xFFD97706),
+                                    foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 12,
                                       vertical: 8,
@@ -1003,6 +1026,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 11,
+                                      color: Colors.white,
                                     ),
                                   ),
                                 ),
@@ -1016,12 +1040,12 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: isDark ? const Color(0xFF0D2825) : Colors.white,
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: const Color(
-                              0xFF004D40,
-                            ).withValues(alpha: 0.15),
+                            color: isDark
+                                ? const Color(0xFF1E3A34)
+                                : const Color(0xFF004D40).withValues(alpha: 0.15),
                           ),
                         ),
                         child: Row(
@@ -1029,14 +1053,14 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                             Container(
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
-                                color: const Color(
-                                  0xFF004D40,
-                                ).withValues(alpha: 0.08),
+                                color: isDark
+                                    ? const Color(0xFF1E3A34)
+                                    : const Color(0xFF004D40).withValues(alpha: 0.08),
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.palette_outlined,
-                                color: Color(0xFF004D40),
+                                color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
                                 size: 22,
                               ),
                             ),
@@ -1050,14 +1074,14 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                     style: GoogleFonts.plusJakartaSans(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 13,
-                                      color: const Color(0xFF004D40),
+                                      color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
                                     ),
                                   ),
                                   Text(
                                     langVM.translate('Register your traditional studio to host quests and earn Kraftangan recognition.'),
                                     style: GoogleFonts.plusJakartaSans(
                                       fontSize: 11,
-                                      color: Colors.grey[600],
+                                      color: isDark ? Colors.white70 : Colors.grey[600],
                                     ),
                                   ),
                                 ],
@@ -1073,9 +1097,10 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                 );
                               },
                               style: OutlinedButton.styleFrom(
-                                side: const BorderSide(
-                                  color: Color(0xFF004D40),
+                                side: BorderSide(
+                                  color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
                                 ),
+                                foregroundColor: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 14,
                                   vertical: 8,
@@ -1089,7 +1114,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 11,
-                                  color: Color(0xFF004D40),
+                                  color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
                                 ),
                               ),
                             ),

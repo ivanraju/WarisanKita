@@ -266,14 +266,19 @@ class _ArtisanDirectChatScreenState extends State<ArtisanDirectChatScreen> {
   }
 
   Widget _buildQuickChip(String label, LanguageViewModel langVM) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return ActionChip(
       onPressed: () => _sendMessage(label),
-      backgroundColor: const Color(0xFFF1F5F9),
+      backgroundColor: isDark ? const Color(0xFF1E3A34) : const Color(0xFFF1F5F9),
       side: BorderSide.none,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       label: Text(
         label,
-        style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A)),
+        style: GoogleFonts.plusJakartaSans(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF0F172A),
+        ),
       ),
     );
   }
