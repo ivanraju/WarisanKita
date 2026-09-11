@@ -255,6 +255,34 @@ void main() {
       expect(cleared.pendingRelocationAddress, isNull);
     });
 
+    test('UserModel serialization preserves artisanProfileId across toMap and fromMap', () {
+      const user = UserModel(
+        id: 'u_artisan_400',
+        email: 'artisan400@warisankita.my',
+        displayName: 'Pak Mat',
+        role: 'Artisan',
+        artisanProfileId: 'ap_profile_999',
+      );
+
+      final map = user.toMap();
+      expect(map['artisanProfileId'], 'ap_profile_999');
+      expect(map['artisan_profile_id'], 'ap_profile_999');
+
+      final restored = UserModel.fromMap(map);
+      expect(restored.artisanProfileId, 'ap_profile_999');
+    });
+
+    test('SupabaseService.ensureArtisanProfileId initializes and returns valid artisan ID when null', () async {
+      final service = SupabaseService();
+      final resolvedId = await service.ensureArtisanProfileId('user_no_profile_id', email: 'no_id@warisankita.my');
+      expect(resolvedId, isNotNull);
+      expect(resolvedId!.isNotEmpty, isTrue);
+
+      // Subsequent calls return the same cached/persisted ID
+      final secondCall = await service.ensureArtisanProfileId('user_no_profile_id', email: 'no_id@warisankita.my');
+      expect(secondCall, resolvedId);
+    });
+
     test('UserModel dynamically resolves joinedDate from created_at and formats to Mmm yyyy', () {
       final userWithTimestamp = UserModel.fromMap({
         'id': 'u456',
@@ -636,7 +664,7 @@ void main() {
             body: ArtisanReviewDialog(
               artisan: relocationProfile,
               onApprove: () => approved = true,
-              onReject: () => rejected = true,
+              onReject: (_) => rejected = true,
             ),
           ),
         ),
@@ -916,18 +944,19 @@ void main() {
       expect(modVM.filteredArtisans.any((p) => p.email == applicantEmail), isTrue);
       expect(modVM.totalPendingCount, greaterThanOrEqualTo(1));
 
-      // 2. Admin rejects the artisan application
-      await modVM.rejectArtisan(applicantId);
+      // 2. Admin rejects the artisan application with custom reason
+      await modVM.rejectArtisan(applicantId, reason: 'Invalid Kraftangan certificate');
 
       // Immediately removed from in-memory lists
       expect(modVM.filteredArtisans.any((p) => p.email == applicantEmail), isFalse);
       expect(modVM.pendingArtisans.any((p) => p.email == applicantEmail), isFalse);
 
-      // Registered user state preserved as active Tourist with artisanStatus REJECTED
+      // Registered user state preserved as active Tourist with artisanStatus REJECTED and rejectionReason saved
       final userAfterReject = modVM.registeredUsers.firstWhere((u) => u.email == applicantEmail);
       expect(userAfterReject.status, 'ACTIVE');
       expect(userAfterReject.role, 'Tourist');
       expect(userAfterReject.artisanStatus, 'REJECTED');
+      expect(userAfterReject.rejectionReason, 'Invalid Kraftangan certificate');
 
       // 3. Admin refreshes or fetches data again
       await modVM.refreshAllData();
@@ -1717,5 +1746,119 @@ void main() {
         expect(find.text('aiman_haziq'), findsNothing);
         expect(find.text('+60 12-345 6789'), findsNothing);
       });
+
+      test('Reapplication transitions user from rejected to pending approval and clears rejection reason', () {
+        final rejectedUser = UserModel(
+          id: 'user-reapply-test',
+          email: 'artisan.reapply@warisankita.my',
+          username: 'artisan_reapply',
+          role: 'Tourist',
+          status: 'ACTIVE',
+          artisanStatus: 'REJECTED',
+          rejectionReason: 'Kraftangan certificate was unreadable.',
+          studioName: 'Reapply Studio',
+          craftCategory: 'Batik',
+        );
+
+        expect(rejectedUser.isRejectedArtisan, isTrue);
+        expect(rejectedUser.isPendingArtisan, isFalse);
+
+        // Reapplying creates pending state and clears rejectionReason
+        final reappliedUser = rejectedUser.copyWith(
+          artisanStatus: 'PENDING_APPROVAL',
+          clearRejectionReason: true,
+        );
+
+        expect(reappliedUser.isRejectedArtisan, isFalse);
+        expect(reappliedUser.isPendingArtisan, isTrue);
+        expect(reappliedUser.rejectionReason, isNull);
+
+        // Even if status is PENDING_APPROVAL with residual rejectionReason, isRejectedArtisan must be false
+        final pendingUserWithResidualReason = UserModel(
+          id: 'user-residual-test',
+          email: 'artisan.residual@warisankita.my',
+          username: 'artisan_residual',
+          role: 'Tourist',
+          status: 'PENDING_APPROVAL',
+          artisanStatus: 'PENDING_APPROVAL',
+          rejectionReason: 'Previous rejection reason',
+        );
+
+        expect(pendingUserWithResidualReason.isRejectedArtisan, isFalse);
+        expect(pendingUserWithResidualReason.isPendingArtisan, isTrue);
+      });
+
+      test('UserModel extracts ssm and cert document URLs and filenames from artisanDocuments', () {
+        const user = UserModel(
+          id: 'user-doc-test',
+          email: 'doc.test@warisankita.my',
+          role: 'Tourist',
+          artisanDocuments: [
+            {
+              'doc_type': 'SSM_BUSINESS_CERT',
+              'file_url': 'https://supabase.co/storage/v1/object/public/artisan_private_docs/ssm/my_ssm.pdf',
+              'file_name': 'my_ssm.pdf',
+            },
+            {
+              'doc_type': 'KRAFTANGAN_MASTER_CERT',
+              'file_url': 'https://supabase.co/storage/v1/object/public/artisan_private_docs/cert/kraftangan.png',
+              'file_name': 'kraftangan.png',
+            },
+            {
+              'doc_type': 'STUDIO_PHOTO',
+              'file_url': 'https://images.unsplash.com/studio.jpg',
+              'file_name': 'studio.jpg',
+            },
+          ],
+        );
+
+        expect(user.ssmFileUrl, contains('my_ssm.pdf'));
+        expect(user.ssmFileName, 'my_ssm.pdf');
+        expect(user.certFileUrl, contains('kraftangan.png'));
+        expect(user.certFileName, 'kraftangan.png');
+      });
+
+      test('UserModel with CLOSED status cleanly resolves to Tourist and not approved artisan', () {
+        final closedUser = UserModel.fromMap({
+          'id': 'closed-user-1',
+          'email': 'closed@warisankita.my',
+          'role': 'Tourist',
+          'artisan_status': 'CLOSED',
+          'status': 'ACTIVE',
+        });
+
+        expect(closedUser.role, 'Tourist');
+        expect(closedUser.artisanStatus, 'CLOSED');
+        expect(closedUser.isApprovedArtisan, isFalse);
+        expect(closedUser.isPendingArtisan, isFalse);
+        expect(closedUser.isRejectedArtisan, isFalse);
+        expect(closedUser.isDualRole, isFalse);
+      });
+
+      test('UserModel re-application after CLOSED correctly resolves to Tourist role and PENDING_APPROVAL', () {
+        // Simulates user re-applying: users table has artisan_status PENDING_APPROVAL, even if stale artisan_profiles join had APPROVED
+        final reappliedUser = UserModel.fromMap({
+          'id': 'reapplied-user-1',
+          'email': 'reapplied@warisankita.my',
+          'role': 'Tourist',
+          'artisan_status': 'PENDING_APPROVAL',
+          'status': 'ACTIVE',
+          'studio_name': 'My New Studio',
+          'craft_category': 'Woodwork',
+          'artisan_profiles': {
+            'id': 'stale-profile-id',
+            'status': 'APPROVED', // stale join from previous artisan lifetime
+            'studio_name': 'Old Studio',
+          },
+        });
+
+        expect(reappliedUser.role, 'Tourist');
+        expect(reappliedUser.roles, ['Tourist']);
+        expect(reappliedUser.artisanStatus, 'PENDING_APPROVAL');
+        expect(reappliedUser.isApprovedArtisan, isFalse);
+        expect(reappliedUser.isPendingArtisan, isTrue);
+        expect(reappliedUser.isRejectedArtisan, isFalse);
+      });
     });
 }
+

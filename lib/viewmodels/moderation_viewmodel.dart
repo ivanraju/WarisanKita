@@ -459,23 +459,42 @@ class ModerationViewModel extends ChangeNotifier {
             .toString()
             .toUpperCase();
         const terminalStatuses = {'REJECTED', 'APPROVED', 'CLOSED'};
-        if (rawStatus == 'REJECTED' ||
-            terminalStatuses.contains(rawArtisanStatus) ||
-            terminalStatuses.contains(profileStatus)) {
-          continue;
-        }
+        final bool isExplicitlyPending = rawArtisanStatus == 'PENDING_APPROVAL' ||
+            rawArtisanStatus == 'PENDING' ||
+            rawStatus == 'PENDING_APPROVAL' ||
+            rawStatus == 'PENDING';
 
-        final matchingRegistered = _registeredUsers.where(
-          (u) => u.email.toLowerCase() == email.toLowerCase(),
-        );
-        if (matchingRegistered.isNotEmpty) {
-          final existingUser = matchingRegistered.first;
-          final existingArtisanStatus = existingUser.artisanStatus
-              ?.toUpperCase();
-          if (existingUser.status.toUpperCase() == 'REJECTED' ||
-              existingArtisanStatus == 'REJECTED' ||
-              existingArtisanStatus == 'APPROVED') {
+        if (!isExplicitlyPending) {
+          if (rawStatus == 'REJECTED' ||
+              terminalStatuses.contains(rawArtisanStatus) ||
+              terminalStatuses.contains(profileStatus)) {
             continue;
+          }
+
+          final matchingRegistered = _registeredUsers.where(
+            (u) => u.email.toLowerCase() == email.toLowerCase(),
+          );
+          if (matchingRegistered.isNotEmpty) {
+            final existingUser = matchingRegistered.first;
+            final existingArtisanStatus = existingUser.artisanStatus
+                ?.toUpperCase();
+            if (existingUser.status.toUpperCase() == 'REJECTED' ||
+                existingArtisanStatus == 'REJECTED' ||
+                existingArtisanStatus == 'APPROVED') {
+              continue;
+            }
+          }
+        } else {
+          final regIdx = _registeredUsers.indexWhere(
+            (u) => u.email.toLowerCase() == email.toLowerCase(),
+          );
+          if (regIdx != -1) {
+            _registeredUsers[regIdx] = _registeredUsers[regIdx].copyWith(
+              status: 'PENDING_APPROVAL',
+              artisanStatus: 'PENDING_APPROVAL',
+              role: 'Tourist',
+              roles: const ['Tourist'],
+            );
           }
         }
 
@@ -505,12 +524,51 @@ class ModerationViewModel extends ChangeNotifier {
                 .toString();
 
         // Resolve photos - must be actual URLs, not filenames
-        List<String> resolvedPhotos;
+        final List<String> resolvedPhotos = [];
         if (raw['photos'] is List && (raw['photos'] as List).isNotEmpty) {
-          resolvedPhotos = List<String>.from(raw['photos']);
-        } else {
-          // Fallback: use the user's avatar as a portfolio image if available
-          resolvedPhotos = [resolvedImageUrl];
+          for (final p in (raw['photos'] as List)) {
+            final str = p?.toString();
+            if (str != null && str.isNotEmpty && !resolvedPhotos.contains(str)) {
+              resolvedPhotos.add(str);
+            }
+          }
+        }
+
+        String? resolvedSsmUrl = raw['ssm_file_url']?.toString();
+        String? resolvedSsmName =
+            (raw['ssm_file'] ?? raw['ssm_file_name'] ?? raw['ssmFileName'])
+                ?.toString();
+        String? resolvedCertUrl = raw['cert_file_url']?.toString();
+        String? resolvedCertName =
+            (raw['cert_file'] ?? raw['cert_file_name'] ?? raw['certFileName'])
+                ?.toString();
+
+        final rawDocs = (artisanProfile?['artisan_documents'] is List)
+            ? artisanProfile!['artisan_documents'] as List
+            : (raw['artisan_documents'] is List
+                ? raw['artisan_documents'] as List
+                : const []);
+        for (final d in rawDocs) {
+          if (d is Map) {
+            final type = d['doc_type']?.toString();
+            final url = d['file_url']?.toString();
+            final name = d['file_name']?.toString();
+            if (type == 'SSM_BUSINESS_CERT' ||
+                type == 'SSM_CERT' ||
+                type == 'SSM') {
+              resolvedSsmUrl ??= url;
+              resolvedSsmName ??= name ?? url?.split('/').last;
+            } else if (type == 'KRAFTANGAN_MASTER_CERT' ||
+                type == 'KRAFTANGAN_CERT' ||
+                type == 'CERT') {
+              resolvedCertUrl ??= url;
+              resolvedCertName ??= name ?? url?.split('/').last;
+            } else if (type == 'STUDIO_PHOTO' || type == 'PORTFOLIO_IMAGE') {
+              if (url != null && url.isNotEmpty && !resolvedPhotos.contains(url)) {
+                resolvedPhotos.add(url);
+              }
+            }
+          }
         }
 
         final newProfile = PendingArtisanProfile(
@@ -532,14 +590,10 @@ class ModerationViewModel extends ChangeNotifier {
                       raw['ssmNumber'] ??
                       '202601004821 (SSM Verified)')
                   .toString(),
-          ssmFileName:
-              (raw['ssm_file'] ?? raw['ssm_file_name'] ?? raw['ssmFileName'])
-                  ?.toString(),
-          ssmFileUrl: raw['ssm_file_url']?.toString(),
-          certFileName:
-              (raw['cert_file'] ?? raw['cert_file_name'] ?? raw['certFileName'])
-                  ?.toString(),
-          certFileUrl: raw['cert_file_url']?.toString(),
+          ssmFileName: resolvedSsmName,
+          ssmFileUrl: resolvedSsmUrl,
+          certFileName: resolvedCertName,
+          certFileUrl: resolvedCertUrl,
           photos: resolvedPhotos,
           bio: raw['bio']?.toString(),
           isUpgradeFromTourist: isUpgrade,
@@ -584,14 +638,13 @@ class ModerationViewModel extends ChangeNotifier {
                       : 'Verified Studio',
                   phone: u.phone ?? '+60 12-345 6789',
                   ssmNumber: u.ssmNumber ?? 'Pending Document Verification',
+                  ssmFileName: u.ssmFileName,
+                  ssmFileUrl: u.ssmFileUrl,
+                  certFileName: u.certFileName,
+                  certFileUrl: u.certFileUrl,
                   bio: u.bio,
                   isUpgradeFromTourist: u.role == 'Tourist',
-                  photos: photos.isNotEmpty
-                      ? photos
-                      : [
-                          u.avatarUrl ??
-                              'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600',
-                        ],
+                  photos: photos,
                 ),
               );
             }
@@ -1035,6 +1088,7 @@ class ModerationViewModel extends ChangeNotifier {
             roles: const ['Tourist'],
             status: 'ACTIVE',
             artisanStatus: 'REJECTED',
+            rejectionReason: reason,
             studioName: artisan.name.isNotEmpty
                 ? artisan.name
                 : existingUser.studioName,
@@ -1050,6 +1104,7 @@ class ModerationViewModel extends ChangeNotifier {
           _registeredUsers[userIdx] = existingUser.copyWith(
             status: 'REJECTED',
             artisanStatus: 'REJECTED',
+            rejectionReason: reason,
             studioName: artisan.name.isNotEmpty
                 ? artisan.name
                 : existingUser.studioName,
@@ -1069,6 +1124,7 @@ class ModerationViewModel extends ChangeNotifier {
         newStatus: 'REJECTED',
         newRole: isExistingTourist ? 'Tourist' : 'Artisan',
         updateArtisanProfileOnly: isExistingTourist,
+        rejectionReason: reason,
       );
 
       _pendingArtisans.removeWhere(
@@ -1089,12 +1145,14 @@ class ModerationViewModel extends ChangeNotifier {
           roles: isTourist ? const ['Tourist'] : existingUser.roles,
           status: isTourist ? 'ACTIVE' : 'REJECTED',
           artisanStatus: 'REJECTED',
+          rejectionReason: reason,
         );
         await _repository.updateArtisanStatus(
           email: existingUser.email,
           newStatus: 'REJECTED',
           newRole: isTourist ? 'Tourist' : 'Artisan',
           updateArtisanProfileOnly: isTourist,
+          rejectionReason: reason,
         );
         _pendingArtisans.removeWhere(
           (p) =>

@@ -1169,12 +1169,13 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
         (highest, task) =>
             (task.sortOrder ?? 0) > highest ? task.sortOrder! : highest,
       );
+      final newSortOrder = highestSortOrder < 2 ? 3 : highestSortOrder + 1;
       await _repository.addHeritageTask(
         questId: quest.id,
         title: cleanTitle,
         isRequired: isRequired,
         xpReward: xpReward,
-        sortOrder: highestSortOrder + 1,
+        sortOrder: newSortOrder,
       );
       _artisanTasks = await _repository.getArtisanHeritageTasks(quest.id);
       await _loadArtisanTaskChangeRequests();

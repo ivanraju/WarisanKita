@@ -11,6 +11,7 @@ import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/directory_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/gamification_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/matchmaker_viewmodel.dart';
+import 'package:warisan_kita/ui/matchmaker/craft_matchmaker_quiz_wizard.dart';
 
 class CraftCategoryFilterItem {
   final String key;
@@ -57,7 +58,14 @@ class TouristDirectoryTab extends StatefulWidget {
       key: 'POTTERY',
       englishName: 'Clay Pottery & Ceramics',
       icon: Icons.water_drop_rounded,
-      matchKeywords: ['potter', 'ceramic', 'clay', 'tembikar', 'seramik', 'labu'],
+      matchKeywords: [
+        'potter',
+        'ceramic',
+        'clay',
+        'tembikar',
+        'seramik',
+        'labu',
+      ],
     ),
     CraftCategoryFilterItem(
       key: 'BATIK',
@@ -81,13 +89,28 @@ class TouristDirectoryTab extends StatefulWidget {
       key: 'METALWORK',
       englishName: 'Metalwork & Pewter',
       icon: Icons.hardware_rounded,
-      matchKeywords: ['metal', 'pewter', 'keris', 'besi', 'tembaga', 'silver', 'perak'],
+      matchKeywords: [
+        'metal',
+        'pewter',
+        'keris',
+        'besi',
+        'tembaga',
+        'silver',
+        'perak',
+      ],
     ),
     CraftCategoryFilterItem(
       key: 'RATTAN',
       englishName: 'Rattan & Bamboo Craft',
       icon: Icons.grass_rounded,
-      matchKeywords: ['rattan', 'bamboo', 'rotan', 'buluh', 'anyaman', 'mengkuang'],
+      matchKeywords: [
+        'rattan',
+        'bamboo',
+        'rotan',
+        'buluh',
+        'anyaman',
+        'mengkuang',
+      ],
     ),
   ];
 
@@ -113,7 +136,8 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
     });
   }
 
-  static List<CraftCategoryFilterItem> get craftFilters => TouristDirectoryTab.craftFilters;
+  static List<CraftCategoryFilterItem> get craftFilters =>
+      TouristDirectoryTab.craftFilters;
 
   bool get _isFilterActive =>
       _searchController.text.trim().isNotEmpty ||
@@ -229,209 +253,290 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          langVM.translate('Filter Heritage Directory'),
-                          softWrap: true,
-                          style: GoogleFonts.dmSerifDisplay(fontSize: 22, color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40)),
-                        ),
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.close, color: isDark ? Colors.white70 : Colors.black87),
-                        onPressed: () => Navigator.of(context).pop(),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-
-                  Row(
-                    children: [
-                      Icon(Icons.map_rounded, color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFD97706), size: 18),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Select Region / State:',
-                        style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 13, color: isDark ? Colors.white : Colors.black87),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: _malaysianStates.map((st) {
-                      final isSelected = _selectedState == st;
-                      return ChoiceChip(
-                        label: Text(st == 'All States' ? langVM.translate('All States') : st),
-                        selected: isSelected,
-                        onSelected: (selected) {
-                          if (selected) {
-                            setState(() => _selectedState = st);
-                            setBottomSheetState(() {});
-                          }
-                        },
-                        selectedColor: const Color(0xFF004D40),
-                        backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF1F5F9),
-                        side: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : null,
-                        labelStyle: TextStyle(
-                          color: isSelected ? Colors.white : (isDark ? Colors.white70 : const Color(0xFF334155)),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 11,
-                        ),
-                      );
-                    }).toList(),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  Row(
-                    children: [
-                      Icon(Icons.category_rounded, color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40), size: 18),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Select Craft Specialization:',
-                        style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 13, color: isDark ? Colors.white : Colors.black87),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: craftFilters.map((catItem) {
-                      final isSelected = _selectedCategoryKey == catItem.key;
-                      return ChoiceChip(
-                        label: Text(langVM.translate(catItem.englishName)),
-                        selected: isSelected,
-                        onSelected: (selected) {
-                          if (selected) {
-                            setState(() => _selectedCategoryKey = catItem.key);
-                            setBottomSheetState(() {});
-                          }
-                        },
-                        selectedColor: const Color(0xFFD97706),
-                        backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF1F5F9),
-                        side: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : null,
-                        labelStyle: TextStyle(
-                          color: isSelected ? Colors.white : (isDark ? Colors.white70 : const Color(0xFF334155)),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 11,
-                        ),
-                      );
-                    }).toList(),
-                  ),
-
-                  const SizedBox(height: 28),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () {
-                            _clearFilters();
-                            setBottomSheetState(() {});
-                            Navigator.of(context).pop();
-                          },
-                          icon: const Icon(Icons.refresh_rounded, size: 16, color: Color(0xFF004D40)),
-                          label: Text(
-                            langVM.translate('Clear Filters'),
-                            style: GoogleFonts.plusJakartaSans(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                              color: const Color(0xFF004D40),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              langVM.translate('Filter Heritage Directory'),
+                              softWrap: true,
+                              style: GoogleFonts.dmSerifDisplay(
+                                fontSize: 22,
+                                color: isDark
+                                    ? const Color(0xFFFFD54F)
+                                    : const Color(0xFF004D40),
+                              ),
                             ),
                           ),
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: Color(0xFF004D40), width: 1.5),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          IconButton(
+                            icon: Icon(
+                              Icons.close,
+                              color: isDark ? Colors.white70 : Colors.black87,
+                            ),
+                            onPressed: () => Navigator.of(context).pop(),
                           ),
-                        ),
+                        ],
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: FilledButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFF004D40),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
+                      const SizedBox(height: 20),
+
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.map_rounded,
+                            color: isDark
+                                ? const Color(0xFFFFD54F)
+                                : const Color(0xFFD97706),
+                            size: 18,
                           ),
-                          child: Text(
-                            langVM.translate('APPLY FILTERS'),
-                            style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.1),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Select Region / State:',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
                           ),
-                        ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: _malaysianStates.map((st) {
+                          final isSelected = _selectedState == st;
+                          return ChoiceChip(
+                            label: Text(
+                              st == 'All States'
+                                  ? langVM.translate('All States')
+                                  : st,
+                            ),
+                            selected: isSelected,
+                            onSelected: (selected) {
+                              if (selected) {
+                                setState(() => _selectedState = st);
+                                setBottomSheetState(() {});
+                              }
+                            },
+                            selectedColor: const Color(0xFF004D40),
+                            backgroundColor: isDark
+                                ? const Color(0xFF041412)
+                                : const Color(0xFFF1F5F9),
+                            side: isDark
+                                ? const BorderSide(color: Color(0xFF1E3A34))
+                                : null,
+                            labelStyle: TextStyle(
+                              color: isSelected
+                                  ? Colors.white
+                                  : (isDark
+                                        ? Colors.white70
+                                        : const Color(0xFF334155)),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                            ),
+                          );
+                        }).toList(),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.category_rounded,
+                            color: isDark
+                                ? const Color(0xFFFFD54F)
+                                : const Color(0xFF004D40),
+                            size: 18,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Select Craft Specialization:',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: craftFilters.map((catItem) {
+                          final isSelected =
+                              _selectedCategoryKey == catItem.key;
+                          return ChoiceChip(
+                            label: Text(langVM.translate(catItem.englishName)),
+                            selected: isSelected,
+                            onSelected: (selected) {
+                              if (selected) {
+                                setState(
+                                  () => _selectedCategoryKey = catItem.key,
+                                );
+                                setBottomSheetState(() {});
+                              }
+                            },
+                            selectedColor: const Color(0xFFD97706),
+                            backgroundColor: isDark
+                                ? const Color(0xFF041412)
+                                : const Color(0xFFF1F5F9),
+                            side: isDark
+                                ? const BorderSide(color: Color(0xFF1E3A34))
+                                : null,
+                            labelStyle: TextStyle(
+                              color: isSelected
+                                  ? Colors.white
+                                  : (isDark
+                                        ? Colors.white70
+                                        : const Color(0xFF334155)),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                            ),
+                          );
+                        }).toList(),
+                      ),
+
+                      const SizedBox(height: 28),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                _clearFilters();
+                                setBottomSheetState(() {});
+                                Navigator.of(context).pop();
+                              },
+                              icon: const Icon(
+                                Icons.refresh_rounded,
+                                size: 16,
+                                color: Color(0xFF004D40),
+                              ),
+                              label: Text(
+                                langVM.translate('Clear Filters'),
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                  color: const Color(0xFF004D40),
+                                ),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(
+                                  color: Color(0xFF004D40),
+                                  width: 1.5,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: FilledButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: const Color(0xFF004D40),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                              ),
+                              child: Text(
+                                langVM.translate('APPLY FILTERS'),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.1,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );
-  },
-);
   }
 
   @override
   Widget build(BuildContext context) {
     final langVM = context.watch<LanguageViewModel>();
     final query = _searchController.text.toLowerCase().trim();
-    
+
     // Wire up to DirectoryViewModel to get REAL artisans from Supabase
     final dirVM = context.watch<DirectoryViewModel>();
-    final allArtisanModels = dirVM.allArtisans.isNotEmpty ? dirVM.allArtisans : dirVM.artisans;
-    final allDirectoryArtisans = allArtisanModels.map((a) => {
-      'id': a.id,
-      'name': a.name,
-      'category': a.craftType,
-      'craft': a.craftType,
-      'state': a.state,
-      'rating': a.rating,
-      'image': a.imageUrl,
-      'images': a.images,
-      'bio': a.description,
-      'exp': '+150 EXP',
-      'experienceYears': a.experience,
-      'workshopCount': a.workshopCount,
-      'tags': a.tags,
-      'address': a.address,
-      'latitude': a.latitude,
-      'longitude': a.longitude,
-      'isLiveOpen': a.isLiveOpen,
-      'ssmNumber': a.ssmNumber,
-      'documents': a.documents,
-      'artisanModel': a, // pass the model for the detail screen
-    }).toList();
+    final allArtisanModels = dirVM.allArtisans.isNotEmpty
+        ? dirVM.allArtisans
+        : dirVM.artisans;
+    final allDirectoryArtisans = allArtisanModels
+        .map(
+          (a) => {
+            'id': a.id,
+            'name': a.name,
+            'category': a.craftType,
+            'craft': a.craftType,
+            'state': a.state,
+            'rating': a.rating,
+            'image': a.imageUrl,
+            'images': a.images,
+            'bio': a.description,
+            'exp': '+150 EXP',
+            'experienceYears': a.experience,
+            'workshopCount': a.workshopCount,
+            'tags': a.tags,
+            'address': a.address,
+            'latitude': a.latitude,
+            'longitude': a.longitude,
+            'isLiveOpen': a.isLiveOpen,
+            'ssmNumber': a.ssmNumber,
+            'documents': a.documents,
+            'phone': a.phone,
+            'artisanModel': a, // pass the model for the detail screen
+          },
+        )
+        .toList();
 
-    final realArtisans = dirVM.artisans.map((a) => {
-      'id': a.id,
-      'name': a.name,
-      'category': a.craftType,
-      'craft': a.craftType,
-      'state': a.state,
-      'rating': a.rating,
-      'image': a.imageUrl,
-      'images': a.images,
-      'bio': a.description,
-      'exp': '+150 EXP',
-      'experienceYears': a.experience,
-      'workshopCount': a.workshopCount,
-      'tags': a.tags,
-      'address': a.address,
-      'latitude': a.latitude,
-      'longitude': a.longitude,
-      'isLiveOpen': a.isLiveOpen,
-      'ssmNumber': a.ssmNumber,
-      'documents': a.documents,
-      'artisanModel': a,
-    }).toList();
+    final realArtisans = dirVM.artisans
+        .map(
+          (a) => {
+            'id': a.id,
+            'name': a.name,
+            'category': a.craftType,
+            'craft': a.craftType,
+            'state': a.state,
+            'rating': a.rating,
+            'image': a.imageUrl,
+            'images': a.images,
+            'bio': a.description,
+            'exp': '+150 EXP',
+            'experienceYears': a.experience,
+            'workshopCount': a.workshopCount,
+            'tags': a.tags,
+            'address': a.address,
+            'latitude': a.latitude,
+            'longitude': a.longitude,
+            'isLiveOpen': a.isLiveOpen,
+            'ssmNumber': a.ssmNumber,
+            'documents': a.documents,
+            'phone': a.phone,
+            'artisanModel': a,
+          },
+        )
+        .toList();
 
     // Directory is 100% bound to real artisans from Supabase
     final artisans = realArtisans;
@@ -446,162 +551,459 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
       final tagList = tags is List ? tags : (tags is String ? [tags] : null);
       final bio = artisan['bio']?.toString().toLowerCase() ?? '';
 
-      final matchesQuery = query.isEmpty ||
+      final matchesQuery =
+          query.isEmpty ||
           artisan['name'].toString().toLowerCase().contains(query) ||
           artisan['category'].toString().toLowerCase().contains(query) ||
           artisan['state'].toString().toLowerCase().contains(query) ||
           bio.contains(query) ||
-          (tagList != null && tagList.any((t) => t.toString().toLowerCase().contains(query)));
+          (tagList != null &&
+              tagList.any((t) => t.toString().toLowerCase().contains(query)));
 
       final matchesCategory = selectedFilter.matches(
         artisan['category']?.toString() ?? '',
         tagList,
       );
 
-      final matchesState = _selectedState == 'All States' ||
-          artisan['state'].toString().toLowerCase() == _selectedState.toLowerCase();
+      final matchesState =
+          _selectedState == 'All States' ||
+          artisan['state'].toString().toLowerCase() ==
+              _selectedState.toLowerCase();
 
       return matchesQuery && matchesCategory && matchesState;
     }).toList();
 
-    // Multi-Tiered Matchmaker Recommendations (Tier 1: Craft -> Tier 2: Region/Material -> Tier 3: Top Masters)
+    // Recommendations strictly based on user's 4 quiz choices (Q1: Experience, Q2: Setting, Q3: Material, Q4: Region)
+    // Completely self-contained and independent recommendation scoring pipeline
     final matchmakerVM = context.watch<MatchmakerViewModel>();
     List<Map<String, dynamic>> recommendedArtisans = [];
-    String recommendationHeaderTitle = langVM.translate('Recommended for You (Based on Preferences)');
+    String recommendationHeaderTitle = langVM.translate(
+      'Suggested for You (Based on Quiz)',
+    );
     String? recommendationSubtitle;
 
-    if (matchmakerVM.isQuizCompleted && matchmakerVM.matchingCrafts.isNotEmpty) {
+    if (matchmakerVM.isQuizCompleted) {
       final personality = matchmakerVM.currentPersonality;
-      final matchingKeywords = <String>{};
-      for (final mc in matchmakerVM.matchingCrafts) {
-        final mcLower = mc.toLowerCase().trim();
-        matchingKeywords.add(mcLower);
-        final words = mcLower
-            .split(RegExp(r'[\s&/,\-]+'))
-            .where((w) => w.length >= 3 && !{'and', 'the', 'arts', 'making', 'crafts', 'craft'}.contains(w));
-        matchingKeywords.addAll(words);
-      }
+      final chosenMaterial =
+          matchmakerVM.material ?? personality?.material ?? '';
+      final chosenRegion = matchmakerVM.region ?? personality?.region ?? '';
+      final chosenExp =
+          matchmakerVM.experienceType ?? personality?.experienceType ?? '';
+      final chosenEnv =
+          matchmakerVM.environment ?? personality?.environment ?? '';
 
-      for (final filter in craftFilters) {
-        if (filter.key == 'ALL') continue;
-        final filterNameLower = filter.englishName.toLowerCase();
-        if (matchingKeywords.any((k) => filterNameLower.contains(k) || filter.key.toLowerCase().contains(k))) {
-          matchingKeywords.addAll(filter.matchKeywords);
+      // Determine material keywords from what user chose in quiz
+      final materialKeywords = <String>{};
+      final matLower = chosenMaterial.toLowerCase();
+      if (matLower.contains('potter') ||
+          matLower.contains('clay') ||
+          matLower.contains('ceramic')) {
+        materialKeywords.addAll([
+          'potter',
+          'ceramic',
+          'clay',
+          'tembikar',
+          'seramik',
+          'labu',
+        ]);
+      } else if (matLower.contains('batik') ||
+          matLower.contains('songket') ||
+          matLower.contains('textile')) {
+        materialKeywords.addAll([
+          'batik',
+          'songket',
+          'textile',
+          'canting',
+          'kain',
+          'tenun',
+          'silk',
+          'weav',
+        ]);
+      } else if (matLower.contains('timber') || matLower.contains('wood')) {
+        materialKeywords.addAll(['wood', 'carv', 'ukir', 'kayu', 'timber']);
+      } else if (matLower.contains('pewter') || matLower.contains('metal')) {
+        materialKeywords.addAll([
+          'metal',
+          'pewter',
+          'keris',
+          'besi',
+          'tembaga',
+          'silver',
+          'perak',
+          'blade',
+          'forg',
+        ]);
+      }
+      for (final mc in matchmakerVM.matchingCrafts) {
+        materialKeywords.add(mc.toLowerCase().trim());
+        for (final w in mc.toLowerCase().split(RegExp(r'[\s&/,\-]+'))) {
+          if (w.length >= 3 &&
+              !{
+                'and',
+                'the',
+                'arts',
+                'making',
+                'crafts',
+                'craft',
+              }.contains(w)) {
+            materialKeywords.add(w);
+          }
         }
       }
 
-      // --- TIER 1: Direct & Category Craft Match ---
-      final tier1Matches = allDirectoryArtisans.where((a) {
+      if (chosenMaterial.isNotEmpty) {
+        for (final w in chosenMaterial.toLowerCase().split(
+          RegExp(r'[\s&/,\-]+'),
+        )) {
+          if (w.length >= 3 &&
+              !{
+                'and',
+                'the',
+                'arts',
+                'making',
+                'crafts',
+                'craft',
+                'textiles',
+                'textile',
+              }.contains(w)) {
+            materialKeywords.add(w);
+          }
+        }
+      }
+
+      // Target states from user's chosen region in quiz
+      final regLower = chosenRegion.toLowerCase();
+      final Set<String> targetStates;
+      if (regLower.contains('east coast') ||
+          regLower.contains('kelantan') ||
+          regLower.contains('terengganu') ||
+          regLower.contains('pahang')) {
+        targetStates = {'kelantan', 'terengganu', 'pahang'};
+      } else if (regLower.contains('west coast') ||
+          regLower.contains('melaka') ||
+          regLower.contains('perak') ||
+          regLower.contains('selangor') ||
+          regLower.contains('penang') ||
+          regLower.contains('johor')) {
+        targetStates = {
+          'melaka',
+          'perak',
+          'selangor',
+          'penang',
+          'johor',
+          'kedah',
+          'perlis',
+          'kuala lumpur',
+          'negeri sembilan',
+        };
+      } else if (regLower.contains('north')) {
+        targetStates = {'penang', 'kedah', 'perlis', 'perak'};
+      } else if (regLower.contains('central')) {
+        targetStates = {'selangor', 'kuala lumpur', 'negeri sembilan'};
+      } else if (regLower.contains('south')) {
+        targetStates = {'johor', 'melaka'};
+      } else if (regLower.contains('borneo') ||
+          regLower.contains('sabah') ||
+          regLower.contains('sarawak')) {
+        targetStates = {'sabah', 'sarawak'};
+      } else {
+        targetStates = {};
+      }
+
+      final scoredArtisans = <Map<String, dynamic>, double>{};
+
+      for (final a in allDirectoryArtisans) {
         final craft = a['craft']?.toString().toLowerCase() ?? '';
         final cat = a['category']?.toString().toLowerCase() ?? '';
         final name = a['name']?.toString().toLowerCase() ?? '';
+        final state = a['state']?.toString().toLowerCase() ?? '';
+        final address = a['address']?.toString().toLowerCase() ?? '';
+        final bio = a['bio']?.toString().toLowerCase() ?? '';
         final tags = a['tags'];
         final tagList = tags is List
             ? tags.map((t) => t.toString().toLowerCase()).toList()
             : (tags is String ? [tags.toLowerCase()] : <String>[]);
 
-        // Exact or substring match with any matchingCrafts item
-        for (final mc in matchmakerVM.matchingCrafts) {
-          final mcLower = mc.toLowerCase().trim();
-          if (craft.contains(mcLower) || mcLower.contains(craft) || cat.contains(mcLower) || mcLower.contains(cat)) {
-            return true;
+        // 1. Material / Craft match (Quiz Q3)
+        bool matchesMaterial = false;
+        for (final kw in materialKeywords) {
+          if (craft.contains(kw) ||
+              cat.contains(kw) ||
+              name.contains(kw) ||
+              tagList.any((t) => t.contains(kw))) {
+            matchesMaterial = true;
+            break;
           }
         }
 
-        // Token / Keyword match against craft, cat, name, tags
-        for (final kw in matchingKeywords) {
-          if (craft.contains(kw) || cat.contains(kw) || name.contains(kw) || tagList.any((t) => t.contains(kw))) {
-            return true;
-          }
-        }
+        // 2. Region / State match (Quiz Q4)
+        bool matchesRegion =
+            targetStates.isEmpty ||
+            targetStates.any((s) => state.contains(s) || address.contains(s));
 
-        // CraftFilter matching
-        for (final filter in craftFilters) {
-          if (filter.key == 'ALL') continue;
-          if (matchingKeywords.any((k) => filter.key.toLowerCase().contains(k) || filter.englishName.toLowerCase().contains(k))) {
-            if (filter.matches(cat, tagList) || filter.matches(craft, tagList)) {
-              return true;
-            }
-          }
-        }
-
-        return false;
-      }).toList();
-
-      if (tier1Matches.isNotEmpty) {
-        recommendedArtisans = tier1Matches;
-        recommendationHeaderTitle = personality != null
-            ? '${langVM.translate('Recommended for You')} • ${personality.title}'
-            : langVM.translate('Recommended for You (Based on Preferences)');
-        recommendationSubtitle = null;
-      } else {
-        // --- TIER 2: Regional & Material Family Match ---
-        final prefRegion = personality?.region?.toLowerCase() ?? '';
-        final prefMaterial = personality?.material?.toLowerCase() ?? '';
-        final materialTokens = prefMaterial
-            .split(RegExp(r'[\s&/,\-]+'))
-            .where((w) => w.length >= 3 && !{'and', 'the', 'crafts', 'craft'}.contains(w))
-            .toList();
-
-        final tier2Matches = allDirectoryArtisans.where((a) {
-          final state = a['state']?.toString().toLowerCase() ?? '';
-          final craft = a['craft']?.toString().toLowerCase() ?? '';
-          final tags = a['tags'];
-          final tagList = tags is List
-              ? tags.map((t) => t.toString().toLowerCase()).toList()
-              : (tags is String ? [tags.toLowerCase()] : <String>[]);
-
-          bool matchesRegion = false;
-          if (prefRegion.contains('east coast')) {
-            matchesRegion = {'kelantan', 'terengganu', 'pahang'}.contains(state);
-          } else if (prefRegion.contains('west coast')) {
-            matchesRegion = {
-              'melaka',
-              'perak',
-              'penang',
-              'selangor',
-              'johor',
-              'kedah',
-              'perlis',
-              'kuala lumpur',
-              'negeri sembilan',
-            }.contains(state);
-          }
-
-          final matchesMaterial = materialTokens.any((t) => craft.contains(t) || tagList.any((tag) => tag.contains(t)));
-
-          return matchesRegion || matchesMaterial;
-        }).toList();
-
-        if (tier2Matches.isNotEmpty) {
-          recommendedArtisans = tier2Matches.take(4).toList();
-          final regionName = prefRegion.contains('east') ? 'East Coast' : (prefRegion.contains('west') ? 'West Coast' : 'Regional');
-          recommendationHeaderTitle = 'Related $regionName Masters • ${personality?.title ?? "Preference Match"}';
-          recommendationSubtitle = 'Exploring authentic regional masters matching your cultural style';
+        // 3. Experience style match (Quiz Q1: Hands-on Workshop vs Observing Master Artisans)
+        bool matchesExp = false;
+        final expLower = chosenExp.toLowerCase();
+        final workshopCount = (a['workshopCount'] as num?)?.toInt() ?? 0;
+        final expYears = a['experienceYears']?.toString().toLowerCase() ?? '';
+        if (expLower.isEmpty) {
+          matchesExp = true;
+        } else if (expLower.contains('hands-on')) {
+          matchesExp =
+              workshopCount > 0 ||
+              tagList.any(
+                (t) =>
+                    t.contains('workshop') ||
+                    t.contains('hands-on') ||
+                    t.contains('class') ||
+                    t.contains('craft') ||
+                    t.contains('learn') ||
+                    t.contains('diy') ||
+                    t.contains('bengkel') ||
+                    t.contains('sesi') ||
+                    t.contains('canting') ||
+                    t.contains('pottery') ||
+                    t.contains('carving'),
+              ) ||
+              bio.contains('workshop') ||
+              bio.contains('hands-on') ||
+              bio.contains('class') ||
+              bio.contains('learn') ||
+              bio.contains('craft') ||
+              bio.contains('bengkel') ||
+              bio.contains('canting') ||
+              bio.contains('pottery') ||
+              bio.contains('carving');
+        } else if (expLower.contains('observing')) {
+          matchesExp =
+              expYears.contains('10+') ||
+              expYears.contains('20+') ||
+              expYears.contains('30+') ||
+              expYears.contains('40+') ||
+              expYears.contains('master') ||
+              tagList.any(
+                (t) =>
+                    t.contains('master') ||
+                    t.contains('heritage') ||
+                    t.contains('authentic') ||
+                    t.contains('tokoh') ||
+                    t.contains('traditional') ||
+                    t.contains('artisan') ||
+                    t.contains('warisan') ||
+                    t.contains('adiguru'),
+              ) ||
+              bio.contains('master') ||
+              bio.contains('heritage') ||
+              bio.contains('demonstration') ||
+              bio.contains('traditional') ||
+              bio.contains('authentic') ||
+              bio.contains('tokoh') ||
+              bio.contains('warisan') ||
+              name.contains('master') ||
+              name.contains('mak') ||
+              name.contains('pak') ||
+              name.contains('uncle') ||
+              name.contains('che') ||
+              name.contains('madam');
         } else {
-          // --- TIER 3: Curated Top-Rated Heritage Masters ---
-          final sortedMasters = List<Map<String, dynamic>>.from(allDirectoryArtisans)
-            ..sort((a, b) {
-              final rA = (a['rating'] as num?)?.toDouble() ?? 0.0;
-              final rB = (b['rating'] as num?)?.toDouble() ?? 0.0;
-              return rB.compareTo(rA);
-            });
-          recommendedArtisans = sortedMasters.take(4).toList();
-          recommendationHeaderTitle = 'Featured Malaysian Heritage Masters';
-          recommendationSubtitle = 'Curated top-rated master artisans across all disciplines';
+          matchesExp = true;
+        }
+
+        // 4. Studio setting / environment match (Quiz Q2: Indoor Studio vs Outdoor Village)
+        bool matchesEnv = false;
+        final envLower = chosenEnv.toLowerCase();
+        if (envLower.isEmpty) {
+          matchesEnv = true;
+        } else if (envLower.contains('indoor')) {
+          matchesEnv =
+              tagList.any(
+                (t) =>
+                    t.contains('studio') ||
+                    t.contains('gallery') ||
+                    t.contains('galeri') ||
+                    t.contains('indoor') ||
+                    t.contains('center') ||
+                    t.contains('centre') ||
+                    t.contains('boutique') ||
+                    t.contains('shop') ||
+                    t.contains('outlet') ||
+                    t.contains('complex') ||
+                    t.contains('kompleks') ||
+                    t.contains('dewan') ||
+                    t.contains('hall') ||
+                    t.contains('museum') ||
+                    t.contains('muzium') ||
+                    t.contains('workshop') ||
+                    t.contains('painting') ||
+                    t.contains('canting') ||
+                    t.contains('craft') ||
+                    t.contains('batik') ||
+                    t.contains('songket') ||
+                    t.contains('pewter'),
+              ) ||
+              bio.contains('studio') ||
+              bio.contains('gallery') ||
+              bio.contains('galeri') ||
+              bio.contains('indoor') ||
+              bio.contains('center') ||
+              bio.contains('centre') ||
+              bio.contains('boutique') ||
+              bio.contains('shop') ||
+              bio.contains('outlet') ||
+              bio.contains('complex') ||
+              bio.contains('kompleks') ||
+              bio.contains('dewan') ||
+              bio.contains('hall') ||
+              bio.contains('museum') ||
+              bio.contains('muzium') ||
+              bio.contains('workshop') ||
+              bio.contains('painting') ||
+              bio.contains('canting') ||
+              bio.contains('craft') ||
+              bio.contains('batik') ||
+              bio.contains('songket') ||
+              bio.contains('pewter') ||
+              address.contains('studio') ||
+              address.contains('gallery') ||
+              address.contains('complex') ||
+              address.contains('center') ||
+              address.contains('centre') ||
+              address.contains('mall') ||
+              address.contains('plaza') ||
+              address.contains('jalan') ||
+              address.contains('lorong') ||
+              name.contains('studio') ||
+              name.contains('gallery') ||
+              name.contains('galeri') ||
+              name.contains('boutique');
+        } else if (envLower.contains('outdoor') ||
+            envLower.contains('village')) {
+          matchesEnv =
+              tagList.any(
+                (t) =>
+                    t.contains('village') ||
+                    t.contains('kampong') ||
+                    t.contains('kampung') ||
+                    t.contains('outdoor') ||
+                    t.contains('open-air') ||
+                    t.contains('garden') ||
+                    t.contains('taman') ||
+                    t.contains('desa') ||
+                    t.contains('river') ||
+                    t.contains('sungai') ||
+                    t.contains('nature') ||
+                    t.contains('seri') ||
+                    t.contains('kebun') ||
+                    t.contains('chalet') ||
+                    t.contains('homestay') ||
+                    t.contains('hutan') ||
+                    t.contains('traditional') ||
+                    t.contains('authentic') ||
+                    t.contains('rural') ||
+                    t.contains('labu') ||
+                    t.contains('clay') ||
+                    t.contains('pottery') ||
+                    t.contains('wood') ||
+                    t.contains('ukir'),
+              ) ||
+              bio.contains('village') ||
+              bio.contains('kampong') ||
+              bio.contains('kampung') ||
+              bio.contains('outdoor') ||
+              bio.contains('open-air') ||
+              bio.contains('garden') ||
+              bio.contains('taman') ||
+              bio.contains('desa') ||
+              bio.contains('river') ||
+              bio.contains('sungai') ||
+              bio.contains('nature') ||
+              bio.contains('seri') ||
+              bio.contains('kebun') ||
+              bio.contains('chalet') ||
+              bio.contains('homestay') ||
+              bio.contains('hutan') ||
+              bio.contains('traditional') ||
+              bio.contains('authentic') ||
+              bio.contains('rural') ||
+              bio.contains('labu') ||
+              bio.contains('clay') ||
+              bio.contains('pottery') ||
+              bio.contains('wood') ||
+              bio.contains('ukir') ||
+              address.contains('kampung') ||
+              address.contains('kampong') ||
+              address.contains('desa') ||
+              address.contains('taman') ||
+              address.contains('sungai') ||
+              address.contains('ulu') ||
+              address.contains('hulu') ||
+              address.contains('kuala');
+        } else {
+          matchesEnv = true;
+        }
+
+        // Only recommend artisans that strictly match ALL 4 quiz questions
+        if (matchesMaterial && matchesRegion && matchesExp && matchesEnv) {
+          double score = 100.0; // Base score for 4-question match
+
+          // Additional affinity bonuses
+          if (expLower.contains('hands-on') &&
+              (workshopCount > 0 ||
+                  tagList.any(
+                    (t) => t.contains('workshop') || t.contains('hands-on'),
+                  ))) {
+            score += 25.0;
+          } else if (expLower.contains('observing') &&
+              (expYears.contains('10+') ||
+                  expYears.contains('20+') ||
+                  tagList.any((t) => t.contains('master')))) {
+            score += 25.0;
+          }
+
+          if (envLower.contains('indoor') &&
+              (tagList.any(
+                    (t) => t.contains('studio') || t.contains('gallery'),
+                  ) ||
+                  bio.contains('studio'))) {
+            score += 25.0;
+          } else if ((envLower.contains('outdoor') ||
+                  envLower.contains('village')) &&
+              (tagList.any(
+                    (t) => t.contains('village') || t.contains('kampong'),
+                  ) ||
+                  bio.contains('village'))) {
+            score += 25.0;
+          }
+
+          // Rating tiebreaker
+          final rating = (a['rating'] as num?)?.toDouble() ?? 0.0;
+          score += (rating * 2.0);
+
+          scoredArtisans[a] = score;
         }
       }
-    } else if (!matchmakerVM.isQuizCompleted && allDirectoryArtisans.isNotEmpty) {
-      // Guest or uncompleted quiz
-      final sortedMasters = List<Map<String, dynamic>>.from(allDirectoryArtisans)
-        ..sort((a, b) {
-          final rA = (a['rating'] as num?)?.toDouble() ?? 0.0;
-          final rB = (b['rating'] as num?)?.toDouble() ?? 0.0;
+
+      final sortedEntries = scoredArtisans.entries.toList()
+        ..sort((e1, e2) {
+          final scoreComparison = e2.value.compareTo(e1.value);
+          if (scoreComparison != 0) return scoreComparison;
+          final rA = (e1.key['rating'] as num?)?.toDouble() ?? 0.0;
+          final rB = (e2.key['rating'] as num?)?.toDouble() ?? 0.0;
           return rB.compareTo(rA);
         });
-      recommendedArtisans = sortedMasters.take(4).toList();
-      recommendationHeaderTitle = langVM.translate('Popular Heritage Masters');
-      recommendationSubtitle = null;
+
+      recommendedArtisans = sortedEntries.map((e) => e.key).toList();
+
+      final categoryName = personality?.primaryCategory ?? chosenMaterial;
+      recommendationHeaderTitle = personality != null
+          ? '${langVM.translate('Suggested for You')} • ${personality.title}'
+          : '${langVM.translate('Suggested for You')} • $categoryName';
+      recommendationSubtitle =
+          chosenMaterial.isNotEmpty && chosenRegion.isNotEmpty
+          ? 'Suggested from your quiz: $chosenMaterial • $chosenRegion${chosenExp.isNotEmpty ? " • $chosenExp" : ""}'
+          : (personality?.tagline.isNotEmpty == true
+                ? personality!.tagline
+                : null);
     }
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -613,7 +1015,9 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
         SliverAppBar(
           floating: true,
           pinned: true,
-          backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
+          backgroundColor: isDark
+              ? const Color(0xFF041412)
+              : const Color(0xFFF8F9FA),
           elevation: 0,
           expandedHeight: 126.0,
           flexibleSpace: FlexibleSpaceBar(
@@ -640,16 +1044,27 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFFFD54F).withValues(alpha: 0.2),
+                                color: const Color(
+                                  0xFFFFD54F,
+                                ).withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: const Color(0xFFFFD54F)),
+                                border: Border.all(
+                                  color: const Color(0xFFFFD54F),
+                                ),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Icon(Icons.location_on_rounded, color: Color(0xFFFFD54F), size: 12),
+                                  const Icon(
+                                    Icons.location_on_rounded,
+                                    color: Color(0xFFFFD54F),
+                                    size: 12,
+                                  ),
                                   const SizedBox(width: 4),
                                   Text(
                                     'MALAYSIA CULTURAL RADAR',
@@ -687,7 +1102,11 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                           shape: BoxShape.circle,
                         ),
                         child: IconButton(
-                          icon: const Icon(Icons.g_translate_rounded, color: Colors.white, size: 20),
+                          icon: const Icon(
+                            Icons.g_translate_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
                           tooltip: 'Translate Page Live',
                           onPressed: () {
                             showDialog(
@@ -695,7 +1114,10 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                               builder: (_) => TranslationLanguageDialog(
                                 currentLanguage: langVM.currentLanguageCode,
                                 onLanguageChanged: (code, name) {
-                                  context.read<LanguageViewModel>().setLanguage(code, name);
+                                  context.read<LanguageViewModel>().setLanguage(
+                                    code,
+                                    name,
+                                  );
                                 },
                               ),
                             );
@@ -709,13 +1131,19 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                           shape: BoxShape.circle,
                         ),
                         child: IconButton(
-                          icon: const Icon(Icons.refresh_rounded, color: Colors.white, size: 20),
+                          icon: const Icon(
+                            Icons.refresh_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
                           tooltip: 'Refresh Directory',
                           onPressed: () {
                             context.read<DirectoryViewModel>().fetchArtisans();
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('Refreshing artisan directory from Supabase...'),
+                                content: Text(
+                                  'Refreshing artisan directory from Supabase...',
+                                ),
                                 duration: Duration(seconds: 1),
                                 behavior: SnackBarBehavior.floating,
                               ),
@@ -733,7 +1161,10 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
 
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 20.0,
+              vertical: 16.0,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -745,23 +1176,41 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                         decoration: BoxDecoration(
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
+                              color: Colors.black.withValues(
+                                alpha: isDark ? 0.3 : 0.05,
+                              ),
                               blurRadius: 16,
                               offset: const Offset(0, 4),
-                            )
+                            ),
                           ],
                         ),
                         child: TextField(
                           controller: _searchController,
-                          style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                          style: TextStyle(
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
                           onChanged: (_) => setState(() {}),
                           decoration: InputDecoration(
-                            hintText: langVM.translate('Search master artisans, state, or craft...'),
-                            hintStyle: GoogleFonts.plusJakartaSans(fontSize: 13, color: isDark ? Colors.white38 : Colors.grey[400]),
-                            prefixIcon: Icon(Icons.search_rounded, color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40)),
+                            hintText: langVM.translate(
+                              'Search master artisans, state, or craft...',
+                            ),
+                            hintStyle: GoogleFonts.plusJakartaSans(
+                              fontSize: 13,
+                              color: isDark ? Colors.white38 : Colors.grey[400],
+                            ),
+                            prefixIcon: Icon(
+                              Icons.search_rounded,
+                              color: isDark
+                                  ? const Color(0xFFFFD54F)
+                                  : const Color(0xFF004D40),
+                            ),
                             suffixIcon: _searchController.text.isNotEmpty
                                 ? IconButton(
-                                    icon: const Icon(Icons.close_rounded, size: 18, color: Color(0xFF64748B)),
+                                    icon: const Icon(
+                                      Icons.close_rounded,
+                                      size: 18,
+                                      color: Color(0xFF64748B),
+                                    ),
                                     onPressed: () {
                                       _searchController.clear();
                                       setState(() {});
@@ -769,15 +1218,23 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                                   )
                                 : null,
                             filled: true,
-                            fillColor: isDark ? const Color(0xFF0D2825) : Colors.white,
-                            contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                            fillColor: isDark
+                                ? const Color(0xFF0D2825)
+                                : Colors.white,
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 14,
+                            ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(20),
-                              borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+                              borderSide: isDark
+                                  ? const BorderSide(color: Color(0xFF1E3A34))
+                                  : BorderSide.none,
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(20),
-                              borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+                              borderSide: isDark
+                                  ? const BorderSide(color: Color(0xFF1E3A34))
+                                  : BorderSide.none,
                             ),
                           ),
                         ),
@@ -794,14 +1251,19 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                         borderRadius: BorderRadius.circular(18),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF004D40).withValues(alpha: 0.3),
+                            color: const Color(
+                              0xFF004D40,
+                            ).withValues(alpha: 0.3),
                             blurRadius: 12,
                             offset: const Offset(0, 4),
-                          )
+                          ),
                         ],
                       ),
                       child: IconButton(
-                        icon: const Icon(Icons.tune_rounded, color: Colors.white),
+                        icon: const Icon(
+                          Icons.tune_rounded,
+                          color: Colors.white,
+                        ),
                         onPressed: () => _showFilterBottomSheet(langVM),
                       ),
                     ),
@@ -815,16 +1277,33 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                     children: [
                       Flexible(
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF78350F).withValues(alpha: 0.4) : const Color(0xFFFEF3C7),
+                            color: isDark
+                                ? const Color(0xFF78350F).withValues(alpha: 0.4)
+                                : const Color(0xFFFEF3C7),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: isDark ? const Color(0xFFD97706).withValues(alpha: 0.5) : const Color(0xFFFDE68A)),
+                            border: Border.all(
+                              color: isDark
+                                  ? const Color(
+                                      0xFFD97706,
+                                    ).withValues(alpha: 0.5)
+                                  : const Color(0xFFFDE68A),
+                            ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.filter_list_rounded, size: 14, color: isDark ? const Color(0xFFFDE68A) : const Color(0xFF92400E)),
+                              Icon(
+                                Icons.filter_list_rounded,
+                                size: 14,
+                                color: isDark
+                                    ? const Color(0xFFFDE68A)
+                                    : const Color(0xFF92400E),
+                              ),
                               const SizedBox(width: 4),
                               Flexible(
                                 child: Text(
@@ -834,7 +1313,9 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                                   style: GoogleFonts.plusJakartaSans(
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
-                                    color: isDark ? const Color(0xFFFDE68A) : const Color(0xFF92400E),
+                                    color: isDark
+                                        ? const Color(0xFFFDE68A)
+                                        : const Color(0xFF92400E),
                                   ),
                                 ),
                               ),
@@ -844,7 +1325,11 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                       ),
                       TextButton.icon(
                         onPressed: _clearFilters,
-                        icon: const Icon(Icons.refresh_rounded, size: 14, color: Color(0xFFDC2626)),
+                        icon: const Icon(
+                          Icons.refresh_rounded,
+                          size: 14,
+                          color: Color(0xFFDC2626),
+                        ),
                         label: Text(
                           langVM.translate('Clear Filters'),
                           style: GoogleFonts.plusJakartaSans(
@@ -855,7 +1340,10 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                         ),
                         style: TextButton.styleFrom(
                           visualDensity: VisualDensity.compact,
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
                         ),
                       ),
                     ],
@@ -877,25 +1365,39 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                       final isSelected = _selectedCategoryKey == catItem.key;
 
                       return GestureDetector(
-                        onTap: () => setState(() => _selectedCategoryKey = catItem.key),
+                        onTap: () =>
+                            setState(() => _selectedCategoryKey = catItem.key),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
                           margin: const EdgeInsets.only(right: 10),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
                           decoration: BoxDecoration(
-                            color: isSelected ? const Color(0xFF004D40) : (isDark ? const Color(0xFF0D2825) : Colors.white),
+                            color: isSelected
+                                ? const Color(0xFF004D40)
+                                : (isDark
+                                      ? const Color(0xFF0D2825)
+                                      : Colors.white),
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
-                              color: isSelected ? const Color(0xFF004D40) : (isDark ? const Color(0xFF1E3A34) : const Color(0xFFE2E8F0)),
+                              color: isSelected
+                                  ? const Color(0xFF004D40)
+                                  : (isDark
+                                        ? const Color(0xFF1E3A34)
+                                        : const Color(0xFFE2E8F0)),
                               width: 1.5,
                             ),
                             boxShadow: isSelected
                                 ? [
                                     BoxShadow(
-                                      color: const Color(0xFF004D40).withValues(alpha: 0.25),
+                                      color: const Color(
+                                        0xFF004D40,
+                                      ).withValues(alpha: 0.25),
                                       blurRadius: 10,
                                       offset: const Offset(0, 4),
-                                    )
+                                    ),
                                   ]
                                 : null,
                           ),
@@ -904,7 +1406,11 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                               Icon(
                                 icon,
                                 size: 16,
-                                color: isSelected ? const Color(0xFFFFD54F) : (isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40)),
+                                color: isSelected
+                                    ? const Color(0xFFFFD54F)
+                                    : (isDark
+                                          ? const Color(0xFFFFD54F)
+                                          : const Color(0xFF004D40)),
                               ),
                               const SizedBox(width: 6),
                               Text(
@@ -912,7 +1418,11 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
-                                  color: isSelected ? Colors.white : (isDark ? Colors.white70 : const Color(0xFF334155)),
+                                  color: isSelected
+                                      ? Colors.white
+                                      : (isDark
+                                            ? Colors.white70
+                                            : const Color(0xFF334155)),
                                 ),
                               ),
                             ],
@@ -928,13 +1438,25 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                 // Region / State Filter Chips Row
                 Row(
                   children: [
-                    Icon(Icons.map_rounded, color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFD97706), size: 14),
+                    Icon(
+                      Icons.map_rounded,
+                      color: isDark
+                          ? const Color(0xFFFFD54F)
+                          : const Color(0xFFD97706),
+                      size: 14,
+                    ),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         langVM.translate('Filter by Region / State:'),
                         softWrap: true,
-                        style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFD97706)),
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: isDark
+                              ? const Color(0xFFFFD54F)
+                              : const Color(0xFFD97706),
+                        ),
                       ),
                     ),
                   ],
@@ -952,16 +1474,28 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                       return Padding(
                         padding: const EdgeInsets.only(right: 6.0),
                         child: ChoiceChip(
-                          label: Text(st == 'All States' ? langVM.translate('All States') : st),
+                          label: Text(
+                            st == 'All States'
+                                ? langVM.translate('All States')
+                                : st,
+                          ),
                           selected: isSelected,
                           onSelected: (selected) {
                             if (selected) setState(() => _selectedState = st);
                           },
                           selectedColor: const Color(0xFFD97706),
-                          backgroundColor: isDark ? const Color(0xFF0D2825) : Colors.white,
-                          side: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : null,
+                          backgroundColor: isDark
+                              ? const Color(0xFF0D2825)
+                              : Colors.white,
+                          side: isDark
+                              ? const BorderSide(color: Color(0xFF1E3A34))
+                              : null,
                           labelStyle: GoogleFonts.plusJakartaSans(
-                            color: isSelected ? Colors.white : (isDark ? Colors.white70 : const Color(0xFF475569)),
+                            color: isSelected
+                                ? Colors.white
+                                : (isDark
+                                      ? Colors.white70
+                                      : const Color(0xFF475569)),
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
                           ),
@@ -982,17 +1516,33 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                   children: [
                     Text(
                       'Preferences Matching:',
-                      style: GoogleFonts.plusJakartaSans(fontSize: 11, color: isDark ? Colors.white60 : Colors.grey[600]),
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        color: isDark ? Colors.white60 : Colors.grey[600],
+                      ),
                     ),
                     FilterChip(
-                      label: Text(_hasPreferences ? '⚡ Personalized (Active)' : 'Off (Show All)'),
+                      label: Text(
+                        _hasPreferences
+                            ? '⚡ Personalized (Active)'
+                            : 'Off (Show All)',
+                      ),
                       selected: _hasPreferences,
-                      onSelected: (val) => setState(() => _hasPreferences = val),
-                      selectedColor: isDark ? const Color(0xFF0369A1).withValues(alpha: 0.3) : const Color(0xFFE0F2FE),
+                      onSelected: (val) =>
+                          setState(() => _hasPreferences = val),
+                      selectedColor: isDark
+                          ? const Color(0xFF0369A1).withValues(alpha: 0.3)
+                          : const Color(0xFFE0F2FE),
                       backgroundColor: isDark ? const Color(0xFF0D2825) : null,
-                      side: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : null,
+                      side: isDark
+                          ? const BorderSide(color: Color(0xFF1E3A34))
+                          : null,
                       labelStyle: TextStyle(
-                        color: _hasPreferences ? (isDark ? const Color(0xFF7DD3FC) : const Color(0xFF0369A1)) : (isDark ? Colors.white60 : Colors.grey[700]),
+                        color: _hasPreferences
+                            ? (isDark
+                                  ? const Color(0xFF7DD3FC)
+                                  : const Color(0xFF0369A1))
+                            : (isDark ? Colors.white60 : Colors.grey[700]),
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                       ),
@@ -1000,68 +1550,306 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                   ],
                 ),
 
-                if (_hasPreferences && recommendedArtisans.isNotEmpty) ...[
+                if (_hasPreferences) ...[
                   const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF0D2825) : const Color(0xFFF0FDF4),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: isDark ? const Color(0xFF1E3A34) : const Color(0xFF86EFAC)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(Icons.auto_awesome_rounded, color: isDark ? const Color(0xFF34D399) : const Color(0xFF15803D), size: 16),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    recommendationHeaderTitle,
-                                    softWrap: true,
-                                    style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: isDark ? const Color(0xFF34D399) : const Color(0xFF15803D),
-                                    ),
-                                  ),
-                                  if (recommendationSubtitle != null) ...[
-                                    const SizedBox(height: 2),
+                  if (matchmakerVM.isQuizCompleted &&
+                      recommendedArtisans.isNotEmpty) ...[
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFF0D2825)
+                            : const Color(0xFFF0FDF4),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: isDark
+                              ? const Color(0xFF1E3A34)
+                              : const Color(0xFF86EFAC),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.auto_awesome_rounded,
+                                color: isDark
+                                    ? const Color(0xFF34D399)
+                                    : const Color(0xFF15803D),
+                                size: 16,
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
                                     Text(
-                                      recommendationSubtitle,
+                                      recommendationHeaderTitle,
+                                      softWrap: true,
                                       style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 10,
-                                        color: isDark ? Colors.white60 : const Color(0xFF166534),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: isDark
+                                            ? const Color(0xFF34D399)
+                                            : const Color(0xFF15803D),
                                       ),
                                     ),
+                                    if (recommendationSubtitle != null) ...[
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        recommendationSubtitle,
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 10,
+                                          color: isDark
+                                              ? Colors.white60
+                                              : const Color(0xFF166534),
+                                        ),
+                                      ),
+                                    ],
                                   ],
-                                ],
+                                ),
                               ),
+                              IconButton(
+                                icon: Icon(
+                                  Icons.tune_rounded,
+                                  size: 18,
+                                  color: isDark
+                                      ? const Color(0xFFFFD54F)
+                                      : const Color(0xFF004D40),
+                                ),
+                                tooltip: 'Update Quiz Preferences',
+                                onPressed: () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (_) => CraftMatchmakerQuizWizard(
+                                      onCompleted: (_) => setState(() {}),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            height: 98,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: recommendedArtisans.length,
+                              itemBuilder: (context, index) {
+                                return _buildRecommendationCard(
+                                  context: context,
+                                  artisan: recommendedArtisans[index],
+                                  langVM: langVM,
+                                );
+                              },
                             ),
-                          ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ] else if (matchmakerVM.isQuizCompleted &&
+                      recommendedArtisans.isEmpty) ...[
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFF0D2825)
+                            : const Color(0xFFFFFBEB),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: isDark
+                              ? const Color(0xFF1E3A34)
+                              : const Color(0xFFFDE68A),
                         ),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          height: 94,
-                          child: ListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: recommendedArtisans.length,
-                            itemBuilder: (context, index) {
-                              return _buildRecommendationCard(
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? const Color(0xFF1E3A34)
+                                  : const Color(0xFFFEF3C7),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              Icons.info_outline_rounded,
+                              color: isDark
+                                  ? const Color(0xFFFFD54F)
+                                  : const Color(0xFFD97706),
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  langVM.translate(
+                                    'No artisans match your quiz choices',
+                                  ),
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark
+                                        ? const Color(0xFFFFD54F)
+                                        : const Color(0xFFB45309),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '${langVM.translate("No artisans currently match your quiz choice for")} "${matchmakerVM.material ?? "Craft"}". ${langVM.translate("Tap below to retake the quiz or browse all crafts.")}',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 10,
+                                    color: isDark
+                                        ? Colors.white60
+                                        : const Color(0xFF92400E),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          OutlinedButton(
+                            onPressed: () {
+                              showDialog(
                                 context: context,
-                                artisan: recommendedArtisans[index],
-                                langVM: langVM,
+                                builder: (_) => CraftMatchmakerQuizWizard(
+                                  onCompleted: (_) => setState(() {}),
+                                ),
                               );
                             },
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(
+                                color: isDark
+                                    ? const Color(0xFFFFD54F)
+                                    : const Color(0xFFD97706),
+                              ),
+                              foregroundColor: isDark
+                                  ? const Color(0xFFFFD54F)
+                                  : const Color(0xFFD97706),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            child: Text(
+                              langVM.translate('Retake Quiz'),
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
+                  ] else ...[
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFF0D2825)
+                            : const Color(0xFFF0FDF4),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: isDark
+                              ? const Color(0xFF1E3A34)
+                              : const Color(0xFF86EFAC),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? const Color(0xFF1E3A34)
+                                  : const Color(0xFFDCFCE7),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              Icons.auto_awesome_rounded,
+                              color: isDark
+                                  ? const Color(0xFFFFD54F)
+                                  : const Color(0xFF15803D),
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  langVM.translate(
+                                    'Take the Craft Matchmaker Quiz',
+                                  ),
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark
+                                        ? const Color(0xFFFFD54F)
+                                        : const Color(0xFF15803D),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  langVM.translate(
+                                    'Answer 4 quick questions to get suggested artisans based on what you choose!',
+                                  ),
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 10,
+                                    color: isDark
+                                        ? Colors.white70
+                                        : const Color(0xFF166534),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          FilledButton(
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (_) => CraftMatchmakerQuizWizard(
+                                  onCompleted: (_) => setState(() {}),
+                                ),
+                              );
+                            },
+                            style: FilledButton.styleFrom(
+                              backgroundColor: isDark
+                                  ? const Color(0xFFFFD54F)
+                                  : const Color(0xFF004D40),
+                              foregroundColor: isDark
+                                  ? const Color(0xFF041412)
+                                  : Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            child: Text(
+                              langVM.translate('START QUIZ'),
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
 
                 const SizedBox(height: 16),
@@ -1081,9 +1869,15 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
         else if (filtered.isEmpty)
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 20.0,
+                vertical: 12.0,
+              ),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 36.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24.0,
+                  vertical: 36.0,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(24),
@@ -1147,7 +1941,10 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                       ),
                       style: FilledButton.styleFrom(
                         backgroundColor: const Color(0xFF004D40),
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 14,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
@@ -1162,13 +1959,10 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 20.0),
             sliver: SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final artisan = filtered[index];
-                  return _buildArtisanCard(context, artisan, langVM);
-                },
-                childCount: filtered.length,
-              ),
+              delegate: SliverChildBuilderDelegate((context, index) {
+                final artisan = filtered[index];
+                return _buildArtisanCard(context, artisan, langVM);
+              }, childCount: filtered.length),
             ),
           ),
 
@@ -1177,11 +1971,21 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
     );
   }
 
-  Widget _buildArtisanCard(BuildContext context, Map<String, dynamic> artisan, LanguageViewModel langVM) {
+  Widget _buildArtisanCard(
+    BuildContext context,
+    Map<String, dynamic> artisan,
+    LanguageViewModel langVM,
+  ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final List<String> rawImages = artisan['images'] != null
+    final rawImagesList = artisan['images'] is List
         ? List<String>.from(artisan['images'])
-        : [artisan['image'] as String];
+        : <String>[];
+    final defaultImage =
+        artisan['image']?.toString() ??
+        'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&auto=format&fit=crop&q=80';
+    final List<String> rawImages = rawImagesList.isNotEmpty
+        ? rawImagesList
+        : [defaultImage];
     final List<String> images = rawImages.length > 1
         ? rawImages
         : [
@@ -1200,9 +2004,12 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
             color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
             blurRadius: 20,
             offset: const Offset(0, 8),
-          )
+          ),
         ],
-        border: Border.all(color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFF1F5F9), width: 1.5),
+        border: Border.all(
+          color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFF1F5F9),
+          width: 1.5,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1230,8 +2037,11 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                     longitude: (artisan['longitude'] as num?)?.toDouble(),
                     isLiveOpen: artisan['isLiveOpen'] ?? true,
                     ssmNumber: artisan['ssmNumber'] as String?,
-                    documents: (artisan['documents'] as List<Map<String, dynamic>>?) ?? const [],
+                    documents:
+                        (artisan['documents'] as List<Map<String, dynamic>>?) ??
+                        const [],
                     onViewQuest: () => _openArtisanQuest(context, artisan),
+                    phoneNumber: artisan['phone'] as String?,
                   ),
                 ),
               );
@@ -1241,12 +2051,18 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
               decoration: BoxDecoration(
                 color: const Color(0xFF004D40),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFFFFD54F).withValues(alpha: 0.5)),
+                border: Border.all(
+                  color: const Color(0xFFFFD54F).withValues(alpha: 0.5),
+                ),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.verified_rounded, color: Color(0xFFFFD54F), size: 14),
+                  const Icon(
+                    Icons.verified_rounded,
+                    color: Color(0xFFFFD54F),
+                    size: 14,
+                  ),
                   const SizedBox(width: 4),
                   Text(
                     'VERIFIED MASTER',
@@ -1272,13 +2088,17 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                     color: const Color(0xFFFF7043).withValues(alpha: 0.4),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
-                  )
+                  ),
                 ],
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.local_fire_department_rounded, color: Colors.white, size: 14),
+                  const Icon(
+                    Icons.local_fire_department_rounded,
+                    color: Colors.white,
+                    size: 14,
+                  ),
                   const SizedBox(width: 4),
                   Text(
                     artisan['exp'] ?? '+150 EXP',
@@ -1297,7 +2117,10 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                 Expanded(
                   child: Container(
                     margin: const EdgeInsets.only(right: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.black.withValues(alpha: 0.65),
                       borderRadius: BorderRadius.circular(10),
@@ -1305,7 +2128,11 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.verified_rounded, color: Color(0xFFFFD54F), size: 14),
+                        const Icon(
+                          Icons.verified_rounded,
+                          color: Color(0xFFFFD54F),
+                          size: 14,
+                        ),
                         const SizedBox(width: 4),
                         Flexible(
                           child: Text(
@@ -1324,7 +2151,10 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.black.withValues(alpha: 0.65),
                     borderRadius: BorderRadius.circular(10),
@@ -1362,7 +2192,9 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                             softWrap: true,
                             style: GoogleFonts.dmSerifDisplay(
                               fontSize: 20,
-                              color: isDark ? Colors.white : const Color(0xFF004D40),
+                              color: isDark
+                                  ? Colors.white
+                                  : const Color(0xFF004D40),
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -1371,7 +2203,9 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
-                              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFD97706),
+                              color: isDark
+                                  ? const Color(0xFFFFD54F)
+                                  : const Color(0xFFD97706),
                             ),
                           ),
                         ],
@@ -1381,16 +2215,33 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                     ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 130),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
                         decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF78350F).withValues(alpha: 0.4) : const Color(0xFFFEF3C7),
+                          color: isDark
+                              ? const Color(0xFF78350F).withValues(alpha: 0.4)
+                              : const Color(0xFFFEF3C7),
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: isDark ? const Color(0xFFD97706).withValues(alpha: 0.5) : const Color(0xFFF59E0B).withValues(alpha: 0.4)),
+                          border: Border.all(
+                            color: isDark
+                                ? const Color(0xFFD97706).withValues(alpha: 0.5)
+                                : const Color(
+                                    0xFFF59E0B,
+                                  ).withValues(alpha: 0.4),
+                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.location_on_rounded, size: 12, color: isDark ? const Color(0xFFFDE68A) : const Color(0xFFD97706)),
+                            Icon(
+                              Icons.location_on_rounded,
+                              size: 12,
+                              color: isDark
+                                  ? const Color(0xFFFDE68A)
+                                  : const Color(0xFFD97706),
+                            ),
                             const SizedBox(width: 4),
                             Flexible(
                               child: Text(
@@ -1400,7 +2251,9 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold,
-                                  color: isDark ? const Color(0xFFFDE68A) : const Color(0xFFD97706),
+                                  color: isDark
+                                      ? const Color(0xFFFDE68A)
+                                      : const Color(0xFFD97706),
                                 ),
                               ),
                             ),
@@ -1421,6 +2274,32 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                     height: 1.5,
                   ),
                 ),
+                if (artisan['phone'] != null &&
+                    artisan['phone'].toString().trim().isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.phone_rounded,
+                        size: 13,
+                        color: isDark
+                            ? const Color(0xFF34D399)
+                            : const Color(0xFF004D40),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        artisan['phone'].toString().trim(),
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: isDark
+                              ? const Color(0xFF34D399)
+                              : const Color(0xFF004D40),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
 
                 const SizedBox(height: 14),
                 // Travel Ticket Perforated Separator Line
@@ -1431,7 +2310,9 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                       child: Container(
                         height: 1.5,
                         margin: const EdgeInsets.symmetric(horizontal: 2),
-                        color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFCBD5E1),
+                        color: isDark
+                            ? const Color(0xFF1E3A34)
+                            : const Color(0xFFCBD5E1),
                       ),
                     ),
                   ),
@@ -1453,24 +2334,43 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                                 imageUrls: images,
                                 bio: artisan['bio'],
                                 rating: artisan['rating'],
-                                experience: artisan['experienceYears'] ?? '10+ Years',
-                                workshopsHosted: (artisan['workshopCount'] as int?) ?? 0,
+                                experience:
+                                    artisan['experienceYears'] ?? '10+ Years',
+                                workshopsHosted:
+                                    (artisan['workshopCount'] as int?) ?? 0,
                                 tags: List<String>.from(artisan['tags'] ?? []),
                                 address: artisan['address'] as String?,
-                                latitude: (artisan['latitude'] as num?)?.toDouble(),
-                                longitude: (artisan['longitude'] as num?)?.toDouble(),
+                                latitude: (artisan['latitude'] as num?)
+                                    ?.toDouble(),
+                                longitude: (artisan['longitude'] as num?)
+                                    ?.toDouble(),
                                 isLiveOpen: artisan['isLiveOpen'] ?? true,
                                 ssmNumber: artisan['ssmNumber'] as String?,
-                                documents: (artisan['documents'] as List<Map<String, dynamic>>?) ?? const [],
-                                onViewQuest: () => _openArtisanQuest(context, artisan),
+                                documents:
+                                    (artisan['documents']
+                                        as List<Map<String, dynamic>>?) ??
+                                    const [],
+                                onViewQuest: () =>
+                                    _openArtisanQuest(context, artisan),
+                                phoneNumber: artisan['phone'] as String?,
                               ),
                             ),
                           );
                         },
                         style: OutlinedButton.styleFrom(
-                          side: BorderSide(color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40), width: 1.5),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
+                          side: BorderSide(
+                            color: isDark
+                                ? const Color(0xFFFFD54F)
+                                : const Color(0xFF004D40),
+                            width: 1.5,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 12,
+                            horizontal: 6,
+                          ),
                         ),
                         child: Text(
                           langVM.translate('View Profile'),
@@ -1478,7 +2378,9 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.center,
                           style: GoogleFonts.plusJakartaSans(
-                            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                            color: isDark
+                                ? const Color(0xFFFFD54F)
+                                : const Color(0xFF004D40),
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
@@ -1490,12 +2392,23 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                       child: FilledButton.icon(
                         onPressed: () => _openArtisanQuest(context, artisan),
                         style: FilledButton.styleFrom(
-                          backgroundColor: isDark ? const Color(0xFF00695C) : const Color(0xFF004D40),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
+                          backgroundColor: isDark
+                              ? const Color(0xFF00695C)
+                              : const Color(0xFF004D40),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 12,
+                            horizontal: 6,
+                          ),
                           elevation: 2,
                         ),
-                        icon: const Icon(Icons.stars_rounded, size: 16, color: Color(0xFFFFD54F)),
+                        icon: const Icon(
+                          Icons.stars_rounded,
+                          size: 16,
+                          color: Color(0xFFFFD54F),
+                        ),
                         label: Text(
                           langVM.translate('START QUEST'),
                           maxLines: 1,
@@ -1526,7 +2439,8 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
     final name = artisan['name']?.toString() ?? '';
     final category = artisan['category']?.toString() ?? '';
     final state = artisan['state']?.toString() ?? '';
-    final imageUrl = artisan['image']?.toString() ??
+    final imageUrl =
+        artisan['image']?.toString() ??
         (artisan['images'] != null && (artisan['images'] as List).isNotEmpty
             ? (artisan['images'] as List).first.toString()
             : 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&auto=format&fit=crop&q=80');
@@ -1535,12 +2449,22 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
         ? rawImages.map((e) => e.toString()).toList()
         : [imageUrl];
     final bio = artisan['bio']?.toString() ?? '';
-    final rating = (artisan['rating'] is num) ? (artisan['rating'] as num).toDouble() : 4.8;
-    final tags = artisan['tags'] != null ? List<String>.from(artisan['tags']) : <String>[];
-    final experience = artisan['experienceYears']?.toString() ?? (artisan['experience']?.toString() ?? '20+ Years');
+    final rating = (artisan['rating'] is num)
+        ? (artisan['rating'] as num).toDouble()
+        : 4.8;
+    final tags = artisan['tags'] != null
+        ? List<String>.from(artisan['tags'])
+        : <String>[];
+    final experience =
+        artisan['experienceYears']?.toString() ??
+        (artisan['experience']?.toString() ?? '20+ Years');
     final address = artisan['address']?.toString();
-    final latitude = (artisan['latitude'] is num) ? (artisan['latitude'] as num).toDouble() : null;
-    final longitude = (artisan['longitude'] is num) ? (artisan['longitude'] as num).toDouble() : null;
+    final latitude = (artisan['latitude'] is num)
+        ? (artisan['latitude'] as num).toDouble()
+        : null;
+    final longitude = (artisan['longitude'] is num)
+        ? (artisan['longitude'] as num).toDouble()
+        : null;
 
     return Container(
       width: 250,
@@ -1552,7 +2476,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
             color: const Color(0xFF15803D).withValues(alpha: 0.15),
             blurRadius: 10,
             offset: const Offset(0, 3),
-          )
+          ),
         ],
       ),
       child: Material(
@@ -1579,8 +2503,11 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                   longitude: longitude,
                   isLiveOpen: artisan['isLiveOpen'] ?? true,
                   ssmNumber: artisan['ssmNumber'] as String?,
-                  documents: (artisan['documents'] as List<Map<String, dynamic>>?) ?? const [],
+                  documents:
+                      (artisan['documents'] as List<Map<String, dynamic>>?) ??
+                      const [],
                   onViewQuest: () => _openArtisanQuest(context, artisan),
+                  phoneNumber: artisan['phone'] as String?,
                 ),
               ),
             );
@@ -1592,9 +2519,8 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                 child: Image.network(
                   imageUrl,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    color: const Color(0xFF004D40),
-                  ),
+                  errorBuilder: (_, __, ___) =>
+                      Container(color: const Color(0xFF004D40)),
                 ),
               ),
               // Dark gradient overlay for text readability
@@ -1617,19 +2543,31 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                 child: Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFF86EFAC).withValues(alpha: 0.8), width: 1.2),
+                    border: Border.all(
+                      color: const Color(0xFF86EFAC).withValues(alpha: 0.8),
+                      width: 1.2,
+                    ),
                   ),
                 ),
               ),
               // Card interactive content
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
                 child: Row(
                   children: [
                     CircleAvatar(
                       radius: 18,
-                      backgroundColor: const Color(0xFF15803D).withValues(alpha: 0.85),
-                      child: const Icon(Icons.auto_awesome_rounded, color: Color(0xFFFFD54F), size: 18),
+                      backgroundColor: const Color(
+                        0xFF15803D,
+                      ).withValues(alpha: 0.85),
+                      child: const Icon(
+                        Icons.auto_awesome_rounded,
+                        color: Color(0xFFFFD54F),
+                        size: 18,
+                      ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -1664,7 +2602,11 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                             const SizedBox(height: 2),
                             Row(
                               children: [
-                                const Icon(Icons.location_on_rounded, size: 10, color: Color(0xFFFFD54F)),
+                                const Icon(
+                                  Icons.location_on_rounded,
+                                  size: 10,
+                                  color: Color(0xFFFFD54F),
+                                ),
                                 const SizedBox(width: 2),
                                 Expanded(
                                   child: Text(
@@ -1679,7 +2621,11 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                                   ),
                                 ),
                                 const SizedBox(width: 4),
-                                const Icon(Icons.arrow_forward_ios_rounded, size: 10, color: Colors.white70),
+                                const Icon(
+                                  Icons.arrow_forward_ios_rounded,
+                                  size: 10,
+                                  color: Colors.white70,
+                                ),
                               ],
                             ),
                           ],

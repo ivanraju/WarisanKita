@@ -626,4 +626,37 @@ void main() {
     expect(vm.currentUser!.status, 'PENDING_APPROVAL');
     expect(vm.currentUser!.studioName, 'New Reborn Studio');
   });
+
+  test('login does not enforce 8-character minimum constraint', () async {
+    backend.add('shortpass@test.com', username: 'shorty', password: '1234');
+    final vm = AuthViewModel(repository: UserRepository(service: service));
+    final result = await vm.login('shortpass@test.com', '1234');
+    expect(result.success, isTrue);
+    expect(vm.errorMessage, isNull);
+    expect(vm.currentUser?.email, 'shortpass@test.com');
+  });
+
+  test('login prompts role selection for artisan and allows selecting active mode', () async {
+    backend.add(
+      'artisan.role@test.com',
+      username: 'artisan_role',
+      role: 'Artisan',
+      password: 'Password123!',
+    );
+    final vm = AuthViewModel(repository: UserRepository(service: service));
+    final result = await vm.login('artisan.role@test.com', 'Password123!');
+    expect(result.success, isTrue);
+    expect(result.requiresRoleSelection, isTrue);
+    expect(result.availableRoles, contains('Master Artisan'));
+    expect(result.availableRoles, contains('Cultural Tourist'));
+
+    // Switch to Tourist mode
+    vm.selectActiveRole('Cultural Tourist');
+    expect(vm.activeRole, 'Cultural Tourist');
+    expect(vm.currentUser?.isDualRole, isTrue);
+
+    // Switch to Master Artisan mode
+    vm.selectActiveRole('Master Artisan');
+    expect(vm.activeRole, 'Master Artisan');
+  });
 }

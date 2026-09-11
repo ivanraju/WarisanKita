@@ -244,6 +244,7 @@ class UserRepository {
     bool updateArtisanProfileOnly = false,
     bool ensureSystemTasks = false,
     String? suspensionReason,
+    String? rejectionReason,
   }) {
     return _service.updateArtisanStatusInDb(
       email: email,
@@ -252,6 +253,7 @@ class UserRepository {
       updateArtisanProfileOnly: updateArtisanProfileOnly,
       ensureSystemTasks: ensureSystemTasks,
       suspensionReason: suspensionReason,
+      rejectionReason: rejectionReason,
     );
   }
 

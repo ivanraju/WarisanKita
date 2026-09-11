@@ -895,7 +895,14 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                           ),
                         ),
                       ] else if (authVM.currentUser?.isApprovedArtisan ==
-                          true) ...[
+                              true ||
+                          (authVM.currentUser?.artisanStatus?.toUpperCase() ==
+                                  'APPROVED' &&
+                              authVM.currentUser?.isArtisanStudioSuspended !=
+                                  true &&
+                              authVM.currentUser?.artisanStatus
+                                      ?.toUpperCase() !=
+                                  'CLOSED')) ...[
                         const SizedBox(height: 18),
                         Container(
                           padding: const EdgeInsets.all(16),
@@ -1066,7 +1073,17 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      'Kraftangan review requires document updates. Tap to revise and resubmit your application.',
+                                      (authVM.currentUser?.rejectionReason !=
+                                                  null &&
+                                              authVM
+                                                  .currentUser!
+                                                  .rejectionReason!
+                                                  .trim()
+                                                  .isNotEmpty)
+                                          ? 'Feedback: "${authVM.currentUser!.rejectionReason!.trim()}" - Tap to revise and resubmit.'
+                                          : 'Kraftangan review requires document updates. Tap to revise and resubmit your application.',
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
                                       style: GoogleFonts.plusJakartaSans(
                                         fontSize: 11,
                                         color: isDark
@@ -1124,15 +1141,19 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                             ],
                           ),
                         ),
-                      ] else if (authVM.currentUser?.isPendingArtisan == true ||
-                          authVM.currentUser?.isPendingApproval == true ||
-                          ((authVM.currentUser?.studioName != null &&
-                                  authVM.currentUser!.studioName!
-                                      .trim()
-                                      .isNotEmpty) &&
-                              authVM.currentUser?.isApprovedArtisan != true &&
-                              authVM.currentUser?.isRejectedArtisan !=
-                                  true)) ...[
+                      ] else if (authVM.currentUser?.artisanStatus
+                                  ?.toUpperCase() !=
+                              'CLOSED' &&
+                          (authVM.currentUser?.isPendingArtisan == true ||
+                              authVM.currentUser?.isPendingApproval == true ||
+                              ((authVM.currentUser?.studioName != null &&
+                                      authVM.currentUser!.studioName!
+                                          .trim()
+                                          .isNotEmpty) &&
+                                  authVM.currentUser?.isApprovedArtisan !=
+                                      true &&
+                                  authVM.currentUser?.isRejectedArtisan !=
+                                      true))) ...[
                         const SizedBox(height: 16),
                         Container(
                           padding: const EdgeInsets.all(16),

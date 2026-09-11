@@ -150,6 +150,15 @@ void main() {
     );
     expect(source, isNot(contains("task['title'] == defaultTask['title']")));
   });
+
+  test('auto-shift logic in _ensureDefaultSystemTasksForApproval moves custom tasks out of slots 1 and 2', () {
+    final source = File(
+      'lib/data/services/supabase_service.dart',
+    ).readAsStringSync();
+    expect(source, contains('conflictingCustomTasks'));
+    expect(source, contains('(sortOrder == 1 || sortOrder == 2)'));
+    expect(source, contains('nextAvailableOrder'));
+  });
 }
 
 const _pendingArtisan = PendingArtisanProfile(
@@ -188,6 +197,7 @@ class _ApprovalRepository extends UserRepository {
     bool updateArtisanProfileOnly = false,
     bool ensureSystemTasks = false,
     String? suspensionReason,
+    String? rejectionReason,
   }) async {
     updateCalls++;
     if (failure != null) throw failure!;
