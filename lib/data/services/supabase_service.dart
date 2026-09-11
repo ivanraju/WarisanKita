@@ -2597,14 +2597,25 @@ class SupabaseService {
               ? artisanProfile!['craft_category'].toString().trim()
               : 'Malaysian craft';
       try {
+        final slug = craftCategory
+            .toLowerCase()
+            .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+            .replaceAll(RegExp(r'^-+|-+$'), '');
+        final secret =
+            '${artisanId}_${DateTime.now().millisecondsSinceEpoch}';
         final createdQuest = await client
             .from('quests')
             .insert({
               'artisan_id': artisanId,
-              'title': '$studioName Quest',
+              'title': '$studioName Cultural Quest',
               'category': 'Demonstration & Lore',
               'description':
                   'Visit $studioName and experience the heritage of $craftCategory.',
+              'qr_code_secret': secret,
+              'geofence_radius_meters': 50,
+              'stamp_title': '$studioName Heritage Stamp',
+              'stamp_image_url':
+                  'https://zmvykemnpuremkebjvyo.supabase.co/storage/v1/object/public/quest-stamps/${slug.isEmpty ? "general" : slug}.webp',
               'status': 'APPROVED',
             })
             .select('id, status')
