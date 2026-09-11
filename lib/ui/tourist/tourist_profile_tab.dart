@@ -569,7 +569,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                                   ),
                                                   const SizedBox(width: 4),
                                                   Text(
-                                                    'Edit',
+                                                    langVM.translate('Edit'),
                                                     style:
                                                         GoogleFonts.plusJakartaSans(
                                                           fontSize: 10,
@@ -640,17 +640,17 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                               children: [
                                 _buildPassportMetric(
                                   completedQuests,
-                                  'Quests Done',
+                                  langVM.translate('Quests Done'),
                                   Icons.check_circle_rounded,
                                 ),
                                 _buildPassportMetric(
                                   visitedStudios,
-                                  'Studios Visited',
+                                  langVM.translate('Studios Visited'),
                                   Icons.storefront_rounded,
                                 ),
                                 _buildPassportMetric(
                                   passportStamps,
-                                  'Heritage Passport Stamps',
+                                  langVM.translate('Heritage Passport Stamps'),
                                   Icons.workspace_premium_rounded,
                                 ),
                               ],
@@ -671,7 +671,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                             : const Color(0xFFF0FDF4),
                         borderRadius: BorderRadius.circular(24),
                         border: Border.all(
-                          color: isDark
+                           color: isDark
                               ? const Color(0xFF3D806B)
                               : const Color(0xFF86EFAC),
                         ),
@@ -707,7 +707,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Preservation Impact',
+                                  langVM.translate('Preservation Impact'),
                                   style: GoogleFonts.dmSerifDisplay(
                                     fontSize: 16,
                                     color: isDark
@@ -768,7 +768,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Master Artisan Studio: Suspended',
+                                    langVM.translate('Master Artisan Studio: Suspended'),
                                     style: GoogleFonts.plusJakartaSans(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 13,
@@ -776,7 +776,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                     ),
                                   ),
                                   Text(
-                                    'Your studio license is under administrative suspension. You may continue exploring as a Cultural Tourist.',
+                                    langVM.translate('Your studio license is under administrative suspension. You may continue exploring as a Cultural Tourist.'),
                                     style: GoogleFonts.plusJakartaSans(
                                       fontSize: 11,
                                       color: const Color(0xFF7F1D1D),
@@ -822,7 +822,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Dual Role: Master Artisan Studio',
+                                    langVM.translate('Dual Role: Master Artisan Studio'),
                                     style: GoogleFonts.plusJakartaSans(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 13,
@@ -832,7 +832,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                     ),
                                   ),
                                   Text(
-                                    'Switch to manage your craft studio, live sessions, and masterworks.',
+                                    langVM.translate('Switch to manage your craft studio, live sessions, and masterworks.'),
                                     style: GoogleFonts.plusJakartaSans(
                                       fontSize: 11,
                                       color: isDark
@@ -861,9 +861,9 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
-                              child: const Text(
-                                'Switch',
-                                style: TextStyle(
+                              child: Text(
+                                langVM.translate('Switch'),
+                                style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 12,
                                 ),
@@ -931,7 +931,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                         children: [
                                           Flexible(
                                             child: Text(
-                                              'Artisan Studio Application',
+                                              langVM.translate('Artisan Studio Application'),
                                               softWrap: true,
                                               style: GoogleFonts.plusJakartaSans(
                                                 fontWeight: FontWeight.bold,
@@ -960,7 +960,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                               ),
                                             ),
                                             child: Text(
-                                              isAppRejected ? 'NEEDS UPDATE' : 'PENDING REVIEW',
+                                              isAppRejected ? langVM.translate('NEEDS UPDATE') : langVM.translate('PENDING REVIEW'),
                                               style: GoogleFonts.plusJakartaSans(
                                                 fontSize: 8,
                                                 fontWeight: FontWeight.w900,
@@ -975,8 +975,8 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                       const SizedBox(height: 2),
                                       Text(
                                         isAppRejected
-                                            ? 'Your application was not approved. Tap below to review feedback and update documents.'
-                                            : 'Your Master Artisan registration is undergoing Kraftangan Malaysia verification. Studio access unlocks upon approval.',
+                                            ? langVM.translate('Your application was not approved. Tap below to review feedback and update documents.')
+                                            : langVM.translate('Your Master Artisan registration is undergoing Kraftangan Malaysia verification. Studio access unlocks upon approval.'),
                                         style: GoogleFonts.plusJakartaSans(
                                           fontSize: 11,
                                           color: isDark
@@ -1022,7 +1022,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                     ),
                                   ),
                                   child: Text(
-                                    isAppRejected ? 'Review & Update' : 'View Application',
+                                    isAppRejected ? langVM.translate('Review & Update') : langVM.translate('View Application'),
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 11,
@@ -1070,7 +1070,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Are you a Master Artisan?',
+                                    langVM.translate('Are you a Master Artisan?'),
                                     style: GoogleFonts.plusJakartaSans(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 13,
@@ -1078,7 +1078,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                     ),
                                   ),
                                   Text(
-                                    'Register your traditional studio to host quests and earn Kraftangan recognition.',
+                                    langVM.translate('Register your traditional studio to host quests and earn Kraftangan recognition.'),
                                     style: GoogleFonts.plusJakartaSans(
                                       fontSize: 11,
                                       color: isDark ? Colors.white70 : Colors.grey[600],
@@ -1110,8 +1110,8 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                 ),
                               ),
                               child: Text(
-                                'Apply',
-                                style: TextStyle(
+                                langVM.translate('Apply'),
+                                style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 11,
                                   color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
@@ -1134,7 +1134,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Heritage Passport Stamps',
+                                langVM.translate('Heritage Passport Stamps'),
                                 maxLines: 2,
                                 softWrap: true,
                                 style: GoogleFonts.dmSerifDisplay(
@@ -1145,7 +1145,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                 ),
                               ),
                               Text(
-                                'Tap any stamp to inspect certificate lore',
+                                langVM.translate('Tap any stamp to inspect certificate lore'),
                                 maxLines: 2,
                                 softWrap: true,
                                 style: GoogleFonts.plusJakartaSans(

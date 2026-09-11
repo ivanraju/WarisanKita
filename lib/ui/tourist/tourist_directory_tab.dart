@@ -1121,9 +1121,16 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
 
   Widget _buildArtisanCard(BuildContext context, Map<String, dynamic> artisan, LanguageViewModel langVM) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final List<String> images = artisan['images'] != null
+    final List<String> rawImages = artisan['images'] != null
         ? List<String>.from(artisan['images'])
         : [artisan['image'] as String];
+    final List<String> images = rawImages.length > 1
+        ? rawImages
+        : [
+            rawImages.first,
+            'https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=600&auto=format&fit=crop&q=80',
+            'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80',
+          ];
 
     return Container(
       margin: const EdgeInsets.only(bottom: 24),

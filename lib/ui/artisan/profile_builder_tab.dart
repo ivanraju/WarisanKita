@@ -82,6 +82,80 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
 
   List<String> _portfolioImages = [];
   Map<String, String> _documents = {};
+  bool _isSaving = false;
+
+  void _onFormChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  bool get _hasUnsavedChanges {
+    final user = context.read<AuthViewModel>().currentUser;
+    if (user == null) return false;
+
+    // 1. Username / Handle
+    final initialHandle = (user.username ?? user.effectiveUsername).replaceAll('@', '').trim();
+    final currentHandle = _usernameController.text.replaceAll('@', '').trim();
+    if (currentHandle != initialHandle) return true;
+
+    // 2. Studio Name
+    final initialStudio = (user.studioName ?? user.displayName ?? '').trim();
+    final currentStudio = _studioNameController.text.trim();
+    if (currentStudio != initialStudio) return true;
+
+    // 3. Craft Category
+    final initialCraft = (user.craftCategory ?? '').trim();
+    final currentCraft = _craftCategoryController.text.trim();
+    if (currentCraft != initialCraft) return true;
+
+    // 4. Experience
+    final initialExp = _isDefaultOrEmptyExperience(user.experience) ? '' : (user.experience ?? '').trim();
+    final currentExp = _experienceController.text.trim();
+    if (currentExp != initialExp) return true;
+
+    // 5. Bio
+    final initialBio = (user.bio ?? '').trim();
+    final currentBio = _bioController.text.trim();
+    if (currentBio != initialBio) return true;
+
+    // 6. State
+    final initialState = (user.state ?? '').trim();
+    final currentState = _stateController.text.trim();
+    if (currentState != initialState) return true;
+
+    // 7. Phone
+    final initialPhone = (user.phone ?? '').trim();
+    final currentPhone = _phoneController.text.trim();
+    if (currentPhone != initialPhone) return true;
+
+    // 8. Workshop Address
+    final initialAddress = (user.address ?? '').trim();
+    final currentAddress = (_workshopAddress ?? '').trim();
+    if (currentAddress != initialAddress) return true;
+
+    // 9. Workshop Pin (lat / lng)
+    if (user.latitude != null && user.longitude != null && user.latitude != 0.0) {
+      if (_selectedWorkshopPin == null) return true;
+      final latDiff = (_selectedWorkshopPin!.latitude - user.latitude!).abs();
+      final lngDiff = (_selectedWorkshopPin!.longitude - user.longitude!).abs();
+      if (latDiff > 0.0001 || lngDiff > 0.0001) return true;
+    } else if (_selectedWorkshopPin != null) {
+      final defaultCenter = _resolveStateCenter(user.state);
+      final latDiff = (_selectedWorkshopPin!.latitude - defaultCenter.latitude).abs();
+      final lngDiff = (_selectedWorkshopPin!.longitude - defaultCenter.longitude).abs();
+      if (latDiff > 0.0001 || lngDiff > 0.0001) return true;
+    }
+
+    // 10. Tools & Materials Tags
+    final userTags = user.tags;
+    if (_toolsAndMaterials.length != userTags.length) return true;
+    for (final tag in _toolsAndMaterials) {
+      if (!userTags.contains(tag)) return true;
+    }
+
+    return false;
+  }
 
   static bool _isDefaultOrEmptyExperience(String? exp) {
     if (exp == null) return true;
@@ -103,13 +177,17 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     _initialUsername = initialHandle;
     _usernameController = TextEditingController(text: initialHandle);
     _usernameController.addListener(_onUsernameChanged);
+    _usernameController.addListener(_onFormChanged);
     _studioNameController = TextEditingController(
       text: user?.studioName ?? user?.displayName ?? '',
     );
+    _studioNameController.addListener(_onFormChanged);
     _craftCategoryController = TextEditingController(
       text: user?.craftCategory ?? '',
     );
+    _craftCategoryController.addListener(_onFormChanged);
     _stateController = TextEditingController(text: user?.state ?? '');
+    _stateController.addListener(_onFormChanged);
     _workshopAddress = user?.address;
     if (user != null && user.latitude != null && user.longitude != null && user.latitude != 0.0) {
       _selectedWorkshopPin = LatLng(user.latitude!, user.longitude!);
@@ -119,10 +197,13 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     _experienceController = TextEditingController(
       text: _isDefaultOrEmptyExperience(user?.experience) ? '' : (user!.experience ?? ''),
     );
+    _experienceController.addListener(_onFormChanged);
     _phoneController = TextEditingController(text: user?.phone ?? '');
+    _phoneController.addListener(_onFormChanged);
     _bioController = TextEditingController(
       text: user?.bio ?? '',
     );
+    _bioController.addListener(_onFormChanged);
     
     _syncFromUser(user, force: true);
 
@@ -270,12 +351,19 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
   void dispose() {
     _usernameDebounce?.cancel();
     _usernameController.removeListener(_onUsernameChanged);
+    _usernameController.removeListener(_onFormChanged);
     _usernameController.dispose();
+    _studioNameController.removeListener(_onFormChanged);
     _studioNameController.dispose();
+    _craftCategoryController.removeListener(_onFormChanged);
     _craftCategoryController.dispose();
+    _stateController.removeListener(_onFormChanged);
     _stateController.dispose();
+    _experienceController.removeListener(_onFormChanged);
     _experienceController.dispose();
+    _phoneController.removeListener(_onFormChanged);
     _phoneController.dispose();
+    _bioController.removeListener(_onFormChanged);
     _bioController.dispose();
     _workshopMapController?.dispose();
     super.dispose();
@@ -559,6 +647,8 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
   }
 
   Future<void> _handleSave() async {
+    if (_isSaving) return;
+
     if (!(_formKey.currentState?.validate() ?? false)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -621,6 +711,8 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
       }
     }
 
+    setState(() => _isSaving = true);
+
     try {
       await authVM.updateProfile(
         username: username,
@@ -667,6 +759,23 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
           );
         }
       } catch (_) {}
+
+      if (!mounted) return;
+
+      // Refresh the directory so changes appear immediately for tourists
+      context.read<DirectoryViewModel>().fetchArtisans();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Artisan Studio Profile & Tourist handle synced successfully!',
+            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold),
+          ),
+          backgroundColor: const Color(0xFF004D40),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -676,24 +785,11 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
           behavior: SnackBarBehavior.floating,
         ),
       );
-      return;
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
     }
-    if (!mounted) return;
-
-    // Refresh the directory so changes appear immediately for tourists
-    context.read<DirectoryViewModel>().fetchArtisans();
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Artisan Studio Profile & Tourist handle synced successfully!',
-          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: const Color(0xFF004D40),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
   }
 
   void _previewTouristView() {
@@ -711,6 +807,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
           imageUrl: _portfolioImages.isNotEmpty
               ? _portfolioImages.first
               : (user?.avatarUrl ?? ''),
+          imageUrls: _portfolioImages.isNotEmpty ? _portfolioImages : null,
           tags: _toolsAndMaterials,
           address: _workshopAddress,
           latitude: _selectedWorkshopPin?.latitude,
@@ -872,7 +969,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                 color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
               ),
               label: Text(
-                'Preview Tourist View',
+                'Preview',
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
@@ -1012,43 +1109,12 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
 
             const SizedBox(height: 24),
 
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    'Studio Information',
-                    softWrap: true,
-                    style: GoogleFonts.dmSerifDisplay(
-                      fontSize: 20,
-                      color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                OutlinedButton.icon(
-                  onPressed: _previewTouristView,
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    side: BorderSide(
-                      color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
-                    ),
-                  ),
-                  icon: Icon(
-                    Icons.remove_red_eye_rounded,
-                    size: 14,
-                    color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
-                  ),
-                  label: Text(
-                    'Preview Tourist Page',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 11,
-                      color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
+            Text(
+              'Studio Information',
+              style: GoogleFonts.dmSerifDisplay(
+                fontSize: 20,
+                color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+              ),
             ),
             const SizedBox(height: 16),
 
@@ -1920,55 +1986,74 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
 
             const SizedBox(height: 36),
 
-            // Save & Preview Buttons Row
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _previewTouristView,
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(
-                        color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
-                        width: 1.5,
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    ),
-                    icon: Icon(
-                      Icons.visibility_rounded,
-                      color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
-                    ),
-                    label: Text(
-                      'PREVIEW TOURIST VIEW',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
-                      ),
+            // Save & Preview Buttons Section
+            if (_hasUnsavedChanges) ...[
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: FilledButton.icon(
+                  onPressed: _isSaving ? null : _handleSave,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                    foregroundColor: isDark ? const Color(0xFF041412) : Colors.white,
+                    disabledBackgroundColor: isDark
+                        ? const Color(0xFFFFD54F).withValues(alpha: 0.5)
+                        : const Color(0xFF004D40).withValues(alpha: 0.5),
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                  icon: _isSaving
+                      ? SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: isDark ? const Color(0xFF041412) : Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.check_circle_rounded, size: 20),
+                  label: Text(
+                    _isSaving ? 'Saving Changes...' : 'Save Profile Changes',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.3,
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: _handleSave,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
-                      foregroundColor: isDark ? const Color(0xFF041412) : Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    ),
-                    child: Text(
-                      'SAVE PROFILE',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
+              ),
+              const SizedBox(height: 12),
+            ],
+
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: OutlinedButton.icon(
+                onPressed: _previewTouristView,
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(
+                    color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                    width: 1.5,
+                  ),
+                  backgroundColor: isDark
+                      ? const Color(0xFFFFD54F).withValues(alpha: 0.05)
+                      : const Color(0xFF004D40).withValues(alpha: 0.04),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                icon: Icon(
+                  Icons.visibility_rounded,
+                  size: 18,
+                  color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                ),
+                label: Text(
+                  'Preview Tourist View',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
                   ),
                 ),
-              ],
+              ),
             ),
           ],
         ),
