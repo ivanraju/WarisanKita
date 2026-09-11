@@ -583,21 +583,23 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
     }
 
     try {
+      final updatedUser = authVM.currentUser ?? user;
       context.read<ModerationViewModel>().addPendingArtisan(
         PendingArtisanProfile(
-          id: user?.id ?? 'p_${DateTime.now().millisecondsSinceEpoch}',
+          id: updatedUser?.id ?? 'p_${DateTime.now().millisecondsSinceEpoch}',
           name: studioName,
           craftCategory: _selectedCraftCategory,
           state: _selectedState,
           dateSubmitted: 'Just Now',
-          imageUrl:
-              'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600',
-          email: user?.email ?? '',
+          imageUrl: updatedUser?.avatarUrl ?? '',
+          email: updatedUser?.email ?? '',
           experience: expText.isNotEmpty ? expText : 'Craft Artisan',
           phone: phone ?? '',
           ssmNumber: ssm,
-          ssmFileName: _ssmFile?.name,
-          certFileName: _kraftanganFile?.name,
+          ssmFileName: _ssmFile?.name ?? updatedUser?.ssmFileName,
+          ssmFileUrl: updatedUser?.ssmFileUrl,
+          certFileName: _kraftanganFile?.name ?? updatedUser?.certFileName,
+          certFileUrl: updatedUser?.certFileUrl,
           photos: _uploadedPhotos.map((p) => p.name).toList(),
           bio: bio.isNotEmpty
               ? bio

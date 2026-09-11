@@ -820,94 +820,6 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                             ],
                           ),
                         ),
-                      ] else if (authVM.currentUser?.isApprovedArtisan ==
-                          true) ...[
-                        const SizedBox(height: 18),
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? const Color(0xFF2B271C)
-                                : const Color(0xFFFFF4D6),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: const Color(0xFFD97706),
-                              width: 1.2,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: const Color(
-                                    0xFFD97706,
-                                  ).withValues(alpha: 0.2),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.storefront_rounded,
-                                  color: Color(0xFFB45309),
-                                  size: 24,
-                                ),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Master Artisan Studio',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 13,
-                                        color: isDark
-                                            ? const Color(0xFFFFE082)
-                                            : const Color(0xFF92400E),
-                                      ),
-                                    ),
-                                    Text(
-                                      'Manage your craft studio, quests and visitors.',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 11,
-                                        color: isDark
-                                            ? const Color(0xFFF5C76B)
-                                            : const Color(0xFFB45309),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              FilledButton(
-                                onPressed: () {
-                                  authVM.selectActiveRole('Master Artisan');
-                                  Navigator.of(
-                                    context,
-                                  ).pushReplacementNamed('/artisan');
-                                },
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: const Color(0xFF004D40),
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 14,
-                                    vertical: 8,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                                child: const Text(
-                                  'Switch',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
                       ] else if (authVM.currentUser?.isRejectedArtisan == true) ...[
                         const SizedBox(height: 16),
                         Container(
@@ -1048,12 +960,13 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                             ],
                           ),
                         ),
-                      ] else if (authVM.currentUser?.isPendingArtisan == true ||
-                          authVM.currentUser?.isPendingApproval == true ||
-                          ((authVM.currentUser?.studioName != null &&
-                                  authVM.currentUser!.studioName!.trim().isNotEmpty) &&
-                              authVM.currentUser?.isApprovedArtisan != true &&
-                              authVM.currentUser?.isRejectedArtisan != true)) ...[
+                      ] else if (authVM.currentUser?.artisanStatus?.toUpperCase() != 'CLOSED' &&
+                          (authVM.currentUser?.isPendingArtisan == true ||
+                           authVM.currentUser?.isPendingApproval == true ||
+                           ((authVM.currentUser?.studioName != null &&
+                                   authVM.currentUser!.studioName!.trim().isNotEmpty) &&
+                               authVM.currentUser?.isApprovedArtisan != true &&
+                               authVM.currentUser?.isRejectedArtisan != true))) ...[
                         const SizedBox(height: 16),
                         Container(
                           padding: const EdgeInsets.all(16),

@@ -358,9 +358,9 @@ class AuthViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Constraint C1: Password length > 7 characters (Regex / Length Check)
-      if (cleanPassword.length <= 7) {
-        _errorMessage = 'PASSWORD MUST BE GREATER THAN 7 CHARACTERS';
+      // Constraint C1: Password cannot be empty
+      if (cleanPassword.isEmpty) {
+        _errorMessage = 'PLEASE ENTER YOUR PASSWORD';
         _isLoading = false;
         notifyListeners();
         return AuthResult(success: false, message: _errorMessage);
@@ -838,6 +838,7 @@ class AuthViewModel extends ChangeNotifier {
       );
 
       _currentUser = user;
+      _activeRole = 'Tourist';
       try {
         final prefs = await SharedPreferences.getInstance();
         await prefs.remove('dismissed_rejection_banner_${user.id}');

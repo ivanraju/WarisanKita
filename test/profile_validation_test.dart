@@ -1759,5 +1759,78 @@ void main() {
         expect(pendingUserWithResidualReason.isRejectedArtisan, isFalse);
         expect(pendingUserWithResidualReason.isPendingArtisan, isTrue);
       });
+
+      test('UserModel extracts ssm and cert document URLs and filenames from artisanDocuments', () {
+        const user = UserModel(
+          id: 'user-doc-test',
+          email: 'doc.test@warisankita.my',
+          role: 'Tourist',
+          artisanDocuments: [
+            {
+              'doc_type': 'SSM_BUSINESS_CERT',
+              'file_url': 'https://supabase.co/storage/v1/object/public/artisan_private_docs/ssm/my_ssm.pdf',
+              'file_name': 'my_ssm.pdf',
+            },
+            {
+              'doc_type': 'KRAFTANGAN_MASTER_CERT',
+              'file_url': 'https://supabase.co/storage/v1/object/public/artisan_private_docs/cert/kraftangan.png',
+              'file_name': 'kraftangan.png',
+            },
+            {
+              'doc_type': 'STUDIO_PHOTO',
+              'file_url': 'https://images.unsplash.com/studio.jpg',
+              'file_name': 'studio.jpg',
+            },
+          ],
+        );
+
+        expect(user.ssmFileUrl, contains('my_ssm.pdf'));
+        expect(user.ssmFileName, 'my_ssm.pdf');
+        expect(user.certFileUrl, contains('kraftangan.png'));
+        expect(user.certFileName, 'kraftangan.png');
+      });
+
+      test('UserModel with CLOSED status cleanly resolves to Tourist and not approved artisan', () {
+        final closedUser = UserModel.fromMap({
+          'id': 'closed-user-1',
+          'email': 'closed@warisankita.my',
+          'role': 'Tourist',
+          'artisan_status': 'CLOSED',
+          'status': 'ACTIVE',
+        });
+
+        expect(closedUser.role, 'Tourist');
+        expect(closedUser.artisanStatus, 'CLOSED');
+        expect(closedUser.isApprovedArtisan, isFalse);
+        expect(closedUser.isPendingArtisan, isFalse);
+        expect(closedUser.isRejectedArtisan, isFalse);
+        expect(closedUser.isDualRole, isFalse);
+      });
+
+      test('UserModel re-application after CLOSED correctly resolves to Tourist role and PENDING_APPROVAL', () {
+        // Simulates user re-applying: users table has artisan_status PENDING_APPROVAL, even if stale artisan_profiles join had APPROVED
+        final reappliedUser = UserModel.fromMap({
+          'id': 'reapplied-user-1',
+          'email': 'reapplied@warisankita.my',
+          'role': 'Tourist',
+          'artisan_status': 'PENDING_APPROVAL',
+          'status': 'ACTIVE',
+          'studio_name': 'My New Studio',
+          'craft_category': 'Woodwork',
+          'artisan_profiles': {
+            'id': 'stale-profile-id',
+            'status': 'APPROVED', // stale join from previous artisan lifetime
+            'studio_name': 'Old Studio',
+          },
+        });
+
+        expect(reappliedUser.role, 'Tourist');
+        expect(reappliedUser.roles, ['Tourist']);
+        expect(reappliedUser.artisanStatus, 'PENDING_APPROVAL');
+        expect(reappliedUser.isApprovedArtisan, isFalse);
+        expect(reappliedUser.isPendingArtisan, isTrue);
+        expect(reappliedUser.isRejectedArtisan, isFalse);
+      });
     });
 }
+

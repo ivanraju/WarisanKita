@@ -590,7 +590,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         obscureText: !_isPasswordVisible,
                         decoration: InputDecoration(
                           labelText: 'Password',
-                          hintText: 'Must be at least 8 characters',
+                          hintText: 'Enter your password',
                           prefixIcon: const Icon(Icons.lock_outline, size: 20),
                           suffixIcon: IconButton(
                             icon: Icon(
@@ -604,9 +604,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         validator: (v) {
                           if (v == null || v.trim().isEmpty) {
                             return 'Please enter your password';
-                          }
-                          if (v.trim().length < 8) {
-                            return 'Password must be at least 8 characters';
                           }
                           return null;
                         },

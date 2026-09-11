@@ -1045,67 +1045,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
               ),
             ),
 
-            if (context.watch<AuthViewModel>().currentUser?.isDualRole == true) ...[
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF0D2825) : const Color(0xFFE0F2FE),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: isDark ? const Color(0xFF1E3A34) : const Color(0xFF38BDF8),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0284C7).withValues(alpha: isDark ? 0.25 : 0.15),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.explore_rounded, color: Color(0xFF38BDF8), size: 24),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Dual Role: Cultural Explorer Mode',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                              color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0369A1),
-                            ),
-                          ),
-                          Text(
-                            'Switch to explore craft heritage, visit artisan workshops, and earn passport stamps.',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 11,
-                              color: isDark ? Colors.white70 : const Color(0xFF0284C7),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    FilledButton(
-                      onPressed: () {
-                        context.read<AuthViewModel>().selectActiveRole('Cultural Tourist');
-                        Navigator.of(context).pushReplacementNamed('/tourist');
-                      },
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFF0284C7),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: const Text('Switch', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+
 
             const SizedBox(height: 24),
 

@@ -103,12 +103,14 @@ class UserModel {
 
   bool get isApprovedArtisan {
     if (artisanStatus?.toUpperCase() == 'CLOSED') return false;
-    if (role == 'Tourist' && artisanStatus?.toUpperCase() != 'APPROVED') return false;
+    if (artisanStatus?.toUpperCase() == 'PENDING_APPROVAL' ||
+        artisanStatus?.toUpperCase() == 'PENDING' ||
+        artisanStatus?.toUpperCase() == 'REJECTED') return false;
+    if (role == 'Tourist') return false;
     return (role == 'Artisan' ||
         role == 'Master Artisan' ||
         roles.contains('Artisan') ||
-        roles.contains('Master Artisan') ||
-        artisanStatus?.toUpperCase() == 'APPROVED') &&
+        roles.contains('Master Artisan')) &&
        isApproved &&
        !isArtisanStudioSuspended;
   }
@@ -132,6 +134,58 @@ class UserModel {
        (isPendingApproval && role != 'Tourist') ||
        (role != 'Tourist' && studioName != null && studioName!.trim().isNotEmpty)) &&
       !isArtisanStudioSuspended;
+
+  String? get ssmFileUrl {
+    for (final d in artisanDocuments) {
+      final type = d['doc_type']?.toString();
+      if (type == 'SSM_BUSINESS_CERT' || type == 'SSM_CERT' || type == 'SSM') {
+        final url = d['file_url']?.toString();
+        if (url != null && url.isNotEmpty) return url;
+      }
+    }
+    return null;
+  }
+
+  String? get ssmFileName {
+    for (final d in artisanDocuments) {
+      final type = d['doc_type']?.toString();
+      if (type == 'SSM_BUSINESS_CERT' || type == 'SSM_CERT' || type == 'SSM') {
+        final name = d['file_name']?.toString();
+        if (name != null && name.isNotEmpty) return name;
+        final url = d['file_url']?.toString();
+        if (url != null && url.isNotEmpty) return url.split('/').last;
+      }
+    }
+    return null;
+  }
+
+  String? get certFileUrl {
+    for (final d in artisanDocuments) {
+      final type = d['doc_type']?.toString();
+      if (type == 'KRAFTANGAN_MASTER_CERT' ||
+          type == 'KRAFTANGAN_CERT' ||
+          type == 'CERT') {
+        final url = d['file_url']?.toString();
+        if (url != null && url.isNotEmpty) return url;
+      }
+    }
+    return null;
+  }
+
+  String? get certFileName {
+    for (final d in artisanDocuments) {
+      final type = d['doc_type']?.toString();
+      if (type == 'KRAFTANGAN_MASTER_CERT' ||
+          type == 'KRAFTANGAN_CERT' ||
+          type == 'CERT') {
+        final name = d['file_name']?.toString();
+        if (name != null && name.isNotEmpty) return name;
+        final url = d['file_url']?.toString();
+        if (url != null && url.isNotEmpty) return url.split('/').last;
+      }
+    }
+    return null;
+  }
 
   String get handle {
     if (username != null && username!.trim().isNotEmpty) {
@@ -416,9 +470,31 @@ class UserModel {
         ? rawWorkshops.toInt()
         : (rawWorkshops != null ? int.tryParse(rawWorkshops.toString()) : null);
 
-    final rawArtisanStatus = artisanMap?['status'] ?? map['artisanStatus'] ?? map['artisan_status'];
-    final String? resolvedArtisanStatus = rawArtisanStatus?.toString();
-    final bool isApprovedArtisanStatus = resolvedArtisanStatus?.toUpperCase() == 'APPROVED';
+    final String? mapArtisanStatus = (map['artisan_status'] ?? map['artisanStatus'])?.toString();
+    final String? profileArtisanStatus = artisanMap?['status']?.toString();
+
+    final String? resolvedArtisanStatus;
+    if (mapArtisanStatus != null &&
+        (mapArtisanStatus.toUpperCase() == 'PENDING_APPROVAL' ||
+         mapArtisanStatus.toUpperCase() == 'PENDING' ||
+         mapArtisanStatus.toUpperCase() == 'CLOSED' ||
+         mapArtisanStatus.toUpperCase() == 'REJECTED')) {
+      resolvedArtisanStatus = mapArtisanStatus;
+    } else {
+      resolvedArtisanStatus = profileArtisanStatus ?? mapArtisanStatus;
+    }
+
+    final bool isClosedArtisan = resolvedArtisanStatus?.toUpperCase() == 'CLOSED' ||
+        map['artisan_status']?.toString().toUpperCase() == 'CLOSED' ||
+        map['artisanStatus']?.toString().toUpperCase() == 'CLOSED';
+    final bool isPendingArtisanStatus = !isClosedArtisan &&
+        (resolvedArtisanStatus?.toUpperCase() == 'PENDING_APPROVAL' ||
+         resolvedArtisanStatus?.toUpperCase() == 'PENDING' ||
+         map['artisan_status']?.toString().toUpperCase() == 'PENDING_APPROVAL' ||
+         map['artisanStatus']?.toString().toUpperCase() == 'PENDING_APPROVAL');
+    final bool isApprovedArtisanStatus = !isClosedArtisan &&
+        !isPendingArtisanStatus &&
+        resolvedArtisanStatus?.toUpperCase() == 'APPROVED';
 
     final String resolvedRole;
     final List<String> resolvedRoles;
@@ -427,6 +503,9 @@ class UserModel {
           ? map['role'] as String
           : 'Admin';
       resolvedRoles = roleList;
+    } else if (isClosedArtisan || isPendingArtisanStatus) {
+      resolvedRole = 'Tourist';
+      resolvedRoles = const ['Tourist'];
     } else if (isApprovedArtisanStatus) {
       resolvedRole = 'Artisan';
       resolvedRoles = const ['Artisan'];
@@ -458,7 +537,11 @@ class UserModel {
       phone: map['phone'] ?? map['phone_number'] ?? artisanMap?['phone'],
       experience: resolvedExp,
       artisanProfileId: artisanMap?['id'],
-      artisanStatus: artisanMap?['status'] ?? map['artisanStatus'] ?? map['artisan_status'],
+      artisanStatus: isClosedArtisan
+          ? 'CLOSED'
+          : (isPendingArtisanStatus
+              ? 'PENDING_APPROVAL'
+              : (artisanMap?['status'] ?? map['artisanStatus'] ?? map['artisan_status'])),
       artisanDocuments: docs,
       tags: tagsList,
       pendingRelocationAddress: map['pending_relocation_address'] ?? map['pendingRelocationAddress'] ?? artisanMap?['pending_relocation_address'],
