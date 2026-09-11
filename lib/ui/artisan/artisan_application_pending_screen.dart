@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:warisan_kita/ui/tourist/apply_artisan_screen.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 
 class ArtisanApplicationPendingScreen extends StatelessWidget {
@@ -31,7 +32,8 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
         ? user.ssmNumber!
         : ((ssmNumber.isNotEmpty) ? ssmNumber : 'Under Verification');
 
-    final bool isRejected = user?.status.toUpperCase() == 'REJECTED';
+    final bool isRejected = user?.status.toUpperCase() == 'REJECTED' ||
+        user?.artisanStatus?.toUpperCase() == 'REJECTED';
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
@@ -390,7 +392,33 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
 
                 const SizedBox(height: 12),
 
-                if (isRejected)
+                if (isRejected) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: FilledButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(
+                            builder: (_) => const ApplyArtisanScreen(),
+                          ),
+                        );
+                      },
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF004D40),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      icon: const Icon(Icons.edit_document, size: 20),
+                      label: Text(
+                        'Update & Re-apply',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity,
                     height: 52,
@@ -415,7 +443,8 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-                  )
+                  ),
+                ]
                 else
                   TextButton(
                     onPressed: () {

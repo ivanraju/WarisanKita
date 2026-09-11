@@ -693,16 +693,31 @@ class ModerationViewModel extends ChangeNotifier {
       }
 
       final userIdx = _registeredUsers.indexWhere((u) => u.email.toLowerCase() == artisan.email.toLowerCase());
+      final isExistingTourist = userIdx != -1 || artisan.isUpgradeFromTourist;
+
       if (userIdx != -1) {
-        _registeredUsers[userIdx] = _registeredUsers[userIdx].copyWith(
-          status: 'REJECTED',
-        );
+        final existingUser = _registeredUsers[userIdx];
+        if (isExistingTourist) {
+          // Keep tourist account active, but record artisan application as REJECTED
+          _registeredUsers[userIdx] = existingUser.copyWith(
+            role: 'Tourist',
+            roles: const ['Tourist'],
+            status: 'ACTIVE',
+            artisanStatus: 'REJECTED',
+          );
+        } else {
+          _registeredUsers[userIdx] = existingUser.copyWith(
+            status: 'REJECTED',
+            artisanStatus: 'REJECTED',
+          );
+        }
       }
 
       await _repository.updateArtisanStatus(
         email: artisan.email,
         newStatus: 'REJECTED',
-        newRole: 'Artisan',
+        newRole: isExistingTourist ? 'Tourist' : 'Artisan',
+        updateArtisanProfileOnly: isExistingTourist,
       );
 
       notifyListeners();
