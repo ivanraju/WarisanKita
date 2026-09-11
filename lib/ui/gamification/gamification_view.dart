@@ -87,7 +87,11 @@ class PassportDashboardScreen extends StatelessWidget {
             Positioned(
               top: -20,
               right: -20,
-              child: Icon(Icons.spa_rounded, size: 250, color: Colors.white.withOpacity(0.05)),
+              child: Icon(
+                Icons.spa_rounded,
+                size: 250,
+                color: Colors.white.withOpacity(0.05),
+              ),
             ),
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -132,7 +136,7 @@ class PassportDashboardScreen extends StatelessWidget {
             color: const Color(0xFFFF7043).withOpacity(0.3),
             blurRadius: 25,
             spreadRadius: 5,
-          )
+          ),
         ],
       ),
       child: const CircleAvatar(
@@ -157,7 +161,7 @@ class PassportDashboardScreen extends StatelessWidget {
             color: Colors.black.withOpacity(0.05),
             blurRadius: 30,
             offset: const Offset(0, 15),
-          )
+          ),
         ],
       ),
       child: Row(
@@ -176,7 +180,11 @@ class PassportDashboardScreen extends StatelessWidget {
                   strokeCap: StrokeCap.round,
                 ),
               ),
-              const Icon(Icons.shield_moon_rounded, color: Color(0xFFFFD54F), size: 36),
+              const Icon(
+                Icons.shield_moon_rounded,
+                color: Color(0xFFFFD54F),
+                size: 36,
+              ),
             ],
           ),
           const SizedBox(width: 28),
@@ -249,31 +257,29 @@ class PassportDashboardScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: stamp.isUnlocked ? Colors.white : Colors.grey.shade100,
         borderRadius: BorderRadius.circular(28),
-        border: stamp.isUnlocked 
-            ? Border.all(color: const Color(0xFFFFD54F), width: 2) 
+        border: stamp.isUnlocked
+            ? Border.all(color: const Color(0xFFFFD54F), width: 2)
             : null,
-        boxShadow: stamp.isUnlocked ? [
-          BoxShadow(
-            color: const Color(0xFFFFD54F).withOpacity(0.2),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          )
-        ] : null,
+        boxShadow: stamp.isUnlocked
+            ? [
+                BoxShadow(
+                  color: const Color(0xFFFFD54F).withOpacity(0.2),
+                  blurRadius: 15,
+                  offset: const Offset(0, 8),
+                ),
+              ]
+            : null,
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           ShaderMask(
             shaderCallback: (bounds) => LinearGradient(
-              colors: stamp.isUnlocked 
+              colors: stamp.isUnlocked
                   ? [const Color(0xFFFFD54F), const Color(0xFFFF7043)]
                   : [Colors.grey.shade400, Colors.grey.shade500],
             ).createShader(bounds),
-            child: Icon(
-              Icons.stars_rounded,
-              size: 48,
-              color: Colors.white,
-            ),
+            child: Icon(Icons.stars_rounded, size: 48, color: Colors.white),
           ),
           const SizedBox(height: 12),
           Text(
@@ -281,7 +287,9 @@ class PassportDashboardScreen extends StatelessWidget {
             style: GoogleFonts.plusJakartaSans(
               fontSize: 9,
               fontWeight: FontWeight.w900,
-              color: stamp.isUnlocked ? const Color(0xFFFF7043) : Colors.black26,
+              color: stamp.isUnlocked
+                  ? const Color(0xFFFF7043)
+                  : Colors.black26,
               letterSpacing: 1.2,
             ),
           ),
@@ -303,11 +311,26 @@ class PassportDashboardScreen extends StatelessWidget {
   Widget _buildStatsSection() {
     return Row(
       children: [
-        _buildStatBox('VISITS', '14', Icons.location_on_rounded, const Color(0xFF00796B)),
+        _buildStatBox(
+          'VISITS',
+          '14',
+          Icons.location_on_rounded,
+          const Color(0xFF00796B),
+        ),
         const SizedBox(width: 16),
-        _buildStatBox('TASKS', '28', Icons.bolt_rounded, const Color(0xFFFF7043)),
+        _buildStatBox(
+          'TASKS',
+          '28',
+          Icons.bolt_rounded,
+          const Color(0xFFFF7043),
+        ),
         const SizedBox(width: 16),
-        _buildStatBox('RANK', '#4', Icons.emoji_events_rounded, const Color(0xFFFFD54F)),
+        _buildStatBox(
+          'RANK',
+          '#4',
+          Icons.emoji_events_rounded,
+          const Color(0xFFFFD54F),
+        ),
       ],
     );
   }
@@ -320,7 +343,11 @@ class PassportDashboardScreen extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(32),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 20, offset: const Offset(0, 10))
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
           ],
         ),
         child: Column(
@@ -329,7 +356,10 @@ class PassportDashboardScreen extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               value,
-              style: GoogleFonts.dmSerifDisplay(fontSize: 22, color: const Color(0xFF004D40)),
+              style: GoogleFonts.dmSerifDisplay(
+                fontSize: 22,
+                color: const Color(0xFF004D40),
+              ),
             ),
             Text(
               label,
@@ -359,7 +389,7 @@ class PassportDashboardScreen extends StatelessWidget {
             color: const Color(0xFF004D40).withOpacity(0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
-          )
+          ),
         ],
       ),
       child: ElevatedButton.icon(
@@ -371,8 +401,12 @@ class PassportDashboardScreen extends StatelessWidget {
         },
         icon: const Icon(Icons.map_rounded, color: Color(0xFFFFD54F)),
         label: const Text(
-          'CONTINUE JOURNEY',
-          style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.5, color: Colors.white),
+          'CONTINUE QUEST',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.5,
+            color: Colors.white,
+          ),
         ),
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.transparent,

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:warisan_kita/domain/models/badge.dart' show EarnedTaskXp;
 import 'package:warisan_kita/domain/models/heritage_task.dart';
+import 'package:warisan_kita/domain/models/task_completion_result.dart';
 
 void main() {
   group('Task XP award contract', () {
@@ -49,10 +50,8 @@ void main() {
         ).readAsStringSync();
 
         expect(source, contains(".eq('is_completed', false)"));
-        expect(
-          source,
-          contains("if (current['is_completed'] == true) return current;"),
-        );
+        expect(source, contains("existing?['is_completed'] == true"));
+        expect(source, contains('_taskCompletionResult'));
         expect(source, contains("onConflict: 'user_id,quest_id'"));
         expect(source, contains('ignoreDuplicates: true'));
         expect(source, isNot(contains(".from('user_task_xp_awards').insert")));
@@ -60,5 +59,29 @@ void main() {
         expect(source, isNot(contains(".from('user_experience').update")));
       },
     );
+
+    test('completion result uses recorded XP and permits an unknown award', () {
+      final recorded = TaskCompletionResult.fromMap({
+        'progress': {
+          'user_id': 'tourist-1',
+          'task_id': 'task-1',
+          'is_completed': true,
+          'progress_seconds': 0,
+        },
+        'xp_awarded': 50,
+      });
+      final unavailable = TaskCompletionResult.fromMap({
+        'progress': {
+          'user_id': 'tourist-1',
+          'task_id': 'task-1',
+          'is_completed': true,
+          'progress_seconds': 0,
+        },
+        'xp_awarded': null,
+      });
+
+      expect(recorded.xpAwarded, 50);
+      expect(unavailable.xpAwarded, isNull);
+    });
   });
 }

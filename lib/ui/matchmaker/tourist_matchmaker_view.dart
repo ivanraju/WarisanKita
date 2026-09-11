@@ -21,9 +21,6 @@ import 'package:warisan_kita/ui/matchmaker/widgets/shimmer_loading_card.dart';
 import 'package:warisan_kita/ui/map/widgets/google_map_widget.dart';
 import 'package:warisan_kita/ui/gamification/quest_view.dart';
 
-import 'package:warisan_kita/ui/tourist/widgets/daily_mood_checkin_dialog.dart';
-import 'package:warisan_kita/ui/core/widgets/translation_language_dialog.dart';
-
 import 'package:warisan_kita/ui/tourist/artisan_detail_screen.dart';
 
 class TouristMatchmakerView extends StatefulWidget {
@@ -517,58 +514,23 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
     });
   }
 
-  Future<void> _showMapSettings() async {
-    final lang = context.read<LanguageViewModel>();
-    final action = await showModalBottomSheet<String>(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.tune_rounded),
-              title: Text(lang.translate('Mood & craft preferences')),
-              onTap: () => Navigator.pop(context, 'mood'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.translate_rounded),
-              title: Text(lang.translate('Language')),
-              onTap: () => Navigator.pop(context, 'language'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.refresh_rounded),
-              title: Text(lang.translate('Refresh studios')),
-              onTap: () => Navigator.pop(context, 'refresh'),
-            ),
-          ],
-        ),
-      ),
-    );
+  Future<void> _refreshStudios() async {
+    final mapViewModel = context.read<MapViewModel>();
+    if (mapViewModel.isRefreshing) return;
+
+    final refreshed = await mapViewModel.refreshWorkshops();
     if (!mounted) return;
-    if (action == 'mood') _triggerMoodCheckin(context);
-    if (action == 'refresh') context.read<MapViewModel>().refreshWorkshops();
-    if (action == 'language') {
-      showDialog(
-        context: context,
-        builder: (_) => TranslationLanguageDialog(
-          currentLanguage: lang.currentLanguageCode,
-          onLanguageChanged: (code, name) => lang.setLanguage(code, name),
+
+    final messenger = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+        content: Text(
+          refreshed
+              ? 'Studios refreshed.'
+              : mapViewModel.refreshError ?? 'Unable to refresh studios.',
         ),
-      );
-    }
-  }
-
-  // ============================================================
-  // MOOD CHECK-IN
-  // ============================================================
-
-  void _triggerMoodCheckin(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (_) => DailyMoodCheckinDialog(
-        onMoodSelected: (moodCategory) {
-          context.read<MapViewModel>().refreshWorkshops();
-        },
       ),
     );
   }
@@ -727,7 +689,13 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
             right: 16,
             child: HeritageMapControls(
               translate: langVM.translate,
-              onSettings: _showMapSettings,
+              isRefreshing: mapVM.isRefreshing,
+              onRefresh:
+                  mapVM.isRefreshing ||
+                      mapVM.isLoading ||
+                      mapVM.isLoadingJourneys
+                  ? null
+                  : _refreshStudios,
             ),
           ),
           if (nearestQuestArtisan != null)
@@ -791,20 +759,24 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
                           color: isDark
                               ? const Color(0xFF0D2825)
                               : const Color(0xFFF7F2E8),
-                          image: isDark
-                              ? null
-                              : const DecorationImage(
-                                  image: ResizeImage(
-                                    AssetImage(
-                                      'assets/images/heritage_batik_background.png',
-                                    ),
-                                    width: 768,
-                                  ),
-                                  fit: BoxFit.fitWidth,
-                                  alignment: Alignment.topCenter,
-                                  repeat: ImageRepeat.repeatY,
-                                  opacity: 0.14,
-                                ),
+                          image: DecorationImage(
+                            image: const ResizeImage(
+                              AssetImage(
+                                'assets/images/heritage_batik_background.png',
+                              ),
+                              width: 768,
+                            ),
+                            fit: BoxFit.fitWidth,
+                            alignment: Alignment.topCenter,
+                            repeat: ImageRepeat.repeatY,
+                            opacity: isDark ? 0.34 : 0.14,
+                            colorFilter: isDark
+                                ? const ColorFilter.mode(
+                                    Color(0xFF286A5E),
+                                    BlendMode.modulate,
+                                  )
+                                : null,
+                          ),
                         ),
                         sliver: SliverMainAxisGroup(
                           slivers: [

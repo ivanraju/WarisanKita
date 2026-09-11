@@ -6,8 +6,11 @@ import 'package:warisan_kita/data/repositories/gamification_repository.dart';
 import 'package:warisan_kita/domain/models/active_quest.dart';
 import 'package:warisan_kita/domain/models/heritage_task.dart';
 import 'package:warisan_kita/domain/models/quest.dart';
+import 'package:warisan_kita/domain/models/quest_location_validation.dart';
 import 'package:warisan_kita/domain/models/quest_participation.dart';
+import 'package:warisan_kita/domain/models/task_completion_result.dart';
 import 'package:warisan_kita/domain/models/task_progress.dart';
+import 'package:warisan_kita/domain/models/user_location.dart';
 import 'package:warisan_kita/viewmodels/gamification_viewmodel.dart';
 
 void main() {
@@ -30,7 +33,7 @@ void main() {
 
       expect(state.activeQuest!.questId, 'newest');
       expect(state.conflictingQuests, hasLength(2));
-      expect(state.warningMessage, contains('Multiple active journeys'));
+      expect(state.warningMessage, contains('Multiple active quests'));
     });
 
     test('malformed dates have a deterministic quest-id fallback', () {
@@ -54,7 +57,9 @@ void main() {
       addTearDown(viewModel.dispose);
 
       await viewModel.selectQuest(_quest('quest-1'));
-      final started = await viewModel.startSelectedQuest();
+      final started = await viewModel.startSelectedQuest(
+        verifiedLocation: _validLocation(),
+      );
 
       expect(started, isTrue);
       expect(repository.startCalls, 1);
@@ -78,7 +83,9 @@ void main() {
         addTearDown(viewModel.dispose);
 
         await viewModel.selectQuest(_quest('quest-1'));
-        final resumed = await viewModel.startSelectedQuest();
+        final resumed = await viewModel.startSelectedQuest(
+          verifiedLocation: _validLocation(),
+        );
 
         expect(resumed, isTrue);
         expect(repository.startCalls, 1);
@@ -102,7 +109,9 @@ void main() {
       addTearDown(viewModel.dispose);
 
       await viewModel.selectQuest(_quest('quest-1'));
-      final started = await viewModel.startSelectedQuest();
+      final started = await viewModel.startSelectedQuest(
+        verifiedLocation: _validLocation(),
+      );
 
       expect(started, isFalse);
       expect(viewModel.canStartQuest('quest-1'), isFalse);
@@ -122,14 +131,41 @@ void main() {
       addTearDown(viewModel.dispose);
 
       await viewModel.selectQuest(_quest('quest-1'));
-      final first = viewModel.startSelectedQuest();
-      final second = await viewModel.startSelectedQuest();
+      final first = viewModel.startSelectedQuest(
+        verifiedLocation: _validLocation(),
+      );
+      final second = await viewModel.startSelectedQuest(
+        verifiedLocation: _validLocation(),
+      );
 
       expect(second, isFalse);
       expect(repository.startCalls, 1);
       pending.complete(_successfulStart(QuestStartDisposition.started));
       expect(await first, isTrue);
       expect(repository.startCalls, 1);
+    });
+
+    test('failed fresh-location validation performs no mutation', () async {
+      final repository = _QuestFlowRepository(
+        initialActiveState: const ActiveQuestState.empty(),
+        startResult: _successfulStart(QuestStartDisposition.started),
+      );
+      final viewModel = GamificationViewModel(repository: repository);
+      addTearDown(viewModel.dispose);
+
+      await viewModel.selectQuest(_quest('quest-1'));
+      final started = await viewModel.startSelectedQuest(
+        verifiedLocation: const QuestLocationValidationResult.invalid(
+          failure: QuestLocationFailure.stale,
+          message: 'Your location is out of date. Refresh and try again.',
+        ),
+      );
+
+      expect(started, isFalse);
+      expect(repository.startCalls, 0);
+      expect(repository.arrivalCompletionCalls, 0);
+      expect(repository.timedStartCalls, 0);
+      expect(viewModel.startQuestError, contains('out of date'));
     });
 
     test('restart restoration exposes the persisted active quest', () async {
@@ -189,7 +225,12 @@ void main() {
         expect(viewModel.canVerifyTaskWithQr(qrTask), isFalse);
         expect(viewModel.qrVerificationLabel(qrTask), 'Resume Quest to Scan');
 
-        expect(await viewModel.resumeSelectedQuest(), isTrue);
+        expect(
+          await viewModel.resumeSelectedQuest(
+            verifiedLocation: _validLocation(),
+          ),
+          isTrue,
+        );
         expect(viewModel.requiresJourneyResume, isFalse);
         expect(viewModel.canVerifyTaskWithQr(qrTask), isTrue);
         expect(repository.timedStartCalls, 0);
@@ -233,8 +274,41 @@ void main() {
       await viewModel.selectQuest(_quest('quest-1'));
 
       expect(viewModel.canStartQuest('quest-2'), isFalse);
-      expect(viewModel.displayedDwellSeconds, greaterThanOrEqualTo(300));
+      expect(viewModel.displayedDwellSeconds, 300);
+      expect(viewModel.isDwellTracking, isFalse);
+      expect(repository.restoreCalls, 1);
     });
+
+    test(
+      'restart preserves six confirmed minutes and restoration is safe',
+      () async {
+        final repository = _QuestFlowRepository(
+          initialActiveState: _stateFor('quest-1'),
+          startResult: _successfulStart(QuestStartDisposition.resumed),
+          progressRows: [
+            _progress('arrival', completed: true),
+            _progress(
+              'dwell',
+              progressSeconds: 360,
+              trackingStartedAt: DateTime.now().toUtc().subtract(
+                const Duration(minutes: 30),
+              ),
+            ),
+          ],
+        );
+        final viewModel = GamificationViewModel(repository: repository);
+        addTearDown(viewModel.dispose);
+
+        await viewModel.selectQuest(_quest('quest-1'));
+        expect(viewModel.displayedDwellSeconds, 360);
+        expect(viewModel.isDwellTracking, isFalse);
+        expect(viewModel.requiresJourneyResume, isTrue);
+
+        await viewModel.selectQuest(_quest('quest-1'));
+        expect(viewModel.displayedDwellSeconds, 360);
+        expect(repository.restoreCalls, 2);
+      },
+    );
 
     test('re-entering range requires an explicit resume tap', () async {
       final repository = _QuestFlowRepository(
@@ -245,7 +319,10 @@ void main() {
       addTearDown(viewModel.dispose);
 
       await viewModel.selectQuest(_quest('quest-1'));
-      expect(await viewModel.startSelectedQuest(), isTrue);
+      expect(
+        await viewModel.startSelectedQuest(verifiedLocation: _validLocation()),
+        isTrue,
+      );
       expect(viewModel.isDwellTracking, isTrue);
       expect(repository.timedStartCalls, 1);
 
@@ -259,7 +336,10 @@ void main() {
       expect(viewModel.canResumeDwellTracking, isTrue);
       expect(repository.timedStartCalls, 1);
 
-      expect(await viewModel.resumeSelectedQuest(), isTrue);
+      expect(
+        await viewModel.resumeSelectedQuest(verifiedLocation: _validLocation()),
+        isTrue,
+      );
       expect(viewModel.isDwellTracking, isTrue);
       expect(viewModel.canResumeDwellTracking, isFalse);
       expect(repository.timedStartCalls, 2);
@@ -297,8 +377,38 @@ void main() {
         expect(viewModel.activeQuest?.questId, 'quest-2');
         expect(
           viewModel.startQuestError,
-          contains('Complete your active journey'),
+          contains('Complete your active quest'),
         );
+      },
+    );
+
+    test(
+      'QR completion exposes only the authoritative recorded award',
+      () async {
+        final task = _bonusTask();
+        final repository = _QuestFlowRepository(
+          initialActiveState: const ActiveQuestState.empty(),
+          startResult: _successfulStart(QuestStartDisposition.started),
+          participation: QuestParticipation(
+            status: 'COMPLETED',
+            startedAt: DateTime.utc(2026, 8, 1),
+          ),
+          hasEarnedStamp: true,
+          heritageTasks: [task],
+          completionXp: 50,
+        );
+        final viewModel = GamificationViewModel(repository: repository);
+        addTearDown(viewModel.dispose);
+
+        await viewModel.selectQuest(_quest('quest-1'));
+        expect(
+          await viewModel.verifyArtisanQrForTask(
+            task: task,
+            qrPayload: 'WK_ARTISAN:artisan-quest-1:secret',
+          ),
+          isTrue,
+        );
+        expect(viewModel.authoritativeXpAwardForTask(task.id), 50);
       },
     );
   });
@@ -317,7 +427,7 @@ void main() {
         startOffset,
       );
       final activeCheckOffset = source.indexOf(
-        '_fetchActiveQuestProgressRowsForUser',
+        '_fetchEffectiveActiveQuestRowsForUser',
         startOffset,
       );
       final endOffset = source.indexOf(
@@ -353,25 +463,42 @@ void main() {
 
     expect(
       methodSource(
-        'Future<Map<String, dynamic>> completeTask(String taskId)',
+        'Future<Map<String, dynamic>> completeArrivalTask',
         'Future<Map<String, dynamic>> completeTaskWithArtisanQr',
       ),
-      contains('_assertNoDifferentActiveQuest'),
+      allOf(
+        contains('_assertExpectedActiveQuest'),
+        contains('expectedSortOrder: 1'),
+      ),
     );
     expect(
       methodSource(
         'Future<Map<String, dynamic>> startTimedTask(String taskId)',
         'Future<Map<String, dynamic>> pauseTimedTask',
       ),
-      contains('_assertNoDifferentActiveQuest'),
+      allOf(
+        contains('_assertExpectedActiveQuest'),
+        contains('expectedSortOrder: 2'),
+      ),
     );
     expect(
       methodSource(
         'Future<Map<String, dynamic>> completeTimedTask(String taskId)',
         'static const String _taskProgressColumns',
       ),
-      contains('_assertNoDifferentActiveQuest'),
+      allOf(
+        contains('_assertExpectedActiveQuest'),
+        contains('expectedSortOrder: 2'),
+      ),
     );
+    expect(source, isNot(contains('completeTask(String taskId)')));
+    final qrSource = methodSource(
+      'Future<Map<String, dynamic>> completeTaskWithArtisanQr',
+      'Future<Map<String, dynamic>> _loadApprovedTaskForCompletion',
+    );
+    expect(qrSource, contains('expectedSystemTask: false'));
+    expect(qrSource, contains('_fetchEffectiveActiveQuestRowsForUser'));
+    expect(qrSource, contains('Complete your active quest'));
   });
 }
 
@@ -456,6 +583,17 @@ TaskProgress _progress(
   trackingStartedAt: trackingStartedAt,
 );
 
+QuestLocationValidationResult _validLocation() =>
+    QuestLocationValidationResult.valid(
+      location: UserLocation(
+        latitude: 3.0,
+        longitude: 101.0,
+        accuracy: 5,
+        recordedAt: DateTime.now().toUtc(),
+      ),
+      distanceMeters: 10,
+    );
+
 class _QuestFlowRepository extends GamificationRepository {
   _QuestFlowRepository({
     required this.initialActiveState,
@@ -465,6 +603,7 @@ class _QuestFlowRepository extends GamificationRepository {
     this.participation,
     this.hasEarnedStamp = false,
     List<HeritageTask>? heritageTasks,
+    this.completionXp = 50,
   }) : _startResult = startResult,
        _startLoader = startLoader,
        heritageTasks =
@@ -483,11 +622,13 @@ class _QuestFlowRepository extends GamificationRepository {
   final QuestParticipation? participation;
   final bool hasEarnedStamp;
   final List<HeritageTask> heritageTasks;
+  final int? completionXp;
   int startCalls = 0;
   int arrivalCompletionCalls = 0;
   int timedStartCalls = 0;
   int pauseCalls = 0;
   int qrCompletionCalls = 0;
+  int restoreCalls = 0;
 
   @override
   Future<ActiveQuestState> getActiveQuestState() async => initialActiveState;
@@ -522,20 +663,29 @@ class _QuestFlowRepository extends GamificationRepository {
   }
 
   @override
-  Future<TaskProgress> completeTask(String taskId) async {
+  Future<TaskCompletionResult> completeArrivalTask({
+    required String questId,
+    required String taskId,
+  }) async {
     arrivalCompletionCalls++;
-    return _progress(taskId, completed: true);
+    return TaskCompletionResult(
+      progress: _progress(taskId, completed: true),
+      xpAwarded: completionXp,
+    );
   }
 
   @override
-  Future<TaskProgress> completeTaskWithArtisanQr({
+  Future<TaskCompletionResult> completeTaskWithArtisanQr({
     required String questId,
     required String artisanId,
     required String taskId,
     required String qrPayload,
   }) async {
     qrCompletionCalls++;
-    return _progress(taskId, completed: true);
+    return TaskCompletionResult(
+      progress: _progress(taskId, completed: true),
+      xpAwarded: completionXp,
+    );
   }
 
   @override
@@ -551,5 +701,19 @@ class _QuestFlowRepository extends GamificationRepository {
   }) async {
     pauseCalls++;
     return _progress(taskId, progressSeconds: progressSeconds);
+  }
+
+  @override
+  Future<TaskProgress> restoreTimedTaskAsPaused(String taskId) async {
+    restoreCalls++;
+    final current = progressRows.firstWhere(
+      (progress) => progress.taskId == taskId,
+      orElse: () => _progress(taskId),
+    );
+    return _progress(
+      taskId,
+      completed: current.isCompleted,
+      progressSeconds: current.progressSeconds,
+    );
   }
 }

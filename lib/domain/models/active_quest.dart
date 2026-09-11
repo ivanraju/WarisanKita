@@ -1,4 +1,5 @@
 import 'package:warisan_kita/domain/models/quest_participation.dart';
+import 'package:warisan_kita/domain/models/quest_completion_reconciliation.dart';
 
 class ActiveQuestSummary {
   final String questId;
@@ -29,36 +30,52 @@ class ActiveQuestSummary {
 class ActiveQuestState {
   final ActiveQuestSummary? activeQuest;
   final List<ActiveQuestSummary> conflictingQuests;
+  final String? reconciliationWarning;
 
   const ActiveQuestState({
     required this.activeQuest,
     this.conflictingQuests = const [],
+    this.reconciliationWarning,
   });
 
   const ActiveQuestState.empty()
     : activeQuest = null,
-      conflictingQuests = const [];
+      conflictingQuests = const [],
+      reconciliationWarning = null;
 
   bool get hasActiveQuest => activeQuest != null;
   bool get hasDataIntegrityWarning => conflictingQuests.isNotEmpty;
 
-  String? get warningMessage => hasDataIntegrityWarning
-      ? 'Multiple active journeys were found. The most recently started '
-            'journey is being used. Please contact support before starting '
-            'another journey.'
-      : null;
+  String? get warningMessage {
+    final conflictWarning = hasDataIntegrityWarning
+        ? 'Multiple active quests were found. No quest will be changed '
+              'until the conflict is resolved.'
+        : null;
+    if (conflictWarning == null) return reconciliationWarning;
+    if (reconciliationWarning == null) return conflictWarning;
+    return '$conflictWarning $reconciliationWarning';
+  }
 
-  factory ActiveQuestState.fromRows(Iterable<Map<String, dynamic>> rows) {
+  factory ActiveQuestState.fromRows(
+    Iterable<Map<String, dynamic>> rows, {
+    String? reconciliationWarning,
+  }) {
     final quests =
         rows
             .map(ActiveQuestSummary.fromMap)
             .where((quest) => quest.questId.isNotEmpty)
             .toList(growable: true)
           ..sort(_compareActiveQuests);
-    if (quests.isEmpty) return const ActiveQuestState.empty();
+    if (quests.isEmpty) {
+      return ActiveQuestState(
+        activeQuest: null,
+        reconciliationWarning: reconciliationWarning,
+      );
+    }
     return ActiveQuestState(
       activeQuest: quests.first,
       conflictingQuests: List.unmodifiable(quests.skip(1)),
+      reconciliationWarning: reconciliationWarning,
     );
   }
 
@@ -112,6 +129,12 @@ class QuestStartResult {
     final progress = progressValue is Map
         ? Map<String, dynamic>.from(progressValue)
         : null;
+    final reconciliationValue = map['completion_reconciliation'];
+    final reconciliation = reconciliationValue is Map
+        ? QuestCompletionReconciliationResult.fromMap(
+            Map<String, dynamic>.from(reconciliationValue),
+          )
+        : null;
     return QuestStartResult(
       disposition: switch (map['outcome']?.toString()) {
         'started' => QuestStartDisposition.started,
@@ -122,7 +145,12 @@ class QuestStartResult {
       participation: progress == null
           ? null
           : QuestParticipation.fromMap(progress),
-      activeState: ActiveQuestState.fromRows(activeRows),
+      activeState: ActiveQuestState.fromRows(
+        activeRows,
+        reconciliationWarning: reconciliation?.hasWarning == true
+            ? reconciliation!.warnings.first
+            : null,
+      ),
     );
   }
 }

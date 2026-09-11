@@ -456,81 +456,140 @@ class _ArtisanHeritageTaskManagementViewState
     }
   }
 
-  Future<void> _deleteRejectedTask(HeritageTask task) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete rejected task?'),
-        content: Text(
-          '“${task.title}” was rejected and can be deleted without another admin review.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFB42318),
+  Future<bool> _confirmTaskRequestRemoval({
+    required String title,
+    required bool rejected,
+  }) async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: Text(title),
+            content: Text(
+              rejected
+                  ? 'This removes the rejected request from your list. It will not change the published task.'
+                  : 'This request will be withdrawn from admin review. Published tasks and existing tourist progress will not be affected.',
             ),
-            child: const Text('Delete Task'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text('Keep Request'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFFB42318),
+                  foregroundColor: Colors.white,
+                ),
+                child: Text(rejected ? 'Remove Request' : 'Cancel Request'),
+              ),
+            ],
           ),
-        ],
+        ) ??
+        false;
+  }
+
+  void _showTaskRequestResult({
+    required bool success,
+    required String successMessage,
+    required Future<void> Function() retry,
+  }) {
+    if (!mounted) return;
+    final viewModel = context.read<GamificationViewModel>();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          success
+              ? successMessage
+              : viewModel.artisanTaskError ??
+                    'The request could not be updated. Please retry.',
+        ),
+        backgroundColor: success ? _green : const Color(0xFFB42318),
+        action: success
+            ? null
+            : SnackBarAction(
+                label: 'Retry',
+                textColor: Colors.white,
+                onPressed: retry,
+              ),
       ),
     );
-    if (confirmed != true || !mounted) return;
+  }
 
+  Future<void> _cancelPendingNewTask(HeritageTask task) async {
+    final confirmed = await _confirmTaskRequestRemoval(
+      title: 'Cancel New Task Submission?',
+      rejected: false,
+    );
+    if (!confirmed || !mounted) return;
     final success = await context
         .read<GamificationViewModel>()
         .cancelNewTaskSubmission(task);
-    if (success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Rejected task deleted.'),
-          backgroundColor: _green,
-        ),
-      );
-    }
+    _showTaskRequestResult(
+      success: success,
+      successMessage: 'New task submission withdrawn from admin review.',
+      retry: () => _cancelPendingNewTask(task),
+    );
   }
 
-  Future<void> _dismissRejectedTaskEdit(
+  Future<void> _removeRejectedNewTask(HeritageTask task) async {
+    final confirmed = await _confirmTaskRequestRemoval(
+      title: 'Remove Rejected Request?',
+      rejected: true,
+    );
+    if (!confirmed || !mounted) return;
+    final success = await context
+        .read<GamificationViewModel>()
+        .cancelNewTaskSubmission(task);
+    _showTaskRequestResult(
+      success: success,
+      successMessage: 'Rejected new-task request removed.',
+      retry: () => _removeRejectedNewTask(task),
+    );
+  }
+
+  Future<void> _cancelPendingTaskChange(
     HeritageTask task,
     HeritageTaskChangeRequest request,
   ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Keep original task?'),
-        content: Text(
-          'The rejected update for “${task.title}” will be dismissed. The approved task remains unchanged.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            style: FilledButton.styleFrom(backgroundColor: _green),
-            child: const Text('Keep Original'),
-          ),
-        ],
-      ),
+    final isDelete = request.requestType.toUpperCase() == 'DELETE';
+    final confirmed = await _confirmTaskRequestRemoval(
+      title: isDelete
+          ? 'Cancel Task Deletion Request?'
+          : 'Cancel Task Edit Request?',
+      rejected: false,
     );
-    if (confirmed != true || !mounted) return;
-
+    if (!confirmed || !mounted) return;
     final success = await context
         .read<GamificationViewModel>()
-        .dismissRejectedTaskEdit(request);
-    if (success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Rejected update dismissed. Original task retained.'),
-          backgroundColor: _green,
-        ),
-      );
-    }
+        .cancelPendingTaskChange(task, request);
+    _showTaskRequestResult(
+      success: success,
+      successMessage: isDelete
+          ? 'Task deletion request cancelled. The task remains active.'
+          : 'Task edit request cancelled. The published task is unchanged.',
+      retry: () => _cancelPendingTaskChange(task, request),
+    );
+  }
+
+  Future<void> _dismissRejectedTaskChange(
+    HeritageTask task,
+    HeritageTaskChangeRequest request,
+  ) async {
+    final confirmed = await _confirmTaskRequestRemoval(
+      title: 'Remove Rejected Request?',
+      rejected: true,
+    );
+    if (!confirmed || !mounted) return;
+    final success = await context
+        .read<GamificationViewModel>()
+        .dismissRejectedTaskChange(task, request);
+    _showTaskRequestResult(
+      success: success,
+      successMessage: request.requestType.toUpperCase() == 'DELETE'
+          ? 'Rejected deletion request dismissed. The task remains active.'
+          : 'Rejected edit request dismissed. The published task is unchanged.',
+      retry: () => _dismissRejectedTaskChange(task, request),
+    );
   }
 
   void _showWorkshopQr(Quest quest) {
@@ -881,11 +940,13 @@ class _ArtisanHeritageTaskManagementViewState
     final hasPendingDelete =
         pendingChange?.requestType.toUpperCase() == 'DELETE';
     final rejectedEdit = viewModel.rejectedEditForTask(task.id);
+    final rejectedDelete = viewModel.rejectedDeleteForTask(task.id);
     final isPendingSubmission = task.status.toUpperCase() == 'PENDING_APPROVAL';
     final isRejectedSubmission = task.status.toUpperCase() == 'REJECTED';
-    final isTaskActionBusy = isRejectedSubmission
-        ? viewModel.isUpdatingNewTask
-        : viewModel.isSubmittingTaskChange;
+    final isTaskActionBusy =
+        viewModel.isUpdatingNewTask ||
+        viewModel.isSubmittingTaskChange ||
+        viewModel.isCancellingTaskRequest;
     final displayStatus = task.isArchived
         ? 'ARCHIVED'
         : hasPendingDelete
@@ -1019,34 +1080,54 @@ class _ArtisanHeritageTaskManagementViewState
               ],
             )
           else if (isPendingSubmission)
-            InkWell(
-              onTap: () => _showPendingTaskSubmission(task),
-              borderRadius: BorderRadius.circular(12),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      '🕒 Task pending admin review',
-                      style: TextStyle(
-                        color: Color(0xFF9A6700),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                      ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                InkWell(
+                  onTap: isTaskActionBusy
+                      ? null
+                      : () => _showPendingTaskSubmission(task),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          '🕒 Task pending admin review',
+                          style: TextStyle(
+                            color: Color(0xFF9A6700),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'View submission ›',
+                          style: TextStyle(
+                            color: isDark ? const Color(0xFFFFD54F) : _green,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'View submission ›',
-                      style: TextStyle(
-                        color: isDark ? const Color(0xFFFFD54F) : _green,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: isTaskActionBusy
+                        ? null
+                        : () => _cancelPendingNewTask(task),
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFFB42318),
+                    ),
+                    icon: const Icon(Icons.cancel_outlined, size: 17),
+                    label: const Text('Cancel Request'),
+                  ),
+                ),
+              ],
             )
           else if (pendingChange != null)
             Column(
@@ -1087,8 +1168,11 @@ class _ArtisanHeritageTaskManagementViewState
                 ),
                 Align(
                   alignment: Alignment.centerRight,
-                  child: hasPendingEdit
-                      ? TextButton.icon(
+                  child: Wrap(
+                    spacing: 6,
+                    children: [
+                      if (hasPendingEdit)
+                        TextButton.icon(
                           onPressed: isTaskActionBusy
                               ? null
                               : () => _showEditTaskSheet(
@@ -1097,8 +1181,20 @@ class _ArtisanHeritageTaskManagementViewState
                                 ),
                           icon: const Icon(Icons.edit_outlined, size: 17),
                           label: const Text('Edit'),
-                        )
-                      : const SizedBox.shrink(),
+                        ),
+                      TextButton.icon(
+                        onPressed: isTaskActionBusy
+                            ? null
+                            : () =>
+                                  _cancelPendingTaskChange(task, pendingChange),
+                        style: TextButton.styleFrom(
+                          foregroundColor: const Color(0xFFB42318),
+                        ),
+                        icon: const Icon(Icons.cancel_outlined, size: 17),
+                        label: const Text('Cancel Request'),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             )
@@ -1140,9 +1236,11 @@ class _ArtisanHeritageTaskManagementViewState
                       OutlinedButton(
                         onPressed: isTaskActionBusy
                             ? null
-                            : () =>
-                                  _dismissRejectedTaskEdit(task, rejectedEdit),
-                        child: const Text('Keep Original'),
+                            : () => _dismissRejectedTaskChange(
+                                task,
+                                rejectedEdit,
+                              ),
+                        child: const Text('Dismiss Request'),
                       ),
                       FilledButton.icon(
                         onPressed: isTaskActionBusy
@@ -1167,6 +1265,47 @@ class _ArtisanHeritageTaskManagementViewState
                 ],
               ),
             )
+          else if (rejectedDelete != null)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF2F2),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFFECACA)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Task deletion request rejected',
+                    style: TextStyle(
+                      color: Color(0xFFB42318),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  if (rejectedDelete.rejectionReason != null) ...[
+                    const SizedBox(height: 5),
+                    Text(
+                      'Reason: ${rejectedDelete.rejectionReason}',
+                      style: const TextStyle(
+                        color: Color(0xFF991B1B),
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 8),
+                  OutlinedButton(
+                    onPressed: isTaskActionBusy
+                        ? null
+                        : () =>
+                              _dismissRejectedTaskChange(task, rejectedDelete),
+                    child: const Text('Dismiss Request'),
+                  ),
+                ],
+              ),
+            )
           else
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
@@ -1179,19 +1318,23 @@ class _ArtisanHeritageTaskManagementViewState
                     foregroundColor: isDark ? const Color(0xFFFFD54F) : _green,
                   ),
                   icon: const Icon(Icons.edit_outlined, size: 17),
-                  label: const Text('Edit'),
+                  label: Text(
+                    isRejectedSubmission ? 'Edit & Resubmit' : 'Edit',
+                  ),
                 ),
                 TextButton.icon(
                   onPressed: isTaskActionBusy
                       ? null
                       : () => isRejectedSubmission
-                            ? _deleteRejectedTask(task)
+                            ? _removeRejectedNewTask(task)
                             : _requestTaskDeletion(task),
                   style: TextButton.styleFrom(
                     foregroundColor: const Color(0xFFEF4444),
                   ),
                   icon: const Icon(Icons.delete_outline_rounded, size: 17),
-                  label: const Text('Delete'),
+                  label: Text(
+                    isRejectedSubmission ? 'Remove Request' : 'Delete',
+                  ),
                 ),
               ],
             ),

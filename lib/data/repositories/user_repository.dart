@@ -214,7 +214,10 @@ class UserRepository {
     );
   }
 
-  Future<UserModel> rejectRelocationRequest({required String email, String? feedback}) {
+  Future<UserModel> rejectRelocationRequest({
+    required String email,
+    String? feedback,
+  }) {
     return _service.rejectRelocationRequest(email: email, feedback: feedback);
   }
 
@@ -239,6 +242,7 @@ class UserRepository {
     required String newStatus,
     required String newRole,
     bool updateArtisanProfileOnly = false,
+    bool ensureSystemTasks = false,
     String? suspensionReason,
   }) {
     return _service.updateArtisanStatusInDb(
@@ -246,24 +250,25 @@ class UserRepository {
       newStatus: newStatus,
       newRole: newRole,
       updateArtisanProfileOnly: updateArtisanProfileOnly,
+      ensureSystemTasks: ensureSystemTasks,
       suspensionReason: suspensionReason,
     );
   }
 
   Future<void> signOut() => _service.signOut();
 
-  Future<UserModel> deactivateArtisanStudio() => _service.deactivateArtisanStudio();
+  Future<UserModel> deactivateArtisanStudio() =>
+      _service.deactivateArtisanStudio();
 
   Future<void> deleteAccount({
     required String userId,
     required String email,
     String? username,
     String? password,
-  }) =>
-      _service.deleteAccount(
-        userId: userId,
-        email: email,
-        username: username,
-        password: password,
-      );
+  }) => _service.deleteAccount(
+    userId: userId,
+    email: email,
+    username: username,
+    password: password,
+  );
 }

@@ -485,4 +485,3 @@ class ExistingAccountCheck {
     this.craftCategory,
   });
 }
-

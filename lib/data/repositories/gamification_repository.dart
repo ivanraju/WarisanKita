@@ -8,7 +8,9 @@ import 'package:warisan_kita/domain/models/heritage_task.dart';
 import 'package:warisan_kita/domain/models/heritage_task_change_request.dart';
 import 'package:warisan_kita/domain/models/quest.dart';
 import 'package:warisan_kita/domain/models/quest_participation.dart';
+import 'package:warisan_kita/domain/models/quest_completion_reconciliation.dart';
 import 'package:warisan_kita/domain/models/task_progress.dart';
+import 'package:warisan_kita/domain/models/task_completion_result.dart';
 import 'package:warisan_kita/domain/models/workshop_quest_journey.dart';
 import 'package:warisan_kita/domain/models/artisan_heritage_analytics.dart';
 
@@ -163,6 +165,15 @@ class GamificationRepository {
     final stamps = List<Map<String, dynamic>>.from(
       data['stamps'] as List? ?? const [],
     );
+    final reconciliationValue = data['completion_reconciliation'];
+    final reconciliation = reconciliationValue is Map
+        ? QuestCompletionReconciliationResult.fromMap(
+            Map<String, dynamic>.from(reconciliationValue),
+          )
+        : const QuestCompletionReconciliationResult(
+            disposition:
+                QuestCompletionReconciliationDisposition.noStampedProgress,
+          );
 
     final tasksByQuest = <String, List<Map<String, dynamic>>>{};
     for (final task in tasks) {
@@ -189,7 +200,11 @@ class GamificationRepository {
     final activeState = ActiveQuestState.fromRows(
       questProgress
           .where(
-            (row) => row['status']?.toString().toUpperCase() == 'IN_PROGRESS',
+            (row) =>
+                row['status']?.toString().toUpperCase() == 'IN_PROGRESS' &&
+                !reconciliation.stampedQuestIds.contains(
+                  row['quest_id']?.toString(),
+                ),
           )
           .map((row) {
             final quest = questById[row['quest_id']?.toString() ?? ''];
@@ -199,6 +214,9 @@ class GamificationRepository {
               'artisan_id': quest?['artisan_id'],
             };
           }),
+      reconciliationWarning: reconciliation.hasWarning
+          ? reconciliation.warnings.first
+          : null,
     );
     final activeQuestId = activeState.activeQuest?.questId;
     final stampedQuestIds = stamps
@@ -320,8 +338,32 @@ class GamificationRepository {
   }
 
   Future<ActiveQuestState> getActiveQuestState() async {
-    final rows = await _service.fetchActiveQuestProgressRows();
-    return ActiveQuestState.fromRows(rows);
+    final data = await _service.fetchActiveQuestStateData();
+    final rows = List<Map<String, dynamic>>.from(
+      data['active_rows'] as List? ?? const [],
+    );
+    final reconciliationValue = data['completion_reconciliation'];
+    final reconciliation = reconciliationValue is Map
+        ? QuestCompletionReconciliationResult.fromMap(
+            Map<String, dynamic>.from(reconciliationValue),
+          )
+        : const QuestCompletionReconciliationResult(
+            disposition:
+                QuestCompletionReconciliationDisposition.noStampedProgress,
+          );
+    return ActiveQuestState.fromRows(
+      rows,
+      reconciliationWarning: reconciliation.hasWarning
+          ? reconciliation.warnings.first
+          : null,
+    );
+  }
+
+  Future<QuestCompletionReconciliationResult>
+  reconcileStampedQuestProgress() async {
+    return QuestCompletionReconciliationResult.fromMap(
+      await _service.reconcileStampedQuestProgress(),
+    );
   }
 
   Future<bool> hasEarnedQuestStamp(String questId) {
@@ -341,17 +383,22 @@ class GamificationRepository {
     return rows.map(TaskProgress.fromMap).toList(growable: false);
   }
 
-  Future<TaskProgress> completeTask(String taskId) async {
-    return TaskProgress.fromMap(await _service.completeTask(taskId));
+  Future<TaskCompletionResult> completeArrivalTask({
+    required String questId,
+    required String taskId,
+  }) async {
+    return TaskCompletionResult.fromMap(
+      await _service.completeArrivalTask(questId: questId, taskId: taskId),
+    );
   }
 
-  Future<TaskProgress> completeTaskWithArtisanQr({
+  Future<TaskCompletionResult> completeTaskWithArtisanQr({
     required String questId,
     required String artisanId,
     required String taskId,
     required String qrPayload,
   }) async {
-    return TaskProgress.fromMap(
+    return TaskCompletionResult.fromMap(
       await _service.completeTaskWithArtisanQr(
         questId: questId,
         artisanId: artisanId,
@@ -377,8 +424,16 @@ class GamificationRepository {
     );
   }
 
-  Future<TaskProgress> completeTimedTask(String taskId) async {
-    return TaskProgress.fromMap(await _service.completeTimedTask(taskId));
+  Future<TaskProgress> restoreTimedTaskAsPaused(String taskId) async {
+    return TaskProgress.fromMap(
+      await _service.restoreTimedTaskAsPaused(taskId),
+    );
+  }
+
+  Future<TaskCompletionResult> completeTimedTask(String taskId) async {
+    return TaskCompletionResult.fromMap(
+      await _service.completeTimedTask(taskId),
+    );
   }
 
   List<HeritageTask> _mapAndSortTasks(List<Map<String, dynamic>> rows) {
@@ -543,12 +598,38 @@ class GamificationRepository {
     return HeritageTask.fromMap(row);
   }
 
-  Future<void> deleteUnapprovedHeritageTask(String taskId) {
-    return _service.deleteUnapprovedHeritageTask(taskId);
+  Future<void> deleteUnapprovedHeritageTask({
+    required String taskId,
+    required String expectedStatus,
+  }) {
+    return _service.deleteUnapprovedHeritageTask(
+      taskId: taskId,
+      expectedStatus: expectedStatus,
+    );
   }
 
-  Future<void> deleteRejectedHeritageTaskEditRequest(String requestId) {
-    return _service.deleteRejectedHeritageTaskEditRequest(requestId);
+  Future<void> deleteHeritageTaskChangeRequest({
+    required String requestId,
+    required String taskId,
+    required String expectedRequestType,
+    required String expectedStatus,
+  }) {
+    return _service.deleteHeritageTaskChangeRequest(
+      requestId: requestId,
+      taskId: taskId,
+      expectedRequestType: expectedRequestType,
+      expectedStatus: expectedStatus,
+    );
+  }
+
+  Future<void> deleteRejectedHeritageTaskEditRequest({
+    required String requestId,
+    required String taskId,
+  }) {
+    return _service.deleteRejectedHeritageTaskEditRequest(
+      requestId: requestId,
+      taskId: taskId,
+    );
   }
 
   Future<List<GamificationModerationRequest>>
@@ -582,5 +663,4 @@ class GamificationRepository {
       rejectionReason: rejectionReason,
     );
   }
-
 }

@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:warisan_kita/domain/models/artisan_profile.dart';
 import 'package:warisan_kita/domain/models/active_artisan_master.dart';
 import 'package:warisan_kita/domain/models/forum_post.dart';
+import 'package:warisan_kita/domain/models/system_task_provisioning.dart';
 import 'package:warisan_kita/domain/models/user.dart';
 import 'package:warisan_kita/domain/validators/ssm_validator.dart';
 
@@ -32,8 +33,11 @@ class SupabaseService {
     }
   }
 
-  SupabaseClient get _authClient => _client ??
-      (throw StateError('Authentication is unavailable. Please reconnect and try again.'));
+  SupabaseClient get _authClient =>
+      _client ??
+      (throw StateError(
+        'Authentication is unavailable. Please reconnect and try again.',
+      ));
 
   // Session Persistence Keys
   static const String _keyAuthUser = 'wk_last_auth_user';
@@ -108,7 +112,7 @@ class SupabaseService {
     } catch (_) {}
   }
 
-    static Future<void> _saveAuthSession(UserModel user) async {
+  static Future<void> _saveAuthSession(UserModel user) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_keyAuthEmail, user.email);
@@ -141,8 +145,18 @@ class SupabaseService {
 
   static String _formatMonthYear(DateTime dt) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${months[dt.month - 1]} ${dt.year}';
   }
@@ -154,12 +168,18 @@ class SupabaseService {
   static final Map<String, Map<String, dynamic>> _pendingRelocationsStore = {};
   static const String _keyPendingRelocPrefix = 'pending_reloc_';
 
-  static Future<void> _savePendingRelocation(String email, Map<String, dynamic> data) async {
+  static Future<void> _savePendingRelocation(
+    String email,
+    Map<String, dynamic> data,
+  ) async {
     final cleanEmail = email.trim().toLowerCase();
     _pendingRelocationsStore[cleanEmail] = Map<String, dynamic>.from(data);
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('$_keyPendingRelocPrefix$cleanEmail', jsonEncode(data));
+      await prefs.setString(
+        '$_keyPendingRelocPrefix$cleanEmail',
+        jsonEncode(data),
+      );
     } catch (e) {
       debugPrint('savePendingRelocation note: $e');
     }
@@ -176,7 +196,9 @@ class SupabaseService {
     }
   }
 
-  static Future<Map<String, dynamic>?> _getPendingRelocation(String email) async {
+  static Future<Map<String, dynamic>?> _getPendingRelocation(
+    String email,
+  ) async {
     final cleanEmail = email.trim().toLowerCase();
     if (_pendingRelocationsStore.containsKey(cleanEmail)) {
       return _pendingRelocationsStore[cleanEmail];
@@ -194,15 +216,20 @@ class SupabaseService {
   }
 
   // Helper to merge pending relocation fields into a UserModel if exists
-  static Future<UserModel> _enrichUserWithPendingRelocation(UserModel user) async {
+  static Future<UserModel> _enrichUserWithPendingRelocation(
+    UserModel user,
+  ) async {
     final email = user.email.trim().toLowerCase();
     if (email.isEmpty) return user;
     final reloc = await _getPendingRelocation(email);
     if (reloc != null) {
-      final proposedAddress = (reloc['pending_relocation_address'] ?? reloc['address'])?.toString();
+      final proposedAddress =
+          (reloc['pending_relocation_address'] ?? reloc['address'])?.toString();
       // If the user's verified address in the database has already been updated to the proposed address,
       // the relocation has been officially approved! Clear the local pending relocation cache.
-      if (proposedAddress != null && proposedAddress.isNotEmpty && user.address == proposedAddress) {
+      if (proposedAddress != null &&
+          proposedAddress.isNotEmpty &&
+          user.address == proposedAddress) {
         await _clearPendingRelocation(email);
         return user.copyWith(clearPendingRelocation: true);
       }
@@ -210,16 +237,24 @@ class SupabaseService {
       final pLng = reloc['pending_relocation_lng'] ?? reloc['longitude'];
       return user.copyWith(
         pendingRelocationAddress: proposedAddress,
-        pendingRelocationState: (reloc['pending_relocation_state'] ?? reloc['state'])?.toString(),
-        pendingRelocationLatitude: pLat is num ? pLat.toDouble() : (pLat != null ? double.tryParse(pLat.toString()) : null),
-        pendingRelocationLongitude: pLng is num ? pLng.toDouble() : (pLng != null ? double.tryParse(pLng.toString()) : null),
-        pendingRelocationReason: (reloc['pending_relocation_reason'] ?? reloc['reason'])?.toString(),
-        pendingRelocationDate: (reloc['pending_relocation_date'] ?? reloc['date'])?.toString(),
+        pendingRelocationState:
+            (reloc['pending_relocation_state'] ?? reloc['state'])?.toString(),
+        pendingRelocationLatitude: pLat is num
+            ? pLat.toDouble()
+            : (pLat != null ? double.tryParse(pLat.toString()) : null),
+        pendingRelocationLongitude: pLng is num
+            ? pLng.toDouble()
+            : (pLng != null ? double.tryParse(pLng.toString()) : null),
+        pendingRelocationReason:
+            (reloc['pending_relocation_reason'] ?? reloc['reason'])?.toString(),
+        pendingRelocationDate:
+            (reloc['pending_relocation_date'] ?? reloc['date'])?.toString(),
       );
     } else if (user.hasPendingRelocation &&
         user.address != null &&
         user.pendingRelocationAddress != null &&
-        user.pendingRelocationAddress!.trim().toLowerCase() == user.address!.trim().toLowerCase()) {
+        user.pendingRelocationAddress!.trim().toLowerCase() ==
+            user.address!.trim().toLowerCase()) {
       return user.copyWith(clearPendingRelocation: true);
     }
     return user;
@@ -246,11 +281,13 @@ class SupabaseService {
         .select('email, status')
         .ilike('username', _literalLookupPattern(cleanUsername))
         .timeout(const Duration(seconds: 10));
-    return !rows.any((row) =>
-        (row['status'] ?? '').toString().toUpperCase() != 'DELETED' &&
-        (excludeEmail == null ||
-            row['email'].toString().toLowerCase() !=
-                excludeEmail.trim().toLowerCase()));
+    return !rows.any(
+      (row) =>
+          (row['status'] ?? '').toString().toUpperCase() != 'DELETED' &&
+          (excludeEmail == null ||
+              row['email'].toString().toLowerCase() !=
+                  excludeEmail.trim().toLowerCase()),
+    );
   }
 
   Future<bool> isSsmRegistered(
@@ -353,10 +390,15 @@ class SupabaseService {
     }
     // Roles and account status must come from the database, not editable
     // authentication metadata or a cached profile.
-    final row = await client.from('users').select()
-        .eq('id', authUser.id).maybeSingle();
+    final row = await client
+        .from('users')
+        .select()
+        .eq('id', authUser.id)
+        .maybeSingle();
     if (row == null) {
-      throw const AuthException('Account profile is unavailable. Please contact support.');
+      throw const AuthException(
+        'Account profile is unavailable. Please contact support.',
+      );
     }
     final user = UserModel.fromMap(row);
     if (user.status.toUpperCase() == 'DELETED' ||
@@ -373,79 +415,55 @@ class SupabaseService {
           .eq('user_id', authUser.id)
           .maybeSingle();
       if (artisan != null) {
-        final artisanStatus = (artisan['status'] ?? '').toString().toUpperCase();
-        row['artisan_status'] = artisanStatus;
-
-        if (artisanStatus == 'APPROVED' && row['artisan_status'] != 'CLOSED' && row['role'] != 'Tourist') {
-          row['role'] = 'Artisan';
-          row['roles'] = ['Artisan'];
-          row['artisan_profiles'] = artisan;
-          if (artisan['bio'] != null && (artisan['bio'] as String).trim().isNotEmpty) {
-            row['bio'] = artisan['bio'];
-          }
-          if (artisan['studio_name'] != null && (artisan['studio_name'] as String).trim().isNotEmpty) {
-            row['studio_name'] = artisan['studio_name'];
-          }
-          if (artisan['craft_category'] != null && (artisan['craft_category'] as String).trim().isNotEmpty) {
-            row['craft_category'] = artisan['craft_category'];
-          }
-          if (artisan['address'] != null && (artisan['address'] as String).trim().isNotEmpty) {
-            row['address'] = artisan['address'];
-          }
-          if (artisan['state'] != null && (artisan['state'] as String).trim().isNotEmpty) {
-            row['state'] = artisan['state'];
-          }
-          if (artisan['latitude'] != null) {
-            row['latitude'] = artisan['latitude'];
-          }
-          if (artisan['longitude'] != null) {
-            row['longitude'] = artisan['longitude'];
-          }
-          if (artisan['tags'] != null) {
-            row['tags'] = artisan['tags'];
-          }
-          if (artisan['artisan_documents'] != null) {
-            row['artisan_documents'] = artisan['artisan_documents'];
-          }
-          if (artisan['experience'] != null && artisan['experience'].toString().trim().isNotEmpty) {
-            row['experience'] = artisan['experience'].toString().trim();
-          } else if (artisan['years_experience'] != null && (artisan['years_experience'] as num) > 1) {
-            row['experience'] = '${artisan['years_experience']} Years';
-          }
-          final prefs = await SharedPreferences.getInstance();
-          final savedLive = prefs.getBool('artisan_live_open_${artisan['id']}') ??
-              prefs.getBool('artisan_live_open_${row['id']}');
-          row['is_live_open'] = savedLive ?? artisan['is_live_open'] ?? true;
-        } else if (artisanStatus == 'REJECTED' ||
-            artisanStatus == 'PENDING_APPROVAL' ||
-            artisanStatus == 'PENDING') {
-          row['artisan_profiles'] = artisan;
-          if (artisan['studio_name'] != null && (artisan['studio_name'] as String).trim().isNotEmpty) {
-            row['studio_name'] = artisan['studio_name'];
-          }
-          if (artisan['craft_category'] != null && (artisan['craft_category'] as String).trim().isNotEmpty) {
-            row['craft_category'] = artisan['craft_category'];
-          }
-          if (artisan['ssm_number'] != null && (artisan['ssm_number'] as String).trim().isNotEmpty) {
-            row['ssm_number'] = artisan['ssm_number'];
-          }
-        } else {
-          // Studio is closed or user reverted to Tourist
-          row['role'] = 'Tourist';
-          row['roles'] = ['Tourist'];
-          row['artisan_status'] = 'CLOSED';
-          row['artisan_profiles'] = null;
-          row['studio_name'] = null;
-          row['craft_category'] = null;
-          row['ssm_number'] = null;
+        row['artisan_profiles'] = artisan;
+        if (artisan['bio'] != null &&
+            (artisan['bio'] as String).trim().isNotEmpty) {
+          row['bio'] = artisan['bio'];
         }
-      } else if (row['artisan_status'] == 'CLOSED' || row['role'] == 'Tourist') {
-        row['role'] = 'Tourist';
-        row['roles'] = ['Tourist'];
-        row['artisan_profiles'] = null;
-        row['studio_name'] = null;
-        row['craft_category'] = null;
-        row['ssm_number'] = null;
+        if (artisan['studio_name'] != null &&
+            (artisan['studio_name'] as String).trim().isNotEmpty) {
+          row['studio_name'] = artisan['studio_name'];
+        }
+        if (artisan['craft_category'] != null &&
+            (artisan['craft_category'] as String).trim().isNotEmpty) {
+          row['craft_category'] = artisan['craft_category'];
+        }
+        if (artisan['address'] != null &&
+            (artisan['address'] as String).trim().isNotEmpty) {
+          row['address'] = artisan['address'];
+        }
+        if (artisan['state'] != null &&
+            (artisan['state'] as String).trim().isNotEmpty) {
+          row['state'] = artisan['state'];
+        }
+        if (artisan['latitude'] != null) {
+          row['latitude'] = artisan['latitude'];
+        }
+        if (artisan['longitude'] != null) {
+          row['longitude'] = artisan['longitude'];
+        }
+        if (artisan['tags'] != null) {
+          row['tags'] = artisan['tags'];
+        }
+        if (artisan['artisan_documents'] != null) {
+          row['artisan_documents'] = artisan['artisan_documents'];
+        }
+        if (artisan['experience'] != null &&
+            artisan['experience'].toString().trim().isNotEmpty) {
+          row['experience'] = artisan['experience'].toString().trim();
+        } else if (artisan['years_experience'] != null &&
+            (artisan['years_experience'] as num) > 1) {
+          row['experience'] = '${artisan['years_experience']} Years';
+        }
+        if (artisan['status'] != null) {
+          row['artisan_status'] = artisan['status'];
+          if (artisan['status'].toString().toUpperCase() == 'APPROVED') {
+            final currentRole = (row['role'] ?? '').toString();
+            if (currentRole.isEmpty || currentRole == 'Tourist') {
+              row['role'] = 'Artisan';
+            }
+          }
+        }
       }
     } catch (e) {
       debugPrint('Error loading artisan_profiles join: $e');
@@ -456,73 +474,49 @@ class SupabaseService {
             .eq('user_id', authUser.id)
             .maybeSingle();
         if (artisan != null) {
-          final artisanStatus = (artisan['status'] ?? '').toString().toUpperCase();
-          row['artisan_status'] = artisanStatus;
-          final currentRole = (row['role'] ?? '').toString();
-
-          if (artisanStatus == 'APPROVED' && row['artisan_status'] != 'CLOSED' && currentRole != 'Tourist') {
-            try {
-              final docs = await client
-                  .from('artisan_documents')
-                  .select()
-                  .eq('artisan_id', artisan['id']);
-              artisan['artisan_documents'] = docs;
-            } catch (docErr) {
-              debugPrint('Error loading artisan_documents fallback: $docErr');
-            }
-            row['artisan_profiles'] = artisan;
-            if (artisan['bio'] != null && (artisan['bio'] as String).trim().isNotEmpty) {
-              row['bio'] = artisan['bio'];
-            }
-            if (artisan['studio_name'] != null && (artisan['studio_name'] as String).trim().isNotEmpty) {
-              row['studio_name'] = artisan['studio_name'];
-            }
-            if (artisan['craft_category'] != null && (artisan['craft_category'] as String).trim().isNotEmpty) {
-              row['craft_category'] = artisan['craft_category'];
-            }
-            if (artisan['address'] != null && (artisan['address'] as String).trim().isNotEmpty) {
-              row['address'] = artisan['address'];
-            }
-            if (artisan['state'] != null && (artisan['state'] as String).trim().isNotEmpty) {
-              row['state'] = artisan['state'];
-            }
-            if (artisan['latitude'] != null) row['latitude'] = artisan['latitude'];
-            if (artisan['longitude'] != null) row['longitude'] = artisan['longitude'];
-            if (artisan['tags'] != null) row['tags'] = artisan['tags'];
-            if (artisan['artisan_documents'] != null) row['artisan_documents'] = artisan['artisan_documents'];
-            if (artisan['experience'] != null && artisan['experience'].toString().trim().isNotEmpty) {
-              row['experience'] = artisan['experience'].toString().trim();
-            } else if (artisan['years_experience'] != null && (artisan['years_experience'] as num) > 1) {
-              row['experience'] = '${artisan['years_experience']} Years';
-            }
-            final prefs = await SharedPreferences.getInstance();
-            final savedLive = prefs.getBool('artisan_live_open_${artisan['id']}') ??
-                prefs.getBool('artisan_live_open_${row['id']}');
-            row['is_live_open'] = savedLive ?? artisan['is_live_open'] ?? true;
-            if (currentRole.isEmpty) {
-              row['role'] = 'Artisan';
-            }
-          } else if (artisanStatus == 'REJECTED' ||
-              artisanStatus == 'PENDING_APPROVAL' ||
-              artisanStatus == 'PENDING') {
-            row['artisan_profiles'] = artisan;
-            if (artisan['studio_name'] != null && (artisan['studio_name'] as String).trim().isNotEmpty) {
-              row['studio_name'] = artisan['studio_name'];
-            }
-            if (artisan['craft_category'] != null && (artisan['craft_category'] as String).trim().isNotEmpty) {
-              row['craft_category'] = artisan['craft_category'];
-            }
-            if (artisan['ssm_number'] != null && (artisan['ssm_number'] as String).trim().isNotEmpty) {
-              row['ssm_number'] = artisan['ssm_number'];
-            }
-          } else {
-            row['role'] = 'Tourist';
-            row['roles'] = ['Tourist'];
-            row['artisan_status'] = 'CLOSED';
-            row['artisan_profiles'] = null;
-            row['studio_name'] = null;
-            row['craft_category'] = null;
-            row['ssm_number'] = null;
+          try {
+            final docs = await client
+                .from('artisan_documents')
+                .select()
+                .eq('artisan_id', artisan['id']);
+            artisan['artisan_documents'] = docs;
+          } catch (docErr) {
+            debugPrint('Error loading artisan_documents fallback: $docErr');
+          }
+          row['artisan_profiles'] = artisan;
+          if (artisan['bio'] != null &&
+              (artisan['bio'] as String).trim().isNotEmpty) {
+            row['bio'] = artisan['bio'];
+          }
+          if (artisan['studio_name'] != null &&
+              (artisan['studio_name'] as String).trim().isNotEmpty) {
+            row['studio_name'] = artisan['studio_name'];
+          }
+          if (artisan['craft_category'] != null &&
+              (artisan['craft_category'] as String).trim().isNotEmpty) {
+            row['craft_category'] = artisan['craft_category'];
+          }
+          if (artisan['address'] != null &&
+              (artisan['address'] as String).trim().isNotEmpty) {
+            row['address'] = artisan['address'];
+          }
+          if (artisan['state'] != null &&
+              (artisan['state'] as String).trim().isNotEmpty) {
+            row['state'] = artisan['state'];
+          }
+          if (artisan['latitude'] != null)
+            row['latitude'] = artisan['latitude'];
+          if (artisan['longitude'] != null)
+            row['longitude'] = artisan['longitude'];
+          if (artisan['tags'] != null) row['tags'] = artisan['tags'];
+          if (artisan['artisan_documents'] != null)
+            row['artisan_documents'] = artisan['artisan_documents'];
+          if (artisan['experience'] != null &&
+              artisan['experience'].toString().trim().isNotEmpty) {
+            row['experience'] = artisan['experience'].toString().trim();
+          } else if (artisan['years_experience'] != null &&
+              (artisan['years_experience'] as num) > 1) {
+            row['experience'] = '${artisan['years_experience']} Years';
           }
         }
       } catch (profileErr) {
@@ -530,113 +524,27 @@ class SupabaseService {
       }
     }
 
-    final cleanEmail = authUser.email?.toLowerCase() ?? '';
-
-    // Fallback for artisan_status, studio_name, craft_category, ssm_number, and experience
-    // when user is a Tourist who applied for artisan role (or remote query missed it).
-    if (row['artisan_status'] == null || (row['artisan_status'] as String).isEmpty) {
-      final meta = authUser.userMetadata;
-      if (meta != null && meta['artisan_status'] != null && meta['artisan_status'].toString().isNotEmpty) {
-        row['artisan_status'] = meta['artisan_status'].toString().toUpperCase();
-      }
-      if ((row['artisan_status'] == null || (row['artisan_status'] as String).isEmpty) && _userStore.containsKey(cleanEmail)) {
-        final cached = _userStore[cleanEmail];
-        final st = cached?['artisan_status'] ?? cached?['artisanStatus'];
-        if (st != null && st.toString().isNotEmpty) {
-          row['artisan_status'] = st.toString().toUpperCase();
-        }
-      }
-    }
-
-    if (row['studio_name'] == null || (row['studio_name'] as String).isEmpty) {
-      final meta = authUser.userMetadata;
-      if (meta != null && meta['studio_name'] != null && meta['studio_name'].toString().isNotEmpty) {
-        row['studio_name'] = meta['studio_name'];
-      }
-      if ((row['studio_name'] == null || (row['studio_name'] as String).isEmpty) && _userStore.containsKey(cleanEmail)) {
-        final cached = _userStore[cleanEmail];
-        final sn = cached?['studio_name'] ?? cached?['studioName'];
-        if (sn != null && sn.toString().isNotEmpty) {
-          row['studio_name'] = sn;
-        }
-      }
-    }
-
-    if (row['craft_category'] == null || (row['craft_category'] as String).isEmpty) {
-      final meta = authUser.userMetadata;
-      if (meta != null && meta['craft_category'] != null && meta['craft_category'].toString().isNotEmpty) {
-        row['craft_category'] = meta['craft_category'];
-      }
-      if ((row['craft_category'] == null || (row['craft_category'] as String).isEmpty) && _userStore.containsKey(cleanEmail)) {
-        final cached = _userStore[cleanEmail];
-        final cc = cached?['craft_category'] ?? cached?['craftCategory'];
-        if (cc != null && cc.toString().isNotEmpty) {
-          row['craft_category'] = cc;
-        }
-      }
-    }
-
-    if (row['ssm_number'] == null || (row['ssm_number'] as String).isEmpty) {
-      final meta = authUser.userMetadata;
-      if (meta != null && meta['ssm_number'] != null && meta['ssm_number'].toString().isNotEmpty) {
-        row['ssm_number'] = meta['ssm_number'];
-      }
-      if ((row['ssm_number'] == null || (row['ssm_number'] as String).isEmpty) && _userStore.containsKey(cleanEmail)) {
-        final cached = _userStore[cleanEmail];
-        final ssm = cached?['ssm_number'] ?? cached?['ssmNumber'];
-        if (ssm != null && ssm.toString().isNotEmpty) {
-          row['ssm_number'] = ssm;
-        }
-      }
-    }
-
-    if (row['experience'] == null && _userStore.containsKey(cleanEmail)) {
-      final cached = _userStore[cleanEmail];
-      if (cached?['experience'] != null && cached!['experience'].toString().trim().isNotEmpty) {
+    if (row['experience'] == null &&
+        _userStore.containsKey(authUser.email?.toLowerCase())) {
+      final cached = _userStore[authUser.email!.toLowerCase()];
+      if (cached?['experience'] != null &&
+          cached!['experience'].toString().trim().isNotEmpty) {
         row['experience'] = cached['experience'].toString().trim();
       }
     }
-
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final rawUser = prefs.getString(_keyAuthUser);
-      if (rawUser != null && rawUser.isNotEmpty) {
-        final cachedUser = jsonDecode(rawUser) as Map<String, dynamic>;
-        final cachedEmail = cachedUser['email']?.toString().toLowerCase();
-        final cachedId = cachedUser['id']?.toString();
-        if (cachedId == authUser.id || cachedEmail == cleanEmail) {
-          if (row['artisan_status'] == null || (row['artisan_status'] as String).isEmpty) {
-            final st = cachedUser['artisan_status'] ?? cachedUser['artisanStatus'];
-            if (st != null && st.toString().isNotEmpty) {
-              row['artisan_status'] = st.toString().toUpperCase();
-            }
-          }
-          if (row['studio_name'] == null || (row['studio_name'] as String).isEmpty) {
-            final sn = cachedUser['studio_name'] ?? cachedUser['studioName'];
-            if (sn != null && sn.toString().isNotEmpty) {
-              row['studio_name'] = sn;
-            }
-          }
-          if (row['craft_category'] == null || (row['craft_category'] as String).isEmpty) {
-            final cc = cachedUser['craft_category'] ?? cachedUser['craftCategory'];
-            if (cc != null && cc.toString().isNotEmpty) {
-              row['craft_category'] = cc;
-            }
-          }
-          if (row['ssm_number'] == null || (row['ssm_number'] as String).isEmpty) {
-            final ssm = cachedUser['ssm_number'] ?? cachedUser['ssmNumber'];
-            if (ssm != null && ssm.toString().isNotEmpty) {
-              row['ssm_number'] = ssm;
-            }
-          }
-          if (row['experience'] == null &&
-              cachedUser['experience'] != null &&
+    if (row['experience'] == null) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final rawUser = prefs.getString(_keyAuthUser);
+        if (rawUser != null && rawUser.isNotEmpty) {
+          final cachedUser = jsonDecode(rawUser) as Map<String, dynamic>;
+          if (cachedUser['experience'] != null &&
               cachedUser['experience'].toString().trim().isNotEmpty) {
             row['experience'] = cachedUser['experience'].toString().trim();
           }
         }
-      }
-    } catch (_) {}
+      } catch (_) {}
+    }
 
     var profile = UserModel.fromMap(row);
     profile = await _enrichUserWithPendingRelocation(profile);
@@ -653,29 +561,40 @@ class SupabaseService {
     if (!input.contains('@') || input.startsWith('@')) {
       final username = input.startsWith('@') ? input.substring(1) : input;
       // Escape LIKE wildcards: underscore is a literal, valid username character.
-      final pattern = username.replaceAll(r'\', r'\\')
-          .replaceAll('_', r'\_').replaceAll('%', r'\%');
-      final row = await client.from('users').select('email')
-          .ilike('username', pattern).maybeSingle();
-      if (row == null) throw const AuthException('INVALID CREDENTIALS: Account not found.');
+      final pattern = username
+          .replaceAll(r'\', r'\\')
+          .replaceAll('_', r'\_')
+          .replaceAll('%', r'\%');
+      final row = await client
+          .from('users')
+          .select('email')
+          .ilike('username', pattern)
+          .maybeSingle();
+      if (row == null)
+        throw const AuthException('INVALID CREDENTIALS: Account not found.');
       email = row['email'] as String;
     }
     try {
-      final response = await client.auth.signInWithPassword(email: email, password: password);
+      final response = await client.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
       if (response.session == null) {
         throw const AuthException('Sign in did not create a valid session.');
       }
       final profile = await _loadAuthenticatedProfile();
       if (profile.status.toUpperCase() == 'SUSPENDED' || profile.isSuspended) {
         await signOut();
-        throw const AuthException('ACCOUNT SUSPENDED BY ADMINISTRATOR: Contact support.');
+        throw const AuthException(
+          'ACCOUNT SUSPENDED BY ADMINISTRATOR: Contact support.',
+        );
       }
       return profile;
     } catch (error) {
       await signOut();
       if (error is AuthException &&
           (error.code == 'email_not_confirmed' ||
-           error.message.toLowerCase().contains('email not confirmed'))) {
+              error.message.toLowerCase().contains('email not confirmed'))) {
         throw EmailVerificationRequired(email);
       }
       rethrow;
@@ -703,7 +622,9 @@ class SupabaseService {
       final rawUser = prefs.getString(_keyAuthUser);
       if (rawUser != null && rawUser.isNotEmpty) {
         final map = jsonDecode(rawUser) as Map<String, dynamic>;
-        UserModel user = await _enrichUserWithPendingRelocation(UserModel.fromMap(map));
+        UserModel user = await _enrichUserWithPendingRelocation(
+          UserModel.fromMap(map),
+        );
         final email = user.email.toLowerCase();
         if (user.status.toUpperCase() == 'DELETED' ||
             _deletedAccounts.contains(email)) {
@@ -713,8 +634,9 @@ class SupabaseService {
         }
         if (_userStore.containsKey(email)) {
           final storeData = _userStore[email]!;
-          final storeStatus =
-              (storeData['status'] ?? '').toString().toUpperCase();
+          final storeStatus = (storeData['status'] ?? '')
+              .toString()
+              .toUpperCase();
           final isSuspended = storeData['isSuspended'] == true;
           final reason = (storeData['suspensionReason'] ?? '').toString();
           if (storeStatus == 'DELETED' ||
@@ -723,7 +645,9 @@ class SupabaseService {
             _userStore.remove(email);
             return null;
           }
-          final fromStore = await _enrichUserWithPendingRelocation(UserModel.fromMap(storeData));
+          final fromStore = await _enrichUserWithPendingRelocation(
+            UserModel.fromMap(storeData),
+          );
           return fromStore;
         }
         return user;
@@ -749,46 +673,76 @@ class SupabaseService {
   }) async {
     final client = _authClient;
     final cleanEmail = email.trim().toLowerCase();
-    final isArtisan = const ['Artisan', 'Master Artisan'].contains(role);
-    if (!isArtisan && role != 'Tourist') {
-      throw const AuthException('This role cannot be created through registration.');
+    final isArtisan = const [
+      'Artisan',
+      'Master Artisan',
+      'Artisan & Tourist',
+      'Tourist & Artisan',
+      'Artisan and Tourist',
+      'Dual Role',
+    ].contains(role);
+    if (!isArtisan && role != 'Tourist' && role != 'Cultural Tourist') {
+      throw const AuthException(
+        'This role cannot be created through registration.',
+      );
     }
     final finalRole = isArtisan ? 'Artisan' : 'Tourist';
     final status = isArtisan ? 'PENDING_APPROVAL' : 'ACTIVE';
     final handle = (username?.trim().isNotEmpty == true
-        ? username!.trim().replaceAll('@', '') : cleanEmail.split('@').first);
+        ? username!.trim().replaceAll('@', '')
+        : cleanEmail.split('@').first);
     if (!await isUsernameAvailable(handle)) {
-      throw const AuthException('USERNAME ALREADY TAKEN: Please choose a unique username.');
+      throw const AuthException(
+        'USERNAME ALREADY TAKEN: Please choose a unique username.',
+      );
     }
     if (isArtisan) {
       final error = SsmValidator.validate(ssmNumber);
       if (error != null) throw AuthException('INVALID SSM: $error');
       if (await isSsmRegistered(ssmNumber!)) {
-        throw const AuthException('DUPLICATE SSM: This studio is already registered.');
+        throw const AuthException(
+          'DUPLICATE SSM: This studio is already registered.',
+        );
       }
     }
     await signOut();
     final response = await client.auth.signUp(
-      email: cleanEmail, password: password,
+      email: cleanEmail,
+      password: password,
       data: {
-        'username': handle, 'full_name': displayName ?? handle,
-        'display_name': displayName ?? handle, 'role': finalRole,
-        'roles': [finalRole], 'status': status, 'studio_name': studioName,
-        'craft_category': craftCategory, 'ssm_number': ssmNumber,
+        'username': handle,
+        'full_name': displayName ?? handle,
+        'display_name': displayName ?? handle,
+        'role': finalRole,
+        'roles': [finalRole],
+        'status': status,
+        'studio_name': studioName,
+        'craft_category': craftCategory,
+        'ssm_number': ssmNumber,
       },
     );
     final user = response.user;
     if (user == null || user.identities?.isEmpty == true) {
-      throw const AuthException('Account could not be created. If already registered, please sign in.');
+      throw const AuthException(
+        'Account could not be created. If already registered, please sign in.',
+      );
     }
     await _unrecordDeletedAccount(cleanEmail);
     await _unrecordDeletedUsername(handle);
     // The auth.users trigger creates the profile atomically. Do not insert
     // a substitute identity when signup fails or before email confirmation.
-    return UserModel(id: user.id, email: cleanEmail, username: handle,
-      displayName: displayName ?? handle, role: finalRole, roles: [finalRole],
-      status: status, studioName: studioName, craftCategory: craftCategory,
-      ssmNumber: ssmNumber);
+    return UserModel(
+      id: user.id,
+      email: cleanEmail,
+      username: handle,
+      displayName: displayName ?? handle,
+      role: finalRole,
+      roles: [finalRole],
+      status: status,
+      studioName: studioName,
+      craftCategory: craftCategory,
+      ssmNumber: ssmNumber,
+    );
   }
 
   Future<void> sendPasswordResetEmail(String email) async {
@@ -801,8 +755,11 @@ class SupabaseService {
         'ADMINISTRATOR ACCOUNT PROTECTED: Administrator credentials cannot be reset via self-service. Contact support.',
       );
     }
-    final account = await client.from('users').select('role, username')
-        .eq('email', cleanEmail).maybeSingle();
+    final account = await client
+        .from('users')
+        .select('role, username')
+        .eq('email', cleanEmail)
+        .maybeSingle();
     if (account == null) {
       throw const AuthException(
         'EMAIL NOT FOUND: No account is registered with this email address.',
@@ -810,30 +767,42 @@ class SupabaseService {
     }
     final role = (account['role'] ?? '').toString().toLowerCase();
     final username = (account['username'] ?? '').toString().toLowerCase();
-    if (role.contains('admin') || username == 'admin' || username == 'clqadmin') {
+    if (role.contains('admin') ||
+        username == 'admin' ||
+        username == 'clqadmin') {
       throw const AuthException(
         'ADMINISTRATOR ACCOUNT PROTECTED: Administrator credentials cannot be reset via self-service. Contact support.',
       );
     }
-    await client.auth.resetPasswordForEmail(cleanEmail,
-      redirectTo: kIsWeb ? Uri.base.resolve('/forgot-password').toString()
-          : 'io.supabase.warisankita://reset-callback');
+    await client.auth.resetPasswordForEmail(
+      cleanEmail,
+      redirectTo: kIsWeb
+          ? Uri.base.resolve('/forgot-password').toString()
+          : 'io.supabase.warisankita://reset-callback',
+    );
   }
 
   Future<void> resetPasswordWithToken({
-    required String email, required String token, required String newPassword,
+    required String email,
+    required String token,
+    required String newPassword,
   }) async {
-    if (_resetInProgress) throw const AuthException('Password reset is already in progress.');
+    if (_resetInProgress)
+      throw const AuthException('Password reset is already in progress.');
     final client = _authClient;
     _resetInProgress = true;
     try {
       final session = client.auth.currentSession;
       // The UI enters this flow through a recovery link validated by Supabase.
       // An arbitrary token or an ordinary signed-in session is not recovery proof.
-      if (token.isNotEmpty || session == null || session.isExpired ||
+      if (token.isNotEmpty ||
+          session == null ||
+          session.isExpired ||
           _recoveryAccessToken != session.accessToken ||
           session.user.email?.toLowerCase() != email.trim().toLowerCase()) {
-        throw const AuthException('Invalid or expired recovery session. Please open a new password reset link.');
+        throw const AuthException(
+          'Invalid or expired recovery session. Please open a new password reset link.',
+        );
       }
       final profile = await _loadAuthenticatedProfile();
       final pEmail = profile.email.toLowerCase().trim();
@@ -853,14 +822,13 @@ class SupabaseService {
       try {
         await client.auth.updateUser(UserAttributes(password: newPassword));
       } on AuthException catch (e) {
-        final errStr = e.message.toLowerCase();
-        if (errStr.contains('should be different') ||
-            errStr.contains('same as old') ||
-            errStr.contains('cannot be the same') ||
-            errStr.contains('same password') ||
+        final message = e.message.toLowerCase();
+        if (message.contains('should be different') ||
+            message.contains('same as old') ||
+            message.contains('same password') ||
             e.code == 'same_password') {
           throw const AuthException(
-            'NEW PASSWORD CANNOT BE THE SAME AS YOUR CURRENT PASSWORD: New password should be different from your old password. Please choose a completely new password, not just a change in uppercase or lowercase.',
+            'NEW PASSWORD CANNOT BE THE SAME AS YOUR CURRENT PASSWORD; it should be different.',
           );
         }
         rethrow;
@@ -872,61 +840,18 @@ class SupabaseService {
     }
   }
 
-  Future<void> changePassword({
-    required String currentPassword,
-    required String newPassword,
+  Future<UserModel> verifyEmailOtp({
+    required String email,
+    required String token,
   }) async {
     final client = _authClient;
-    final currentUser = client.auth.currentUser;
-    final session = client.auth.currentSession;
-    if (currentUser == null || session == null || session.isExpired) {
-      throw const AuthException('No active session. Please sign in again.');
-    }
-
-    final cleanCurrent = currentPassword.trim();
-    final cleanNew = newPassword.trim();
-
-    if (cleanCurrent.toLowerCase() == cleanNew.toLowerCase()) {
-      throw const AuthException(
-        'NEW PASSWORD IS TOO SIMILAR TO YOUR CURRENT PASSWORD: Please choose a completely new password, not just a change in uppercase or lowercase.',
-      );
-    }
-
-    final email = currentUser.email;
-    if (email == null || email.isEmpty) {
-      throw const AuthException('User email not found. Please sign in again.');
-    }
-
-    try {
-      await client.auth.signInWithPassword(email: email, password: cleanCurrent);
-    } on AuthException catch (_) {
-      throw const AuthException(
-        'INCORRECT CURRENT PASSWORD: The current password you entered does not match our records.',
-      );
-    }
-
-    try {
-      await client.auth.updateUser(UserAttributes(password: cleanNew));
-    } on AuthException catch (e) {
-      final errStr = e.message.toLowerCase();
-      if (errStr.contains('should be different') ||
-          errStr.contains('same as old') ||
-          errStr.contains('cannot be the same') ||
-          errStr.contains('same password') ||
-          e.code == 'same_password') {
-        throw const AuthException(
-          'NEW PASSWORD CANNOT BE THE SAME AS YOUR CURRENT PASSWORD: New password should be different from your old password. Please choose a completely new password, not just a change in uppercase or lowercase.',
-        );
-      }
-      rethrow;
-    }
-  }
-
-  Future<UserModel> verifyEmailOtp({required String email, required String token}) async {
-    final client = _authClient;
     final response = await client.auth.verifyOTP(
-      email: email.trim().toLowerCase(), token: token.trim(), type: OtpType.signup);
-    if (response.session == null) throw const AuthException('Email verification failed.');
+      email: email.trim().toLowerCase(),
+      token: token.trim(),
+      type: OtpType.signup,
+    );
+    if (response.session == null)
+      throw const AuthException('Email verification failed.');
     try {
       return await _loadAuthenticatedProfile();
     } catch (_) {
@@ -936,7 +861,10 @@ class SupabaseService {
   }
 
   Future<void> resendVerificationOtp({required String email}) async {
-    await _authClient.auth.resend(type: OtpType.signup, email: email.trim().toLowerCase());
+    await _authClient.auth.resend(
+      type: OtpType.signup,
+      email: email.trim().toLowerCase(),
+    );
   }
 
   Future<UserModel> linkArtisanRoleToTourist({
@@ -964,27 +892,18 @@ class SupabaseService {
         client.auth.currentUser != null) {
       cleanEmail = client.auth.currentUser!.email?.toLowerCase() ?? '';
     }
-
     if (cleanEmail.isEmpty) {
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        final storedEmail = prefs.getString(_keyAuthEmail)?.trim().toLowerCase();
-        if (storedEmail != null && storedEmail.isNotEmpty) {
-          cleanEmail = storedEmail;
-        }
-        if (cleanEmail.isEmpty) {
-          final rawUser = prefs.getString(_keyAuthUser);
-          if (rawUser != null && rawUser.isNotEmpty) {
-            final map = jsonDecode(rawUser) as Map<String, dynamic>;
-            final e = (map['email'] ?? '').toString().trim().toLowerCase();
-            if (e.isNotEmpty) cleanEmail = e;
-          }
-        }
-      } catch (_) {}
+      final prefs = await SharedPreferences.getInstance();
+      final rawUser = prefs.getString(_keyAuthUser);
+      if (rawUser != null && rawUser.isNotEmpty) {
+        try {
+          final cached = jsonDecode(rawUser) as Map<String, dynamic>;
+          cleanEmail = (cached['email'] ?? '').toString().trim().toLowerCase();
+        } catch (_) {}
+      }
     }
-
     if (cleanEmail.isEmpty) {
-      throw Exception('User email is required to submit artisan application. Please ensure you are signed in.');
+      throw Exception('User email is required to submit artisan application.');
     }
 
     await Future.delayed(const Duration(milliseconds: 300));
@@ -1015,11 +934,9 @@ class SupabaseService {
         'email': cleanEmail,
         'username': cleanEmail.split('@').first,
         'displayName': cleanEmail.split('@').first,
-        'role': 'Tourist',
-        'roles': ['Tourist'],
-        'status': 'ACTIVE',
-        'artisanStatus': 'PENDING_APPROVAL',
-        'artisan_status': 'PENDING_APPROVAL',
+        'role': 'Artisan & Tourist',
+        'roles': ['Tourist', 'Artisan'],
+        'status': 'PENDING_APPROVAL',
         'studioName': studioName,
         'craftCategory': craftCategory,
         'joinedDate': _formatMonthYear(DateTime.now()),
@@ -1045,81 +962,49 @@ class SupabaseService {
       );
     }
 
-    // Update user record with pending artisan credentials while preserving Tourist account
+    // Update user record with pending artisan credentials
     userRecord['studioName'] = studioName;
     userRecord['craftCategory'] = craftCategory;
     userRecord['ssmNumber'] = ssmNumber;
-    userRecord['ssm_number'] = ssmNumber;
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final uid = userRecord['id']?.toString() ?? '';
-      if (uid.isNotEmpty) {
-        await prefs.setString('artisan_ssm_$uid', ssmNumber);
-      }
-    } catch (_) {}
     if (experience != null) userRecord['experience'] = experience;
     if (ssmFile != null) userRecord['ssm_file_name'] = ssmFile.name;
     if (certFile != null) userRecord['cert_file_name'] = certFile.name;
     if (address != null) userRecord['address'] = address;
     if (state != null) userRecord['state'] = state;
     userRecord['status'] = 'PENDING_APPROVAL';
-    userRecord['artisanStatus'] = 'PENDING_APPROVAL';
-    userRecord['artisan_status'] = 'PENDING_APPROVAL';
-    userRecord['role'] = 'Tourist';
-    userRecord['roles'] = ['Tourist'];
+    userRecord['role'] = 'Artisan & Tourist';
+    userRecord['roles'] = ['Tourist', 'Artisan'];
 
-    // In-memory document preservation & type-safe merging for local session:
-    final List<Map<String, dynamic>> existingLocalDocs = [];
-    if (userRecord['artisan_documents'] is List) {
-      existingLocalDocs.addAll(
-        List<Map<String, dynamic>>.from(userRecord['artisan_documents'] as List),
-      );
-    } else if (userRecord['artisanDocuments'] is List) {
-      existingLocalDocs.addAll(
-        List<Map<String, dynamic>>.from(userRecord['artisanDocuments'] as List),
-      );
-    }
-
-    final List<Map<String, dynamic>> newLocalDocs = [];
-    if (ssmFile != null) {
-      newLocalDocs.add({
-        'artisan_id': userRecord['id'],
-        'doc_type': 'SSM_BUSINESS_CERT',
-        'file_url': 'local://ssm/${ssmFile.name}',
-        'file_name': ssmFile.name,
+    final preservedDocuments = userRecord['artisan_documents'] is List
+        ? List<Map<String, dynamic>>.from(
+            (userRecord['artisan_documents'] as List).map(
+              (item) => Map<String, dynamic>.from(item as Map),
+            ),
+          )
+        : <Map<String, dynamic>>[];
+    void replaceLocalDocument(String type, PlatformFile? file) {
+      if (file == null) return;
+      preservedDocuments.removeWhere((doc) => doc['doc_type'] == type);
+      preservedDocuments.add({
+        'doc_type': type,
+        'file_name': file.name,
+        'file_url': '',
       });
     }
-    if (certFile != null) {
-      newLocalDocs.add({
-        'artisan_id': userRecord['id'],
-        'doc_type': 'KRAFTANGAN_MASTER_CERT',
-        'file_url': 'local://cert/${certFile.name}',
-        'file_name': certFile.name,
-      });
-    }
-    if (photos != null && photos.isNotEmpty) {
-      for (var p in photos) {
-        newLocalDocs.add({
-          'artisan_id': userRecord['id'],
+
+    replaceLocalDocument('SSM_BUSINESS_CERT', ssmFile);
+    replaceLocalDocument('KRAFTANGAN_MASTER_CERT', certFile);
+    if (photos != null) {
+      for (final photo in photos) {
+        preservedDocuments.add({
           'doc_type': 'STUDIO_PHOTO',
-          'file_url': 'local://studio/${p.name}',
-          'file_name': p.name,
+          'file_name': photo.name,
+          'file_url': '',
         });
       }
     }
-
-    if (newLocalDocs.isNotEmpty) {
-      final replacedTypes = newLocalDocs.map((d) => d['doc_type'] as String).toSet();
-      final mergedLocalDocs = [
-        ...existingLocalDocs.where((d) => !replacedTypes.contains(d['doc_type'])),
-        ...newLocalDocs,
-      ];
-      userRecord['artisan_documents'] = mergedLocalDocs;
-      userRecord['artisanDocuments'] = mergedLocalDocs;
-    } else if (existingLocalDocs.isNotEmpty) {
-      userRecord['artisan_documents'] = existingLocalDocs;
-      userRecord['artisanDocuments'] = existingLocalDocs;
-    }
+    userRecord['artisan_documents'] = preservedDocuments;
+    userRecord['artisanDocuments'] = preservedDocuments;
 
     if (client != null) {
       try {
@@ -1128,8 +1013,7 @@ class SupabaseService {
             UserAttributes(
               data: {
                 'status': 'PENDING_APPROVAL',
-                'role': 'Tourist',
-                'artisan_status': 'PENDING_APPROVAL',
+                'role': 'Artisan & Tourist',
                 'studio_name': studioName,
                 'craft_category': craftCategory,
                 'ssm_number': ssmNumber,
@@ -1150,36 +1034,15 @@ class SupabaseService {
             '00000000-0000-4000-8000-000000000001';
 
         if (existing != null) {
-          // Note: users table only has: id, email, full_name, phone_number,
-          // avatar_url, role, status, artisan_status, username, display_name.
-          // It does NOT have studio_name, craft_category, ssm_number columns.
-          try {
-            await client
-                .from('users')
-                .update({
-                  'status': 'PENDING_APPROVAL',
-                  'role': 'Tourist',
-                  'artisan_status': 'PENDING_APPROVAL',
-                  if (phone != null) 'phone_number': phone,
-                  'updated_at': DateTime.now().toIso8601String(),
-                })
-                .eq('id', userId);
-          } catch (userUpdateErr) {
-            debugPrint('linkArtisanRoleToTourist users update note: $userUpdateErr');
-            try {
-              await client
-                  .from('users')
-                  .update({
-                    'status': 'PENDING_APPROVAL',
-                    'role': 'Tourist',
-                    'artisan_status': 'PENDING_APPROVAL',
-                    'updated_at': DateTime.now().toIso8601String(),
-                  })
-                  .eq('id', userId);
-            } catch (err) {
-              debugPrint('linkArtisanRoleToTourist users minimal update note: $err');
-            }
-          }
+          await client
+              .from('users')
+              .update({
+                'status': 'PENDING_APPROVAL',
+                'role': 'Artisan & Tourist',
+                if (phone != null) 'phone_number': phone,
+                'updated_at': DateTime.now().toIso8601String(),
+              })
+              .ilike('email', cleanEmail);
         } else {
           await client.from('users').insert({
             'id': userId,
@@ -1187,8 +1050,7 @@ class SupabaseService {
             'username': userRecord['username'] ?? cleanEmail.split('@').first,
             'full_name': userRecord['displayName'] ?? studioName,
             'status': 'PENDING_APPROVAL',
-            'role': 'Tourist',
-            'artisan_status': 'PENDING_APPROVAL',
+            'role': 'Artisan & Tourist',
             if (phone != null) 'phone_number': phone,
             'created_at': DateTime.now().toIso8601String(),
             'updated_at': DateTime.now().toIso8601String(),
@@ -1202,14 +1064,17 @@ class SupabaseService {
               .eq('user_id', userId)
               .maybeSingle();
 
-          final profileData = <String, dynamic>{
+          final profileData = {
             'studio_name': studioName,
             'craft_category': craftCategory,
             'ssm_number': ssmNumber,
-            // artisan_profiles has 'years_experience' but NOT 'experience' column
-            if (experience != null && experience.trim().isNotEmpty)
+            if (experience != null && experience.trim().isNotEmpty) ...{
+              'experience': experience.trim(),
               if (RegExp(r'\d+').firstMatch(experience) != null)
-                'years_experience': int.tryParse(RegExp(r'\d+').firstMatch(experience)!.group(0)!),
+                'years_experience': int.tryParse(
+                  RegExp(r'\d+').firstMatch(experience)!.group(0)!,
+                ),
+            },
             'bio':
                 bio ??
                 'Master artisan dedicated to traditional Malaysian craft.',
@@ -1238,11 +1103,7 @@ class SupabaseService {
           }
 
           if (profileRes != null) {
-            final artisanId = profileRes is Map
-                ? profileRes['id']
-                : (profileRes is List && profileRes.isNotEmpty && profileRes.first is Map
-                    ? profileRes.first['id']
-                    : null);
+            final artisanId = profileRes['id'];
 
             Future<Map<String, String>?> uploadDoc(
               PlatformFile? file,
@@ -1316,20 +1177,6 @@ class SupabaseService {
             }
 
             try {
-              // 1. Fetch backup of existing artisan documents BEFORE any mutation
-              final List<Map<String, dynamic>> backupDocs = [];
-              try {
-                final existingRes = await client
-                    .from('artisan_documents')
-                    .select()
-                    .eq('artisan_id', artisanId);
-                for (final item in existingRes) {
-                  backupDocs.add(Map<String, dynamic>.from(item));
-                }
-              } catch (backupErr) {
-                debugPrint('Supabase backup existing artisan_documents note: $backupErr');
-              }
-
               final ssmUpload = await uploadDoc(
                 ssmFile,
                 'artisan_private_docs',
@@ -1379,49 +1226,12 @@ class SupabaseService {
                 }
               }
 
-              // 2. Only delete and replace the document types that have valid new uploads ready
+              await client
+                  .from('artisan_documents')
+                  .delete()
+                  .eq('artisan_id', artisanId);
               if (docsToInsert.isNotEmpty) {
-                final Set<String> typesToReplace = docsToInsert
-                    .map((d) => d['doc_type'] as String)
-                    .toSet();
-
-                // Keep track of which documents are about to be replaced for rollback
-                final deletedBackup = backupDocs
-                    .where((d) => typesToReplace.contains(d['doc_type']))
-                    .toList();
-
-                try {
-                  // Selectively delete only the document types being replaced
-                  for (final type in typesToReplace) {
-                    await client
-                        .from('artisan_documents')
-                        .delete()
-                        .eq('artisan_id', artisanId)
-                        .eq('doc_type', type);
-                  }
-
-                  // Insert new documents
-                  await client.from('artisan_documents').insert(docsToInsert);
-                } catch (insertErr) {
-                  debugPrint(
-                    'Supabase insert failed, initiating rollback: $insertErr',
-                  );
-                  // ROLLBACK: restore previous documents from deletedBackup
-                  if (deletedBackup.isNotEmpty) {
-                    try {
-                      final restoreList = deletedBackup.map((d) {
-                        final copy = Map<String, dynamic>.from(d);
-                        copy.remove('id');
-                        return copy;
-                      }).toList();
-                      await client.from('artisan_documents').insert(restoreList);
-                      debugPrint('Supabase rollback succeeded: restored previous documents.');
-                    } catch (rollbackErr) {
-                      debugPrint('Supabase rollback failed: $rollbackErr');
-                    }
-                  }
-                  rethrow;
-                }
+                await client.from('artisan_documents').insert(docsToInsert);
               }
             } catch (docErr) {
               debugPrint(
@@ -1439,10 +1249,7 @@ class SupabaseService {
       }
     }
 
-    final profile = UserModel.fromMap(userRecord);
-    _userStore[cleanEmail] = userRecord;
-    await _saveAuthSession(profile);
-    return profile;
+    return UserModel.fromMap(userRecord);
   }
 
   Future<UserModel> updateUserProfile({
@@ -1513,7 +1320,9 @@ class SupabaseService {
           final candidate = _cleanUsernameKey(candidateUsername);
           for (final entry in _userStore.entries) {
             if (entry.key.toLowerCase() == cleanEmail) continue;
-            final existing = (entry.value['username'] as String?)?.trim().toLowerCase();
+            final existing = (entry.value['username'] as String?)
+                ?.trim()
+                .toLowerCase();
             if (existing != null && _cleanUsernameKey(existing) == candidate) {
               throw Exception(
                 'USERNAME ALREADY TAKEN: "@${username.replaceAll('@', '')}" is registered by another user. Please choose a different username.',
@@ -1558,37 +1367,10 @@ class SupabaseService {
     if (isLiveOpen != null) {
       userRecord['is_live_open'] = isLiveOpen;
       userRecord['isLiveOpen'] = isLiveOpen;
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        final artisanId = userRecord['id']?.toString() ?? userRecord['user_id']?.toString();
-        if (artisanId != null && artisanId.isNotEmpty) {
-          await prefs.setBool('artisan_live_open_$artisanId', isLiveOpen);
-        }
-        final uid = userRecord['id']?.toString() ?? userRecord['user_id']?.toString();
-        if (uid != null && uid.isNotEmpty) {
-          await prefs.setBool('artisan_live_open_$uid', isLiveOpen);
-        }
-      } catch (e) {
-        debugPrint('Note saving artisan_live_open to SharedPreferences: $e');
-      }
     }
-
     if (workshopCount != null) {
       userRecord['workshop_count'] = workshopCount;
       userRecord['workshopCount'] = workshopCount;
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        final artisanId = userRecord['id']?.toString() ?? userRecord['user_id']?.toString();
-        if (artisanId != null && artisanId.isNotEmpty) {
-          await prefs.setInt('artisan_workshop_count_$artisanId', workshopCount);
-        }
-        final uid = userRecord['id']?.toString() ?? userRecord['user_id']?.toString();
-        if (uid != null && uid.isNotEmpty) {
-          await prefs.setInt('artisan_workshop_count_$uid', workshopCount);
-        }
-      } catch (e) {
-        debugPrint('Note saving artisan_workshop_count to SharedPreferences: $e');
-      }
     }
 
     Map<String, dynamic> apMap;
@@ -1596,9 +1378,6 @@ class SupabaseService {
       apMap = Map<String, dynamic>.from(userRecord['artisan_profiles'] as Map);
     } else {
       apMap = <String, dynamic>{};
-    }
-    if (workshopCount != null) {
-      apMap['workshop_count'] = workshopCount;
     }
     if (studioName != null && studioName.trim().isNotEmpty) {
       apMap['studio_name'] = studioName.trim();
@@ -1618,14 +1397,18 @@ class SupabaseService {
     if (craftCategory != null) apMap['craft_category'] = craftCategory;
     if (toolsAndMaterials != null) apMap['tags'] = toolsAndMaterials;
     if (isLiveOpen != null) apMap['is_live_open'] = isLiveOpen;
+    if (workshopCount != null) apMap['workshop_count'] = workshopCount;
     userRecord['artisan_profiles'] = apMap;
 
     if (isArtisanAccount || studioName != null || craftCategory != null) {
-      userRecord['role'] = 'Artisan';
-      userRecord['roles'] = <String>{
-        ...List<String>.from(userRecord['roles'] ?? <String>[]),
-        'Artisan'
-      }.toList();
+      if (userRecord['role'] != 'Artisan' &&
+          userRecord['role'] != 'Master Artisan') {
+        userRecord['role'] = 'Artisan';
+      }
+      if (userRecord['roles'] is List &&
+          !(userRecord['roles'] as List).contains('Artisan')) {
+        (userRecord['roles'] as List).add('Artisan');
+      }
     }
 
     _userStore[cleanEmail] = userRecord;
@@ -1635,7 +1418,9 @@ class SupabaseService {
       try {
         final updateMap = <String, dynamic>{};
         if (username != null) {
-          updateMap['username'] = username.trim().replaceAll('@', '');
+          final cleanHandle = username.trim().replaceAll('@', '');
+          updateMap['username'] = cleanHandle;
+          updateMap['full_name'] = displayName ?? cleanHandle;
         }
         if (displayName != null) {
           updateMap['display_name'] = displayName.trim();
@@ -1668,6 +1453,7 @@ class SupabaseService {
                 'full_name': displayName ?? username,
               if (phone != null) 'phone_number': phone,
               if (avatarUrl != null) 'avatar_url': avatarUrl,
+              if (isLiveOpen != null) 'is_live_open': isLiveOpen,
               'updated_at': DateTime.now().toIso8601String(),
             };
             if (isArtisanAccount) {
@@ -1684,7 +1470,12 @@ class SupabaseService {
           }
 
           // 2. Update or Insert Supabase Postgres 'artisan_profiles' table (Professional columns only, by user_id)
-          if (isArtisanAccount || studioName != null || bio != null || craftCategory != null || toolsAndMaterials != null || experience != null) {
+          if (isArtisanAccount ||
+              studioName != null ||
+              bio != null ||
+              craftCategory != null ||
+              toolsAndMaterials != null ||
+              experience != null) {
             try {
               final userRow = await client
                   .from('users')
@@ -1701,7 +1492,9 @@ class SupabaseService {
                   if (experience != null && experience.trim().isNotEmpty) ...{
                     'experience': experience.trim(),
                     if (RegExp(r'\d+').firstMatch(experience) != null)
-                      'years_experience': int.tryParse(RegExp(r'\d+').firstMatch(experience)!.group(0)!),
+                      'years_experience': int.tryParse(
+                        RegExp(r'\d+').firstMatch(experience)!.group(0)!,
+                      ),
                   },
                   if (state != null) 'state': state,
                   if (address != null) 'address': address,
@@ -1709,6 +1502,7 @@ class SupabaseService {
                   if (longitude != null) 'longitude': longitude,
                   if (craftCategory != null) 'craft_category': craftCategory,
                   if (toolsAndMaterials != null) 'tags': toolsAndMaterials,
+                  if (isLiveOpen != null) 'is_live_open': isLiveOpen,
                   if (workshopCount != null) 'workshop_count': workshopCount,
                   'updated_at': DateTime.now().toIso8601String(),
                 };
@@ -1726,51 +1520,71 @@ class SupabaseService {
                           .update(artisanUpdates)
                           .eq('user_id', effectiveUid);
                     } catch (artisanErr) {
-                      debugPrint('Direct artisan_profiles update note: $artisanErr');
-                      if (artisanUpdates.containsKey('experience') || artisanUpdates.containsKey('workshop_count')) {
+                      debugPrint(
+                        'Direct artisan_profiles update note: $artisanErr',
+                      );
+                      if (artisanUpdates.containsKey('experience')) {
                         try {
-                          final fallbackUpdates = Map<String, dynamic>.from(artisanUpdates)
-                            ..remove('experience')
-                            ..remove('workshop_count');
+                          final fallbackUpdates = Map<String, dynamic>.from(
+                            artisanUpdates,
+                          )..remove('experience');
                           await client
                               .from('artisan_profiles')
                               .update(fallbackUpdates)
                               .eq('user_id', effectiveUid);
                         } catch (fallbackErr) {
-                          debugPrint('Fallback artisan_profiles update note: $fallbackErr');
+                          debugPrint(
+                            'Fallback artisan_profiles update note: $fallbackErr',
+                          );
                         }
                       }
                     }
                   } else {
                     // CRITICAL FIX: The artisan_profiles row was missing!
                     // Insert new record so artisan data is NEVER silently dropped.
-                    final newProfile = Map<String, dynamic>.from(artisanUpdates);
+                    final newProfile = Map<String, dynamic>.from(
+                      artisanUpdates,
+                    );
                     newProfile['user_id'] = effectiveUid;
                     newProfile['created_at'] = DateTime.now().toIso8601String();
-                    newProfile['studio_name'] ??= studioName ?? displayName ?? username ?? userRow?['full_name'] ?? 'Artisan Studio';
-                    newProfile['craft_category'] ??= craftCategory ?? 'Traditional Crafts';
-                    newProfile['bio'] ??= bio ?? 'Master artisan dedicated to traditional Malaysian craft.';
+                    newProfile['studio_name'] ??=
+                        studioName ??
+                        displayName ??
+                        username ??
+                        userRow?['full_name'] ??
+                        'Artisan Studio';
+                    newProfile['craft_category'] ??=
+                        craftCategory ?? 'Traditional Crafts';
+                    newProfile['bio'] ??=
+                        bio ??
+                        'Master artisan dedicated to traditional Malaysian craft.';
                     newProfile['experience'] ??= experience ?? '10+ Years';
                     newProfile['address'] ??= address ?? state ?? 'Malaysia';
                     newProfile['state'] ??= state ?? 'Malaysia';
                     newProfile['status'] = 'APPROVED';
                     if (latitude != null) newProfile['latitude'] = latitude;
                     if (longitude != null) newProfile['longitude'] = longitude;
-                    if (toolsAndMaterials != null) newProfile['tags'] = toolsAndMaterials;
-                    if (workshopCount != null) newProfile['workshop_count'] = workshopCount;
+                    if (toolsAndMaterials != null)
+                      newProfile['tags'] = toolsAndMaterials;
 
                     try {
                       await client.from('artisan_profiles').insert(newProfile);
                     } catch (insertErr) {
-                      debugPrint('Direct artisan_profiles insert note: $insertErr');
-                      if (newProfile.containsKey('experience') || newProfile.containsKey('workshop_count')) {
+                      debugPrint(
+                        'Direct artisan_profiles insert note: $insertErr',
+                      );
+                      if (newProfile.containsKey('experience')) {
                         try {
-                          final fallbackProfile = Map<String, dynamic>.from(newProfile)
-                            ..remove('experience')
-                            ..remove('workshop_count');
-                          await client.from('artisan_profiles').insert(fallbackProfile);
+                          final fallbackProfile = Map<String, dynamic>.from(
+                            newProfile,
+                          )..remove('experience');
+                          await client
+                              .from('artisan_profiles')
+                              .insert(fallbackProfile);
                         } catch (fallbackInsertErr) {
-                          debugPrint('Fallback artisan_profiles insert note: $fallbackInsertErr');
+                          debugPrint(
+                            'Fallback artisan_profiles insert note: $fallbackInsertErr',
+                          );
                         }
                       }
                     }
@@ -1825,7 +1639,8 @@ class SupabaseService {
 
     await _savePendingRelocation(cleanEmail, relocData);
 
-    final userRecord = _userStore[cleanEmail] ?? <String, dynamic>{'email': cleanEmail};
+    final userRecord =
+        _userStore[cleanEmail] ?? <String, dynamic>{'email': cleanEmail};
     userRecord.addAll(relocData);
     _userStore[cleanEmail] = userRecord;
 
@@ -1840,28 +1655,36 @@ class SupabaseService {
         final userId = uRow?['id']?.toString() ?? userRecord['id']?.toString();
         if (userId != null) {
           try {
-            await client.from('artisan_profiles').update({
-              'pending_relocation_address': address.trim(),
-              'pending_relocation_state': state.trim(),
-              'pending_relocation_lat': latitude,
-              'pending_relocation_lng': longitude,
-              'pending_relocation_reason': reason.trim(),
-              'pending_relocation_date': relocData['pending_relocation_date'],
-              'updated_at': DateTime.now().toIso8601String(),
-            }).eq('user_id', userId);
+            await client
+                .from('artisan_profiles')
+                .update({
+                  'pending_relocation_address': address.trim(),
+                  'pending_relocation_state': state.trim(),
+                  'pending_relocation_lat': latitude,
+                  'pending_relocation_lng': longitude,
+                  'pending_relocation_reason': reason.trim(),
+                  'pending_relocation_date':
+                      relocData['pending_relocation_date'],
+                  'updated_at': DateTime.now().toIso8601String(),
+                })
+                .eq('user_id', userId);
           } catch (e) {
             debugPrint('Supabase submitRelocationRequest table note: $e');
           }
           try {
-            await client.from('users').update({
-              'pending_relocation_address': address.trim(),
-              'pending_relocation_state': state.trim(),
-              'pending_relocation_lat': latitude,
-              'pending_relocation_lng': longitude,
-              'pending_relocation_reason': reason.trim(),
-              'pending_relocation_date': relocData['pending_relocation_date'],
-              'updated_at': DateTime.now().toIso8601String(),
-            }).eq('id', userId);
+            await client
+                .from('users')
+                .update({
+                  'pending_relocation_address': address.trim(),
+                  'pending_relocation_state': state.trim(),
+                  'pending_relocation_lat': latitude,
+                  'pending_relocation_lng': longitude,
+                  'pending_relocation_reason': reason.trim(),
+                  'pending_relocation_date':
+                      relocData['pending_relocation_date'],
+                  'updated_at': DateTime.now().toIso8601String(),
+                })
+                .eq('id', userId);
           } catch (_) {}
         }
       } catch (e) {
@@ -1887,7 +1710,8 @@ class SupabaseService {
 
     await _clearPendingRelocation(cleanEmail);
 
-    final userRecord = _userStore[cleanEmail] ?? <String, dynamic>{'email': cleanEmail};
+    final userRecord =
+        _userStore[cleanEmail] ?? <String, dynamic>{'email': cleanEmail};
     userRecord.remove('pending_relocation_address');
     userRecord.remove('pending_relocation_state');
     userRecord.remove('pending_relocation_lat');
@@ -1914,28 +1738,34 @@ class SupabaseService {
         final userId = uRow?['id']?.toString() ?? userRecord['id']?.toString();
         if (userId != null) {
           try {
-            await client.from('artisan_profiles').update({
-              'pending_relocation_address': null,
-              'pending_relocation_state': null,
-              'pending_relocation_lat': null,
-              'pending_relocation_lng': null,
-              'pending_relocation_reason': null,
-              'pending_relocation_date': null,
-              'updated_at': DateTime.now().toIso8601String(),
-            }).eq('user_id', userId);
+            await client
+                .from('artisan_profiles')
+                .update({
+                  'pending_relocation_address': null,
+                  'pending_relocation_state': null,
+                  'pending_relocation_lat': null,
+                  'pending_relocation_lng': null,
+                  'pending_relocation_reason': null,
+                  'pending_relocation_date': null,
+                  'updated_at': DateTime.now().toIso8601String(),
+                })
+                .eq('user_id', userId);
           } catch (e) {
             debugPrint('Supabase cancelRelocationRequest table note: $e');
           }
           try {
-            await client.from('users').update({
-              'pending_relocation_address': null,
-              'pending_relocation_state': null,
-              'pending_relocation_lat': null,
-              'pending_relocation_lng': null,
-              'pending_relocation_reason': null,
-              'pending_relocation_date': null,
-              'updated_at': DateTime.now().toIso8601String(),
-            }).eq('id', userId);
+            await client
+                .from('users')
+                .update({
+                  'pending_relocation_address': null,
+                  'pending_relocation_state': null,
+                  'pending_relocation_lat': null,
+                  'pending_relocation_lng': null,
+                  'pending_relocation_reason': null,
+                  'pending_relocation_date': null,
+                  'updated_at': DateTime.now().toIso8601String(),
+                })
+                .eq('id', userId);
           } catch (_) {}
         }
       } catch (e) {
@@ -1943,9 +1773,9 @@ class SupabaseService {
       }
     }
 
-    final updatedModel = UserModel.fromMap(userRecord).copyWith(
-      clearPendingRelocation: true,
-    );
+    final updatedModel = UserModel.fromMap(
+      userRecord,
+    ).copyWith(clearPendingRelocation: true);
     await _saveAuthSession(updatedModel);
     return updatedModel;
   }
@@ -1961,11 +1791,28 @@ class SupabaseService {
     await Future.delayed(const Duration(milliseconds: 200));
 
     final relocData = await _getPendingRelocation(cleanEmail);
-    final userRecord = _userStore[cleanEmail] ?? <String, dynamic>{'email': cleanEmail};
-    String? newAddress = proposedAddress ?? relocData?['pending_relocation_address'] ?? userRecord['pending_relocation_address'] ?? userRecord['pendingRelocationAddress'];
-    String? newState = proposedState ?? relocData?['pending_relocation_state'] ?? userRecord['pending_relocation_state'] ?? userRecord['pendingRelocationState'];
-    dynamic newLat = proposedLat ?? relocData?['pending_relocation_lat'] ?? userRecord['pending_relocation_lat'] ?? userRecord['pendingRelocationLatitude'];
-    dynamic newLng = proposedLng ?? relocData?['pending_relocation_lng'] ?? userRecord['pending_relocation_lng'] ?? userRecord['pendingRelocationLongitude'];
+    final userRecord =
+        _userStore[cleanEmail] ?? <String, dynamic>{'email': cleanEmail};
+    String? newAddress =
+        proposedAddress ??
+        relocData?['pending_relocation_address'] ??
+        userRecord['pending_relocation_address'] ??
+        userRecord['pendingRelocationAddress'];
+    String? newState =
+        proposedState ??
+        relocData?['pending_relocation_state'] ??
+        userRecord['pending_relocation_state'] ??
+        userRecord['pendingRelocationState'];
+    dynamic newLat =
+        proposedLat ??
+        relocData?['pending_relocation_lat'] ??
+        userRecord['pending_relocation_lat'] ??
+        userRecord['pendingRelocationLatitude'];
+    dynamic newLng =
+        proposedLng ??
+        relocData?['pending_relocation_lng'] ??
+        userRecord['pending_relocation_lng'] ??
+        userRecord['pendingRelocationLongitude'];
 
     final client = _client;
     String? resolvedUserId = userRecord['id']?.toString();
@@ -1983,13 +1830,24 @@ class SupabaseService {
           Map<String, dynamic>? ap;
           if (profileRes['artisan_profiles'] is Map) {
             ap = Map<String, dynamic>.from(profileRes['artisan_profiles']);
-          } else if (profileRes['artisan_profiles'] is List && (profileRes['artisan_profiles'] as List).isNotEmpty) {
-            ap = Map<String, dynamic>.from((profileRes['artisan_profiles'] as List).first);
+          } else if (profileRes['artisan_profiles'] is List &&
+              (profileRes['artisan_profiles'] as List).isNotEmpty) {
+            ap = Map<String, dynamic>.from(
+              (profileRes['artisan_profiles'] as List).first,
+            );
           }
-          newAddress ??= ap?['pending_relocation_address']?.toString() ?? profileRes['pending_relocation_address']?.toString();
-          newState ??= ap?['pending_relocation_state']?.toString() ?? profileRes['pending_relocation_state']?.toString();
-          newLat ??= ap?['pending_relocation_lat'] ?? profileRes['pending_relocation_lat'];
-          newLng ??= ap?['pending_relocation_lng'] ?? profileRes['pending_relocation_lng'];
+          newAddress ??=
+              ap?['pending_relocation_address']?.toString() ??
+              profileRes['pending_relocation_address']?.toString();
+          newState ??=
+              ap?['pending_relocation_state']?.toString() ??
+              profileRes['pending_relocation_state']?.toString();
+          newLat ??=
+              ap?['pending_relocation_lat'] ??
+              profileRes['pending_relocation_lat'];
+          newLng ??=
+              ap?['pending_relocation_lng'] ??
+              profileRes['pending_relocation_lng'];
         }
       } catch (e) {
         debugPrint('Supabase pending relocation lookup note: $e');
@@ -2032,8 +1890,14 @@ class SupabaseService {
           final artisanUpdates = <String, dynamic>{
             if (newAddress != null) 'address': newAddress,
             if (newState != null) 'state': newState,
-            if (newLat != null) 'latitude': newLat is num ? newLat : double.tryParse(newLat.toString()),
-            if (newLng != null) 'longitude': newLng is num ? newLng : double.tryParse(newLng.toString()),
+            if (newLat != null)
+              'latitude': newLat is num
+                  ? newLat
+                  : double.tryParse(newLat.toString()),
+            if (newLng != null)
+              'longitude': newLng is num
+                  ? newLng
+                  : double.tryParse(newLng.toString()),
             'pending_relocation_address': null,
             'pending_relocation_state': null,
             'pending_relocation_lat': null,
@@ -2043,17 +1907,29 @@ class SupabaseService {
             'updated_at': DateTime.now().toIso8601String(),
           };
           try {
-            await client.from('artisan_profiles').update(artisanUpdates).eq('user_id', resolvedUserId);
+            await client
+                .from('artisan_profiles')
+                .update(artisanUpdates)
+                .eq('user_id', resolvedUserId);
           } catch (e) {
             debugPrint('artisan_profiles update note: $e');
             try {
-              await client.from('artisan_profiles').update({
-                if (newAddress != null) 'address': newAddress,
-                if (newState != null) 'state': newState,
-                if (newLat != null) 'latitude': newLat is num ? newLat : double.tryParse(newLat.toString()),
-                if (newLng != null) 'longitude': newLng is num ? newLng : double.tryParse(newLng.toString()),
-                'updated_at': DateTime.now().toIso8601String(),
-              }).eq('user_id', resolvedUserId);
+              await client
+                  .from('artisan_profiles')
+                  .update({
+                    if (newAddress != null) 'address': newAddress,
+                    if (newState != null) 'state': newState,
+                    if (newLat != null)
+                      'latitude': newLat is num
+                          ? newLat
+                          : double.tryParse(newLat.toString()),
+                    if (newLng != null)
+                      'longitude': newLng is num
+                          ? newLng
+                          : double.tryParse(newLng.toString()),
+                    'updated_at': DateTime.now().toIso8601String(),
+                  })
+                  .eq('user_id', resolvedUserId);
             } catch (_) {}
           }
 
@@ -2070,14 +1946,20 @@ class SupabaseService {
             'updated_at': DateTime.now().toIso8601String(),
           };
           try {
-            await client.from('users').update(userUpdates).eq('id', resolvedUserId);
+            await client
+                .from('users')
+                .update(userUpdates)
+                .eq('id', resolvedUserId);
           } catch (e) {
             try {
-              await client.from('users').update({
-                if (newAddress != null) 'address': newAddress,
-                if (newState != null) 'state': newState,
-                'updated_at': DateTime.now().toIso8601String(),
-              }).eq('id', resolvedUserId);
+              await client
+                  .from('users')
+                  .update({
+                    if (newAddress != null) 'address': newAddress,
+                    if (newState != null) 'state': newState,
+                    'updated_at': DateTime.now().toIso8601String(),
+                  })
+                  .eq('id', resolvedUserId);
             } catch (_) {}
           }
         }
@@ -2089,15 +1971,22 @@ class SupabaseService {
     final updatedModel = UserModel.fromMap(userRecord).copyWith(
       address: newAddress,
       state: newState,
-      latitude: newLat is num ? newLat.toDouble() : (newLat != null ? double.tryParse(newLat.toString()) : null),
-      longitude: newLng is num ? newLng.toDouble() : (newLng != null ? double.tryParse(newLng.toString()) : null),
+      latitude: newLat is num
+          ? newLat.toDouble()
+          : (newLat != null ? double.tryParse(newLat.toString()) : null),
+      longitude: newLng is num
+          ? newLng.toDouble()
+          : (newLng != null ? double.tryParse(newLng.toString()) : null),
       clearPendingRelocation: true,
     );
     await _saveAuthSession(updatedModel);
     return updatedModel;
   }
 
-  Future<UserModel> rejectRelocationRequest({required String email, String? feedback}) async {
+  Future<UserModel> rejectRelocationRequest({
+    required String email,
+    String? feedback,
+  }) async {
     return cancelRelocationRequest(email: email);
   }
 
@@ -2146,11 +2035,14 @@ class SupabaseService {
               rowMap['ssm_number'] ??= ap['ssm_number'];
               rowMap['bio'] ??= ap['bio'];
               rowMap['state'] ??= ap['state'] ?? ap['address'];
-              rowMap['experience'] ??= (ap['experience'] != null && ap['experience'].toString().trim().isNotEmpty)
+              rowMap['experience'] ??=
+                  (ap['experience'] != null &&
+                      ap['experience'].toString().trim().isNotEmpty)
                   ? ap['experience'].toString().trim()
-                  : (ap['years_experience'] != null && (ap['years_experience'] as num) > 1
-                      ? '${ap['years_experience']} years experience'
-                      : null);
+                  : (ap['years_experience'] != null &&
+                            (ap['years_experience'] as num) > 1
+                        ? '${ap['years_experience']} years experience'
+                        : null);
 
               // Extract documents if they exist
               if (ap['artisan_documents'] is List) {
@@ -2196,22 +2088,6 @@ class SupabaseService {
                 }
               }
             }
-
-            final userStatus = (rowMap['status'] ?? '').toString().toUpperCase();
-            // Use artisan_profiles.status as the authoritative source for artisan state.
-            // users.artisan_status can lag (e.g. admin cache set it to REJECTED but
-            // user has since re-applied and artisan_profiles is now PENDING_APPROVAL).
-            final apStatus = (ap?['status'] ?? '').toString().toUpperCase();
-
-            // Strictly exclude any rejected, approved, or closed applications
-            // but trust artisan_profiles.status over users.artisan_status.
-            if (userStatus == 'REJECTED' ||
-                apStatus == 'REJECTED' ||
-                apStatus == 'APPROVED' ||
-                apStatus == 'CLOSED') {
-              continue;
-            }
-
             results.add(rowMap);
           }
         }
@@ -2224,16 +2100,7 @@ class SupabaseService {
     for (final entry in _userStore.entries) {
       final user = entry.value;
       final status = (user['status'] ?? '').toString().toUpperCase();
-      final artisanStatus = (user['artisan_status'] ?? user['artisanStatus'] ?? '').toString().toUpperCase();
-
-      if (status == 'REJECTED' ||
-          artisanStatus == 'REJECTED' ||
-          artisanStatus == 'APPROVED' ||
-          artisanStatus == 'CLOSED') {
-        continue;
-      }
-
-      if (status.contains('PENDING') || artisanStatus.contains('PENDING')) {
+      if (status.contains('PENDING')) {
         final userEmail = (user['email'] ?? entry.key).toString().toLowerCase();
         if (!results.any(
           (r) => (r['email'] ?? '').toString().toLowerCase() == userEmail,
@@ -2242,12 +2109,6 @@ class SupabaseService {
         }
       }
     }
-
-    // Note: Do NOT purge based on _userStore here. The DB query already
-    // filters to users WHERE status ILIKE '%PENDING%', so any row that
-    // came from the DB is authoritative. The _userStore may be stale
-    // (e.g. admin's cache still shows REJECTED for a user who has since
-    // re-applied), which would incorrectly exclude legitimate re-applications.
 
     return results;
   }
@@ -2290,7 +2151,8 @@ class SupabaseService {
             if (rowStatus == 'DELETED') continue;
 
             if (rowMap['artisan_profiles'] == null ||
-                (rowMap['artisan_profiles'] is List && (rowMap['artisan_profiles'] as List).isEmpty)) {
+                (rowMap['artisan_profiles'] is List &&
+                    (rowMap['artisan_profiles'] as List).isEmpty)) {
               try {
                 final ap = await client
                     .from('artisan_profiles')
@@ -2326,7 +2188,9 @@ class SupabaseService {
       if (_deletedAccounts.contains(email) || email.startsWith('deleted_')) {
         continue;
       }
-      final existingIdx = results.indexWhere((a) => a.email.toLowerCase() == email);
+      final existingIdx = results.indexWhere(
+        (a) => a.email.toLowerCase() == email,
+      );
       if (role.contains('Artisan') && !status.contains('PENDING')) {
         if (existingIdx == -1) {
           results.add(
@@ -2334,7 +2198,8 @@ class SupabaseService {
           );
         } else {
           final existing = results[existingIdx];
-          if ((existing.experience == 'Verified Studio' || existing.experience.isEmpty) &&
+          if ((existing.experience == 'Verified Studio' ||
+                  existing.experience.isEmpty) &&
               user['experience'] != null &&
               user['experience'].toString().trim().isNotEmpty) {
             results[existingIdx] = existing.copyWith(
@@ -2357,7 +2222,9 @@ class SupabaseService {
         try {
           res = await client
               .from('users')
-              .select('*, artisan_profiles!artisan_profiles_user_id_fkey(*, artisan_documents(*))')
+              .select(
+                '*, artisan_profiles!artisan_profiles_user_id_fkey(*, artisan_documents(*))',
+              )
               .neq('status', 'DELETED')
               .order('created_at', ascending: false);
         } catch (_) {
@@ -2380,7 +2247,8 @@ class SupabaseService {
           for (final row in res) {
             final rowMap = Map<String, dynamic>.from(row);
             if (rowMap['artisan_profiles'] == null ||
-                (rowMap['artisan_profiles'] is List && (rowMap['artisan_profiles'] as List).isEmpty)) {
+                (rowMap['artisan_profiles'] is List &&
+                    (rowMap['artisan_profiles'] as List).isEmpty)) {
               try {
                 final ap = await client
                     .from('artisan_profiles')
@@ -2416,7 +2284,9 @@ class SupabaseService {
       if (_deletedAccounts.contains(email) || email.startsWith('deleted_')) {
         continue;
       }
-      final existingIdx = results.indexWhere((u) => u.email.toLowerCase() == email);
+      final existingIdx = results.indexWhere(
+        (u) => u.email.toLowerCase() == email,
+      );
       if (existingIdx == -1) {
         results.add(UserModel.fromMap(Map<String, dynamic>.from(user)));
       } else {
@@ -2437,22 +2307,169 @@ class SupabaseService {
     return results;
   }
 
+  Future<void> _ensureDefaultSystemTasksForApproval({
+    required SupabaseClient client,
+    required String email,
+  }) async {
+    final userRow = await client
+        .from('users')
+        .select('id')
+        .ilike('email', email)
+        .maybeSingle();
+    final userId = userRow?['id']?.toString().trim() ?? '';
+    if (userId.isEmpty) {
+      throw StateError('The artisan user account could not be found.');
+    }
+
+    final artisanProfile = await client
+        .from('artisan_profiles')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
+    final artisanId = artisanProfile?['id']?.toString().trim() ?? '';
+    if (artisanId.isEmpty) {
+      throw StateError('The artisan profile could not be found.');
+    }
+
+    final questRows = List<Map<String, dynamic>>.from(
+      await client
+          .from('quests')
+          .select('id, status')
+          .eq('artisan_id', artisanId)
+          .inFilter('status', const ['PENDING_APPROVAL', 'APPROVED']),
+    );
+    if (questRows.isEmpty) {
+      throw StateError(
+        'Approval cannot continue because this artisan has no current cultural quest.',
+      );
+    }
+    if (questRows.length > 1) {
+      throw StateError(
+        'Approval cannot continue because this artisan has multiple current cultural quests.',
+      );
+    }
+
+    final questId = questRows.single['id']?.toString().trim() ?? '';
+    if (questId.isEmpty) {
+      throw StateError('The artisan cultural quest is invalid.');
+    }
+
+    final taskRows = List<Map<String, dynamic>>.from(
+      await client
+          .from('heritage_tasks')
+          .select(
+            'id, title, is_required, xp_reward, sort_order, status, '
+            'is_system_task, is_archived',
+          )
+          .eq('quest_id', questId),
+    );
+    final plan = DefaultSystemTaskPolicy.plan(
+      taskRows.map(
+        (task) => ExistingQuestTaskSlot(
+          id: task['id']?.toString() ?? '',
+          sortOrder: task['sort_order'] is num
+              ? (task['sort_order'] as num).toInt()
+              : null,
+          isSystemTask: task['is_system_task'] == true,
+          isArchived: task['is_archived'] == true,
+        ),
+      ),
+    );
+    final reviewPayload = <String, dynamic>{
+      'status': 'APPROVED',
+      'rejection_reason': null,
+      'reviewed_at': DateTime.now().toUtc().toIso8601String(),
+      if (client.auth.currentUser != null)
+        'reviewed_by': client.auth.currentUser!.id,
+    };
+
+    for (final specification in DefaultSystemTaskPolicy.specifications) {
+      final existingTaskId = plan.taskIdsToNormalize[specification.sortOrder];
+      if (existingTaskId == null) {
+        await client.from('heritage_tasks').insert({
+          'quest_id': questId,
+          'title': specification.title,
+          'is_required': true,
+          'xp_reward': specification.xpReward,
+          'sort_order': specification.sortOrder,
+          'is_system_task': true,
+          'is_archived': false,
+          ...reviewPayload,
+        });
+      } else {
+        await client
+            .from('heritage_tasks')
+            .update({
+              'title': specification.title,
+              'is_required': true,
+              'xp_reward': specification.xpReward,
+              'sort_order': specification.sortOrder,
+              'is_system_task': true,
+              'is_archived': false,
+              ...reviewPayload,
+            })
+            .eq('id', existingTaskId);
+      }
+    }
+
+    final verifiedTasks = List<Map<String, dynamic>>.from(
+      await client
+          .from('heritage_tasks')
+          .select(
+            'title, is_required, xp_reward, sort_order, status, '
+            'is_system_task, is_archived',
+          )
+          .eq('quest_id', questId)
+          .eq('is_system_task', true)
+          .eq('is_archived', false),
+    );
+    final isValid = DefaultSystemTaskPolicy.specifications.every((
+      specification,
+    ) {
+      final matches = verifiedTasks.where(
+        (task) => task['sort_order'] == specification.sortOrder,
+      );
+      if (matches.length != 1) return false;
+      final task = matches.single;
+      return task['title'] == specification.title &&
+          task['is_required'] == true &&
+          task['xp_reward'] == specification.xpReward &&
+          task['status'] == 'APPROVED';
+    });
+    if (!isValid ||
+        verifiedTasks.length != DefaultSystemTaskPolicy.specifications.length) {
+      throw StateError(
+        'The two required system tasks could not be verified. Artisan approval was not completed.',
+      );
+    }
+  }
+
   Future<void> updateArtisanStatusInDb({
     required String email,
     required String newStatus,
     required String newRole,
     bool updateArtisanProfileOnly = false,
+    bool ensureSystemTasks = false,
     String? suspensionReason,
   }) async {
     final cleanEmail = email.trim().toLowerCase();
-    final resolvedArtisanStatus = (newStatus.toUpperCase() == 'ACTIVE' ||
-            newStatus.toUpperCase() == 'APPROVED')
-        ? 'APPROVED'
-        : newStatus;
+    final client = _client;
+    final isApproval =
+        ensureSystemTasks &&
+        (newStatus.toUpperCase() == 'ACTIVE' ||
+            newStatus.toUpperCase() == 'APPROVED') &&
+        newRole.toLowerCase().contains('artisan');
+    if (client != null && isApproval) {
+      await _ensureDefaultSystemTasksForApproval(
+        client: client,
+        email: cleanEmail,
+      );
+    }
+
     if (_userStore.containsKey(cleanEmail)) {
       if (updateArtisanProfileOnly) {
-        _userStore[cleanEmail]!['artisanStatus'] = resolvedArtisanStatus;
-        _userStore[cleanEmail]!['artisan_status'] = resolvedArtisanStatus;
+        _userStore[cleanEmail]!['artisanStatus'] = newStatus;
+        _userStore[cleanEmail]!['artisan_status'] = newStatus;
         _userStore[cleanEmail]!['status'] = 'ACTIVE';
         _userStore[cleanEmail]!['isSuspended'] = false;
         _userStore[cleanEmail]!['suspensionReason'] = null;
@@ -2462,8 +2479,6 @@ class SupabaseService {
         }
       } else {
         _userStore[cleanEmail]!['status'] = newStatus;
-        _userStore[cleanEmail]!['artisanStatus'] = resolvedArtisanStatus;
-        _userStore[cleanEmail]!['artisan_status'] = resolvedArtisanStatus;
         _userStore[cleanEmail]!['role'] = newRole;
         _userStore[cleanEmail]!['isSuspended'] = (newStatus == 'SUSPENDED');
         if (newStatus == 'SUSPENDED') {
@@ -2473,10 +2488,10 @@ class SupabaseService {
           _userStore[cleanEmail]!['suspensionReason'] = null;
           _userStore[cleanEmail]!['suspension_reason'] = null;
         }
-        if (newRole == 'Artisan') {
+        if (newRole == 'Artisan & Tourist') {
+          _userStore[cleanEmail]!['roles'] = ['Tourist', 'Artisan'];
+        } else if (newRole == 'Artisan') {
           _userStore[cleanEmail]!['roles'] = ['Artisan'];
-        } else if (newRole == 'Tourist') {
-          _userStore[cleanEmail]!['roles'] = ['Tourist'];
         }
       }
 
@@ -2487,8 +2502,8 @@ class SupabaseService {
           final map = jsonDecode(rawUser) as Map<String, dynamic>;
           if ((map['email'] as String?)?.toLowerCase() == cleanEmail) {
             if (updateArtisanProfileOnly) {
-              map['artisanStatus'] = resolvedArtisanStatus;
-              map['artisan_status'] = resolvedArtisanStatus;
+              map['artisanStatus'] = newStatus;
+              map['artisan_status'] = newStatus;
               map['status'] = 'ACTIVE';
               map['isSuspended'] = false;
               map['suspensionReason'] = null;
@@ -2498,8 +2513,6 @@ class SupabaseService {
               }
             } else {
               map['status'] = newStatus;
-              map['artisanStatus'] = resolvedArtisanStatus;
-              map['artisan_status'] = resolvedArtisanStatus;
               map['isSuspended'] = (newStatus == 'SUSPENDED');
               if (newStatus == 'SUSPENDED') {
                 map['suspensionReason'] = suspensionReason;
@@ -2520,51 +2533,24 @@ class SupabaseService {
       }
     }
 
-    final client = _client;
     if (client != null) {
-      // Always call the SECURITY DEFINER RPC – it bypasses RLS and can upsert
-      // artisan_profiles rows even when the authenticated user is a Tourist.
-      // For tourist-upgrade rejections (updateArtisanProfileOnly=true), we
-      // pass p_status as the artisan_status value ('REJECTED') but keep the
-      // user's DB role as Tourist and their account status as ACTIVE via the
-      // direct table update below.
-      try {
-        final rpcStatus = updateArtisanProfileOnly ? newStatus : newStatus;
-        final rpcRole = updateArtisanProfileOnly ? newRole : newRole;
-        // Fetch cached studio info to seed the artisan_profiles upsert
-        final cached = _userStore[cleanEmail];
-        final studioName = cached?['studioName'] ?? cached?['studio_name'];
-        final craftCategory = cached?['craftCategory'] ?? cached?['craft_category'];
-        final ssmNumber = cached?['ssmNumber'] ?? cached?['ssm_number'];
-        final rpcParams = <String, dynamic>{
-          'p_email': cleanEmail,
-          'p_status': rpcStatus,
-          'p_role': rpcRole,
-          'p_studio_name': studioName,
-          'p_craft_category': craftCategory,
-          'p_ssm_number': ssmNumber,
-        };
-        await client.rpc('admin_update_user_status', params: rpcParams);
-        debugPrint('Supabase RPC admin_update_user_status succeeded for $cleanEmail');
-        // For tourist-upgrade rejections the RPC sets users.status=REJECTED
-        // which would lock out the tourist account. Fix it back to ACTIVE now.
-        if (updateArtisanProfileOnly) {
-          try {
-            await client
-                .from('users')
-                .update({
-                  'status': 'ACTIVE',
-                  'role': newRole,
-                  'artisan_status': newStatus,
-                  'updated_at': DateTime.now().toIso8601String(),
-                })
-                .ilike('email', cleanEmail);
-          } catch (fixErr) {
-            debugPrint('Tourist status fix note: $fixErr');
-          }
+      if (!updateArtisanProfileOnly) {
+        // 1. Try invoking PostgreSQL SECURITY DEFINER RPC
+        try {
+          await client.rpc(
+            'admin_update_user_status',
+            params: {
+              'p_email': cleanEmail,
+              'p_status': newStatus,
+              'p_role': newRole,
+            },
+          );
+          debugPrint(
+            'Supabase RPC admin_update_user_status succeeded for $cleanEmail',
+          );
+        } catch (rpcError) {
+          debugPrint('Supabase RPC admin_update_user_status note: $rpcError');
         }
-      } catch (rpcError) {
-        debugPrint('Supabase RPC admin_update_user_status note: $rpcError');
       }
 
       // 2. Direct Table Updates Fallback
@@ -2573,48 +2559,30 @@ class SupabaseService {
           final updatePayload = <String, dynamic>{
             'status': newStatus,
             'role': newRole,
-            'artisan_status': resolvedArtisanStatus,
             'updated_at': DateTime.now().toIso8601String(),
           };
+          if (newStatus == 'SUSPENDED') {
+            updatePayload['is_suspended'] = true;
+            if (suspensionReason != null) {
+              updatePayload['suspension_reason'] = suspensionReason;
+            }
+          } else if (newStatus == 'ACTIVE') {
+            updatePayload['is_suspended'] = false;
+            updatePayload['suspension_reason'] = null;
+          }
           try {
             await client
                 .from('users')
                 .update(updatePayload)
                 .ilike('email', cleanEmail);
           } catch (updateErr) {
+            // Fallback if remote table does not yet have suspension_reason column
             debugPrint('Direct user table update note: $updateErr');
-          }
-        } else {
-          // When updateArtisanProfileOnly is true (e.g. tourist whose artisan request was rejected),
-          // ensure users.status is ACTIVE and users.role is updated (e.g. Tourist) so they don't remain PENDING_APPROVAL
-          final userUpdate = <String, dynamic>{
-            'status': 'ACTIVE',
-            'updated_at': DateTime.now().toIso8601String(),
-          };
-          if (newRole.isNotEmpty) {
-            userUpdate['role'] = newRole;
-          }
-          final resolvedUserArtisanStatus = (newStatus.toUpperCase() == 'ACTIVE' ||
-                  newStatus.toUpperCase() == 'APPROVED')
-              ? 'APPROVED'
-              : newStatus;
-          try {
+            updatePayload.remove('suspension_reason');
             await client
                 .from('users')
-                .update({
-                  ...userUpdate,
-                  'artisan_status': resolvedUserArtisanStatus,
-                })
+                .update(updatePayload)
                 .ilike('email', cleanEmail);
-          } catch (_) {
-            try {
-              await client
-                  .from('users')
-                  .update(userUpdate)
-                  .ilike('email', cleanEmail);
-            } catch (err) {
-              debugPrint('Direct user table active sync note: $err');
-            }
           }
         }
 
@@ -2635,39 +2603,16 @@ class SupabaseService {
                   newStatus.toUpperCase() == 'APPROVED')
               ? 'APPROVED'
               : newStatus;
-          if (artisanProfileBeforeUpdate != null) {
-            try {
-              await client
-                  .from('artisan_profiles')
-                  .update({
-                    'status': artisanStatus,
-                    'updated_at': DateTime.now().toIso8601String(),
-                  })
-                  .eq('user_id', userRow['id']);
-            } catch (updErr) {
-              debugPrint('Direct artisan_profiles update note: $updErr');
-            }
-          } else {
-            try {
-              final cached = _userStore[cleanEmail];
-              await client.from('artisan_profiles').insert({
-                'user_id': userRow['id'],
+          await client
+              .from('artisan_profiles')
+              .update({
                 'status': artisanStatus,
-                'studio_name': cached?['studioName'] ?? cached?['studio_name'] ?? 'Heritage Studio',
-                'craft_category': cached?['craftCategory'] ?? cached?['craft_category'] ?? 'Traditional Craft',
-                if (cached?['ssmNumber'] != null || cached?['ssm_number'] != null)
-                  'ssm_number': cached?['ssmNumber'] ?? cached?['ssm_number'],
-                'created_at': DateTime.now().toIso8601String(),
                 'updated_at': DateTime.now().toIso8601String(),
-              });
-            } catch (insErr) {
-              debugPrint('Direct artisan_profiles insert note (RLS): $insErr');
-            }
-          }
+              })
+              .eq('user_id', userRow['id']);
 
-          // The RPC above may already have changed the profile to APPROVED.
-          // Always reconcile the quest and its system tasks when approving so
-          // the flow is idempotent: artisan -> quest -> default tasks.
+          // System tasks were verified before changing approval state. Keep
+          // the one current quest aligned with the approved profile here.
           if (artisanStatus == 'APPROVED' &&
               artisanProfileBeforeUpdate != null) {
             final artisanProfileId = artisanProfileBeforeUpdate['id']
@@ -2681,17 +2626,6 @@ class SupabaseService {
                     .trim() ??
                 'Malaysian craft';
 
-            final questRows = List<Map<String, dynamic>>.from(
-              await client
-                  .from('quests')
-                  .select('id')
-                  .eq('artisan_id', artisanProfileId),
-            );
-            final questIds = questRows
-                .map((row) => row['id']?.toString())
-                .whereType<String>()
-                .toList(growable: false);
-
             await client
                 .from('quests')
                 .update({
@@ -2703,84 +2637,117 @@ class SupabaseService {
                 })
                 .eq('artisan_id', artisanProfileId)
                 .eq('status', 'PENDING_APPROVAL');
-
-            if (questIds.isNotEmpty) {
-              final reviewPayload = <String, dynamic>{
-                'status': 'APPROVED',
-                'rejection_reason': null,
-                'reviewed_at': DateTime.now().toUtc().toIso8601String(),
-                if (client.auth.currentUser != null)
-                  'reviewed_by': client.auth.currentUser!.id,
-              };
-
-              for (final questId in questIds) {
-                final existingSystemTasks = List<Map<String, dynamic>>.from(
-                  await client
-                      .from('heritage_tasks')
-                      .select('id, title, sort_order, is_system_task')
-                      .eq('quest_id', questId)
-                      .inFilter('sort_order', const [1, 2]),
-                );
-
-                final defaultTasks = <Map<String, dynamic>>[
-                  {
-                    'title': 'Go to the workshop',
-                    'sort_order': 1,
-                    'xp_reward': 50,
-                  },
-                  {
-                    'title': 'Stay for 15 minutes',
-                    'sort_order': 2,
-                    'xp_reward': 50,
-                  },
-                ];
-
-                for (final defaultTask in defaultTasks) {
-                  final sortOrder = defaultTask['sort_order'] as int;
-                  final matchingTasks = existingSystemTasks.where(
-                    (task) =>
-                        task['title'] == defaultTask['title'] ||
-                        (task['is_system_task'] == true &&
-                            task['sort_order'] == sortOrder),
-                  );
-
-                  if (matchingTasks.isEmpty) {
-                    await client.from('heritage_tasks').insert({
-                      'quest_id': questId,
-                      'title': defaultTask['title'],
-                      'is_required': true,
-                      'xp_reward': defaultTask['xp_reward'],
-                      'sort_order': sortOrder,
-                      'status': 'APPROVED',
-                      'is_system_task': true,
-                      'is_archived': false,
-                      ...reviewPayload,
-                    });
-                  } else {
-                    for (final task in matchingTasks) {
-                      await client
-                          .from('heritage_tasks')
-                          .update({
-                            'title': defaultTask['title'],
-                            'is_required': true,
-                            'xp_reward': defaultTask['xp_reward'],
-                            'sort_order': sortOrder,
-                            'is_system_task': true,
-                            'is_archived': false,
-                            ...reviewPayload,
-                          })
-                          .eq('id', task['id']);
-                    }
-                  }
-                }
-              }
-            }
           }
         }
       } catch (e) {
         debugPrint('Supabase direct updateArtisanStatusInDb note: $e');
+        if (isApproval) {
+          rethrow;
+        }
       }
     }
+  }
+
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final client = _authClient;
+    final currentUser = client.auth.currentUser;
+    final session = client.auth.currentSession;
+    if (currentUser == null || session == null || session.isExpired) {
+      throw const AuthException('No active session. Please sign in again.');
+    }
+    final email = currentUser.email;
+    if (email == null || email.isEmpty) {
+      throw const AuthException('User email not found. Please sign in again.');
+    }
+    if (currentPassword.trim().toLowerCase() ==
+        newPassword.trim().toLowerCase()) {
+      throw const AuthException(
+        'NEW PASSWORD IS TOO SIMILAR TO YOUR CURRENT PASSWORD',
+      );
+    }
+    try {
+      await client.auth.signInWithPassword(
+        email: email,
+        password: currentPassword.trim(),
+      );
+    } on AuthException catch (_) {
+      throw const AuthException('INCORRECT CURRENT PASSWORD');
+    }
+    await client.auth.updateUser(UserAttributes(password: newPassword.trim()));
+  }
+
+  Future<UserModel> deactivateArtisanStudio() async {
+    final prefs = await SharedPreferences.getInstance();
+    final cloudUser = _client?.auth.currentUser;
+    final email = (cloudUser?.email ?? prefs.getString(_keyAuthEmail) ?? '')
+        .trim()
+        .toLowerCase();
+    if (email.isEmpty) {
+      throw const AuthException('No active user session found.');
+    }
+
+    final existing = _userStore[email] ?? <String, dynamic>{'email': email};
+    existing
+      ..['role'] = 'Tourist'
+      ..['roles'] = <String>['Tourist']
+      ..['status'] = 'ACTIVE'
+      ..['artisan_status'] = 'CLOSED'
+      ..['is_live_open'] = false
+      ..remove('artisan_profiles');
+    _userStore[email] = existing;
+
+    final client = _client;
+    if (client != null && cloudUser != null) {
+      final userId = cloudUser.id;
+      try {
+        await client.rpc(
+          'deactivate_artisan_studio',
+          params: {'p_user_id': userId},
+        );
+      } catch (e) {
+        debugPrint('deactivate_artisan_studio RPC note: $e');
+      }
+      try {
+        await client.from('artisan_profiles').delete().eq('user_id', userId);
+      } catch (e) {
+        debugPrint('deactivateArtisanStudio profile cleanup note: $e');
+      }
+      try {
+        await client
+            .from('users')
+            .update({
+              'role': 'Tourist',
+              'artisan_status': 'CLOSED',
+              'status': 'ACTIVE',
+              'is_live_open': false,
+              'updated_at': DateTime.now().toIso8601String(),
+            })
+            .eq('id', userId);
+      } catch (e) {
+        debugPrint('deactivateArtisanStudio user update note: $e');
+      }
+      try {
+        await client.auth.updateUser(
+          UserAttributes(
+            data: {
+              'role': 'Tourist',
+              'roles': ['Tourist'],
+              'artisan_status': 'CLOSED',
+              'status': 'ACTIVE',
+            },
+          ),
+        );
+      } catch (e) {
+        debugPrint('deactivateArtisanStudio auth metadata note: $e');
+      }
+    }
+
+    final updated = UserModel.fromMap(existing);
+    await _saveAuthSession(updated);
+    return updated;
   }
 
   Future<void> signOut() async {
@@ -2797,195 +2764,55 @@ class SupabaseService {
     }
   }
 
-  Future<UserModel> deactivateArtisanStudio() async {
-    final client = _client;
-    if (client != null) {
-      final currentUser = client.auth.currentUser;
-      if (currentUser == null) {
-        throw const AuthException('No active user session found. Please sign in again.');
-      }
-      final userId = currentUser.id;
-      final email = currentUser.email?.toLowerCase() ?? '';
-
-      // 1. Try dedicated PostgreSQL RPC if available
-      try {
-        await client.rpc('deactivate_artisan_studio', params: {'p_user_id': userId});
-      } catch (rpcErr) {
-        debugPrint('deactivate_artisan_studio RPC note: $rpcErr');
-      }
-
-      // 2. Query artisan_profiles ID for attached records cleanup
-      String? artisanProfileId;
-      try {
-        final apRow = await client
-            .from('artisan_profiles')
-            .select('id')
-            .eq('user_id', userId)
-            .maybeSingle();
-        artisanProfileId = apRow?['id']?.toString();
-      } catch (e) {
-        debugPrint('deactivateArtisanStudio apRow lookup note: $e');
-      }
-
-      // 3. Clean up attached documents and retire quests
-      if (artisanProfileId != null) {
-        try {
-          await client.from('artisan_documents').delete().eq('artisan_id', artisanProfileId);
-        } catch (e) {
-          debugPrint('deactivateArtisanStudio artisan_documents note: $e');
-        }
-        try {
-          await client.from('quests').update({'status': 'RETIRED'}).eq('artisan_id', artisanProfileId);
-        } catch (e) {
-          debugPrint('deactivateArtisanStudio quests retire note: $e');
-        }
-      }
-
-      // 4. Mark artisan_profiles as CLOSED and attempt delete
-      try {
-        await client.from('artisan_profiles').update({
-          'status': 'CLOSED',
-          'updated_at': DateTime.now().toIso8601String(),
-        }).eq('user_id', userId);
-      } catch (e) {
-        debugPrint('deactivateArtisanStudio artisan_profiles status update note: $e');
-      }
-      try {
-        await client.from('artisan_profiles').delete().eq('user_id', userId);
-      } catch (e) {
-        debugPrint('deactivateArtisanStudio artisan_profiles delete note: $e');
-      }
-
-      // 5. Demote user role in public.users to Tourist and clear artisan_status
-      final updateMap = {
-        'role': 'Tourist',
-        'artisan_status': 'CLOSED',
-        'status': 'ACTIVE',
-        'updated_at': DateTime.now().toIso8601String(),
-      };
-      try {
-        await client.from('users').update(updateMap).eq('id', userId);
-      } catch (e) {
-        debugPrint('deactivateArtisanStudio public.users update note: $e');
-      }
-
-      // 6. Invoke admin_update_user_status RPC to sync role securely
-      try {
-        await client.rpc('admin_update_user_status', params: {
-          'p_email': email,
-          'p_status': 'ACTIVE',
-          'p_role': 'Tourist',
-          'p_studio_name': null,
-          'p_craft_category': null,
-          'p_ssm_number': null,
-        });
-      } catch (rpcErr) {
-        debugPrint('deactivateArtisanStudio admin_update_user_status RPC note: $rpcErr');
-      }
-
-      // 7. Update auth metadata
-      try {
-        await client.auth.updateUser(
-          UserAttributes(
-            data: {
-              'role': 'Tourist',
-              'roles': ['Tourist'],
-              'artisan_status': 'CLOSED',
-              'status': 'ACTIVE',
-            },
-          ),
-        );
-      } catch (e) {
-        debugPrint('deactivateArtisanStudio auth.updateUser note: $e');
-      }
-
-      // 8. Update in-memory user store if present
-      if (_userStore.containsKey(email)) {
-        _userStore[email]!['role'] = 'Tourist';
-        _userStore[email]!['roles'] = ['Tourist'];
-        _userStore[email]!['studio_name'] = null;
-        _userStore[email]!['craft_category'] = null;
-        _userStore[email]!['ssm_number'] = null;
-        _userStore[email]!['is_approved_artisan'] = false;
-        _userStore[email]!['artisan_status'] = 'CLOSED';
-        _userStore[email]!['is_live_open'] = false;
-      }
-
-      // 9. Reload and save updated authenticated profile
-      var updatedUser = await _loadAuthenticatedProfile();
-      updatedUser = updatedUser.copyWith(
-        role: 'Tourist',
-        roles: const ['Tourist'],
-        status: 'ACTIVE',
-        artisanStatus: 'CLOSED',
-        clearStudioDetails: true,
-      );
-      await _saveAuthSession(updatedUser);
-      return updatedUser;
-    }
-
-    // Offline / unit test branch
-    final prefs = await SharedPreferences.getInstance();
-    final rawUser = prefs.getString(_keyAuthUser);
-    if (rawUser != null && rawUser.isNotEmpty) {
-      final map = jsonDecode(rawUser) as Map<String, dynamic>;
-      map['role'] = 'Tourist';
-      map['roles'] = ['Tourist'];
-      map['status'] = 'ACTIVE';
-      map['studio_name'] = null;
-      map['craft_category'] = null;
-      map['ssm_number'] = null;
-      map['bio'] = null;
-      map['artisan_profiles'] = null;
-      map['is_approved_artisan'] = false;
-      map['artisan_status'] = 'CLOSED';
-      map['is_live_open'] = false;
-      final email = (map['email'] ?? '').toString().toLowerCase();
-      if (_userStore.containsKey(email)) {
-        _userStore[email]!['role'] = 'Tourist';
-        _userStore[email]!['roles'] = ['Tourist'];
-        _userStore[email]!['status'] = 'ACTIVE';
-        _userStore[email]!['studio_name'] = null;
-        _userStore[email]!['craft_category'] = null;
-        _userStore[email]!['ssm_number'] = null;
-        _userStore[email]!['bio'] = null;
-        _userStore[email]!['artisan_profiles'] = null;
-        _userStore[email]!['is_approved_artisan'] = false;
-        _userStore[email]!['artisan_status'] = 'CLOSED';
-        _userStore[email]!['is_live_open'] = false;
-      }
-      final updated = UserModel.fromMap(map);
-      await _saveAuthSession(updated);
-      return updated;
-    }
-    throw const AuthException('No local authenticated session to update.');
-  }
-
   Future<void> deleteAccount({
     required String userId,
     required String email,
     String? username,
     String? password,
   }) async {
+    final clientForAuth = _client;
+    if (password != null &&
+        password.isNotEmpty &&
+        clientForAuth?.auth.currentUser != null) {
+      try {
+        await clientForAuth!.auth.signInWithPassword(
+          email: email.trim().toLowerCase(),
+          password: password,
+        );
+      } on AuthException catch (_) {
+        throw const AuthException('INCORRECT PASSWORD');
+      }
+    }
     await Future.delayed(const Duration(milliseconds: 200));
     final cleanEmail = email.trim().toLowerCase();
 
-    // 0. If password is provided, verify credentials with Supabase
-    final client = _client;
-    if (client != null && password != null && password.trim().isNotEmpty) {
-      try {
-        await client.auth.signInWithPassword(
-          email: cleanEmail,
-          password: password.trim(),
-        );
-      } on AuthException catch (_) {
-        throw const AuthException(
-          'Incorrect password. Please check your password and try again.',
-        );
-      }
+    // 1. Record in persistent deleted accounts and usernames store
+    await _recordDeletedAccount(cleanEmail);
+    if (username != null && username.trim().isNotEmpty) {
+      await _recordDeletedUsername(username);
+    }
+    final inMemoryUsername = (_userStore[cleanEmail]?['username'] as String?)
+        ?.trim();
+    if (inMemoryUsername != null && inMemoryUsername.isNotEmpty) {
+      await _recordDeletedUsername(inMemoryUsername);
     }
 
-    // 1. Delete or deactivate in Supabase if connected
+    // 2. Remove user from local in-memory store
+    _userStore.remove(cleanEmail);
+    _userStore.removeWhere(
+      (key, value) =>
+          key.toLowerCase() == cleanEmail ||
+          (userId.isNotEmpty && value['id'] == userId),
+    );
+
+    // 3. Clear any pending OTPs or reset tokens for this account
+    _recoveryAccessToken = null;
+
+    // 4. Clear local session from SharedPreferences
+    await _clearAuthSession();
+
+    // 5. Delete or deactivate in Supabase if connected
+    final client = _client;
     if (client != null) {
       final effectiveUserId = userId.isNotEmpty
           ? userId
@@ -3009,10 +2836,10 @@ class SupabaseService {
 
         // A. Try admin_update_user_status RPC (SECURITY DEFINER, updates users & auth.users metadata)
         try {
-          await client.rpc('admin_update_user_status', params: {
-            'p_email': cleanEmail,
-            'p_status': 'DELETED',
-          });
+          await client.rpc(
+            'admin_update_user_status',
+            params: {'p_email': cleanEmail, 'p_status': 'DELETED'},
+          );
         } catch (rpcErr) {
           debugPrint('admin_update_user_status RPC note: $rpcErr');
         }
@@ -3045,14 +2872,11 @@ class SupabaseService {
           }
         }
 
-        // D. Try direct DELETE on public.users table if not already deleted by RPC
+        // D. Try direct DELETE on public.users table
         bool usersDeleted = false;
         if (!rpcDeleted && effectiveUserId.isNotEmpty) {
           try {
-            await client
-                .from('users')
-                .delete()
-                .eq('id', effectiveUserId);
+            await client.from('users').delete().eq('id', effectiveUserId);
             usersDeleted = true;
             debugPrint('deleteAccount direct users delete succeeded');
           } catch (delErr) {
@@ -3093,20 +2917,13 @@ class SupabaseService {
           }
         }
 
-        // F. Update Supabase Auth user metadata ONLY if user was not deleted from auth.users
-        if (!rpcDeleted) {
-          try {
-            await client.auth.updateUser(
-              UserAttributes(
-                data: {
-                  'status': 'DELETED',
-                  'is_deleted': true,
-                },
-              ),
-            );
-          } catch (metaErr) {
-            debugPrint('deleteAccount auth.updateUser note: $metaErr');
-          }
+        // F. Update Supabase Auth user metadata so it flags as DELETED
+        try {
+          await client.auth.updateUser(
+            UserAttributes(data: {'status': 'DELETED', 'is_deleted': true}),
+          );
+        } catch (metaErr) {
+          debugPrint('deleteAccount auth.updateUser note: $metaErr');
         }
 
         // G. Sign out Supabase auth session
@@ -3119,31 +2936,6 @@ class SupabaseService {
         debugPrint('Supabase deleteAccount general note: $e');
       }
     }
-
-    // 2. Record in persistent deleted accounts and usernames store
-    await _recordDeletedAccount(cleanEmail);
-    if (username != null && username.trim().isNotEmpty) {
-      await _recordDeletedUsername(username);
-    }
-    final inMemoryUsername =
-        (_userStore[cleanEmail]?['username'] as String?)?.trim();
-    if (inMemoryUsername != null && inMemoryUsername.isNotEmpty) {
-      await _recordDeletedUsername(inMemoryUsername);
-    }
-
-    // 3. Remove user from local in-memory store
-    _userStore.remove(cleanEmail);
-    _userStore.removeWhere(
-      (key, value) =>
-          key.toLowerCase() == cleanEmail ||
-          (userId.isNotEmpty && value['id'] == userId),
-    );
-
-    // 4. Clear any pending OTPs or reset tokens for this account
-    _recoveryAccessToken = null;
-
-    // 5. Clear local session from SharedPreferences
-    await _clearAuthSession();
   }
 
   // --- Directory Services ---
@@ -3162,28 +2954,8 @@ class SupabaseService {
           .eq('status', 'APPROVED');
 
       debugPrint('Supabase response: $response');
-      final prefs = await SharedPreferences.getInstance();
       final list = List<Map<String, dynamic>>.from(response);
-      final mapped = list.map((map) {
-        final profileId = map['id']?.toString() ?? '';
-        final userId = map['user_id']?.toString() ?? '';
-        final savedLive = prefs.getBool('artisan_live_open_$profileId') ??
-            prefs.getBool('artisan_live_open_$userId');
-        if (savedLive != null) {
-          map['is_live_open'] = savedLive;
-        }
-        final savedWorkshops = prefs.getInt('artisan_workshop_count_$profileId') ??
-            prefs.getInt('artisan_workshop_count_$userId');
-        if (savedWorkshops != null) {
-          map['workshop_count'] = savedWorkshops;
-        }
-        final savedSsm = prefs.getString('artisan_ssm_$profileId') ??
-            prefs.getString('artisan_ssm_$userId');
-        if (savedSsm != null && savedSsm.isNotEmpty && (map['ssm_number'] == null || map['ssm_number'].toString().isEmpty)) {
-          map['ssm_number'] = savedSsm;
-        }
-        return ArtisanModel.fromMap(map);
-      }).toList();
+      final mapped = list.map((map) => ArtisanModel.fromMap(map)).toList();
       debugPrint('Mapped artisans count: ${mapped.length}');
       return mapped;
     } catch (e) {
@@ -5327,14 +5099,157 @@ class SupabaseService {
 
   // --- Gamification Services ---
 
+  Future<Map<String, dynamic>> reconcileStampedQuestProgress() async {
+    final client = _requireSupabaseClient();
+    final user = _requireAuthenticatedUser(
+      client,
+      'You must be signed in to reconcile quest completion.',
+    );
+    return _reconcileStampedQuestProgressForUser(client, user.id);
+  }
+
+  Future<Map<String, dynamic>> _reconcileStampedQuestProgressForUser(
+    SupabaseClient client,
+    String userId,
+  ) async {
+    final stampRows = List<Map<String, dynamic>>.from(
+      await client
+          .from('passport_stamps')
+          .select('quest_id, unlocked_at')
+          .eq('user_id', userId),
+    );
+    final stampByQuest = <String, Map<String, dynamic>>{};
+    for (final stamp in stampRows) {
+      final questId = stamp['quest_id']?.toString().trim() ?? '';
+      if (questId.isNotEmpty) stampByQuest.putIfAbsent(questId, () => stamp);
+    }
+    if (stampByQuest.isEmpty) {
+      return const {
+        'disposition': 'no_stamped_progress',
+        'stamped_quest_ids': <String>[],
+        'reconciled_quest_ids': <String>[],
+        'warnings': <String>[],
+      };
+    }
+
+    final progressRows = List<Map<String, dynamic>>.from(
+      await client
+          .from('quest_progress')
+          .select('quest_id, status, completed_at')
+          .eq('user_id', userId)
+          .inFilter('quest_id', stampByQuest.keys.toList(growable: false)),
+    );
+    final reconciledIds = <String>[];
+    final warnings = <String>[];
+    var inconsistentCount = 0;
+
+    for (final progress in progressRows) {
+      final questId = progress['quest_id']?.toString().trim() ?? '';
+      if (questId.isEmpty || !stampByQuest.containsKey(questId)) continue;
+      if (progress['status']?.toString().toUpperCase() == 'COMPLETED') {
+        continue;
+      }
+      inconsistentCount++;
+      final existingCompletedAt = progress['completed_at']?.toString().trim();
+      final stampUnlockedAt = stampByQuest[questId]?['unlocked_at']
+          ?.toString()
+          .trim();
+      final completedAt = existingCompletedAt?.isNotEmpty == true
+          ? existingCompletedAt
+          : stampUnlockedAt?.isNotEmpty == true
+          ? stampUnlockedAt
+          : DateTime.now().toUtc().toIso8601String();
+      try {
+        final updated = List<Map<String, dynamic>>.from(
+          await client
+              .from('quest_progress')
+              .update({'status': 'COMPLETED', 'completed_at': completedAt})
+              .eq('user_id', userId)
+              .eq('quest_id', questId)
+              .neq('status', 'COMPLETED')
+              .select('quest_id'),
+        );
+        if (updated.isNotEmpty) {
+          reconciledIds.add(questId);
+          continue;
+        }
+        final current = await client
+            .from('quest_progress')
+            .select('status')
+            .eq('user_id', userId)
+            .eq('quest_id', questId)
+            .maybeSingle();
+        if (current?['status']?.toString().toUpperCase() != 'COMPLETED') {
+          warnings.add(
+            'Your Passport stamp is safe, but saved quest progress could not be repaired.',
+          );
+        }
+      } catch (error) {
+        debugPrint('Stamped quest reconciliation note: $error');
+        warnings.add(
+          'Your Passport stamp is safe, but saved quest progress could not be repaired.',
+        );
+      }
+    }
+
+    final disposition = warnings.isNotEmpty
+        ? 'locally_completed_with_warning'
+        : reconciledIds.isNotEmpty
+        ? 'reconciled'
+        : inconsistentCount == 0
+        ? 'already_consistent'
+        : 'locally_completed_with_warning';
+    return {
+      'disposition': disposition,
+      'stamped_quest_ids': stampByQuest.keys.toList(growable: false),
+      'reconciled_quest_ids': reconciledIds,
+      'warnings': warnings.toSet().toList(growable: false),
+    };
+  }
+
+  Future<Map<String, dynamic>> _readStampedQuestCompletionStateForUser(
+    SupabaseClient client,
+    String userId,
+  ) async {
+    final stampRows = List<Map<String, dynamic>>.from(
+      await client
+          .from('passport_stamps')
+          .select('quest_id')
+          .eq('user_id', userId),
+    );
+    final stampedQuestIds = stampRows
+        .map((row) => row['quest_id']?.toString().trim() ?? '')
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .toList(growable: false);
+    return {
+      'disposition': 'read_only',
+      'stamped_quest_ids': stampedQuestIds,
+      'reconciled_quest_ids': const <String>[],
+      'warnings': const <String>[],
+    };
+  }
+
   Future<Map<String, dynamic>> fetchPassportData() async {
     final client = _requireSupabaseClient();
     final user = _requireAuthenticatedUser(
       client,
       'You must be signed in to view your Heritage Passport.',
     );
-
     final warnings = <String>[];
+
+    try {
+      final reconciliation = await _reconcileStampedQuestProgressForUser(
+        client,
+        user.id,
+      );
+      warnings.addAll(
+        List<String>.from(reconciliation['warnings'] as List? ?? const []),
+      );
+    } catch (error) {
+      debugPrint('Passport completion reconciliation note: $error');
+    }
+
     Map<String, dynamic>? experienceRow;
     var taskAwardRows = <Map<String, dynamic>>[];
     var stampRows = <Map<String, dynamic>>[];
@@ -5474,10 +5389,24 @@ class SupabaseService {
     final client = _requireSupabaseClient();
     final user = _requireAuthenticatedUser(
       client,
-      'You must be signed in to view Heritage Quest journeys.',
+      'You must be signed in to view Heritage Quests.',
     );
 
     final warnings = <String>[];
+    Map<String, dynamic>? completionReconciliation;
+    try {
+      completionReconciliation = await _readStampedQuestCompletionStateForUser(
+        client,
+        user.id,
+      );
+      warnings.addAll(
+        List<String>.from(
+          completionReconciliation['warnings'] as List? ?? const [],
+        ),
+      );
+    } catch (error) {
+      debugPrint('Map completion reconciliation note: $error');
+    }
     var questRows = <Map<String, dynamic>>[];
     var taskRows = <Map<String, dynamic>>[];
     var questProgressRows = <Map<String, dynamic>>[];
@@ -5570,7 +5499,7 @@ class SupabaseService {
     }
 
     if (!questDataAvailable && !xpAvailable && !stampsAvailable) {
-      throw StateError('Unable to load Heritage Quest journeys.');
+      throw StateError('Unable to load Heritage Quests.');
     }
 
     return {
@@ -5584,6 +5513,7 @@ class SupabaseService {
       'xp_available': xpAvailable,
       'stamps_available': stampsAvailable,
       'warnings': warnings,
+      'completion_reconciliation': completionReconciliation,
     };
   }
 
@@ -5867,7 +5797,7 @@ class SupabaseService {
 
     final row = await client
         .from('quest_progress')
-        .select('status, started_at')
+        .select('status, started_at, completed_at')
         .eq('user_id', user.id)
         .eq('quest_id', questId)
         .maybeSingle();
@@ -5876,12 +5806,59 @@ class SupabaseService {
   }
 
   Future<List<Map<String, dynamic>>> fetchActiveQuestProgressRows() async {
+    final data = await fetchActiveQuestStateData();
+    return List<Map<String, dynamic>>.from(
+      data['active_rows'] as List? ?? const [],
+    );
+  }
+
+  Future<Map<String, dynamic>> fetchActiveQuestStateData() async {
     final client = _requireSupabaseClient();
     final user = _requireAuthenticatedUser(
       client,
-      'You must be signed in to view your active journey.',
+      'You must be signed in to view your active quest.',
     );
-    return _fetchActiveQuestProgressRowsForUser(client, user.id);
+    final reconciliation = await _readStampedQuestCompletionStateForUser(
+      client,
+      user.id,
+    );
+    final rows = await _fetchActiveQuestProgressRowsForUser(client, user.id);
+    final stampedQuestIds = List<Object?>.from(
+      reconciliation['stamped_quest_ids'] as List? ?? const [],
+    ).map((value) => value?.toString() ?? '').toSet();
+    return {
+      'active_rows': rows
+          .where(
+            (row) => !stampedQuestIds.contains(row['quest_id']?.toString()),
+          )
+          .toList(growable: false),
+      'completion_reconciliation': reconciliation,
+    };
+  }
+
+  Future<
+    ({List<Map<String, dynamic>> rows, Map<String, dynamic> reconciliation})
+  >
+  _fetchEffectiveActiveQuestRowsForUser(
+    SupabaseClient client,
+    String userId,
+  ) async {
+    final reconciliation = await _reconcileStampedQuestProgressForUser(
+      client,
+      userId,
+    );
+    final stampedQuestIds = List<Object?>.from(
+      reconciliation['stamped_quest_ids'] as List? ?? const [],
+    ).map((value) => value?.toString() ?? '').toSet();
+    final rows = await _fetchActiveQuestProgressRowsForUser(client, userId);
+    return (
+      rows: rows
+          .where(
+            (row) => !stampedQuestIds.contains(row['quest_id']?.toString()),
+          )
+          .toList(growable: false),
+      reconciliation: reconciliation,
+    );
   }
 
   Future<List<Map<String, dynamic>>> _fetchActiveQuestProgressRowsForUser(
@@ -5995,17 +5972,27 @@ class SupabaseService {
       'You must be signed in to start a quest.',
     );
 
-    var activeRows = await _fetchActiveQuestProgressRowsForUser(
+    var activeSnapshot = await _fetchEffectiveActiveQuestRowsForUser(
       client,
       user.id,
     );
+    var activeRows = activeSnapshot.rows;
     if (activeRows.isNotEmpty) {
+      if (activeRows.length > 1) {
+        return {
+          'outcome': 'integrity_conflict',
+          'active_rows': activeRows,
+          'progress': null,
+          'completion_reconciliation': activeSnapshot.reconciliation,
+        };
+      }
       final activeQuestId = activeRows.first['quest_id']?.toString() ?? '';
       if (activeQuestId != questId) {
         return {
           'outcome': 'blocked',
           'active_rows': activeRows,
           'progress': activeRows.first,
+          'completion_reconciliation': activeSnapshot.reconciliation,
         };
       }
       await _ensureTaskProgressRows(client, user.id, taskIds);
@@ -6013,6 +6000,7 @@ class SupabaseService {
         'outcome': 'resumed',
         'active_rows': activeRows,
         'progress': activeRows.first,
+        'completion_reconciliation': activeSnapshot.reconciliation,
       };
     }
 
@@ -6025,14 +6013,19 @@ class SupabaseService {
             ignoreDuplicates: true,
           );
     } catch (_) {
-      activeRows = await _fetchActiveQuestProgressRowsForUser(client, user.id);
+      activeSnapshot = await _fetchEffectiveActiveQuestRowsForUser(
+        client,
+        user.id,
+      );
+      activeRows = activeSnapshot.rows;
       if (activeRows.isEmpty) rethrow;
       final activeQuestId = activeRows.first['quest_id']?.toString() ?? '';
       if (activeRows.length > 1) {
         return {
           'outcome': 'integrity_conflict',
           'active_rows': activeRows,
-          'progress': activeRows.first,
+          'progress': null,
+          'completion_reconciliation': activeSnapshot.reconciliation,
         };
       }
       if (activeQuestId == questId) {
@@ -6042,10 +6035,15 @@ class SupabaseService {
         'outcome': activeQuestId == questId ? 'resumed' : 'blocked',
         'active_rows': activeRows,
         'progress': activeRows.first,
+        'completion_reconciliation': activeSnapshot.reconciliation,
       };
     }
 
-    activeRows = await _fetchActiveQuestProgressRowsForUser(client, user.id);
+    activeSnapshot = await _fetchEffectiveActiveQuestRowsForUser(
+      client,
+      user.id,
+    );
+    activeRows = activeSnapshot.rows;
     final activeQuestId = activeRows.isEmpty
         ? ''
         : activeRows.first['quest_id']?.toString() ?? '';
@@ -6053,7 +6051,8 @@ class SupabaseService {
       return {
         'outcome': activeRows.length > 1 ? 'integrity_conflict' : 'blocked',
         'active_rows': activeRows,
-        'progress': activeRows.isEmpty ? null : activeRows.first,
+        'progress': null,
+        'completion_reconciliation': activeSnapshot.reconciliation,
       };
     }
 
@@ -6062,6 +6061,7 @@ class SupabaseService {
       'outcome': 'started',
       'active_rows': activeRows,
       'progress': activeRows.first,
+      'completion_reconciliation': activeSnapshot.reconciliation,
     };
   }
 
@@ -6107,50 +6107,40 @@ class SupabaseService {
     return List<Map<String, dynamic>>.from(rows);
   }
 
-  Future<Map<String, dynamic>> completeTask(String taskId) async {
+  Future<Map<String, dynamic>> completeArrivalTask({
+    required String questId,
+    required String taskId,
+  }) async {
     final client = _requireSupabaseClient();
     final user = _requireAuthenticatedUser(
       client,
-      'You must be signed in to complete a task.',
+      'You must be signed in to complete the workshop arrival.',
     );
-    final task = await client
-        .from('heritage_tasks')
-        .select('quest_id')
-        .eq('id', taskId)
-        .eq('status', 'APPROVED')
-        .eq('is_archived', false)
-        .maybeSingle();
-    if (task == null) {
-      throw StateError('This task is not available for completion.');
+    await _loadApprovedTaskForCompletion(
+      client: client,
+      questId: questId,
+      taskId: taskId,
+      expectedSystemTask: true,
+      expectedSortOrder: 1,
+      invalidTypeMessage: 'This is not the workshop arrival system task.',
+    );
+    final existing = await _findTaskProgressRow(client, user.id, taskId);
+    if (existing?['is_completed'] == true) {
+      return _taskCompletionResult(client, user.id, taskId, existing!);
     }
-    final questId = task['quest_id'].toString();
-    await _assertNoDifferentActiveQuest(
+    await _assertExpectedActiveQuest(
       client: client,
       userId: user.id,
       questId: questId,
     );
     await _ensureTaskProgress(client, user.id, taskId);
-
-    final now = DateTime.now().toUtc().toIso8601String();
-    await client
-        .from('task_progress')
-        .update({
-          'is_completed': true,
-          'completed_at': now,
-          'progress_seconds': 0,
-          'tracking_started_at': null,
-          'updated_at': now,
-        })
-        .eq('user_id', user.id)
-        .eq('task_id', taskId)
-        .eq('is_completed', false);
-    final completed = await _fetchTaskProgressRow(client, user.id, taskId);
-    await _updateQuestRewardAndCompletion(
+    return _completeValidatedTask(
       client: client,
       userId: user.id,
       questId: questId,
+      taskId: taskId,
+      completedProgressSeconds: 0,
     );
-    return completed;
   }
 
   Future<Map<String, dynamic>> completeTaskWithArtisanQr({
@@ -6185,21 +6175,18 @@ class SupabaseService {
       throw StateError('This QR code does not belong to this artisan.');
     }
 
-    final task = await client
-        .from('heritage_tasks')
-        .select('id, is_system_task, sort_order, created_at')
-        .eq('id', taskId)
-        .eq('quest_id', questId)
-        .eq('status', 'APPROVED')
-        .eq('is_archived', false)
-        .maybeSingle();
-    if (task == null) {
-      throw StateError('This task is not available for verification.');
-    }
-    if (task['is_system_task'] == true) {
-      throw StateError(
-        'System tasks complete automatically and do not require a QR scan.',
-      );
+    final task = await _loadApprovedTaskForCompletion(
+      client: client,
+      questId: questId,
+      taskId: taskId,
+      expectedSystemTask: false,
+      invalidTypeMessage:
+          'System tasks complete automatically and do not require a QR scan.',
+    );
+
+    final existing = await _findTaskProgressRow(client, user.id, taskId);
+    if (existing?['is_completed'] == true) {
+      return _taskCompletionResult(client, user.id, taskId, existing!);
     }
 
     final questProgress = await client
@@ -6237,11 +6224,123 @@ class SupabaseService {
       throw StateError('Start this quest before scanning the workshop QR.');
     }
 
+    if (canCompleteJourneyTask) {
+      await _assertExpectedActiveQuest(
+        client: client,
+        userId: user.id,
+        questId: questId,
+      );
+    } else {
+      final activeSnapshot = await _fetchEffectiveActiveQuestRowsForUser(
+        client,
+        user.id,
+      );
+      if (activeSnapshot.rows.isNotEmpty) {
+        throw StateError(
+          'Complete your active quest before attempting bonus activities.',
+        );
+      }
+    }
     await _ensureTaskProgress(client, user.id, taskId);
-    final current = await _fetchTaskProgressRow(client, user.id, taskId);
-    if (current['is_completed'] == true) return current;
+    return _completeValidatedTask(
+      client: client,
+      userId: user.id,
+      questId: questId,
+      taskId: taskId,
+      completedProgressSeconds: 0,
+    );
+  }
 
-    return completeTask(taskId);
+  Future<Map<String, dynamic>> _loadApprovedTaskForCompletion({
+    required SupabaseClient client,
+    required String questId,
+    required String taskId,
+    required bool expectedSystemTask,
+    int? expectedSortOrder,
+    required String invalidTypeMessage,
+  }) async {
+    final quest = await client
+        .from('quests')
+        .select('id')
+        .eq('id', questId)
+        .eq('status', 'APPROVED')
+        .maybeSingle();
+    if (quest == null) {
+      throw StateError('This quest is not available for completion.');
+    }
+    final task = await client
+        .from('heritage_tasks')
+        .select('id, quest_id, is_system_task, sort_order, created_at')
+        .eq('id', taskId)
+        .eq('quest_id', questId)
+        .eq('status', 'APPROVED')
+        .eq('is_archived', false)
+        .maybeSingle();
+    if (task == null) {
+      throw StateError('This task is not available for completion.');
+    }
+    if (task['is_system_task'] != expectedSystemTask ||
+        (expectedSortOrder != null &&
+            task['sort_order'] != expectedSortOrder)) {
+      throw StateError(invalidTypeMessage);
+    }
+    return task;
+  }
+
+  Future<Map<String, dynamic>> _completeValidatedTask({
+    required SupabaseClient client,
+    required String userId,
+    required String questId,
+    required String taskId,
+    required int completedProgressSeconds,
+  }) async {
+    final now = DateTime.now().toUtc().toIso8601String();
+    await client
+        .from('task_progress')
+        .update({
+          'is_completed': true,
+          'completed_at': now,
+          'progress_seconds': completedProgressSeconds,
+          'tracking_started_at': null,
+          'updated_at': now,
+        })
+        .eq('user_id', userId)
+        .eq('task_id', taskId)
+        .eq('is_completed', false);
+    final completed = await _fetchTaskProgressRow(client, userId, taskId);
+    await _updateQuestRewardAndCompletion(
+      client: client,
+      userId: userId,
+      questId: questId,
+    );
+    return _taskCompletionResult(client, userId, taskId, completed);
+  }
+
+  Future<Map<String, dynamic>> _taskCompletionResult(
+    SupabaseClient client,
+    String userId,
+    String taskId,
+    Map<String, dynamic> progress,
+  ) async {
+    int? xpAwarded;
+    try {
+      final rows = List<Map<String, dynamic>>.from(
+        await client
+            .from('user_task_xp_awards')
+            .select('xp_awarded')
+            .eq('user_id', userId)
+            .eq('task_id', taskId)
+            .limit(1),
+      );
+      final value = rows.isEmpty ? null : rows.first['xp_awarded'];
+      final parsed = value is num
+          ? value.toInt()
+          : int.tryParse(value?.toString() ?? '');
+      if (parsed != null && parsed >= 0) xpAwarded = parsed;
+    } catch (error) {
+      debugPrint('Authoritative task XP lookup unavailable: $error');
+    }
+    return {'progress': progress, 'xp_awarded': xpAwarded};
   }
 
   Future<void> _updateQuestRewardAndCompletion({
@@ -6251,7 +6350,7 @@ class SupabaseService {
   }) async {
     final progress = await client
         .from('quest_progress')
-        .select('status, started_at')
+        .select('status, started_at, completed_at')
         .eq('user_id', userId)
         .eq('quest_id', questId)
         .maybeSingle();
@@ -6259,12 +6358,28 @@ class SupabaseService {
 
     final existingStamp = await client
         .from('passport_stamps')
-        .select('id')
+        .select('id, unlocked_at')
         .eq('user_id', userId)
         .eq('quest_id', questId)
         .maybeSingle();
-    if (progress['status']?.toString().toUpperCase() == 'COMPLETED' ||
-        existingStamp != null) {
+    if (progress['status']?.toString().toUpperCase() == 'COMPLETED') {
+      return;
+    }
+    if (existingStamp != null) {
+      final existingCompletedAt = progress['completed_at']?.toString().trim();
+      final stampUnlockedAt = existingStamp['unlocked_at']?.toString().trim();
+      await client
+          .from('quest_progress')
+          .update({
+            'status': 'COMPLETED',
+            if (existingCompletedAt?.isNotEmpty != true)
+              'completed_at': stampUnlockedAt?.isNotEmpty == true
+                  ? stampUnlockedAt
+                  : DateTime.now().toUtc().toIso8601String(),
+          })
+          .eq('user_id', userId)
+          .eq('quest_id', questId)
+          .neq('status', 'COMPLETED');
       return;
     }
 
@@ -6330,20 +6445,27 @@ class SupabaseService {
       client,
       'You must be signed in to track a task.',
     );
-    final task = await client
+    final taskRow = await client
         .from('heritage_tasks')
         .select('quest_id')
         .eq('id', taskId)
-        .eq('status', 'APPROVED')
-        .eq('is_archived', false)
         .maybeSingle();
-    if (task == null) {
+    final questId = taskRow?['quest_id']?.toString() ?? '';
+    if (questId.isEmpty) {
       throw StateError('This task is not available for tracking.');
     }
-    await _assertNoDifferentActiveQuest(
+    await _loadApprovedTaskForCompletion(
+      client: client,
+      questId: questId,
+      taskId: taskId,
+      expectedSystemTask: true,
+      expectedSortOrder: 2,
+      invalidTypeMessage: 'This is not the workshop timer system task.',
+    );
+    await _assertExpectedActiveQuest(
       client: client,
       userId: user.id,
-      questId: task['quest_id'].toString(),
+      questId: questId,
     );
     await _ensureTaskProgress(client, user.id, taskId);
 
@@ -6372,6 +6494,28 @@ class SupabaseService {
       client,
       'You must be signed in to save task progress.',
     );
+    final taskRow = await client
+        .from('heritage_tasks')
+        .select('quest_id')
+        .eq('id', taskId)
+        .maybeSingle();
+    final questId = taskRow?['quest_id']?.toString() ?? '';
+    if (questId.isEmpty) {
+      throw StateError('This task is not available for tracking.');
+    }
+    await _loadApprovedTaskForCompletion(
+      client: client,
+      questId: questId,
+      taskId: taskId,
+      expectedSystemTask: true,
+      expectedSortOrder: 2,
+      invalidTypeMessage: 'This is not the workshop timer system task.',
+    );
+    await _assertExpectedActiveQuest(
+      client: client,
+      userId: user.id,
+      questId: questId,
+    );
     await _ensureTaskProgress(client, user.id, taskId);
 
     final now = DateTime.now().toUtc().toIso8601String();
@@ -6388,33 +6532,91 @@ class SupabaseService {
     return _fetchTaskProgressRow(client, user.id, taskId);
   }
 
+  Future<Map<String, dynamic>> restoreTimedTaskAsPaused(String taskId) async {
+    final client = _requireSupabaseClient();
+    final user = _requireAuthenticatedUser(
+      client,
+      'You must be signed in to restore workshop timer progress.',
+    );
+    final taskRow = await client
+        .from('heritage_tasks')
+        .select('quest_id')
+        .eq('id', taskId)
+        .maybeSingle();
+    final questId = taskRow?['quest_id']?.toString() ?? '';
+    if (questId.isEmpty) {
+      throw StateError('This task is not available for tracking.');
+    }
+    await _loadApprovedTaskForCompletion(
+      client: client,
+      questId: questId,
+      taskId: taskId,
+      expectedSystemTask: true,
+      expectedSortOrder: 2,
+      invalidTypeMessage: 'This is not the workshop timer system task.',
+    );
+    await _assertExpectedActiveQuest(
+      client: client,
+      userId: user.id,
+      questId: questId,
+    );
+    await _ensureTaskProgress(client, user.id, taskId);
+    final current = await _fetchTaskProgressRow(client, user.id, taskId);
+    if (current['is_completed'] == true ||
+        current['tracking_started_at'] == null) {
+      return current;
+    }
+    final confirmedSeconds =
+        ((current['progress_seconds'] as num?)?.toInt() ?? 0).clamp(0, 900);
+    final now = DateTime.now().toUtc().toIso8601String();
+    await client
+        .from('task_progress')
+        .update({
+          'progress_seconds': confirmedSeconds,
+          'tracking_started_at': null,
+          'updated_at': now,
+        })
+        .eq('user_id', user.id)
+        .eq('task_id', taskId)
+        .eq('is_completed', false);
+    return _fetchTaskProgressRow(client, user.id, taskId);
+  }
+
   Future<Map<String, dynamic>> completeTimedTask(String taskId) async {
     final client = _requireSupabaseClient();
     final user = _requireAuthenticatedUser(
       client,
       'You must be signed in to complete a task.',
     );
-    final task = await client
+    final taskRow = await client
         .from('heritage_tasks')
-        .select('quest_id, is_system_task, sort_order')
+        .select('quest_id')
         .eq('id', taskId)
-        .eq('status', 'APPROVED')
-        .eq('is_archived', false)
         .maybeSingle();
-    if (task == null ||
-        task['is_system_task'] != true ||
-        task['sort_order'] != 2) {
-      throw StateError('This is not the workshop timer system task.');
+    final questId = taskRow?['quest_id']?.toString() ?? '';
+    if (questId.isEmpty) {
+      throw StateError('This task is not available for completion.');
     }
-    await _assertNoDifferentActiveQuest(
+    await _loadApprovedTaskForCompletion(
+      client: client,
+      questId: questId,
+      taskId: taskId,
+      expectedSystemTask: true,
+      expectedSortOrder: 2,
+      invalidTypeMessage: 'This is not the workshop timer system task.',
+    );
+    final existing = await _findTaskProgressRow(client, user.id, taskId);
+    if (existing?['is_completed'] == true) {
+      return _taskCompletionResult(client, user.id, taskId, existing!);
+    }
+    await _assertExpectedActiveQuest(
       client: client,
       userId: user.id,
-      questId: task['quest_id'].toString(),
+      questId: questId,
     );
     await _ensureTaskProgress(client, user.id, taskId);
-
-    final current = await _fetchTaskProgressRow(client, user.id, taskId);
-    if (current['is_completed'] == true) return current;
+    final current =
+        existing ?? await _fetchTaskProgressRow(client, user.id, taskId);
 
     var elapsedSeconds = (current['progress_seconds'] as num?)?.toInt() ?? 0;
     final trackingStartedAt = DateTime.tryParse(
@@ -6430,33 +6632,20 @@ class SupabaseService {
       );
     }
 
-    final now = DateTime.now().toUtc().toIso8601String();
-    await client
-        .from('task_progress')
-        .update({
-          'is_completed': true,
-          'completed_at': now,
-          'progress_seconds': 900,
-          'tracking_started_at': null,
-          'updated_at': now,
-        })
-        .eq('user_id', user.id)
-        .eq('task_id', taskId)
-        .eq('is_completed', false);
-    final completed = await _fetchTaskProgressRow(client, user.id, taskId);
-    await _updateQuestRewardAndCompletion(
+    return _completeValidatedTask(
       client: client,
       userId: user.id,
-      questId: task['quest_id'].toString(),
+      questId: questId,
+      taskId: taskId,
+      completedProgressSeconds: 900,
     );
-    return completed;
   }
 
   static const String _taskProgressColumns =
       'user_id, task_id, is_completed, completed_at, progress_seconds, '
       'tracking_started_at';
 
-  Future<void> _assertNoDifferentActiveQuest({
+  Future<void> _assertExpectedActiveQuest({
     required SupabaseClient client,
     required String userId,
     required String questId,
@@ -6470,10 +6659,11 @@ class SupabaseService {
         .map((row) => row['quest_id']?.toString() ?? '')
         .where((id) => id.isNotEmpty)
         .toSet();
-    if (activeQuestIds.any((id) => id != questId)) {
+    if (activeQuestIds.length != 1 || !activeQuestIds.contains(questId)) {
       throw StateError(
-        'Complete your active journey before attempting activities from '
-        'another quest.',
+        activeQuestIds.length > 1
+            ? 'Multiple active quests were found. Resolve the conflict before completing activities.'
+            : 'Start this quest before completing its activities.',
       );
     }
   }
@@ -6515,6 +6705,19 @@ class SupabaseService {
         .eq('user_id', userId)
         .eq('task_id', taskId)
         .single();
+  }
+
+  Future<Map<String, dynamic>?> _findTaskProgressRow(
+    SupabaseClient client,
+    String userId,
+    String taskId,
+  ) {
+    return client
+        .from('task_progress')
+        .select(_taskProgressColumns)
+        .eq('user_id', userId)
+        .eq('task_id', taskId)
+        .maybeSingle();
   }
 
   Future<Map<String, dynamic>> updateUnapprovedHeritageTask({
@@ -6560,50 +6763,184 @@ class SupabaseService {
     return updatedTask;
   }
 
-  Future<void> deleteUnapprovedHeritageTask(String taskId) async {
-    final client = _client;
-    if (client == null) {
-      throw StateError('Supabase is not initialized.');
+  Future<Map<String, dynamic>> _loadOwnedArtisanTaskForRequestAction({
+    required SupabaseClient client,
+    required String taskId,
+  }) async {
+    final user = _requireAuthenticatedUser(
+      client,
+      'You must be signed in to manage task requests.',
+    );
+    final artisanProfile = await client
+        .from('artisan_profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+    if (artisanProfile == null) {
+      throw StateError(
+        'No artisan profile is linked to this signed-in account.',
+      );
     }
-    if (client.auth.currentUser == null) {
-      throw StateError('You must be signed in to cancel a task submission.');
+
+    final task = await client
+        .from('heritage_tasks')
+        .select('id, quest_id, is_system_task, status, is_archived')
+        .eq('id', taskId)
+        .maybeSingle();
+    if (task == null) {
+      throw StateError(
+        'This task request is no longer available. Refreshing its latest status.',
+      );
+    }
+
+    final questId = task['quest_id']?.toString() ?? '';
+    final quest = questId.isEmpty
+        ? null
+        : await client
+              .from('quests')
+              .select('id, artisan_id')
+              .eq('id', questId)
+              .maybeSingle();
+    if (quest == null ||
+        quest['artisan_id']?.toString() != artisanProfile['id']?.toString()) {
+      throw StateError('You are not authorized to manage this task request.');
+    }
+    if (task['is_system_task'] == true) {
+      throw StateError('System task requests cannot be cancelled.');
+    }
+    return Map<String, dynamic>.from(task);
+  }
+
+  Future<Map<String, dynamic>> _loadOwnedTaskChangeRequest({
+    required SupabaseClient client,
+    required String requestId,
+    required String taskId,
+  }) async {
+    _requireAuthenticatedUser(
+      client,
+      'You must be signed in to manage task requests.',
+    );
+    final request = await client
+        .from('heritage_task_change_requests')
+        .select('id, task_id, request_type, status')
+        .eq('id', requestId)
+        .maybeSingle();
+    if (request == null) {
+      throw StateError(
+        'This request has already been reviewed. Refreshing its latest status.',
+      );
+    }
+    if (request['task_id']?.toString() != taskId) {
+      throw StateError('You are not authorized to manage this task request.');
+    }
+    final task = await _loadOwnedArtisanTaskForRequestAction(
+      client: client,
+      taskId: taskId,
+    );
+    if (task['status']?.toString().toUpperCase() != 'APPROVED' ||
+        task['is_archived'] == true) {
+      throw StateError(
+        'Only requests for an approved active task can be removed.',
+      );
+    }
+    return Map<String, dynamic>.from(request);
+  }
+
+  Future<void> deleteUnapprovedHeritageTask({
+    required String taskId,
+    required String expectedStatus,
+  }) async {
+    final client = _requireSupabaseClient();
+    final normalizedStatus = expectedStatus.toUpperCase();
+    if (normalizedStatus != 'PENDING_APPROVAL' &&
+        normalizedStatus != 'REJECTED') {
+      throw ArgumentError.value(
+        expectedStatus,
+        'expectedStatus',
+        'Only pending or rejected task submissions can be removed.',
+      );
+    }
+    final task = await _loadOwnedArtisanTaskForRequestAction(
+      client: client,
+      taskId: taskId,
+    );
+    if (task['status']?.toString().toUpperCase() != normalizedStatus ||
+        task['is_archived'] == true) {
+      throw StateError(
+        'This request has already been reviewed. Refreshing its latest status.',
+      );
     }
 
     final deletedTask = await client
         .from('heritage_tasks')
         .delete()
         .eq('id', taskId)
+        .eq('quest_id', task['quest_id'])
         .eq('is_system_task', false)
-        .eq('status', 'REJECTED')
+        .eq('is_archived', false)
+        .eq('status', normalizedStatus)
         .select('id')
         .maybeSingle();
     if (deletedTask == null) {
-      throw StateError('Only a rejected new task can be deleted immediately.');
+      throw StateError(
+        'This request has already been reviewed. Refreshing its latest status.',
+      );
     }
   }
 
-  Future<void> deleteRejectedHeritageTaskEditRequest(String requestId) async {
-    final client = _client;
-    if (client == null) {
-      throw StateError('Supabase is not initialized.');
+  Future<void> deleteHeritageTaskChangeRequest({
+    required String requestId,
+    required String taskId,
+    required String expectedRequestType,
+    required String expectedStatus,
+  }) async {
+    final client = _requireSupabaseClient();
+    final requestType = expectedRequestType.toUpperCase();
+    final status = expectedStatus.toUpperCase();
+    if ((requestType != 'EDIT' && requestType != 'DELETE') ||
+        (status != 'PENDING_APPROVAL' && status != 'REJECTED')) {
+      throw ArgumentError('Unsupported task-request cancellation state.');
     }
-    if (client.auth.currentUser == null) {
-      throw StateError('You must be signed in to dismiss a rejected update.');
+    final request = await _loadOwnedTaskChangeRequest(
+      client: client,
+      requestId: requestId,
+      taskId: taskId,
+    );
+    if (request['request_type']?.toString().toUpperCase() != requestType) {
+      throw StateError('This request type cannot be cancelled here.');
+    }
+    if (request['status']?.toString().toUpperCase() != status) {
+      throw StateError(
+        'This request has already been reviewed. Refreshing its latest status.',
+      );
     }
 
     final deletedRequest = await client
         .from('heritage_task_change_requests')
         .delete()
         .eq('id', requestId)
-        .eq('request_type', 'EDIT')
-        .eq('status', 'REJECTED')
+        .eq('task_id', taskId)
+        .eq('request_type', requestType)
+        .eq('status', status)
         .select('id')
         .maybeSingle();
     if (deletedRequest == null) {
       throw StateError(
-        'This rejected task update no longer exists or cannot be dismissed.',
+        'This request has already been reviewed. Refreshing its latest status.',
       );
     }
+  }
+
+  Future<void> deleteRejectedHeritageTaskEditRequest({
+    required String requestId,
+    required String taskId,
+  }) {
+    return deleteHeritageTaskChangeRequest(
+      requestId: requestId,
+      taskId: taskId,
+      expectedRequestType: 'EDIT',
+      expectedStatus: 'REJECTED',
+    );
   }
 
   Future<List<Map<String, dynamic>>> fetchHeritageTaskChangeRequests(
@@ -6706,31 +7043,13 @@ class SupabaseService {
   Future<void> deletePendingHeritageTaskEditRequest({
     required String requestId,
     required String taskId,
-  }) async {
-    final client = _client;
-    if (client == null) {
-      throw StateError('Supabase is not initialized.');
-    }
-    if (client.auth.currentUser == null) {
-      throw StateError(
-        'You must be signed in to cancel a pending task update.',
-      );
-    }
-
-    final deletedRequest = await client
-        .from('heritage_task_change_requests')
-        .delete()
-        .eq('id', requestId)
-        .eq('task_id', taskId)
-        .eq('request_type', 'EDIT')
-        .eq('status', 'PENDING_APPROVAL')
-        .select('id')
-        .maybeSingle();
-    if (deletedRequest == null) {
-      throw StateError(
-        'This task update is no longer pending. Refresh to see the latest admin decision.',
-      );
-    }
+  }) {
+    return deleteHeritageTaskChangeRequest(
+      requestId: requestId,
+      taskId: taskId,
+      expectedRequestType: 'EDIT',
+      expectedStatus: 'PENDING_APPROVAL',
+    );
   }
 
   Future<Map<String, dynamic>> resubmitRejectedHeritageTaskEditRequest({
