@@ -313,7 +313,7 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
                       height: 18,
                       child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                     )
-                  : const Text('DELETE ACCOUNT'),
+                  : const Text('PERMANENTLY DELETE ACCOUNT'),
             ),
           ],
         ),
@@ -516,7 +516,8 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
           ),
           _buildDangerTile(
             icon: Icons.delete_forever_outlined,
-            title: 'Delete Studio Account',
+            title: 'Permanently Delete Account',
+            subtitle: 'Permanently remove your studio, craft items, tourist passport, and credentials.',
             onTap: _handleDeleteAccount,
           ),
 
@@ -644,6 +645,7 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
   Widget _buildDangerTile({
     required IconData icon,
     required String title,
+    String? subtitle,
     required VoidCallback onTap,
   }) {
     return Container(
@@ -664,6 +666,15 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
             color: const Color(0xFFEF4444),
           ),
         ),
+        subtitle: subtitle != null
+            ? Text(
+                subtitle,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 11,
+                  color: const Color(0xFFB91C1C),
+                ),
+              )
+            : null,
         trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFFEF4444)),
       ),
     );
