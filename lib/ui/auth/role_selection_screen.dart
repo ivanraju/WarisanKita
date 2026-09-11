@@ -89,6 +89,9 @@ class RoleSelectionScreen extends StatelessWidget {
     final authVM = context.watch<AuthViewModel>();
     final user = authVM.currentUser;
     final isArtisanSuspended = user?.isArtisanStudioSuspended == true;
+    final isArtisanRejected = user?.isRejectedArtisan == true ||
+        user?.status.toUpperCase() == 'REJECTED' ||
+        user?.artisanStatus?.toUpperCase() == 'REJECTED';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
@@ -127,10 +130,6 @@ class RoleSelectionScreen extends StatelessWidget {
               ),
 
               const SizedBox(height: 16),
-
-              final isArtisanRejected = user?.isRejectedArtisan == true ||
-                  user?.status.toUpperCase() == 'REJECTED' ||
-                  user?.artisanStatus?.toUpperCase() == 'REJECTED';
 
               // Card 2: Artisan Portal
               _buildRoleCard(
