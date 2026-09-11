@@ -1076,30 +1076,34 @@ class SupabaseService {
             '00000000-0000-4000-8000-000000000001';
 
         if (existing != null) {
+          // Note: users table only has: id, email, full_name, phone_number,
+          // avatar_url, role, status, artisan_status, username, display_name.
+          // It does NOT have studio_name, craft_category, ssm_number columns.
           try {
             await client
                 .from('users')
                 .update({
                   'status': 'PENDING_APPROVAL',
                   'role': 'Artisan & Tourist',
-                  'studio_name': studioName,
-                  'craft_category': craftCategory,
-                  'ssm_number': ssmNumber,
                   'artisan_status': 'PENDING_APPROVAL',
                   if (phone != null) 'phone_number': phone,
                   'updated_at': DateTime.now().toIso8601String(),
                 })
                 .ilike('email', cleanEmail);
-          } catch (_) {
-            await client
-                .from('users')
-                .update({
-                  'status': 'PENDING_APPROVAL',
-                  'role': 'Artisan & Tourist',
-                  if (phone != null) 'phone_number': phone,
-                  'updated_at': DateTime.now().toIso8601String(),
-                })
-                .ilike('email', cleanEmail);
+          } catch (userUpdateErr) {
+            debugPrint('linkArtisanRoleToTourist users update note: $userUpdateErr');
+            try {
+              await client
+                  .from('users')
+                  .update({
+                    'status': 'PENDING_APPROVAL',
+                    'role': 'Artisan & Tourist',
+                    'updated_at': DateTime.now().toIso8601String(),
+                  })
+                  .ilike('email', cleanEmail);
+            } catch (err) {
+              debugPrint('linkArtisanRoleToTourist users minimal update note: $err');
+            }
           }
         } else {
           await client.from('users').insert({
@@ -1122,15 +1126,14 @@ class SupabaseService {
               .eq('user_id', userId)
               .maybeSingle();
 
-          final profileData = {
+          final profileData = <String, dynamic>{
             'studio_name': studioName,
             'craft_category': craftCategory,
             'ssm_number': ssmNumber,
-            if (experience != null && experience.trim().isNotEmpty) ...{
-              'experience': experience.trim(),
+            // artisan_profiles has 'years_experience' but NOT 'experience' column
+            if (experience != null && experience.trim().isNotEmpty)
               if (RegExp(r'\d+').firstMatch(experience) != null)
                 'years_experience': int.tryParse(RegExp(r'\d+').firstMatch(experience)!.group(0)!),
-            },
             'bio':
                 bio ??
                 'Master artisan dedicated to traditional Malaysian craft.',
