@@ -159,12 +159,18 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setBottomSheetState) {
-            return Container(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+            return SafeArea(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.85,
+                ),
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -306,11 +312,13 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                   ),
                 ],
               ),
-            );
-          },
+            ),
+          ),
         );
       },
     );
+  },
+);
   }
 
   @override
@@ -399,10 +407,10 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
           pinned: true,
           backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
           elevation: 0,
-          expandedHeight: 120.0,
+          expandedHeight: 126.0,
           flexibleSpace: FlexibleSpaceBar(
             background: Container(
-              padding: const EdgeInsets.fromLTRB(20, 50, 20, 10),
+              padding: const EdgeInsets.fromLTRB(20, 42, 20, 10),
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
@@ -418,8 +426,10 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -450,6 +460,8 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                         const SizedBox(height: 6),
                         Text(
                           langVM.translate('Explore Living Heritage'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.dmSerifDisplay(
                             color: Colors.white,
                             fontSize: 22,
@@ -593,27 +605,33 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF78350F).withValues(alpha: 0.4) : const Color(0xFFFEF3C7),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: isDark ? const Color(0xFFD97706).withValues(alpha: 0.5) : const Color(0xFFFDE68A)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.filter_list_rounded, size: 14, color: isDark ? const Color(0xFFFDE68A) : const Color(0xFF92400E)),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${filtered.length} matching result${filtered.length == 1 ? '' : 's'}',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: isDark ? const Color(0xFFFDE68A) : const Color(0xFF92400E),
+                      Flexible(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF78350F).withValues(alpha: 0.4) : const Color(0xFFFEF3C7),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: isDark ? const Color(0xFFD97706).withValues(alpha: 0.5) : const Color(0xFFFDE68A)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.filter_list_rounded, size: 14, color: isDark ? const Color(0xFFFDE68A) : const Color(0xFF92400E)),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  '${filtered.length} matching result${filtered.length == 1 ? '' : 's'}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark ? const Color(0xFFFDE68A) : const Color(0xFF92400E),
+                                  ),
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                       TextButton.icon(
@@ -805,7 +823,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                         ),
                         const SizedBox(height: 12),
                         SizedBox(
-                          height: 86,
+                          height: 94,
                           child: ListView.builder(
                             scrollDirection: Axis.horizontal,
                             itemCount: recommendedArtisans.length,
@@ -991,6 +1009,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                 border: Border.all(color: const Color(0xFFFFD54F).withValues(alpha: 0.5)),
               ),
               child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(Icons.verified_rounded, color: Color(0xFFFFD54F), size: 14),
                   const SizedBox(width: 4),
@@ -1022,6 +1041,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                 ],
               ),
               child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(Icons.local_fire_department_rounded, color: Colors.white, size: 14),
                   const SizedBox(width: 4),
@@ -1039,25 +1059,33 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
             bottomContent: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.65),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.verified_rounded, color: Color(0xFFFFD54F), size: 14),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${artisan['craft'] ?? artisan['category']} Studio',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                Expanded(
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.65),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.verified_rounded, color: Color(0xFFFFD54F), size: 14),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            '${artisan['craft'] ?? artisan['category']} Studio',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
                 Container(
@@ -1068,6 +1096,8 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                   ),
                   child: Text(
                     '${artisan['experienceYears']} Heritage Master',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
@@ -1113,27 +1143,34 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF78350F).withValues(alpha: 0.4) : const Color(0xFFFEF3C7),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: isDark ? const Color(0xFFD97706).withValues(alpha: 0.5) : const Color(0xFFF59E0B).withValues(alpha: 0.4)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.location_on_rounded, size: 12, color: isDark ? const Color(0xFFFDE68A) : const Color(0xFFD97706)),
-                          const SizedBox(width: 4),
-                          Text(
-                            artisan['state'],
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? const Color(0xFFFDE68A) : const Color(0xFFD97706),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 130),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF78350F).withValues(alpha: 0.4) : const Color(0xFFFEF3C7),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: isDark ? const Color(0xFFD97706).withValues(alpha: 0.5) : const Color(0xFFF59E0B).withValues(alpha: 0.4)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.location_on_rounded, size: 12, color: isDark ? const Color(0xFFFDE68A) : const Color(0xFFD97706)),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                artisan['state'],
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? const Color(0xFFFDE68A) : const Color(0xFFD97706),
+                                ),
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -1193,10 +1230,13 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                         style: OutlinedButton.styleFrom(
                           side: BorderSide(color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40), width: 1.5),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
                         ),
                         child: Text(
                           langVM.translate('View Profile'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
                           style: GoogleFonts.plusJakartaSans(
                             color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
                             fontSize: 12,
@@ -1222,12 +1262,14 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                         style: FilledButton.styleFrom(
                           backgroundColor: isDark ? const Color(0xFF00695C) : const Color(0xFF004D40),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
                           elevation: 2,
                         ),
                         icon: const Icon(Icons.stars_rounded, size: 16, color: Color(0xFFFFD54F)),
                         label: Text(
                           langVM.translate('START QUEST'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 11,
                             fontWeight: FontWeight.w900,
@@ -1390,15 +1432,19 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                               children: [
                                 const Icon(Icons.location_on_rounded, size: 10, color: Color(0xFFFFD54F)),
                                 const SizedBox(width: 2),
-                                Text(
-                                  state,
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.white70,
+                                Expanded(
+                                  child: Text(
+                                    state,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.white70,
+                                    ),
                                   ),
                                 ),
-                                const Spacer(),
+                                const SizedBox(width: 4),
                                 const Icon(Icons.arrow_forward_ios_rounded, size: 10, color: Colors.white70),
                               ],
                             ),
