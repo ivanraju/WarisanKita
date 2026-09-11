@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS public.users (
     -- Account Flags & Timestamps
     is_suspended BOOLEAN DEFAULT FALSE,
     suspension_reason TEXT,
+    artisan_status TEXT,
     created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -104,6 +105,9 @@ BEGIN
     END IF;
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='suspension_reason') THEN
         ALTER TABLE public.users ADD COLUMN suspension_reason TEXT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='artisan_status') THEN
+        ALTER TABLE public.users ADD COLUMN artisan_status TEXT;
     END IF;
 END $$;
 
@@ -262,15 +266,23 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- 9. Public Security-Definer RPC Function for Moderation (Approve / Reject / Suspend)
+-- Drop ambiguous 3-parameter overload to resolve PGRST203 function resolution error
+DROP FUNCTION IF EXISTS public.admin_update_user_status(text, text, text);
+
 CREATE OR REPLACE FUNCTION public.admin_update_user_status(
     p_email text,
     p_status text,
-    p_role text DEFAULT NULL
+    p_role text DEFAULT NULL,
+    p_studio_name text DEFAULT NULL,
+    p_craft_category text DEFAULT NULL,
+    p_ssm_number text DEFAULT NULL
 )
 RETURNS JSONB AS $$
 DECLARE
     v_user_id uuid;
     v_artisan_status text;
+    v_existing_studio text;
+    v_existing_craft text;
 BEGIN
     -- 1. Find user id
     SELECT id INTO v_user_id
@@ -281,37 +293,67 @@ BEGIN
         RETURN jsonb_build_object('success', false, 'message', 'User not found');
     END IF;
 
-    -- 2. Update public.users status and role
+    -- 2. Resolve artisan_status
+    IF upper(p_status) IN ('ACTIVE', 'APPROVED') THEN
+        v_artisan_status := 'APPROVED';
+    ELSE
+        v_artisan_status := upper(p_status);
+    END IF;
+
+    -- 3. Update public.users status, role, and artisan_status
     UPDATE public.users
-    SET 
-        status = p_status,
+    SET
+        status = CASE 
+            WHEN COALESCE(p_role, role) = 'Tourist' AND upper(p_status) = 'REJECTED' THEN 'ACTIVE'
+            ELSE p_status 
+        END,
         role = COALESCE(p_role, role),
+        artisan_status = v_artisan_status,
         updated_at = now()
     WHERE id = v_user_id;
 
-    -- 3. Update auth.users user_metadata status and role if auth user exists
+    -- 4. Update auth.users user_metadata
     UPDATE auth.users
-    SET raw_user_meta_data = raw_user_meta_data || 
+    SET raw_user_meta_data = raw_user_meta_data ||
         jsonb_build_object(
-            'status', p_status,
+            'status', CASE 
+                WHEN COALESCE(p_role, raw_user_meta_data->>'role') = 'Tourist' AND upper(p_status) = 'REJECTED' THEN 'ACTIVE'
+                ELSE p_status 
+            END,
+            'artisan_status', v_artisan_status,
             'role', COALESCE(p_role, raw_user_meta_data->>'role')
         )
     WHERE id = v_user_id;
 
-    -- 4. Update public.artisan_profiles status
-    IF upper(p_status) IN ('ACTIVE', 'APPROVED') THEN
-        v_artisan_status := 'APPROVED';
-    ELSE
-        v_artisan_status := p_status;
-    END IF;
-
-    UPDATE public.artisan_profiles
-    SET 
-        status = v_artisan_status,
-        updated_at = now()
+    -- 5. Fetch existing studio details from artisan_profiles table for fallback
+    SELECT studio_name, craft_category
+    INTO v_existing_studio, v_existing_craft
+    FROM public.artisan_profiles
     WHERE user_id = v_user_id;
 
-    RETURN jsonb_build_object('success', true, 'user_id', v_user_id, 'status', p_status);
+    -- 6. Upsert artisan_profiles (insert if missing, update status if exists)
+    INSERT INTO public.artisan_profiles (
+        user_id,
+        status,
+        studio_name,
+        craft_category,
+        ssm_number,
+        created_at,
+        updated_at
+    ) VALUES (
+        v_user_id,
+        v_artisan_status,
+        COALESCE(p_studio_name, v_existing_studio, 'Heritage Studio'),
+        COALESCE(p_craft_category, v_existing_craft, 'Traditional Craft'),
+        p_ssm_number,
+        now(),
+        now()
+    )
+    ON CONFLICT (user_id) DO UPDATE SET
+        status = EXCLUDED.status,
+        updated_at = now();
+
+    RETURN jsonb_build_object('success', true, 'user_id', v_user_id, 'status', p_status, 'artisan_status', v_artisan_status);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -321,6 +363,8 @@ GRANT SELECT, INSERT, UPDATE ON public.artisan_profiles TO anon, authenticated;
 GRANT SELECT, INSERT, UPDATE ON public.artisan_documents TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.check_account_by_email(text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_update_user_status(text, text, text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_update_user_status(text, text, text, text, text, text) TO anon, authenticated;
+
 
 -- Policies for public.users and public.artisan_profiles
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
@@ -539,6 +583,9 @@ CREATE POLICY "Public select artisan_profiles" ON public.artisan_profiles FOR SE
 
 DROP POLICY IF EXISTS "Public update artisan_profiles" ON public.artisan_profiles;
 CREATE POLICY "Public update artisan_profiles" ON public.artisan_profiles FOR UPDATE USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public insert artisan_profiles" ON public.artisan_profiles;
+CREATE POLICY "Public insert artisan_profiles" ON public.artisan_profiles FOR INSERT WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Public delete artisan_profiles" ON public.artisan_profiles;
 CREATE POLICY "Public delete artisan_profiles" ON public.artisan_profiles FOR DELETE USING (true);

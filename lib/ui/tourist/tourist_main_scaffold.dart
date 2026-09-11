@@ -2,11 +2,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:warisan_kita/ui/core/account_suspended_screen.dart';
 import 'package:warisan_kita/ui/matchmaker/tourist_matchmaker_view.dart';
 import 'package:warisan_kita/ui/core/live_forum_tab.dart';
 import 'package:warisan_kita/ui/tourist/tourist_directory_tab.dart';
 import 'package:warisan_kita/ui/tourist/tourist_profile_tab.dart';
+import 'package:warisan_kita/ui/artisan/artisan_application_pending_screen.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/gamification_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
@@ -24,10 +26,17 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
   int _currentIndex = 0;
   Timer? _statusPollTimer;
   bool _journeyRestoreScheduled = false;
+  bool _isRejectionBannerDismissed = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<AuthViewModel>().refreshCurrentUser();
+        _checkRejectionBannerDismissed();
+      }
+    });
     if (widget.enableLivePolling) {
       _statusPollTimer = Timer.periodic(const Duration(seconds: 4), (_) {
         if (mounted) {
@@ -37,6 +46,17 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
           }
         }
       });
+    }
+  }
+
+  Future<void> _checkRejectionBannerDismissed() async {
+    final user = context.read<AuthViewModel>().currentUser;
+    if (user != null) {
+      final prefs = await SharedPreferences.getInstance();
+      final dismissed = prefs.getBool('dismissed_rejection_banner_${user.id}') ?? false;
+      if (mounted && dismissed) {
+        setState(() => _isRejectionBannerDismissed = true);
+      }
     }
   }
 
@@ -76,18 +96,127 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
     final langVM = context.watch<LanguageViewModel>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    final isArtisanRejected = user.isRejectedArtisan;
+
     return Scaffold(
       backgroundColor: isDark
           ? const Color(0xFF041412)
           : const Color(0xFFF8F9FA),
       extendBody: true,
-      body: IndexedStack(
-        index: _currentIndex,
+      body: Column(
         children: [
-          const TouristDirectoryTab(),
-          TouristMatchmakerView(isActive: _currentIndex == 1),
-          const LiveForumTab(),
-          const TouristProfileTab(),
+          if (isArtisanRejected && !_isRejectionBannerDismissed)
+            Material(
+              color: isDark ? const Color(0xFF2A1215) : const Color(0xFFFEF2F2),
+              elevation: 2,
+              child: SafeArea(
+                bottom: false,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(
+                        color: isDark ? const Color(0xFF5C1D24) : const Color(0xFFFCA5A5),
+                        width: 1,
+                      ),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFEF4444),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.cancel_outlined, color: Colors.white, size: 16),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Artisan Application Not Approved',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? const Color(0xFFFCA5A5) : const Color(0xFF991B1B),
+                              ),
+                            ),
+                            Text(
+                              'Kraftangan review required document updates.',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11,
+                                color: isDark ? Colors.white70 : const Color(0xFF7F1D1D),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      FilledButton(
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => ArtisanApplicationPendingScreen(
+                                studioName: user.studioName ?? '',
+                                craftCategory: user.craftCategory ?? '',
+                                ssmNumber: user.ssmNumber ?? '',
+                              ),
+                            ),
+                          );
+                        },
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFFEF4444),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        child: Text(
+                          'Review',
+                          style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      IconButton(
+                        icon: Icon(
+                          Icons.close,
+                          size: 18,
+                          color: isDark ? const Color(0xFFFCA5A5) : const Color(0xFF991B1B),
+                        ),
+                        tooltip: 'Dismiss message',
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                        onPressed: () async {
+                          setState(() => _isRejectionBannerDismissed = true);
+                          final prefs = await SharedPreferences.getInstance();
+                          final uid = context.read<AuthViewModel>().currentUser?.id;
+                          if (uid != null) {
+                            await prefs.setBool('dismissed_rejection_banner_$uid', true);
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          Expanded(
+            child: IndexedStack(
+              index: _currentIndex,
+              children: [
+                const TouristDirectoryTab(),
+                TouristMatchmakerView(isActive: _currentIndex == 1),
+                const LiveForumTab(),
+                const TouristProfileTab(),
+              ],
+            ),
+          ),
         ],
       ),
       bottomNavigationBar: SafeArea(

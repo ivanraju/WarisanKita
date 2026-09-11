@@ -22,7 +22,10 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.read<GamificationViewModel>().loadPassport();
+      if (mounted) {
+        context.read<GamificationViewModel>().loadPassport();
+        context.read<AuthViewModel>().refreshCurrentUser();
+      }
     });
   }
 
@@ -869,133 +872,144 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                           ],
                         ),
                       ),
-                    ] else if (authVM.currentUser?.isPendingArtisan == true ||
-                        authVM.currentUser?.isPendingApproval == true ||
-                        (authVM.currentUser?.studioName != null &&
-                            authVM.currentUser!.studioName!.trim().isNotEmpty &&
-                            authVM.currentUser?.isApprovedArtisan != true)) ...[
+                    ] else if (authVM.currentUser?.artisanStatus?.toUpperCase() != 'CLOSED' &&
+                        (authVM.currentUser?.isRejectedArtisan == true ||
+                         authVM.currentUser?.artisanStatus?.toUpperCase() == 'REJECTED' ||
+                         authVM.currentUser?.isPendingArtisan == true ||
+                         authVM.currentUser?.artisanStatus?.toUpperCase() == 'PENDING_APPROVAL' ||
+                         authVM.currentUser?.artisanStatus?.toUpperCase() == 'PENDING' ||
+                         (authVM.currentUser?.role != 'Tourist' &&
+                             (authVM.currentUser?.isPendingApproval == true ||
+                              (authVM.currentUser?.studioName != null &&
+                               authVM.currentUser!.studioName!.trim().isNotEmpty &&
+                               authVM.currentUser?.isApprovedArtisan != true))))) ...[
                       const SizedBox(height: 16),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFFBEB),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: const Color(0xFFFCD34D)),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: const Color(
-                                  0xFFD97706,
-                                ).withValues(alpha: 0.15),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.hourglass_top_rounded,
-                                color: Color(0xFFB45309),
-                                size: 24,
-                              ),
+                      Builder(
+                        builder: (context) {
+                          final isAppRejected = authVM.currentUser?.isRejectedArtisan == true;
+                          return Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: isAppRejected ? const Color(0xFFFEF2F2) : const Color(0xFFFFFBEB),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: isAppRejected ? const Color(0xFFFCA5A5) : const Color(0xFFFCD34D)),
                             ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: isAppRejected
+                                        ? const Color(0xFFEF4444).withValues(alpha: 0.12)
+                                        : const Color(0xFFD97706).withValues(alpha: 0.15),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    isAppRejected ? Icons.cancel_outlined : Icons.hourglass_top_rounded,
+                                    color: isAppRejected ? const Color(0xFFDC2626) : const Color(0xFFB45309),
+                                    size: 24,
+                                  ),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Flexible(
-                                        child: Text(
-                                          'Artisan Studio Application',
-                                          softWrap: true,
-                                          style: GoogleFonts.plusJakartaSans(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 13,
-                                            color: const Color(0xFF92400E),
+                                      Row(
+                                        children: [
+                                          Flexible(
+                                            child: Text(
+                                              'Artisan Studio Application',
+                                              softWrap: true,
+                                              style: GoogleFonts.plusJakartaSans(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 13,
+                                                color: isAppRejected ? const Color(0xFF991B1B) : const Color(0xFF92400E),
+                                              ),
+                                            ),
                                           ),
-                                        ),
+                                          const SizedBox(width: 6),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: isAppRejected ? const Color(0xFFFEE2E2) : const Color(0xFFFEF3C7),
+                                              borderRadius: BorderRadius.circular(6),
+                                              border: Border.all(
+                                                color: isAppRejected ? const Color(0xFFF87171) : const Color(0xFFF59E0B),
+                                              ),
+                                            ),
+                                            child: Text(
+                                              isAppRejected ? 'NEEDS UPDATE' : 'PENDING REVIEW',
+                                              style: GoogleFonts.plusJakartaSans(
+                                                fontSize: 8,
+                                                fontWeight: FontWeight.w900,
+                                                color: isAppRejected ? const Color(0xFFDC2626) : const Color(0xFF92400E),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                      const SizedBox(width: 6),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 6,
-                                          vertical: 2,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFFEF3C7),
-                                          borderRadius: BorderRadius.circular(
-                                            6,
-                                          ),
-                                          border: Border.all(
-                                            color: const Color(0xFFF59E0B),
-                                          ),
-                                        ),
-                                        child: Text(
-                                          'PENDING REVIEW',
-                                          style: GoogleFonts.plusJakartaSans(
-                                            fontSize: 8,
-                                            fontWeight: FontWeight.w900,
-                                            color: const Color(0xFF92400E),
-                                          ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        isAppRejected
+                                            ? 'Your application was not approved. Tap below to review feedback and update documents.'
+                                            : 'Your Master Artisan registration is undergoing Kraftangan Malaysia verification. Studio access unlocks upon approval.',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 11,
+                                          color: isAppRejected ? const Color(0xFF7F1D1D) : const Color(0xFF78350F),
+                                          height: 1.3,
                                         ),
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    'Your Master Artisan registration is undergoing Kraftangan Malaysia verification. Studio access unlocks upon approval.',
-                                    style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 11,
-                                      color: const Color(0xFF78350F),
-                                      height: 1.3,
+                                ),
+                                const SizedBox(width: 8),
+                                FilledButton(
+                                  onPressed: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            ArtisanApplicationPendingScreen(
+                                              studioName:
+                                                  authVM.currentUser?.studioName ??
+                                                  'Your Craft Studio',
+                                              craftCategory:
+                                                  authVM
+                                                      .currentUser
+                                                      ?.craftCategory ??
+                                                  'Malaysian Heritage Craft',
+                                              ssmNumber:
+                                                  authVM.currentUser?.ssmNumber ??
+                                                  'Pending Document Verification',
+                                            ),
+                                      ),
+                                    );
+                                  },
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: isAppRejected ? const Color(0xFFDC2626) : const Color(0xFFD97706),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 8,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
                                     ),
                                   ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            FilledButton(
-                              onPressed: () {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) =>
-                                        ArtisanApplicationPendingScreen(
-                                          studioName:
-                                              authVM.currentUser?.studioName ??
-                                              'Your Craft Studio',
-                                          craftCategory:
-                                              authVM
-                                                  .currentUser
-                                                  ?.craftCategory ??
-                                              'Malaysian Heritage Craft',
-                                          ssmNumber:
-                                              authVM.currentUser?.ssmNumber ??
-                                              'Pending Document Verification',
-                                        ),
+                                  child: Text(
+                                    isAppRejected ? 'Review & Update' : 'View Application',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 11,
+                                    ),
                                   ),
-                                );
-                              },
-                              style: FilledButton.styleFrom(
-                                backgroundColor: const Color(0xFFD97706),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
                                 ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              child: const Text(
-                                'View Application',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 11,
-                                ),
-                              ),
+                              ],
                             ),
-                          ],
-                        ),
+                          );
+                        },
                       ),
                     ] else ...[
                       const SizedBox(height: 16),

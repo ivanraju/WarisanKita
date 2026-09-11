@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:warisan_kita/ui/tourist/apply_artisan_screen.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 
-class ArtisanApplicationPendingScreen extends StatelessWidget {
+class ArtisanApplicationPendingScreen extends StatefulWidget {
   final String studioName;
   final String craftCategory;
   final String ssmNumber;
@@ -16,6 +18,39 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
   });
 
   @override
+  State<ArtisanApplicationPendingScreen> createState() =>
+      _ArtisanApplicationPendingScreenState();
+}
+
+class _ArtisanApplicationPendingScreenState
+    extends State<ArtisanApplicationPendingScreen> {
+  Timer? _pollTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<AuthViewModel>().refreshCurrentUser();
+      }
+    });
+    _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (mounted) {
+        final auth = context.read<AuthViewModel>();
+        if (auth.currentUser != null && !auth.currentUser!.isSuspended) {
+          auth.refreshCurrentUser();
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width > 800;
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -23,15 +58,15 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
     final user = authVM.currentUser;
     final String effectiveStudio = (user?.studioName != null && user!.studioName!.isNotEmpty)
         ? user.studioName!
-        : ((studioName.isNotEmpty) ? studioName : 'Traditional Craft Studio');
+        : ((widget.studioName.isNotEmpty) ? widget.studioName : 'Traditional Craft Studio');
     final String effectiveCraft = (user?.craftCategory != null && user!.craftCategory!.isNotEmpty)
         ? user.craftCategory!
-        : ((craftCategory.isNotEmpty) ? craftCategory : 'Heritage Craft');
+        : ((widget.craftCategory.isNotEmpty) ? widget.craftCategory : 'Heritage Craft');
     final String effectiveSsm = (user?.ssmNumber != null && user!.ssmNumber!.isNotEmpty)
         ? user.ssmNumber!
-        : ((ssmNumber.isNotEmpty) ? ssmNumber : 'Under Verification');
+        : ((widget.ssmNumber.isNotEmpty) ? widget.ssmNumber : 'Under Verification');
 
-    final bool isRejected = user?.status.toUpperCase() == 'REJECTED';
+    final bool isRejected = user?.isRejectedArtisan == true;
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
@@ -298,24 +333,82 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
                 const SizedBox(height: 20),
 
                 // Action Buttons
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: FilledButton.icon(
-                    onPressed: () async {
-                      if (isRejected) {
-                        Navigator.pushReplacementNamed(context, '/apply-artisan');
-                      } else {
+                if (isRejected) ...[
+                  // Primary Action for Rejected: Update Documents & Re-Apply
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: FilledButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(
+                            builder: (_) => const ApplyArtisanScreen(),
+                          ),
+                        );
+                      },
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF004D40),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
+                      ),
+                      icon: const Icon(Icons.edit_document, size: 20),
+                      label: Text(
+                        'Update Documents & Re-Apply',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                ] else ...[
+                  // Primary Action for Pending: Check Verification Status
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: FilledButton.icon(
+                      onPressed: () async {
                         final authVM = context.read<AuthViewModel>();
                         await authVM.restoreSession();
                         if (!context.mounted) return;
                         
-                        final currentStatus = authVM.currentUser?.status;
-                        
-                        if (currentStatus == 'ACTIVE' || currentStatus == 'APPROVED') {
-                           Navigator.pushReplacementNamed(context, '/tourist');
-                        } else if (currentStatus == 'REJECTED') {
-                           // Trigger rebuild with rejected status
+                        final refreshedUser = authVM.currentUser;
+                        final isNowRejected = refreshedUser?.isRejectedArtisan == true;
+                        final isNowApproved = refreshedUser?.isApprovedArtisan == true;
+
+                        if (isNowApproved) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Row(
+                                children: [
+                                  Icon(Icons.check_circle_outline_rounded, color: Colors.white, size: 18),
+                                  SizedBox(width: 10),
+                                  Text('🎉 Congratulations! Your artisan application has been approved.'),
+                                ],
+                              ),
+                              backgroundColor: Color(0xFF10B981),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                          Navigator.pushReplacementNamed(context, '/artisan');
+                        } else if (isNowRejected) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Row(
+                                children: [
+                                  Icon(Icons.cancel_outlined, color: Colors.white, size: 18),
+                                  SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text('Your application was not approved. Please review details below and re-apply.'),
+                                  ),
+                                ],
+                              ),
+                              backgroundColor: Color(0xFFEF4444),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
@@ -331,28 +424,29 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
                             ),
                           );
                         }
-                      }
-                    },
-                    style: FilledButton.styleFrom(
-                      backgroundColor: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
-                      foregroundColor: isDark ? const Color(0xFF041412) : Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      elevation: 0,
-                    ),
-                    icon: Icon(isRejected ? Icons.refresh_rounded : Icons.refresh_rounded, size: 20),
-                    label: Text(
-                      isRejected ? 'Update Documents & Re-Apply' : 'Check Verification Status',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                        letterSpacing: 0.5,
+                      },
+                      style: FilledButton.styleFrom(
+                        backgroundColor: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                        foregroundColor: isDark ? const Color(0xFF041412) : Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
+                      ),
+                      icon: const Icon(Icons.refresh_rounded, size: 20),
+                      label: Text(
+                        'Check Verification Status',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          letterSpacing: 0.5,
+                        ),
                       ),
                     ),
                   ),
-                ),
+                ],
 
                 const SizedBox(height: 12),
 
+                // Contact Support Button
                 SizedBox(
                   width: double.infinity,
                   height: 48,
@@ -390,45 +484,27 @@ class ArtisanApplicationPendingScreen extends StatelessWidget {
 
                 const SizedBox(height: 12),
 
-                if (isRejected)
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        Navigator.pushReplacementNamed(context, '/tourist');
-                      },
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
-                        side: BorderSide(
-                          color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
-                          width: 1.5,
-                        ),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      icon: const Icon(Icons.explore_outlined, size: 20),
-                      label: Text(
-                        'Continue as Cultural Tourist',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
-                      ),
-                    ),
-                  )
-                else
-                  TextButton(
+                // Return to Tourist Mode
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: TextButton.icon(
                     onPressed: () {
                       Navigator.pushReplacementNamed(context, '/tourist');
                     },
                     style: TextButton.styleFrom(
                       foregroundColor: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
                     ),
-                    child: Text(
-                      'Explore Map as Tourist while waiting',
-                      style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, fontSize: 13),
+                    icon: const Icon(Icons.explore_outlined, size: 18),
+                    label: Text(
+                      'Continue as Cultural Tourist',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
+                ),
               ],
             ),
           ),

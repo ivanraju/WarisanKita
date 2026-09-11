@@ -91,7 +91,7 @@ class _ArtisanMainScaffoldState extends State<ArtisanMainScaffold> {
     final authVM = context.watch<AuthViewModel>();
     final user = authVM.currentUser;
 
-    // Security Guard 1: Account-level suspension blocks entire account (Artisan & Tourist)
+    // Security Guard 1: Account-level suspension blocks entire account
     if (user != null && (user.isSuspended || user.status == 'SUSPENDED')) {
       return const AccountSuspendedScreen();
     }
@@ -116,7 +116,7 @@ class _ArtisanMainScaffoldState extends State<ArtisanMainScaffold> {
       return const ArtisanStudioSuspendedScreen();
     }
 
-    if (user != null && !user.isApprovedArtisan && (user.isPendingArtisan || user.status == 'PENDING_APPROVAL' || user.status == 'PENDING' || user.status == 'REJECTED')) {
+    if (user != null && !user.isApprovedArtisan && (user.isPendingArtisan || user.isRejectedArtisan || user.status == 'PENDING_APPROVAL' || user.status == 'PENDING' || user.status == 'REJECTED' || user.artisanStatus?.toUpperCase() == 'REJECTED')) {
       return const ArtisanApplicationPendingScreen();
     }
     

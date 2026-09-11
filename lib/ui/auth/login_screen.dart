@@ -369,10 +369,16 @@ class _LoginScreenState extends State<LoginScreen> {
 
     // Handle Pending Artisan [A4]
     if (result.route == 'pending_artisan') {
+      final isRejected = result.user?.status.toUpperCase() == 'REJECTED' ||
+          result.user?.artisanStatus?.toUpperCase() == 'REJECTED';
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('ARTISAN APPLICATION SUBMITTED: Pending Admin Review'),
-          backgroundColor: Color(0xFFD97706),
+        SnackBar(
+          content: Text(
+            isRejected
+                ? 'ARTISAN APPLICATION: Needs Review & Document Updates'
+                : 'ARTISAN APPLICATION SUBMITTED: Pending Admin Review',
+          ),
+          backgroundColor: isRejected ? const Color(0xFFEF4444) : const Color(0xFFD97706),
           behavior: SnackBarBehavior.floating,
         ),
       );
