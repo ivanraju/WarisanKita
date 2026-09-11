@@ -944,6 +944,62 @@ class AuthViewModel extends ChangeNotifier {
     }
   }
 
+  Future<AuthResult> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    final cleanCurrent = currentPassword.trim();
+    final cleanNew = newPassword.trim();
+    final cleanConfirm = confirmPassword.trim();
+
+    if (cleanCurrent.isEmpty) {
+      _errorMessage = 'PLEASE ENTER YOUR CURRENT PASSWORD';
+      notifyListeners();
+      return AuthResult(success: false, message: _errorMessage);
+    }
+
+    if (cleanNew.length <= 7) {
+      _errorMessage = 'PASSWORD MUST BE GREATER THAN 7 CHARACTERS';
+      notifyListeners();
+      return AuthResult(success: false, message: _errorMessage);
+    }
+
+    if (cleanNew != cleanConfirm) {
+      _errorMessage = 'PASSWORDS DO NOT MATCH';
+      notifyListeners();
+      return AuthResult(success: false, message: _errorMessage);
+    }
+
+    if (cleanCurrent.toLowerCase() == cleanNew.toLowerCase()) {
+      _errorMessage =
+          'NEW PASSWORD IS TOO SIMILAR TO YOUR CURRENT PASSWORD: Please choose a completely new password, not just a change in uppercase or lowercase.';
+      notifyListeners();
+      return AuthResult(success: false, message: _errorMessage);
+    }
+
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _repository.changePassword(
+        currentPassword: cleanCurrent,
+        newPassword: cleanNew,
+      );
+
+      _statusMessage = 'PASSWORD CHANGED SUCCESSFULLY';
+      _isLoading = false;
+      notifyListeners();
+      return AuthResult(success: true, message: _statusMessage);
+    } catch (e) {
+      _errorMessage = _friendlyError(e);
+      _isLoading = false;
+      notifyListeners();
+      return AuthResult(success: false, message: _errorMessage);
+    }
+  }
+
   Future<void> logout() async {
     try {
       await _repository.signOut();

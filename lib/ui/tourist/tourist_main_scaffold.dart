@@ -56,6 +56,21 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
       return const AccountSuspendedScreen();
     }
 
+    if (user == null) {
+      if (!authVM.isLoading) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted &&
+              ModalRoute.of(context)?.isCurrent == true &&
+              context.read<AuthViewModel>().currentUser == null) {
+            Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil('/login', (route) => false);
+          }
+        });
+      }
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     _scheduleJourneyRestoration();
 
     final langVM = context.watch<LanguageViewModel>();

@@ -81,6 +81,16 @@ class UserRepository {
     );
   }
 
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) {
+    return _service.changePassword(
+      currentPassword: currentPassword,
+      newPassword: newPassword,
+    );
+  }
+
   Future<UserModel> verifyEmailOtp({
     required String email,
     required String token,

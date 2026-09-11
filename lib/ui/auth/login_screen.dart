@@ -379,9 +379,9 @@ class _LoginScreenState extends State<LoginScreen> {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (_) => ArtisanApplicationPendingScreen(
-            studioName: result.user?.studioName ?? 'MASTER ARTISAN STUDIO',
-            craftCategory: result.user?.craftCategory ?? 'Pottery & Ceramics',
-            ssmNumber: result.user?.ssmNumber ?? '202601004821 (SSM Verified)',
+            studioName: result.user?.studioName ?? '',
+            craftCategory: result.user?.craftCategory ?? '',
+            ssmNumber: result.user?.ssmNumber ?? '',
           ),
         ),
       );

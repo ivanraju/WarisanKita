@@ -477,7 +477,11 @@ class SupabaseService {
         final rawUser = prefs.getString(_keyAuthUser);
         if (rawUser != null && rawUser.isNotEmpty) {
           final cachedUser = jsonDecode(rawUser) as Map<String, dynamic>;
-          if (cachedUser['experience'] != null && cachedUser['experience'].toString().trim().isNotEmpty) {
+          final cachedEmail = cachedUser['email']?.toString().toLowerCase();
+          final cachedId = cachedUser['id']?.toString();
+          if ((cachedId == authUser.id || cachedEmail == authUser.email?.toLowerCase()) &&
+              cachedUser['experience'] != null &&
+              cachedUser['experience'].toString().trim().isNotEmpty) {
             row['experience'] = cachedUser['experience'].toString().trim();
           }
         }
@@ -697,11 +701,75 @@ class SupabaseService {
           'ADMINISTRATOR ACCOUNT PROTECTED: Administrator credentials cannot be reset via self-service. Contact support.',
         );
       }
-      await client.auth.updateUser(UserAttributes(password: newPassword));
+      try {
+        await client.auth.updateUser(UserAttributes(password: newPassword));
+      } on AuthException catch (e) {
+        final errStr = e.message.toLowerCase();
+        if (errStr.contains('should be different') ||
+            errStr.contains('same as old') ||
+            errStr.contains('cannot be the same') ||
+            errStr.contains('same password') ||
+            e.code == 'same_password') {
+          throw const AuthException(
+            'NEW PASSWORD CANNOT BE THE SAME AS YOUR CURRENT PASSWORD: New password should be different from your old password. Please choose a completely new password, not just a change in uppercase or lowercase.',
+          );
+        }
+        rethrow;
+      }
       _recoveryAccessToken = null;
       await signOut();
     } finally {
       _resetInProgress = false;
+    }
+  }
+
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final client = _authClient;
+    final currentUser = client.auth.currentUser;
+    final session = client.auth.currentSession;
+    if (currentUser == null || session == null || session.isExpired) {
+      throw const AuthException('No active session. Please sign in again.');
+    }
+
+    final cleanCurrent = currentPassword.trim();
+    final cleanNew = newPassword.trim();
+
+    if (cleanCurrent.toLowerCase() == cleanNew.toLowerCase()) {
+      throw const AuthException(
+        'NEW PASSWORD IS TOO SIMILAR TO YOUR CURRENT PASSWORD: Please choose a completely new password, not just a change in uppercase or lowercase.',
+      );
+    }
+
+    final email = currentUser.email;
+    if (email == null || email.isEmpty) {
+      throw const AuthException('User email not found. Please sign in again.');
+    }
+
+    try {
+      await client.auth.signInWithPassword(email: email, password: cleanCurrent);
+    } on AuthException catch (_) {
+      throw const AuthException(
+        'INCORRECT CURRENT PASSWORD: The current password you entered does not match our records.',
+      );
+    }
+
+    try {
+      await client.auth.updateUser(UserAttributes(password: cleanNew));
+    } on AuthException catch (e) {
+      final errStr = e.message.toLowerCase();
+      if (errStr.contains('should be different') ||
+          errStr.contains('same as old') ||
+          errStr.contains('cannot be the same') ||
+          errStr.contains('same password') ||
+          e.code == 'same_password') {
+        throw const AuthException(
+          'NEW PASSWORD CANNOT BE THE SAME AS YOUR CURRENT PASSWORD: New password should be different from your old password. Please choose a completely new password, not just a change in uppercase or lowercase.',
+        );
+      }
+      rethrow;
     }
   }
 
