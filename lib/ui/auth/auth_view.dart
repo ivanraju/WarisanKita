@@ -119,7 +119,7 @@ class _LoginScreenState extends State<LoginScreen> {
             controller: _passwordController,
             obscureText: true,
             decoration: const InputDecoration(
-              hintText: 'Password',
+              hintText: 'Enter your password',
               prefixIcon: Icon(Icons.lock_outline_rounded),
             ),
           ),
