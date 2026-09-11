@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:warisan_kita/ui/core/account_suspended_screen.dart';
 import 'package:warisan_kita/ui/matchmaker/tourist_matchmaker_view.dart';
 import 'package:warisan_kita/ui/core/live_forum_tab.dart';
@@ -25,6 +26,7 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
   int _currentIndex = 0;
   Timer? _statusPollTimer;
   bool _journeyRestoreScheduled = false;
+  bool _isRejectionBannerDismissed = false;
 
   @override
   void initState() {
@@ -32,6 +34,7 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         context.read<AuthViewModel>().refreshCurrentUser();
+        _checkRejectionBannerDismissed();
       }
     });
     if (widget.enableLivePolling) {
@@ -43,6 +46,17 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
           }
         }
       });
+    }
+  }
+
+  Future<void> _checkRejectionBannerDismissed() async {
+    final user = context.read<AuthViewModel>().currentUser;
+    if (user != null) {
+      final prefs = await SharedPreferences.getInstance();
+      final dismissed = prefs.getBool('dismissed_rejection_banner_${user.id}') ?? false;
+      if (mounted && dismissed) {
+        setState(() => _isRejectionBannerDismissed = true);
+      }
     }
   }
 
@@ -91,7 +105,7 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
       extendBody: true,
       body: Column(
         children: [
-          if (isArtisanRejected)
+          if (isArtisanRejected && !_isRejectionBannerDismissed)
             Material(
               color: isDark ? const Color(0xFF2A1215) : const Color(0xFFFEF2F2),
               elevation: 2,
@@ -166,6 +180,26 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
                           'Review',
                           style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold),
                         ),
+                      ),
+                      const SizedBox(width: 4),
+                      IconButton(
+                        icon: Icon(
+                          Icons.close,
+                          size: 18,
+                          color: isDark ? const Color(0xFFFCA5A5) : const Color(0xFF991B1B),
+                        ),
+                        tooltip: 'Dismiss message',
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                        onPressed: () async {
+                          setState(() => _isRejectionBannerDismissed = true);
+                          final prefs = await SharedPreferences.getInstance();
+                          final uid = context.read<AuthViewModel>().currentUser?.id;
+                          if (uid != null) {
+                            await prefs.setBool('dismissed_rejection_banner_$uid', true);
+                          }
+                        },
                       ),
                     ],
                   ),
