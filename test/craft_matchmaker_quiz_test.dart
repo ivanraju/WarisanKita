@@ -564,5 +564,76 @@ void main() {
       expect(find.text('No artisans match your quiz choices'), findsOneWidget);
       expect(find.text('Retake Quiz'), findsOneWidget);
     });
+
+    testWidgets('Strict 4-question match: only suggests artisans matching Experience, Environment, Material, and Region', (tester) async {
+      tester.view.physicalSize = const Size(1200, 1000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      SharedPreferences.setMockInitialValues({});
+      final authVM = AuthViewModel();
+      final matchmakerVM = MatchmakerViewModel();
+      final langVM = LanguageViewModel();
+
+      final fourMatchArtisans = [
+        ArtisanModel(
+          id: 'artisan_hands_on_studio',
+          name: 'Siti Hands-On Batik Studio',
+          craftType: 'Batik Canting',
+          state: 'Kelantan',
+          description: 'Hands-on indoor workshop studio in Kota Bharu',
+          imageUrl: 'https://example.com/siti.png',
+          rating: 4.9,
+          workshopCount: 5,
+          tags: const ['batik', 'canting', 'workshop', 'studio'],
+        ),
+        ArtisanModel(
+          id: 'artisan_outdoor_village',
+          name: 'Pak Hassan Kampong Potter',
+          craftType: 'Clay Pottery & Ceramics',
+          state: 'Perak',
+          description: 'Outdoor traditional village pottery workshop',
+          imageUrl: 'https://example.com/hassan.png',
+          rating: 4.8,
+          tags: const ['labu sayong', 'pottery', 'clay', 'village', 'outdoor'],
+        ),
+      ];
+
+      final dirVM = DirectoryViewModel(repository: _MockArtisanRepository(fourMatchArtisans));
+      await dirVM.fetchArtisans();
+
+      // User chooses: Hands-on (Q1), Indoor Studio (Q2), Batik (Q3), East Coast (Q4)
+      await matchmakerVM.saveQuizResults(
+        experienceType: 'Hands-on Workshop',
+        environment: 'Indoor Studio',
+        material: 'Batik & Songket Textiles',
+        region: 'East Coast Heritage',
+        userEmail: 'tourist@warisankita.my',
+      );
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: authVM),
+            ChangeNotifierProvider.value(value: matchmakerVM),
+            ChangeNotifierProvider.value(value: langVM),
+            ChangeNotifierProvider.value(value: dirVM),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(
+              body: TouristDirectoryTab(),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      // Siti matches ALL 4 questions -> Suggested
+      expect(find.text('Siti Hands-On Batik Studio'), findsWidgets);
+      // Pak Hassan does NOT match material/region/env -> Not suggested in recommendations
+      expect(find.textContaining('The Royal Textile Connoisseur'), findsOneWidget);
+    });
   });
 }

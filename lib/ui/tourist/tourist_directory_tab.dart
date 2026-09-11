@@ -492,7 +492,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
             ? tags.map((t) => t.toString().toLowerCase()).toList()
             : (tags is String ? [tags.toLowerCase()] : <String>[]);
 
-        // 1. Material / Craft match (Strict prerequisite from Quiz Q3)
+        // 1. Material / Craft match (Quiz Q3)
         bool matchesMaterial = false;
         for (final kw in materialKeywords) {
           if (craft.contains(kw) || cat.contains(kw) || name.contains(kw) || tagList.any((t) => t.contains(kw))) {
@@ -501,41 +501,66 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
           }
         }
 
-        // 2. Region / State match (Strict prerequisite from Quiz Q4)
+        // 2. Region / State match (Quiz Q4)
         bool matchesRegion = targetStates.isEmpty ||
             targetStates.any((s) => state.contains(s) || address.contains(s));
 
-        // Only recommend artisans that strictly match BOTH the chosen craft/material AND region from the quiz
-        if (matchesMaterial && matchesRegion) {
-          double score = 100.0; // Base score for exact craft + region match
+        // 3. Experience style match (Quiz Q1: Hands-on Workshop vs Observing Master Artisans)
+        bool matchesExp = false;
+        final expLower = chosenExp.toLowerCase();
+        final workshopCount = (a['workshopCount'] as num?)?.toInt() ?? 0;
+        final expYears = a['experienceYears']?.toString().toLowerCase() ?? '';
+        if (expLower.isEmpty) {
+          matchesExp = true;
+        } else if (expLower.contains('hands-on')) {
+          matchesExp = workshopCount > 0 ||
+              tagList.any((t) => t.contains('workshop') || t.contains('hands-on') || t.contains('class') || t.contains('craft') || t.contains('learn') || t.contains('diy') || t.contains('bengkel') || t.contains('sesi') || t.contains('canting') || t.contains('pottery') || t.contains('carving')) ||
+              bio.contains('workshop') || bio.contains('hands-on') || bio.contains('class') || bio.contains('learn') || bio.contains('craft') || bio.contains('bengkel') || bio.contains('canting') || bio.contains('pottery') || bio.contains('carving');
+        } else if (expLower.contains('observing')) {
+          matchesExp = expYears.contains('10+') || expYears.contains('20+') || expYears.contains('30+') || expYears.contains('40+') || expYears.contains('master') ||
+              tagList.any((t) => t.contains('master') || t.contains('heritage') || t.contains('authentic') || t.contains('tokoh') || t.contains('traditional') || t.contains('artisan') || t.contains('warisan') || t.contains('adiguru')) ||
+              bio.contains('master') || bio.contains('heritage') || bio.contains('demonstration') || bio.contains('traditional') || bio.contains('authentic') || bio.contains('tokoh') || bio.contains('warisan') ||
+              name.contains('master') || name.contains('mak') || name.contains('pak') || name.contains('uncle') || name.contains('che') || name.contains('madam');
+        } else {
+          matchesExp = true;
+        }
 
-          // 3. Experience style match bonus from Quiz Q1 (Weight: +25)
-          final expLower = chosenExp.toLowerCase();
-          final workshopCount = (a['workshopCount'] as num?)?.toInt() ?? 0;
-          if (expLower.contains('hands-on')) {
-            if (workshopCount > 0 || tagList.any((t) => t.contains('workshop') || t.contains('hands-on') || t.contains('class'))) {
-              score += 25.0;
-            }
-          } else if (expLower.contains('observing')) {
-            final expYears = a['experienceYears']?.toString().toLowerCase() ?? '';
-            if (expYears.contains('10+') || expYears.contains('20+') || tagList.any((t) => t.contains('master') || t.contains('heritage'))) {
-              score += 25.0;
-            }
+        // 4. Studio setting / environment match (Quiz Q2: Indoor Studio vs Outdoor Village)
+        bool matchesEnv = false;
+        final envLower = chosenEnv.toLowerCase();
+        if (envLower.isEmpty) {
+          matchesEnv = true;
+        } else if (envLower.contains('indoor')) {
+          matchesEnv = tagList.any((t) => t.contains('studio') || t.contains('gallery') || t.contains('galeri') || t.contains('indoor') || t.contains('center') || t.contains('centre') || t.contains('boutique') || t.contains('shop') || t.contains('outlet') || t.contains('complex') || t.contains('kompleks') || t.contains('dewan') || t.contains('hall') || t.contains('museum') || t.contains('muzium') || t.contains('workshop') || t.contains('painting') || t.contains('canting') || t.contains('craft') || t.contains('batik') || t.contains('songket') || t.contains('pewter')) ||
+              bio.contains('studio') || bio.contains('gallery') || bio.contains('galeri') || bio.contains('indoor') || bio.contains('center') || bio.contains('centre') || bio.contains('boutique') || bio.contains('shop') || bio.contains('outlet') || bio.contains('complex') || bio.contains('kompleks') || bio.contains('dewan') || bio.contains('hall') || bio.contains('museum') || bio.contains('muzium') || bio.contains('workshop') || bio.contains('painting') || bio.contains('canting') || bio.contains('craft') || bio.contains('batik') || bio.contains('songket') || bio.contains('pewter') ||
+              address.contains('studio') || address.contains('gallery') || address.contains('complex') || address.contains('center') || address.contains('centre') || address.contains('mall') || address.contains('plaza') || address.contains('jalan') || address.contains('lorong') ||
+              name.contains('studio') || name.contains('gallery') || name.contains('galeri') || name.contains('boutique');
+        } else if (envLower.contains('outdoor') || envLower.contains('village')) {
+          matchesEnv = tagList.any((t) => t.contains('village') || t.contains('kampong') || t.contains('kampung') || t.contains('outdoor') || t.contains('open-air') || t.contains('garden') || t.contains('taman') || t.contains('desa') || t.contains('river') || t.contains('sungai') || t.contains('nature') || t.contains('seri') || t.contains('kebun') || t.contains('chalet') || t.contains('homestay') || t.contains('hutan') || t.contains('traditional') || t.contains('authentic') || t.contains('rural') || t.contains('labu') || t.contains('clay') || t.contains('pottery') || t.contains('wood') || t.contains('ukir')) ||
+              bio.contains('village') || bio.contains('kampong') || bio.contains('kampung') || bio.contains('outdoor') || bio.contains('open-air') || bio.contains('garden') || bio.contains('taman') || bio.contains('desa') || bio.contains('river') || bio.contains('sungai') || bio.contains('nature') || bio.contains('seri') || bio.contains('kebun') || bio.contains('chalet') || bio.contains('homestay') || bio.contains('hutan') || bio.contains('traditional') || bio.contains('authentic') || bio.contains('rural') || bio.contains('labu') || bio.contains('clay') || bio.contains('pottery') || bio.contains('wood') || bio.contains('ukir') ||
+              address.contains('kampung') || address.contains('kampong') || address.contains('desa') || address.contains('taman') || address.contains('sungai') || address.contains('ulu') || address.contains('hulu') || address.contains('kuala');
+        } else {
+          matchesEnv = true;
+        }
+
+        // Only recommend artisans that strictly match ALL 4 quiz questions
+        if (matchesMaterial && matchesRegion && matchesExp && matchesEnv) {
+          double score = 100.0; // Base score for 4-question match
+
+          // Additional affinity bonuses
+          if (expLower.contains('hands-on') && (workshopCount > 0 || tagList.any((t) => t.contains('workshop') || t.contains('hands-on')))) {
+            score += 25.0;
+          } else if (expLower.contains('observing') && (expYears.contains('10+') || expYears.contains('20+') || tagList.any((t) => t.contains('master')))) {
+            score += 25.0;
           }
 
-          // 4. Studio setting / environment match bonus from Quiz Q2 (Weight: +25)
-          final envLower = chosenEnv.toLowerCase();
-          if (envLower.contains('indoor')) {
-            if (tagList.any((t) => t.contains('studio') || t.contains('gallery') || t.contains('indoor')) || bio.contains('studio') || bio.contains('gallery')) {
-              score += 25.0;
-            }
-          } else if (envLower.contains('outdoor') || envLower.contains('village')) {
-            if (tagList.any((t) => t.contains('village') || t.contains('kampong') || t.contains('outdoor')) || bio.contains('village') || bio.contains('kampong')) {
-              score += 25.0;
-            }
+          if (envLower.contains('indoor') && (tagList.any((t) => t.contains('studio') || t.contains('gallery')) || bio.contains('studio'))) {
+            score += 25.0;
+          } else if ((envLower.contains('outdoor') || envLower.contains('village')) && (tagList.any((t) => t.contains('village') || t.contains('kampong')) || bio.contains('village'))) {
+            score += 25.0;
           }
 
-          // 5. Rating tiebreaker
+          // Rating tiebreaker
           final rating = (a['rating'] as num?)?.toDouble() ?? 0.0;
           score += (rating * 2.0);
 
