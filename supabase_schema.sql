@@ -540,6 +540,9 @@ CREATE POLICY "Public select artisan_profiles" ON public.artisan_profiles FOR SE
 DROP POLICY IF EXISTS "Public update artisan_profiles" ON public.artisan_profiles;
 CREATE POLICY "Public update artisan_profiles" ON public.artisan_profiles FOR UPDATE USING (true) WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Public insert artisan_profiles" ON public.artisan_profiles;
+CREATE POLICY "Public insert artisan_profiles" ON public.artisan_profiles FOR INSERT WITH CHECK (true);
+
 DROP POLICY IF EXISTS "Public delete artisan_profiles" ON public.artisan_profiles;
 CREATE POLICY "Public delete artisan_profiles" ON public.artisan_profiles FOR DELETE USING (true);
 

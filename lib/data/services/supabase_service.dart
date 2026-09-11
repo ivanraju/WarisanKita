@@ -2458,25 +2458,33 @@ class SupabaseService {
               ? 'APPROVED'
               : newStatus;
           if (artisanProfileBeforeUpdate != null) {
-            await client
-                .from('artisan_profiles')
-                .update({
-                  'status': artisanStatus,
-                  'updated_at': DateTime.now().toIso8601String(),
-                })
-                .eq('user_id', userRow['id']);
+            try {
+              await client
+                  .from('artisan_profiles')
+                  .update({
+                    'status': artisanStatus,
+                    'updated_at': DateTime.now().toIso8601String(),
+                  })
+                  .eq('user_id', userRow['id']);
+            } catch (updErr) {
+              debugPrint('Direct artisan_profiles update note: $updErr');
+            }
           } else {
-            final cached = _userStore[cleanEmail];
-            await client.from('artisan_profiles').insert({
-              'user_id': userRow['id'],
-              'status': artisanStatus,
-              'studio_name': cached?['studioName'] ?? cached?['studio_name'] ?? 'Heritage Studio',
-              'craft_category': cached?['craftCategory'] ?? cached?['craft_category'] ?? 'Traditional Craft',
-              if (cached?['ssmNumber'] != null || cached?['ssm_number'] != null)
-                'ssm_number': cached?['ssmNumber'] ?? cached?['ssm_number'],
-              'created_at': DateTime.now().toIso8601String(),
-              'updated_at': DateTime.now().toIso8601String(),
-            });
+            try {
+              final cached = _userStore[cleanEmail];
+              await client.from('artisan_profiles').insert({
+                'user_id': userRow['id'],
+                'status': artisanStatus,
+                'studio_name': cached?['studioName'] ?? cached?['studio_name'] ?? 'Heritage Studio',
+                'craft_category': cached?['craftCategory'] ?? cached?['craft_category'] ?? 'Traditional Craft',
+                if (cached?['ssmNumber'] != null || cached?['ssm_number'] != null)
+                  'ssm_number': cached?['ssmNumber'] ?? cached?['ssm_number'],
+                'created_at': DateTime.now().toIso8601String(),
+                'updated_at': DateTime.now().toIso8601String(),
+              });
+            } catch (insErr) {
+              debugPrint('Direct artisan_profiles insert note (RLS): $insErr');
+            }
           }
 
           // The RPC above may already have changed the profile to APPROVED.
