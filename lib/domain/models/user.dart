@@ -79,21 +79,40 @@ class UserModel {
   bool get hasPendingRelocation =>
       pendingRelocationAddress != null && pendingRelocationAddress!.trim().isNotEmpty;
 
-  bool get isDualRole => false;
+  bool get isDualRole =>
+      role == 'Artisan & Tourist' ||
+      role == 'Artisan/Tourist' ||
+      role == 'Tourist & Artisan' ||
+      role == 'Tourist/Artisan' ||
+      role == 'Artisan and Tourist' ||
+      (roles.contains('Artisan') && roles.contains('Tourist')) ||
+      (roles.contains('Master Artisan') && roles.contains('Tourist')) ||
+      ((role == 'Tourist' || role == 'Cultural Tourist' || roles.contains('Tourist')) &&
+          (roles.contains('Artisan') ||
+              roles.contains('Master Artisan') ||
+              artisanStatus?.toUpperCase() == 'APPROVED' ||
+              (studioName != null && studioName!.isNotEmpty)));
 
   bool get isArtisan =>
       role == 'Artisan' ||
       role == 'Master Artisan' ||
+      isDualRole ||
       roles.contains('Artisan') ||
-      roles.contains('Master Artisan');
+      roles.contains('Master Artisan') ||
+      artisanStatus?.toUpperCase() == 'APPROVED';
 
   bool get isTourist =>
       role == 'Tourist' ||
+      isDualRole ||
       roles.contains('Tourist');
 
   bool get isAdmin => role == 'Admin' || roles.contains('Admin');
 
-  bool get hasMultipleRoles => false;
+  bool get hasMultipleRoles =>
+      isDualRole ||
+      roles.length > 1 ||
+      (isArtisan && (role == 'Tourist' || roles.contains('Tourist'))) ||
+      (artisanStatus?.toUpperCase() == 'APPROVED');
 
   bool get isApproved => status == 'ACTIVE' || status == 'APPROVED';
   bool get isPendingApproval => status == 'PENDING_APPROVAL' || status == 'PENDING';
@@ -109,8 +128,10 @@ class UserModel {
     if (role == 'Tourist') return false;
     return (role == 'Artisan' ||
         role == 'Master Artisan' ||
+        isDualRole ||
         roles.contains('Artisan') ||
-        roles.contains('Master Artisan')) &&
+        roles.contains('Master Artisan') ||
+        artisanStatus?.toUpperCase() == 'APPROVED') &&
        isApproved &&
        !isArtisanStudioSuspended;
   }

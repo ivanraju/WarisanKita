@@ -581,11 +581,16 @@ class SupabaseService {
       }
     }
 
+    final cachedStatus = (_userStore[authUser.email?.toLowerCase()]?['artisan_status'] ?? '').toString().toUpperCase();
     final userArtisanStatus = (row['artisan_status'] ?? '').toString().toUpperCase();
-    if (userArtisanStatus == 'CLOSED') {
+    if (userArtisanStatus == 'CLOSED' || cachedStatus == 'CLOSED') {
       row['role'] = 'Tourist';
       row['roles'] = ['Tourist'];
       row['artisan_status'] = 'CLOSED';
+      row['studio_name'] = null;
+      row['craft_category'] = null;
+      row['ssm_number'] = null;
+      row['artisan_profiles'] = null;
     } else if (userArtisanStatus == 'PENDING_APPROVAL' ||
         userArtisanStatus == 'PENDING') {
       row['role'] = 'Tourist';
@@ -3040,6 +3045,12 @@ class SupabaseService {
       ..['status'] = 'ACTIVE'
       ..['artisan_status'] = 'CLOSED'
       ..['artisanStatus'] = 'CLOSED'
+      ..['studio_name'] = null
+      ..['studioName'] = null
+      ..['craft_category'] = null
+      ..['craftCategory'] = null
+      ..['ssm_number'] = null
+      ..['ssmNumber'] = null
       ..['is_live_open'] = false
       ..remove('artisan_profiles');
     _userStore[email] = existing;
@@ -3054,6 +3065,21 @@ class SupabaseService {
         );
       } catch (e) {
         debugPrint('deactivate_artisan_studio RPC note: $e');
+      }
+      try {
+        await client.rpc(
+          'admin_update_user_status',
+          params: {
+            'p_email': email,
+            'p_status': 'CLOSED',
+            'p_role': 'Tourist',
+            'p_studio_name': null,
+            'p_craft_category': null,
+            'p_ssm_number': null,
+          },
+        );
+      } catch (e) {
+        debugPrint('deactivateArtisanStudio admin_update_user_status fallback note: $e');
       }
       try {
         await client
@@ -3085,8 +3111,12 @@ class SupabaseService {
             .from('users')
             .update({
               'role': 'Tourist',
+              'roles': ['Tourist'],
               'artisan_status': 'CLOSED',
               'status': 'ACTIVE',
+              'studio_name': null,
+              'craft_category': null,
+              'ssm_number': null,
               'is_live_open': false,
               'updated_at': DateTime.now().toIso8601String(),
             })
@@ -3110,7 +3140,24 @@ class SupabaseService {
       }
     }
 
-    final updated = UserModel.fromMap(existing);
+    var updated = UserModel.fromMap(existing);
+    if (client != null && cloudUser != null) {
+      try {
+        final reloaded = await _loadAuthenticatedProfile();
+        updated = reloaded.copyWith(
+          role: 'Tourist',
+          roles: const ['Tourist'],
+          artisanStatus: 'CLOSED',
+          clearStudioDetails: true,
+        );
+      } catch (_) {}
+    }
+    updated = updated.copyWith(
+      role: 'Tourist',
+      roles: const ['Tourist'],
+      artisanStatus: 'CLOSED',
+      clearStudioDetails: true,
+    );
     await _saveAuthSession(updated);
     return updated;
   }

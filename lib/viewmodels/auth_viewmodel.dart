@@ -133,12 +133,22 @@ class AuthViewModel extends ChangeNotifier {
             _relocationResolutionNotice = 'REJECTED';
           }
         }
-        _currentUser = user;
+        var resolvedUser = user;
+        if (_currentUser?.artisanStatus?.toUpperCase() == 'CLOSED' &&
+            user.artisanStatus?.toUpperCase() != 'CLOSED') {
+          resolvedUser = user.copyWith(
+            role: 'Tourist',
+            roles: const ['Tourist'],
+            artisanStatus: 'CLOSED',
+            clearStudioDetails: true,
+          );
+        }
+        _currentUser = resolvedUser;
         if (_currentUser!.isArtisanStudioSuspended &&
             (_activeRole == 'Artisan' || _activeRole == 'Master Artisan')) {
           _activeRole = 'Cultural Tourist';
         }
-        if (user.status == 'SUSPENDED' || user.isSuspended) {
+        if (resolvedUser.status == 'SUSPENDED' || resolvedUser.isSuspended) {
           _errorMessage = 'ACCOUNT SUSPENDED BY ADMINISTRATOR: CONTACT SUPPORT';
         }
         notifyListeners();
@@ -404,18 +414,42 @@ class AuthViewModel extends ChangeNotifier {
 
       _currentUser = user;
 
-      // Strict single-role routing
-      String targetRoute = '/tourist';
+      // Dedicated Admin routing
       if (user.role == 'Admin') {
-        targetRoute = '/admin';
-      } else if (user.role == 'Artisan' || user.role == 'Master Artisan') {
-        if (!user.isApprovedArtisan) {
-          targetRoute = 'pending_artisan';
-        } else {
-          targetRoute = '/artisan';
-        }
+        _activeRole = 'Admin';
+        _statusMessage = 'LOGIN SUCCESSFUL';
+        _isLoading = false;
+        notifyListeners();
+        return AuthResult(
+          success: true,
+          user: user,
+          route: '/admin',
+          message: _statusMessage,
+        );
       }
 
+      // Alternate Flow A5: Artisan Active Mode Selection (Master Artisan vs Cultural Tourist)
+      if (user.isArtisan ||
+          user.isApprovedArtisan ||
+          user.isPendingArtisan ||
+          user.isArtisanStudioSuspended ||
+          (user.artisanStatus?.toUpperCase() == 'APPROVED' && user.artisanStatus?.toUpperCase() != 'CLOSED')) {
+        _requiresRoleSelection = true;
+        _availableRoles = const ['Master Artisan', 'Cultural Tourist'];
+        _statusMessage = 'SELECT YOUR ACTIVE ROLE MODE';
+        _isLoading = false;
+        notifyListeners();
+        return AuthResult(
+          success: true,
+          user: user,
+          requiresRoleSelection: true,
+          availableRoles: _availableRoles,
+          message: _statusMessage,
+        );
+      }
+
+      // Default Tourist routing
+      String targetRoute = '/tourist';
       _activeRole = user.role;
       _statusMessage = 'LOGIN SUCCESSFUL';
       _isLoading = false;
@@ -1052,7 +1086,12 @@ class AuthViewModel extends ChangeNotifier {
 
     try {
       final updatedUser = await _repository.deactivateArtisanStudio();
-      _currentUser = updatedUser;
+      _currentUser = updatedUser.copyWith(
+        role: 'Tourist',
+        roles: const ['Tourist'],
+        artisanStatus: 'CLOSED',
+        clearStudioDetails: true,
+      );
       _activeRole = 'Tourist';
       _requiresRoleSelection = false;
       _errorMessage = null;
