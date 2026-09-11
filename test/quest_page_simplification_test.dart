@@ -148,7 +148,7 @@ void main() {
         for (final label in [
           'Start Quest',
           'Move Within Quest Zone',
-          'Resume Quest',
+          'Stop Quest',
           'Quest In Progress',
           'Return to Quest Area',
           'Quest Completed',

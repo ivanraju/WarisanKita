@@ -413,6 +413,7 @@ class ArtisanMatchCard extends StatelessWidget {
   Color _journeyColor(WorkshopQuestState? state) => switch (state) {
     WorkshopQuestState.available => const Color(0xFFFFD54F),
     WorkshopQuestState.inProgress => const Color(0xFFE67E00),
+    WorkshopQuestState.stopped => const Color(0xFFB45309),
     WorkshopQuestState.blockedByOtherQuest => const Color(0xFFB45309),
     WorkshopQuestState.completed => const Color(0xFF00695C),
     WorkshopQuestState.unavailable || null => const Color(0xFF004D40),
@@ -421,6 +422,7 @@ class ArtisanMatchCard extends StatelessWidget {
   IconData _journeyIcon(WorkshopQuestState? state) => switch (state) {
     WorkshopQuestState.available => Icons.flag_rounded,
     WorkshopQuestState.inProgress => Icons.directions_walk_rounded,
+    WorkshopQuestState.stopped => Icons.stop_circle_outlined,
     WorkshopQuestState.blockedByOtherQuest => Icons.lock_clock_rounded,
     WorkshopQuestState.completed => Icons.workspace_premium_rounded,
     WorkshopQuestState.unavailable || null => Icons.storefront_rounded,
@@ -440,6 +442,7 @@ class _JourneyPreview extends StatelessWidget {
         : switch (journey.state) {
             WorkshopQuestState.available => const Color(0xFFB45309),
             WorkshopQuestState.inProgress => const Color(0xFFE67E00),
+            WorkshopQuestState.stopped => const Color(0xFFB45309),
             WorkshopQuestState.blockedByOtherQuest => const Color(0xFFB45309),
             WorkshopQuestState.completed => const Color(0xFF00695C),
             WorkshopQuestState.unavailable => const Color(0xFF64748B),

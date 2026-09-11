@@ -7,6 +7,7 @@ class QuestParticipation {
   const QuestParticipation({required this.status, required this.startedAt});
 
   bool get isCompleted => status.toUpperCase() == 'COMPLETED';
+  bool get isStopped => status.toUpperCase() == 'STOPPED';
 
   factory QuestParticipation.fromMap(Map<String, dynamic> map) {
     return QuestParticipation(

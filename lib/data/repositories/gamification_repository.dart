@@ -263,6 +263,8 @@ class GamificationRepository {
           ? WorkshopQuestState.completed
           : progressStatus == 'IN_PROGRESS' && questId == activeQuestId
           ? WorkshopQuestState.inProgress
+          : progressStatus == 'STOPPED'
+          ? WorkshopQuestState.stopped
           : activeQuestId != null
           ? WorkshopQuestState.blockedByOtherQuest
           : WorkshopQuestState.available;
@@ -376,6 +378,10 @@ class GamificationRepository {
   }) async {
     final row = await _service.startQuest(questId: questId, taskIds: taskIds);
     return QuestStartResult.fromMap(row);
+  }
+
+  Future<QuestParticipation> stopQuest(String questId) async {
+    return QuestParticipation.fromMap(await _service.stopQuest(questId));
   }
 
   Future<List<TaskProgress>> getTaskProgress(List<String> taskIds) async {

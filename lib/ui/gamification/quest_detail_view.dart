@@ -36,6 +36,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
   bool? _lastReportedInside;
   String? _lastReportedStatus;
   bool _isShowingCompletionDialog = false;
+  Timer? _exitConfirmationTimer;
 
   @override
   void initState() {
@@ -74,6 +75,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
 
   @override
   void dispose() {
+    _exitConfirmationTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -170,6 +172,34 @@ class _QuestDetailViewState extends State<QuestDetailView>
 
     _lastReportedInside = inside;
     _lastReportedStatus = status;
+    if (!inside && status == 'IN_PROGRESS') {
+      _exitConfirmationTimer ??= Timer(const Duration(seconds: 3), () async {
+        _exitConfirmationTimer = null;
+        if (!mounted || !(ModalRoute.of(context)?.isCurrent ?? false)) return;
+        final latestDistance = context
+            .read<MapViewModel>()
+            .getDistanceToWorkshop(workshop);
+        if (latestDistance != null &&
+            latestDistance > quest.geofenceRadiusMeters) {
+          await viewModel.handleQuestProximityChanged(false);
+          if (!mounted || viewModel.questProgressStatus != 'STOPPED') return;
+          unawaited(context.read<MapViewModel>().loadJourneyData());
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Quest stopped because you left the workshop area. '
+                'Your progress has been saved.',
+              ),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: Color(0xFF005B4F),
+            ),
+          );
+        }
+      });
+      return;
+    }
+    _exitConfirmationTimer?.cancel();
+    _exitConfirmationTimer = null;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) unawaited(viewModel.handleQuestProximityChanged(inside));
     });
@@ -584,7 +614,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
                       ? viewModel.isDwellTracking
                             ? 'Inside quest area • Timer running'
                             : viewModel.canResumeDwellTracking
-                            ? 'Inside quest area • Tap Resume Quest to continue'
+                            ? 'Inside quest area • Tap Start Quest to continue'
                             : 'Inside quest area • Timer paused'
                       : 'Outside quest area • Timer paused',
                   style: GoogleFonts.plusJakartaSans(
@@ -965,6 +995,12 @@ class _QuestDetailViewState extends State<QuestDetailView>
         !isBlockedByAnotherQuest &&
         !isOutsideBeforeStart &&
         !viewModel.isStartingQuest;
+    final canStop =
+        isInProgress &&
+        !isCompleted &&
+        !isOutOfRange &&
+        !viewModel.isStartingQuest &&
+        !viewModel.isStoppingQuest;
     return Container(
       decoration: BoxDecoration(
         color: _isDark ? const Color(0xFF0B211D) : const Color(0xFFFFFCF5),
@@ -1023,6 +1059,8 @@ class _QuestDetailViewState extends State<QuestDetailView>
                     ? () => _showActiveQuestConflict(context, viewModel)
                     : canResume
                     ? () => _resumeQuest(context, viewModel)
+                    : canStop
+                    ? () => _confirmStopQuest(context, viewModel)
                     : canStart
                     ? () => _startQuest(context, viewModel)
                     : null,
@@ -1046,6 +1084,14 @@ class _QuestDetailViewState extends State<QuestDetailView>
                           color: Colors.white,
                         ),
                       )
+                    : viewModel.isStoppingQuest
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
                     : Icon(
                         isCompleted
                             ? Icons.workspace_premium_rounded
@@ -1053,11 +1099,15 @@ class _QuestDetailViewState extends State<QuestDetailView>
                             ? Icons.location_off_rounded
                             : canResume
                             ? Icons.play_arrow_rounded
+                            : canStop
+                            ? Icons.stop_circle_outlined
                             : Icons.play_arrow_rounded,
                       ),
                 label: Text(
                   viewModel.isStartingQuest
                       ? 'Starting Quest...'
+                      : viewModel.isStoppingQuest
+                      ? 'Stopping Quest...'
                       : isCompleted
                       ? 'Quest Completed'
                       : isBlockedByAnotherQuest
@@ -1065,7 +1115,9 @@ class _QuestDetailViewState extends State<QuestDetailView>
                       : isOutOfRange
                       ? 'Return to Quest Area'
                       : canResume
-                      ? 'Resume Quest'
+                      ? 'Start Quest'
+                      : canStop
+                      ? 'Stop Quest'
                       : isOutsideBeforeStart
                       ? 'Move Within Quest Zone'
                       : isInProgress
@@ -1077,8 +1129,55 @@ class _QuestDetailViewState extends State<QuestDetailView>
                 ),
               ),
             ),
+            if (canResume) ...[
+              const SizedBox(height: 4),
+              TextButton.icon(
+                onPressed: viewModel.isStoppingQuest
+                    ? null
+                    : () => _confirmStopQuest(context, viewModel),
+                icon: const Icon(Icons.stop_circle_outlined, size: 18),
+                label: const Text('Stop Quest'),
+              ),
+            ],
           ],
         ),
+      ),
+    );
+  }
+
+  Future<void> _confirmStopQuest(
+    BuildContext context,
+    GamificationViewModel viewModel,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Stop this quest?'),
+        content: const Text(
+          'Your completed activities, XP, and timer progress will be saved. '
+          'You can start another workshop quest after stopping.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Keep Quest Active'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Stop Quest'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    final stopped = await viewModel.stopSelectedQuest();
+    if (!context.mounted || !stopped) return;
+    unawaited(context.read<MapViewModel>().loadJourneyData());
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Quest stopped. Your progress has been saved.'),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Color(0xFF005B4F),
       ),
     );
   }
@@ -1110,7 +1209,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
     if (!context.mounted || !resumed) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Quest resumed. The workshop timer is running.'),
+        content: Text('Quest started. The workshop timer is running.'),
         behavior: SnackBarBehavior.floating,
         backgroundColor: Color(0xFF005B4F),
       ),

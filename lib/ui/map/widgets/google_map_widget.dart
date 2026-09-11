@@ -474,6 +474,7 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget>
     if (isSelected) return _selectedWorkshopMarkerIcon;
     return switch (journey?.state) {
       WorkshopQuestState.inProgress => _activeQuestMarkerIcon,
+      WorkshopQuestState.stopped => _workshopMarkerIcon,
       WorkshopQuestState.available => _workshopMarkerIcon,
       WorkshopQuestState.blockedByOtherQuest => _unavailableQuestMarkerIcon,
       WorkshopQuestState.completed => _completedQuestMarkerIcon,

@@ -1,12 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' show AuthException;
+import 'package:supabase_flutter/supabase_flutter.dart'
+    show AuthException, AuthRetryableFetchException;
 import 'package:warisan_kita/data/repositories/user_repository.dart';
 import 'package:warisan_kita/domain/models/user.dart';
 import 'package:warisan_kita/domain/validators/ssm_validator.dart';
 import 'package:warisan_kita/domain/validators/profile_validator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:warisan_kita/data/services/supabase_service.dart' show EmailVerificationRequired;
+import 'package:warisan_kita/data/services/supabase_service.dart'
+    show EmailVerificationRequired;
 
 enum AuthStatus { unauthenticated, authenticating, authenticated, error }
 
@@ -51,7 +53,9 @@ class AuthViewModel extends ChangeNotifier {
     if (match != null) {
       return match.group(1)!.trim();
     }
-    return raw.replaceFirst('Exception: ', '').replaceFirst('AuthException: ', '');
+    return raw
+        .replaceFirst('Exception: ', '')
+        .replaceFirst('AuthException: ', '');
   }
 
   bool _isLoading = false;
@@ -59,6 +63,8 @@ class AuthViewModel extends ChangeNotifier {
 
   UserModel? _currentUser;
   UserModel? get currentUser => _currentUser;
+
+  Future<UserModel?>? _currentUserRefresh;
 
   @visibleForTesting
   void setCurrentUserForTesting(UserModel? user) {
@@ -115,7 +121,22 @@ class AuthViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<UserModel?> refreshCurrentUser() async {
+  Future<UserModel?> refreshCurrentUser() {
+    final existingRefresh = _currentUserRefresh;
+    if (existingRefresh != null) return existingRefresh;
+
+    late final Future<UserModel?> refresh;
+    refresh = _refreshCurrentUserOnce().whenComplete(() {
+      if (identical(_currentUserRefresh, refresh)) {
+        _currentUserRefresh = null;
+      }
+    });
+    _currentUserRefresh = refresh;
+    return refresh;
+  }
+
+  Future<UserModel?> _refreshCurrentUserOnce() async {
+    final previousUser = _currentUser;
     try {
       final user = await _repository.getCurrentUser();
       if (user != null) {
@@ -126,7 +147,8 @@ class AuthViewModel extends ChangeNotifier {
             _currentUser!.email.toLowerCase() != user.email.toLowerCase()) {
           return _currentUser;
         }
-        if (_currentUser?.hasPendingRelocation == true && !user.hasPendingRelocation) {
+        if (_currentUser?.hasPendingRelocation == true &&
+            !user.hasPendingRelocation) {
           if (user.address == _currentUser?.pendingRelocationAddress) {
             _relocationResolutionNotice = 'APPROVED';
           } else {
@@ -156,6 +178,9 @@ class AuthViewModel extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint('refreshCurrentUser note: $e');
+      if (e is AuthRetryableFetchException && previousUser != null) {
+        return previousUser;
+      }
     }
     _currentUser = null;
     _activeRole = null;
@@ -293,7 +318,8 @@ class AuthViewModel extends ChangeNotifier {
           pendingRelocationLatitude: latitude,
           pendingRelocationLongitude: longitude,
           pendingRelocationReason: reason.trim(),
-          pendingRelocationDate: updated.pendingRelocationDate ?? DateTime.now().toIso8601String(),
+          pendingRelocationDate:
+              updated.pendingRelocationDate ?? DateTime.now().toIso8601String(),
         );
       } else {
         _currentUser = updated;
@@ -312,9 +338,7 @@ class AuthViewModel extends ChangeNotifier {
     try {
       await _repository.cancelRelocationRequest(email: email);
       if (_currentUser != null) {
-        _currentUser = _currentUser!.copyWith(
-          clearPendingRelocation: true,
-        );
+        _currentUser = _currentUser!.copyWith(clearPendingRelocation: true);
       }
     } finally {
       _isLoading = false;
@@ -335,10 +359,7 @@ class AuthViewModel extends ChangeNotifier {
       if (url != null && _currentUser != null) {
         _currentUser = _currentUser!.copyWith(avatarUrl: url);
         try {
-          await _repository.updateUserProfile(
-            email: email,
-            avatarUrl: url,
-          );
+          await _repository.updateUserProfile(email: email, avatarUrl: url);
         } catch (e) {
           debugPrint('updateUserProfile avatarUrl sync note: $e');
         }
@@ -470,12 +491,15 @@ class AuthViewModel extends ChangeNotifier {
           lower.contains('email_not_confirmed') ||
           lower.contains('not confirmed') ||
           lower.contains('not verified')) {
-        _errorMessage = 'EMAIL NOT VERIFIED: Please enter the 6-digit verification code sent to your email.';
+        _errorMessage =
+            'EMAIL NOT VERIFIED: Please enter the 6-digit verification code sent to your email.';
         notifyListeners();
         return AuthResult(
           success: false,
           requiresEmailVerification: true,
-          unverifiedEmail: e is EmailVerificationRequired ? e.email : cleanEmail,
+          unverifiedEmail: e is EmailVerificationRequired
+              ? e.email
+              : cleanEmail,
           message: _errorMessage,
         );
       }
@@ -508,10 +532,13 @@ class AuthViewModel extends ChangeNotifier {
         email: cleanEmail,
         token: cleanToken,
       );
-      if (user.isSuspended || user.status.toUpperCase() == 'SUSPENDED' ||
+      if (user.isSuspended ||
+          user.status.toUpperCase() == 'SUSPENDED' ||
           (kIsWeb && !user.isAdmin)) {
         await _repository.signOut();
-        throw Exception('ACCESS DENIED: This account cannot access this application.');
+        throw Exception(
+          'ACCESS DENIED: This account cannot access this application.',
+        );
       }
       _currentUser = user;
       _activeRole = user.role;
@@ -519,8 +546,11 @@ class AuthViewModel extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
 
-      final route = user.isAdmin ? '/admin' :
-          user.isArtisan ? (user.isApprovedArtisan ? '/artisan' : 'pending_artisan') : '/tourist';
+      final route = user.isAdmin
+          ? '/admin'
+          : user.isArtisan
+          ? (user.isApprovedArtisan ? '/artisan' : 'pending_artisan')
+          : '/tourist';
       return AuthResult(
         success: true,
         user: user,
@@ -544,7 +574,8 @@ class AuthViewModel extends ChangeNotifier {
     if (cleanEmail.isEmpty) return false;
     try {
       await _repository.resendVerificationOtp(email: cleanEmail);
-      _statusMessage = 'A new 6-digit verification code has been sent to your email.';
+      _statusMessage =
+          'A new 6-digit verification code has been sent to your email.';
       notifyListeners();
       return true;
     } catch (e) {
@@ -558,7 +589,8 @@ class AuthViewModel extends ChangeNotifier {
   void selectActiveRole(String role) {
     if (role.contains('Artisan') &&
         _currentUser != null &&
-        (!_currentUser!.isApprovedArtisan || _currentUser!.isArtisanStudioSuspended)) {
+        (!_currentUser!.isApprovedArtisan ||
+            _currentUser!.isArtisanStudioSuspended)) {
       // Security guard: Cannot select Master Artisan role unless approved by admin and studio is not suspended
       return;
     }
@@ -677,7 +709,10 @@ class AuthViewModel extends ChangeNotifier {
       _statusMessage = 'REGISTRATION SUCCESSFUL: PLEASE VERIFY YOUR EMAIL';
       _isLoading = false;
       notifyListeners();
-      return await _finishRegistration(user, user.isArtisan ? 'pending_artisan' : '/tourist');
+      return await _finishRegistration(
+        user,
+        user.isArtisan ? 'pending_artisan' : '/tourist',
+      );
     } catch (e) {
       _errorMessage = _friendlyError(e);
       _isLoading = false;
@@ -813,7 +848,9 @@ class AuthViewModel extends ChangeNotifier {
 
     try {
       String targetEmail = email.trim();
-      if (targetEmail.isEmpty && _currentUser != null && _currentUser!.email.trim().isNotEmpty) {
+      if (targetEmail.isEmpty &&
+          _currentUser != null &&
+          _currentUser!.email.trim().isNotEmpty) {
         targetEmail = _currentUser!.email.trim();
       }
       if (targetEmail.isEmpty) {
@@ -1099,7 +1136,8 @@ class AuthViewModel extends ChangeNotifier {
       notifyListeners();
       return const AuthResult(
         success: true,
-        message: 'Your artisan studio has been deactivated. You are now exploring as a Cultural Explorer.',
+        message:
+            'Your artisan studio has been deactivated. You are now exploring as a Cultural Explorer.',
       );
     } catch (e) {
       _isLoading = false;

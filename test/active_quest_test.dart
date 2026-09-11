@@ -223,7 +223,7 @@ void main() {
         expect(viewModel.requiresJourneyResume, isTrue);
         expect(viewModel.canResumeDwellTracking, isTrue);
         expect(viewModel.canVerifyTaskWithQr(qrTask), isFalse);
-        expect(viewModel.qrVerificationLabel(qrTask), 'Resume Quest to Scan');
+        expect(viewModel.qrVerificationLabel(qrTask), 'Start Quest to Scan');
 
         expect(
           await viewModel.resumeSelectedQuest(
@@ -310,39 +310,68 @@ void main() {
       },
     );
 
-    test('re-entering range requires an explicit resume tap', () async {
+    test(
+      'leaving range stops the quest and releases the active lock',
+      () async {
+        final repository = _QuestFlowRepository(
+          initialActiveState: const ActiveQuestState.empty(),
+          startResult: _successfulStart(QuestStartDisposition.started),
+        );
+        final viewModel = GamificationViewModel(repository: repository);
+        addTearDown(viewModel.dispose);
+
+        await viewModel.selectQuest(_quest('quest-1'));
+        expect(
+          await viewModel.startSelectedQuest(
+            verifiedLocation: _validLocation(),
+          ),
+          isTrue,
+        );
+        expect(viewModel.isDwellTracking, isTrue);
+        expect(repository.timedStartCalls, 1);
+
+        await viewModel.handleQuestProximityChanged(false);
+        expect(viewModel.isDwellTracking, isFalse);
+        expect(viewModel.canResumeDwellTracking, isFalse);
+        expect(repository.pauseCalls, 1);
+        expect(repository.stopCalls, 1);
+        expect(viewModel.questProgressStatus, 'STOPPED');
+        expect(viewModel.hasActiveQuest, isFalse);
+        expect(viewModel.canStartQuest('quest-2'), isTrue);
+      },
+    );
+
+    test('a stopped quest starts from its saved timer progress', () async {
+      final originalStartedAt = DateTime.utc(2026, 1, 1);
       final repository = _QuestFlowRepository(
         initialActiveState: const ActiveQuestState.empty(),
-        startResult: _successfulStart(QuestStartDisposition.started),
+        startResult: _successfulStart(QuestStartDisposition.resumed),
+        participation: QuestParticipation(
+          status: 'STOPPED',
+          startedAt: originalStartedAt,
+        ),
+        progressRows: [
+          _progress('arrival', completed: true),
+          _progress('dwell', progressSeconds: 240),
+        ],
       );
       final viewModel = GamificationViewModel(repository: repository);
       addTearDown(viewModel.dispose);
 
       await viewModel.selectQuest(_quest('quest-1'));
+      expect(viewModel.questProgressStatus, 'STOPPED');
+      expect(viewModel.questStartedAt, originalStartedAt);
+
       expect(
         await viewModel.startSelectedQuest(verifiedLocation: _validLocation()),
         isTrue,
       );
+      expect(viewModel.questProgressStatus, 'IN_PROGRESS');
       expect(viewModel.isDwellTracking, isTrue);
+      expect(viewModel.requiresJourneyResume, isFalse);
+      expect(repository.startCalls, 1);
       expect(repository.timedStartCalls, 1);
-
-      await viewModel.handleQuestProximityChanged(false);
-      expect(viewModel.isDwellTracking, isFalse);
-      expect(viewModel.canResumeDwellTracking, isFalse);
-      expect(repository.pauseCalls, 1);
-
-      await viewModel.handleQuestProximityChanged(true);
-      expect(viewModel.isDwellTracking, isFalse);
-      expect(viewModel.canResumeDwellTracking, isTrue);
-      expect(repository.timedStartCalls, 1);
-
-      expect(
-        await viewModel.resumeSelectedQuest(verifiedLocation: _validLocation()),
-        isTrue,
-      );
-      expect(viewModel.isDwellTracking, isTrue);
-      expect(viewModel.canResumeDwellTracking, isFalse);
-      expect(repository.timedStartCalls, 2);
+      expect(repository.arrivalCompletionCalls, 0);
     });
 
     test(
@@ -629,6 +658,7 @@ class _QuestFlowRepository extends GamificationRepository {
   int pauseCalls = 0;
   int qrCompletionCalls = 0;
   int restoreCalls = 0;
+  int stopCalls = 0;
 
   @override
   Future<ActiveQuestState> getActiveQuestState() async => initialActiveState;
@@ -660,6 +690,16 @@ class _QuestFlowRepository extends GamificationRepository {
   }) {
     startCalls++;
     return _startLoader?.call() ?? Future.value(_startResult!);
+  }
+
+  @override
+  Future<QuestParticipation> stopQuest(String questId) async {
+    stopCalls++;
+    initialActiveState = const ActiveQuestState.empty();
+    return QuestParticipation(
+      status: 'STOPPED',
+      startedAt: DateTime.utc(2026, 1, 1),
+    );
   }
 
   @override

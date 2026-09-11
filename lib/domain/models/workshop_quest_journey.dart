@@ -1,6 +1,7 @@
 enum WorkshopQuestState {
   available,
   inProgress,
+  stopped,
   blockedByOtherQuest,
   completed,
   unavailable,
@@ -42,6 +43,7 @@ class WorkshopQuestJourney {
   String get stateLabel => switch (state) {
     WorkshopQuestState.available => 'NEW QUEST',
     WorkshopQuestState.inProgress => 'IN PROGRESS',
+    WorkshopQuestState.stopped => 'QUEST STOPPED',
     WorkshopQuestState.blockedByOtherQuest => 'ANOTHER JOURNEY ACTIVE',
     WorkshopQuestState.completed => 'STAMP COLLECTED',
     WorkshopQuestState.unavailable => 'UNAVAILABLE',

@@ -744,8 +744,12 @@ class SupabaseService {
       }
       try {
         return await _loadAuthenticatedProfile();
-      } catch (_) {
-        await signOut();
+      } catch (error) {
+        // Retryable transport failures do not prove that the session is
+        // invalid. Preserve it so a later refresh can recover normally.
+        if (error is! AuthRetryableFetchException) {
+          await signOut();
+        }
         rethrow;
       }
     }
@@ -6760,6 +6764,58 @@ class SupabaseService {
       };
     }
 
+    Map<String, dynamic>? stoppedProgress;
+    try {
+      final stoppedRows = await client
+          .from('quest_progress')
+          .update({'status': 'IN_PROGRESS'})
+          .eq('user_id', user.id)
+          .eq('quest_id', questId)
+          .eq('status', 'STOPPED')
+          .select('quest_id, status, started_at');
+      if (stoppedRows.isNotEmpty) {
+        stoppedProgress = Map<String, dynamic>.from(stoppedRows.first);
+      }
+    } catch (_) {
+      activeSnapshot = await _fetchEffectiveActiveQuestRowsForUser(
+        client,
+        user.id,
+      );
+      activeRows = activeSnapshot.rows;
+      if (activeRows.isEmpty) rethrow;
+      final activeQuestId = activeRows.first['quest_id']?.toString() ?? '';
+      if (activeRows.length > 1) {
+        return {
+          'outcome': 'integrity_conflict',
+          'active_rows': activeRows,
+          'progress': null,
+          'completion_reconciliation': activeSnapshot.reconciliation,
+        };
+      }
+      if (activeQuestId == questId) {
+        await _ensureTaskProgressRows(client, user.id, taskIds);
+      }
+      return {
+        'outcome': activeQuestId == questId ? 'resumed' : 'blocked',
+        'active_rows': activeRows,
+        'progress': activeRows.first,
+        'completion_reconciliation': activeSnapshot.reconciliation,
+      };
+    }
+    if (stoppedProgress != null) {
+      await _ensureTaskProgressRows(client, user.id, taskIds);
+      activeSnapshot = await _fetchEffectiveActiveQuestRowsForUser(
+        client,
+        user.id,
+      );
+      return {
+        'outcome': 'resumed',
+        'active_rows': activeSnapshot.rows,
+        'progress': stoppedProgress,
+        'completion_reconciliation': activeSnapshot.reconciliation,
+      };
+    }
+
     try {
       await client
           .from('quest_progress')
@@ -6819,6 +6875,54 @@ class SupabaseService {
       'progress': activeRows.first,
       'completion_reconciliation': activeSnapshot.reconciliation,
     };
+  }
+
+  Future<Map<String, dynamic>> stopQuest(String questId) async {
+    final client = _requireSupabaseClient();
+    final user = _requireAuthenticatedUser(
+      client,
+      'You must be signed in to stop a quest.',
+    );
+    final current = await client
+        .from('quest_progress')
+        .select('quest_id, status, started_at')
+        .eq('user_id', user.id)
+        .eq('quest_id', questId)
+        .maybeSingle();
+    if (current == null) {
+      throw StateError('This quest has not been started.');
+    }
+
+    final status = current['status']?.toString().toUpperCase() ?? '';
+    if (status == 'STOPPED') return current;
+    if (status == 'COMPLETED') {
+      throw StateError('A completed quest cannot be stopped.');
+    }
+    if (status != 'IN_PROGRESS') {
+      throw StateError('This quest is not currently active.');
+    }
+
+    final stoppedRows = await client
+        .from('quest_progress')
+        .update({'status': 'STOPPED'})
+        .eq('user_id', user.id)
+        .eq('quest_id', questId)
+        .eq('status', 'IN_PROGRESS')
+        .select('quest_id, status, started_at');
+    if (stoppedRows.isNotEmpty) {
+      return Map<String, dynamic>.from(stoppedRows.first);
+    }
+
+    final latest = await client
+        .from('quest_progress')
+        .select('quest_id, status, started_at')
+        .eq('user_id', user.id)
+        .eq('quest_id', questId)
+        .maybeSingle();
+    if (latest?['status']?.toString().toUpperCase() == 'STOPPED') {
+      return latest!;
+    }
+    throw StateError('The quest could not be stopped safely.');
   }
 
   Future<void> _ensureTaskProgressRows(
@@ -6882,6 +6986,11 @@ class SupabaseService {
     );
     final existing = await _findTaskProgressRow(client, user.id, taskId);
     if (existing?['is_completed'] == true) {
+      await _updateQuestRewardAndCompletion(
+        client: client,
+        userId: user.id,
+        questId: questId,
+      );
       return _taskCompletionResult(client, user.id, taskId, existing!);
     }
     await _assertExpectedActiveQuest(
@@ -6942,15 +7051,23 @@ class SupabaseService {
 
     final existing = await _findTaskProgressRow(client, user.id, taskId);
     if (existing?['is_completed'] == true) {
+      await _updateQuestRewardAndCompletion(
+        client: client,
+        userId: user.id,
+        questId: questId,
+      );
       return _taskCompletionResult(client, user.id, taskId, existing!);
     }
 
-    final questProgress = await client
+    final questProgressRows = await client
         .from('quest_progress')
         .select('status, started_at')
         .eq('user_id', user.id)
         .eq('quest_id', questId)
-        .maybeSingle();
+        .limit(1);
+    final questProgress = questProgressRows.isEmpty
+        ? null
+        : Map<String, dynamic>.from(questProgressRows.first);
     final progressStatus = questProgress?['status']?.toString().toUpperCase();
     final taskCreatedAt = DateTime.tryParse(
       task['created_at']?.toString() ?? '',
@@ -7104,20 +7221,26 @@ class SupabaseService {
     required String userId,
     required String questId,
   }) async {
-    final progress = await client
+    final questProgressRows = await client
         .from('quest_progress')
         .select('status, started_at, completed_at')
         .eq('user_id', userId)
         .eq('quest_id', questId)
-        .maybeSingle();
+        .limit(1);
+    final progress = questProgressRows.isEmpty
+        ? null
+        : Map<String, dynamic>.from(questProgressRows.first);
     if (progress == null) return;
 
-    final existingStamp = await client
+    final existingStampRows = await client
         .from('passport_stamps')
         .select('id, unlocked_at')
         .eq('user_id', userId)
         .eq('quest_id', questId)
-        .maybeSingle();
+        .limit(1);
+    final existingStamp = existingStampRows.isEmpty
+        ? null
+        : Map<String, dynamic>.from(existingStampRows.first);
     if (progress['status']?.toString().toUpperCase() == 'COMPLETED') {
       return;
     }
@@ -7363,6 +7486,11 @@ class SupabaseService {
     );
     final existing = await _findTaskProgressRow(client, user.id, taskId);
     if (existing?['is_completed'] == true) {
+      await _updateQuestRewardAndCompletion(
+        client: client,
+        userId: user.id,
+        questId: questId,
+      );
       return _taskCompletionResult(client, user.id, taskId, existing!);
     }
     await _assertExpectedActiveQuest(
@@ -7467,13 +7595,14 @@ class SupabaseService {
     SupabaseClient client,
     String userId,
     String taskId,
-  ) {
-    return client
+  ) async {
+    final rows = await client
         .from('task_progress')
         .select(_taskProgressColumns)
         .eq('user_id', userId)
         .eq('task_id', taskId)
-        .maybeSingle();
+        .limit(1);
+    return rows.isEmpty ? null : Map<String, dynamic>.from(rows.first);
   }
 
   Future<Map<String, dynamic>> updateUnapprovedHeritageTask({

@@ -11,6 +11,7 @@ import 'package:warisan_kita/domain/models/quest.dart';
 import 'package:warisan_kita/domain/models/quest_location_validation.dart';
 import 'package:warisan_kita/domain/models/quest_participation.dart';
 import 'package:warisan_kita/domain/models/task_progress.dart';
+import 'package:warisan_kita/domain/models/task_completion_result.dart';
 import 'package:warisan_kita/domain/models/artisan_heritage_analytics.dart';
 
 class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
@@ -41,6 +42,8 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
 
   bool _isStartingQuest = false;
   bool get isStartingQuest => _isStartingQuest;
+  bool _isStoppingQuest = false;
+  bool get isStoppingQuest => _isStoppingQuest;
 
   String? _startQuestError;
   String? get startQuestError => _startQuestError;
@@ -504,6 +507,7 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
       return false;
     }
 
+    final wasStopped = _questProgressStatus?.toUpperCase() == 'STOPPED';
     _isStartingQuest = true;
     _startQuestError = null;
     notifyListeners();
@@ -550,7 +554,14 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
         await _restorePersistedDwellAsPaused();
         _syncDisplayedDwellProgress();
         _isInsideQuestGeofence = true;
-        _requiresManualResume = true;
+        if (wasStopped && !isTaskCompleted(dwellTask)) {
+          final dwellProgress = await _repository.startTimedTask(dwellTask.id);
+          _taskProgress[dwellTask.id] = dwellProgress;
+          _requiresManualResume = false;
+          _beginLocalDwellTimer(dwellProgress);
+        } else {
+          _requiresManualResume = !wasStopped;
+        }
         return true;
       }
 
@@ -670,7 +681,7 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
     if (!canCompleteJourneyTask && !canCompleteBonusTask) {
       return 'Start Quest to Scan';
     }
-    if (_requiresManualResume) return 'Resume Quest to Scan';
+    if (_requiresManualResume) return 'Start Quest to Scan';
     if (isStayFifteenMinutesTask(task) &&
         _displayedDwellSeconds < dwellRequiredSeconds) {
       return 'Complete 15 Minutes First';
@@ -763,6 +774,49 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  Future<bool> stopSelectedQuest() async {
+    if (_isStoppingQuest || _isStartingQuest) return false;
+    final quest = _selectedQuest;
+    if (quest == null ||
+        _questProgressStatus?.toUpperCase() != 'IN_PROGRESS' ||
+        isQuestPermanentlyCompleted) {
+      return false;
+    }
+
+    _isStoppingQuest = true;
+    _startQuestError = null;
+    notifyListeners();
+    try {
+      await _pauseDwellTracking();
+      if (_startQuestError != null) {
+        _requiresManualResume = true;
+        return false;
+      }
+      _questParticipation = await _repository.stopQuest(quest.id);
+      _questProgressStatus = _questParticipation?.status ?? 'STOPPED';
+      if (activeQuest?.questId == quest.id) {
+        _activeQuestState = const ActiveQuestState.empty();
+      }
+      _requiresManualResume = false;
+      _isInsideQuestGeofence = false;
+      return true;
+    } catch (error, stackTrace) {
+      debugPrint('GamificationViewModel stop quest error: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      _startQuestError = error
+          .toString()
+          .replaceFirst('Bad state: ', '')
+          .replaceFirst('Exception: ', '');
+      if (_questProgressStatus?.toUpperCase() == 'IN_PROGRESS') {
+        _requiresManualResume = true;
+      }
+      return false;
+    } finally {
+      _isStoppingQuest = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> handleQuestProximityChanged(bool isInside) async {
     _pendingProximity = isInside;
     if (_isProcessingProximity) return;
@@ -795,11 +849,7 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
     }
 
     _isInsideQuestGeofence = false;
-    final dwellTask = _stayFifteenMinutesTask;
-    if (dwellTask != null && !isTaskCompleted(dwellTask)) {
-      _requiresManualResume = true;
-      await _pauseDwellTracking();
-    }
+    await stopSelectedQuest();
     notifyListeners();
   }
 
@@ -908,24 +958,47 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
     _cancelDwellTimer();
     try {
       final completion = await _repository.completeTimedTask(dwellTask.id);
-      _taskProgress[dwellTask.id] = completion.progress;
-      _authoritativeTaskAwards[dwellTask.id] = completion.xpAwarded;
-      _displayedDwellSeconds = dwellRequiredSeconds;
-      if (areAllRequiredHeritageTasksCompleted) {
-        _markQuestBadgeEarned();
-      }
-      if (areAllHeritageTasksCompleted) {
-        _markQuestFullyCompleted();
-      }
-      unawaited(loadPassport());
+      _acceptDwellCompletion(dwellTask.id, completion);
     } catch (error, stackTrace) {
       debugPrint('GamificationViewModel complete dwell error: $error');
       debugPrintStack(stackTrace: stackTrace);
-      _startQuestError = 'Unable to complete the workshop timer right now.';
+      try {
+        final latest = await _repository.getTaskProgress([dwellTask.id]);
+        final persisted = latest
+            .where((item) => item.taskId == dwellTask.id && item.isCompleted)
+            .firstOrNull;
+        if (persisted == null) {
+          _startQuestError = 'Unable to complete the workshop timer right now.';
+        } else {
+          final recovered = await _repository.completeTimedTask(dwellTask.id);
+          _acceptDwellCompletion(dwellTask.id, recovered);
+          _startQuestError = null;
+        }
+      } catch (recoveryError, recoveryStackTrace) {
+        debugPrint(
+          'GamificationViewModel dwell completion recovery error: '
+          '$recoveryError',
+        );
+        debugPrintStack(stackTrace: recoveryStackTrace);
+        _startQuestError = 'Unable to complete the workshop timer right now.';
+      }
     } finally {
       _isCompletingDwellTask = false;
       notifyListeners();
     }
+  }
+
+  void _acceptDwellCompletion(String taskId, TaskCompletionResult completion) {
+    _taskProgress[taskId] = completion.progress;
+    _authoritativeTaskAwards[taskId] = completion.xpAwarded;
+    _displayedDwellSeconds = dwellRequiredSeconds;
+    if (areAllRequiredHeritageTasksCompleted) {
+      _markQuestBadgeEarned();
+    }
+    if (areAllHeritageTasksCompleted) {
+      _markQuestFullyCompleted();
+    }
+    unawaited(loadPassport());
   }
 
   void _identifySystemTasks() {

@@ -61,6 +61,7 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
   String? _proximityQuestId;
   bool? _lastReportedQuestInside;
   DateTime? _lastProcessedProximityReadingAt;
+  int _consecutiveOutsideQuestReadings = 0;
   final Set<String> _discoveredQuestIds = <String>{};
 
   // ============================================================
@@ -513,6 +514,15 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
         ? distance <= exitRadius
         : distance <= quest.geofenceRadiusMeters;
     _lastProcessedProximityReadingAt = recordedAt;
+    if (isInside) {
+      _consecutiveOutsideQuestReadings = 0;
+    } else {
+      if (_proximityQuestId != quest.id) {
+        _consecutiveOutsideQuestReadings = 0;
+      }
+      _consecutiveOutsideQuestReadings++;
+      if (_consecutiveOutsideQuestReadings < 2) return;
+    }
     if (_proximityQuestId == quest.id && _lastReportedQuestInside == isInside) {
       return;
     }
@@ -527,7 +537,26 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
               'IN_PROGRESS') {
         return;
       }
-      unawaited(gamificationViewModel.handleQuestProximityChanged(isInside));
+      unawaited(() async {
+        await gamificationViewModel.handleQuestProximityChanged(isInside);
+        if (!isInside &&
+            mounted &&
+            gamificationViewModel.questProgressStatus == 'STOPPED') {
+          await mapViewModel.loadJourneyData();
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Quest stopped because you left the workshop area. '
+                  'Your progress has been saved.',
+                ),
+                behavior: SnackBarBehavior.floating,
+                backgroundColor: Color(0xFF005B4F),
+              ),
+            );
+          }
+        }
+      }());
     });
   }
 
