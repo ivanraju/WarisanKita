@@ -349,6 +349,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
       'isLiveOpen': a.isLiveOpen,
       'ssmNumber': a.ssmNumber,
       'documents': a.documents,
+      'phone': a.phone,
       'artisanModel': a, // pass the model for the detail screen
     }).toList();
 
@@ -372,6 +373,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
       'isLiveOpen': a.isLiveOpen,
       'ssmNumber': a.ssmNumber,
       'documents': a.documents,
+      'phone': a.phone,
       'artisanModel': a,
     }).toList();
 
@@ -1173,6 +1175,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                     isLiveOpen: artisan['isLiveOpen'] ?? true,
                     ssmNumber: artisan['ssmNumber'] as String?,
                     documents: (artisan['documents'] as List<Map<String, dynamic>>?) ?? const [],
+                    phoneNumber: artisan['phone'] as String?,
                   ),
                 ),
               );
@@ -1362,6 +1365,32 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                     height: 1.5,
                   ),
                 ),
+                if (artisan['phone'] != null &&
+                    artisan['phone'].toString().trim().isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.phone_rounded,
+                        size: 13,
+                        color: isDark
+                            ? const Color(0xFF34D399)
+                            : const Color(0xFF004D40),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        artisan['phone'].toString().trim(),
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: isDark
+                              ? const Color(0xFF34D399)
+                              : const Color(0xFF004D40),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
 
                 const SizedBox(height: 14),
                 // Travel Ticket Perforated Separator Line
@@ -1403,6 +1432,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                                 isLiveOpen: artisan['isLiveOpen'] ?? true,
                                 ssmNumber: artisan['ssmNumber'] as String?,
                                 documents: (artisan['documents'] as List<Map<String, dynamic>>?) ?? const [],
+                                phoneNumber: artisan['phone'] as String?,
                               ),
                             ),
                           );
@@ -1530,6 +1560,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                   isLiveOpen: artisan['isLiveOpen'] ?? true,
                   ssmNumber: artisan['ssmNumber'] as String?,
                   documents: (artisan['documents'] as List<Map<String, dynamic>>?) ?? const [],
+                  phoneNumber: artisan['phone'] as String?,
                 ),
               ),
             );

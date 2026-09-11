@@ -16,6 +16,7 @@ class ArtisanModel {
   final bool isLiveOpen;
   final String? ssmNumber;
   final List<Map<String, dynamic>> documents;
+  final String? phone;
 
   ArtisanModel({
     required this.id,
@@ -35,6 +36,7 @@ class ArtisanModel {
     this.isLiveOpen = true,
     this.ssmNumber,
     this.documents = const [],
+    this.phone,
   });
 
   ArtisanModel copyWith({
@@ -55,6 +57,7 @@ class ArtisanModel {
     bool? isLiveOpen,
     String? ssmNumber,
     List<Map<String, dynamic>>? documents,
+    String? phone,
   }) {
     return ArtisanModel(
       id: id ?? this.id,
@@ -74,6 +77,7 @@ class ArtisanModel {
       isLiveOpen: isLiveOpen ?? this.isLiveOpen,
       ssmNumber: ssmNumber ?? this.ssmNumber,
       documents: documents ?? this.documents,
+      phone: phone ?? this.phone,
     );
   }
 
@@ -139,6 +143,14 @@ class ArtisanModel {
             (map['users'] != null ? map['users']['ssm_number'] : null))
         ?.toString();
 
+    final String? phone = (map['phone'] ??
+            map['phone_number'] ??
+            map['phoneNumber'] ??
+            (map['users'] != null
+                ? (map['users']['phone_number'] ?? map['users']['phone'])
+                : null))
+        ?.toString();
+
     List<Map<String, dynamic>> docsList = [];
     if (map['artisan_documents'] != null) {
       docsList = List<Map<String, dynamic>>.from(map['artisan_documents']);
@@ -169,6 +181,7 @@ class ArtisanModel {
       isLiveOpen: isLive,
       ssmNumber: ssm,
       documents: docsList,
+      phone: phone,
     );
   }
 }

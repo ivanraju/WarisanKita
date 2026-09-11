@@ -3043,7 +3043,7 @@ class SupabaseService {
       final response = await client
           .from('artisan_profiles')
           .select(
-            '*, users(full_name, avatar_url), artisan_documents(file_url, doc_type)',
+            '*, users(full_name, avatar_url, phone_number), artisan_documents(file_url, doc_type)',
           )
           .eq('status', 'APPROVED');
 
@@ -3071,9 +3071,18 @@ class SupabaseService {
                   uName.toLowerCase() == a.name.toLowerCase())) {
             final uIsLive =
                 u['is_live_open'] as bool? ?? u['isLiveOpen'] as bool?;
+            final uPhone =
+                (u['phone_number'] ?? u['phone'])?.toString().trim();
+            ArtisanModel current = a;
             if (uIsLive != null && uIsLive != a.isLiveOpen) {
-              mapped[i] = a.copyWith(isLiveOpen: uIsLive);
+              current = current.copyWith(isLiveOpen: uIsLive);
             }
+            if (uPhone != null &&
+                uPhone.isNotEmpty &&
+                (current.phone == null || current.phone!.isEmpty)) {
+              current = current.copyWith(phone: uPhone);
+            }
+            mapped[i] = current;
             break;
           }
         }

@@ -26,6 +26,7 @@ class ArtisanDetailScreen extends StatefulWidget {
   final int? workshopsHosted;
   final String? ssmNumber;
   final List<Map<String, dynamic>> documents;
+  final String? phoneNumber;
 
   const ArtisanDetailScreen({
     super.key,
@@ -47,6 +48,7 @@ class ArtisanDetailScreen extends StatefulWidget {
     this.workshopsHosted,
     this.ssmNumber,
     this.documents = const [],
+    this.phoneNumber,
   });
 
   @override
@@ -183,6 +185,20 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Could not open map directions')),
+        );
+      }
+    }
+  }
+
+  Future<void> _makePhoneCall(String phone) async {
+    final clean = phone.replaceAll(RegExp(r'[^\d+]'), '');
+    final uri = Uri.parse('tel:$clean');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not call $phone')),
         );
       }
     }
@@ -955,6 +971,127 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                       ),
                     ],
                   ),
+
+                  if (widget.phoneNumber != null &&
+                      widget.phoneNumber!.trim().isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.phone_rounded,
+                          size: 16,
+                          color: isDark
+                              ? const Color(0xFF34D399)
+                              : const Color(0xFF004D40),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            widget.phoneNumber!.trim(),
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: isDark
+                                  ? Colors.white70
+                                  : const Color(0xFF334155),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF0D2825) : Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isDark
+                              ? const Color(0xFF1E3A34)
+                              : const Color(0xFFE2E8F0),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? const Color(0xFF34D399).withValues(alpha: 0.15)
+                                  : const Color(0xFF004D40).withValues(alpha: 0.08),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.phone_in_talk_rounded,
+                              color: isDark
+                                  ? const Color(0xFF34D399)
+                                  : const Color(0xFF004D40),
+                              size: 18,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  tr('Studio Contact & Inquiries'),
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 11,
+                                    color: isDark
+                                        ? Colors.white60
+                                        : Colors.grey[600],
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  widget.phoneNumber!.trim(),
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark
+                                        ? Colors.white
+                                        : const Color(0xFF1E293B),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          FilledButton.tonalIcon(
+                            icon: const Icon(Icons.call_rounded, size: 16),
+                            label: Text(tr('Call')),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: isDark
+                                  ? const Color(0xFF1E3A34)
+                                  : const Color(0xFFDCFCE7),
+                              foregroundColor: isDark
+                                  ? const Color(0xFF34D399)
+                                  : const Color(0xFF15803D),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 8,
+                              ),
+                              visualDensity: VisualDensity.compact,
+                            ),
+                            onPressed: () =>
+                                _makePhoneCall(widget.phoneNumber!),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
 
                   SizedBox(height: widget.onViewQuest == null ? 24 : 100),
                 ],

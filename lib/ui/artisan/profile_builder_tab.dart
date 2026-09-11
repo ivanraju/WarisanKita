@@ -823,6 +823,9 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
           latitude: _selectedWorkshopPin?.latitude,
           longitude: _selectedWorkshopPin?.longitude,
           isLiveOpen: user?.isLiveOpen ?? true,
+          phoneNumber: _phoneController.text.trim().isNotEmpty
+              ? _phoneController.text.trim()
+              : user?.phone,
         ),
       ),
     );
@@ -1221,7 +1224,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
               style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
               decoration: _inputDecoration(
                 isDark,
-                labelText: 'Phone / WhatsApp',
+                labelText: 'Phone Number',
                 prefixIcon: Icons.phone_outlined,
                 helperText: 'Public workshop contact for tourist inquiries (e.g. +60 12-345 6789)',
               ),
