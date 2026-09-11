@@ -384,13 +384,13 @@ BEGIN
         );
     END IF;
 
-    -- 6. Fetch existing studio details from artisan_profiles table for fallback
-    SELECT studio_name, craft_category
-    INTO v_existing_studio, v_existing_craft
+    -- 6. Fetch existing studio details from artisan_profiles table if present
+    SELECT studio_name, craft_category, address, state
+    INTO v_existing_studio, v_existing_craft, v_existing_address, v_existing_state
     FROM public.artisan_profiles
     WHERE user_id = v_user_id;
 
-    -- 7. Upsert artisan_profiles (insert if missing, update status if exists)
+    -- 7. Upsert artisan_profiles with safe fallbacks for all NOT-NULL columns
     INSERT INTO public.artisan_profiles (
         user_id,
         status,
@@ -398,6 +398,8 @@ BEGIN
         craft_category,
         ssm_number,
         bio,
+        address,
+        state,
         created_at,
         updated_at
     ) VALUES (
@@ -407,6 +409,8 @@ BEGIN
         COALESCE(p_craft_category, v_existing_craft, 'Traditional Craft'),
         p_ssm_number,
         'Heritage artisan studio bio',
+        COALESCE(v_existing_address, 'Melaka'),
+        COALESCE(v_existing_state, 'Melaka'),
         now(),
         now()
     )

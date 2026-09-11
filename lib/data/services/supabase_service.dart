@@ -2717,7 +2717,6 @@ class SupabaseService {
         final updatePayload = <String, dynamic>{
           'status': updateArtisanProfileOnly ? 'ACTIVE' : newStatus,
           'role': newRole,
-          'roles': [newRole],
           'artisan_status': resolvedArtisanStatus,
           'updated_at': DateTime.now().toIso8601String(),
         };
@@ -2736,16 +2735,24 @@ class SupabaseService {
               .update(updatePayload)
               .ilike('email', cleanEmail);
         } catch (updateErr) {
-          // Fallback if remote table does not yet have suspension_reason column
+          // Fallback if remote table does not yet have suspension_reason/is_suspended column
           debugPrint('Direct user table update note: $updateErr');
-          updatePayload.remove('suspension_reason');
-          await client
-              .from('users')
-              .update(updatePayload)
-              .ilike('email', cleanEmail);
+          try {
+            await client
+                .from('users')
+                .update({
+                  'status': updateArtisanProfileOnly ? 'ACTIVE' : newStatus,
+                  'role': newRole,
+                  'artisan_status': resolvedArtisanStatus,
+                  'updated_at': DateTime.now().toIso8601String(),
+                })
+                .ilike('email', cleanEmail);
+          } catch (retryErr) {
+            debugPrint('Direct user table fallback update note: $retryErr');
+          }
         }
 
-        // Update artisan_profiles status matching user_id
+        // Update artisan_profiles status matching user_id if present
         final userRow = await client
             .from('users')
             .select('id')
@@ -2757,13 +2764,15 @@ class SupabaseService {
               .select('id, status, studio_name, craft_category')
               .eq('user_id', userRow['id'])
               .maybeSingle();
-          await client
-              .from('artisan_profiles')
-              .update({
-                'status': resolvedArtisanStatus,
-                'updated_at': DateTime.now().toIso8601String(),
-              })
-              .eq('user_id', userRow['id']);
+          if (artisanProfileBeforeUpdate != null) {
+            await client
+                .from('artisan_profiles')
+                .update({
+                  'status': resolvedArtisanStatus,
+                  'updated_at': DateTime.now().toIso8601String(),
+                })
+                .eq('user_id', userRow['id']);
+          }
 
           // System tasks were verified before changing approval state. Keep
           // the one current quest aligned with the approved profile here.
