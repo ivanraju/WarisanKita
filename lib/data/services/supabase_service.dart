@@ -932,6 +932,8 @@ class SupabaseService {
     if (address != null) userRecord['address'] = address;
     if (state != null) userRecord['state'] = state;
     userRecord['status'] = 'PENDING_APPROVAL';
+    userRecord['artisanStatus'] = 'PENDING_APPROVAL';
+    userRecord['artisan_status'] = 'PENDING_APPROVAL';
     userRecord['role'] = 'Artisan & Tourist';
     userRecord['roles'] = ['Tourist', 'Artisan'];
 

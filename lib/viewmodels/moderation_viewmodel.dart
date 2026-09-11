@@ -523,6 +523,18 @@ class ModerationViewModel extends ChangeNotifier {
   void addPendingArtisan(PendingArtisanProfile profile) {
     _pendingArtisans.removeWhere((p) => p.email.toLowerCase() == profile.email.toLowerCase());
     _pendingArtisans.insert(0, profile);
+    final userIdx = _registeredUsers.indexWhere((u) => u.email.toLowerCase() == profile.email.toLowerCase());
+    if (userIdx != -1) {
+      _registeredUsers[userIdx] = _registeredUsers[userIdx].copyWith(
+        status: 'PENDING_APPROVAL',
+        artisanStatus: 'PENDING_APPROVAL',
+        role: 'Artisan & Tourist',
+        roles: const ['Tourist', 'Artisan'],
+        studioName: profile.name,
+        craftCategory: profile.craftCategory,
+        state: profile.state,
+      );
+    }
     notifyListeners();
   }
 
@@ -533,10 +545,15 @@ class ModerationViewModel extends ChangeNotifier {
   }
 
   Future<void> approveArtisan(String id) async {
-    final idx = _pendingArtisans.indexWhere((item) => item.id == id);
+    int idx = _pendingArtisans.indexWhere((item) => item.id == id);
+    if (idx == -1) {
+      idx = _pendingArtisans.indexWhere((item) => item.email.toLowerCase() == id.toLowerCase());
+    }
     if (idx != -1) {
       final artisan = _pendingArtisans[idx];
-      _pendingArtisans.removeAt(idx);
+      _pendingArtisans.removeWhere(
+        (p) => p.id == id || p.email.toLowerCase() == artisan.email.toLowerCase(),
+      );
       final submittedDate = _parseSubmissionDate(artisan.dateSubmitted);
       _recordApproval(submittedDate);
 
@@ -582,8 +599,9 @@ class ModerationViewModel extends ChangeNotifier {
         if (userIdx != -1) {
           _registeredUsers[userIdx] = _registeredUsers[userIdx].copyWith(
             role: targetRole,
-            roles: ['Artisan'],
+            roles: const ['Artisan'],
             status: 'ACTIVE',
+            artisanStatus: 'APPROVED',
             studioName: artisan.name,
             craftCategory: artisan.craftCategory,
             ssmNumber: artisan.ssmNumber,
@@ -597,6 +615,7 @@ class ModerationViewModel extends ChangeNotifier {
             role: targetRole,
             roles: const ['Artisan'],
             status: 'ACTIVE',
+            artisanStatus: 'APPROVED',
             studioName: artisan.name,
             craftCategory: artisan.craftCategory,
             ssmNumber: artisan.ssmNumber,
@@ -610,9 +629,10 @@ class ModerationViewModel extends ChangeNotifier {
           id: 'u_${DateTime.now().millisecondsSinceEpoch}',
           email: artisan.email,
           displayName: artisan.name,
-          role: 'Artisan',
+          role: targetRole,
           roles: const ['Artisan'],
           status: 'ACTIVE',
+          artisanStatus: 'APPROVED',
           studioName: artisan.name,
           craftCategory: artisan.craftCategory,
           ssmNumber: artisan.ssmNumber,
