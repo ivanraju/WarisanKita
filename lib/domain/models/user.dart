@@ -114,17 +114,21 @@ class UserModel {
       isApproved &&
       !isArtisanStudioSuspended;
 
-  bool get isRejectedArtisan =>
-      (status.toUpperCase() == 'REJECTED' ||
-       artisanStatus?.toUpperCase() == 'REJECTED') &&
-      !isApprovedArtisan;
+  bool get isRejectedArtisan {
+    if (isApprovedArtisan) return false;
+    final artStatus = artisanStatus?.toUpperCase();
+    if (artStatus == 'PENDING_APPROVAL' || artStatus == 'PENDING') return false;
+    return artStatus == 'REJECTED' ||
+        (status.toUpperCase() == 'REJECTED' && artStatus == null);
+  }
 
   bool get isPendingArtisan =>
+      !isApprovedArtisan &&
       !isRejectedArtisan &&
-      (artisanStatus == 'PENDING_APPROVAL' ||
-       artisanStatus == 'PENDING' ||
+      (artisanStatus?.toUpperCase() == 'PENDING_APPROVAL' ||
+       artisanStatus?.toUpperCase() == 'PENDING' ||
        isPendingApproval ||
-       (studioName != null && studioName!.trim().isNotEmpty && !isApprovedArtisan)) &&
+       (studioName != null && studioName!.trim().isNotEmpty)) &&
       !isArtisanStudioSuspended;
 
   String get handle {

@@ -91,7 +91,7 @@ class _ArtisanMainScaffoldState extends State<ArtisanMainScaffold> {
     final authVM = context.watch<AuthViewModel>();
     final user = authVM.currentUser;
 
-    // Security Guard 1: Account-level suspension blocks entire account (Artisan & Tourist)
+    // Security Guard 1: Account-level suspension blocks entire account
     if (user != null && (user.isSuspended || user.status == 'SUSPENDED')) {
       return const AccountSuspendedScreen();
     }

@@ -66,8 +66,7 @@ class _ArtisanApplicationPendingScreenState
         ? user.ssmNumber!
         : ((widget.ssmNumber.isNotEmpty) ? widget.ssmNumber : 'Under Verification');
 
-    final bool isRejected = user?.status.toUpperCase() == 'REJECTED' ||
-        user?.artisanStatus?.toUpperCase() == 'REJECTED';
+    final bool isRejected = user?.isRejectedArtisan == true;
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
@@ -376,8 +375,7 @@ class _ArtisanApplicationPendingScreenState
                         if (!context.mounted) return;
                         
                         final refreshedUser = authVM.currentUser;
-                        final isNowRejected = refreshedUser?.status.toUpperCase() == 'REJECTED' ||
-                            refreshedUser?.artisanStatus?.toUpperCase() == 'REJECTED';
+                        final isNowRejected = refreshedUser?.isRejectedArtisan == true;
                         final isNowApproved = refreshedUser?.isApprovedArtisan == true;
 
                         if (isNowApproved) {

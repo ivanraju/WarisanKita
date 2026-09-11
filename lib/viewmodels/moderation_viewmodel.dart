@@ -528,8 +528,8 @@ class ModerationViewModel extends ChangeNotifier {
       _registeredUsers[userIdx] = _registeredUsers[userIdx].copyWith(
         status: 'PENDING_APPROVAL',
         artisanStatus: 'PENDING_APPROVAL',
-        role: 'Artisan & Tourist',
-        roles: const ['Tourist', 'Artisan'],
+        role: 'Tourist',
+        roles: const ['Tourist'],
         studioName: profile.name,
         craftCategory: profile.craftCategory,
         state: profile.state,
@@ -694,13 +694,15 @@ class ModerationViewModel extends ChangeNotifier {
       await _repository.updateArtisanStatus(
         email: artisan.email,
         newStatus: 'SUSPENDED',
-        newRole: 'Artisan & Tourist',
+        newRole: 'Tourist',
         updateArtisanProfileOnly: true,
       );
 
       final uIdx = _registeredUsers.indexWhere((u) => u.email.toLowerCase() == artisan.email.toLowerCase());
       if (uIdx != -1) {
         _registeredUsers[uIdx] = _registeredUsers[uIdx].copyWith(
+          role: 'Tourist',
+          roles: const ['Tourist'],
           artisanStatus: 'SUSPENDED',
         );
       }
@@ -718,13 +720,15 @@ class ModerationViewModel extends ChangeNotifier {
       await _repository.updateArtisanStatus(
         email: artisan.email,
         newStatus: 'APPROVED',
-        newRole: 'Artisan & Tourist',
+        newRole: 'Artisan',
         updateArtisanProfileOnly: true,
       );
 
       final uIdx = _registeredUsers.indexWhere((u) => u.email.toLowerCase() == artisan.email.toLowerCase());
       if (uIdx != -1) {
         _registeredUsers[uIdx] = _registeredUsers[uIdx].copyWith(
+          role: 'Artisan',
+          roles: const ['Artisan'],
           artisanStatus: 'APPROVED',
         );
       }

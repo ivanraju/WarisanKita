@@ -300,7 +300,10 @@ BEGIN
     -- 3. Update public.users status, role, and artisan_status
     UPDATE public.users
     SET
-        status = p_status,
+        status = CASE 
+            WHEN COALESCE(p_role, role) = 'Tourist' AND upper(p_status) = 'REJECTED' THEN 'ACTIVE'
+            ELSE p_status 
+        END,
         role = COALESCE(p_role, role),
         artisan_status = v_artisan_status,
         updated_at = now()
@@ -310,7 +313,10 @@ BEGIN
     UPDATE auth.users
     SET raw_user_meta_data = raw_user_meta_data ||
         jsonb_build_object(
-            'status', p_status,
+            'status', CASE 
+                WHEN COALESCE(p_role, raw_user_meta_data->>'role') = 'Tourist' AND upper(p_status) = 'REJECTED' THEN 'ACTIVE'
+                ELSE p_status 
+            END,
             'artisan_status', v_artisan_status,
             'role', COALESCE(p_role, raw_user_meta_data->>'role')
         )

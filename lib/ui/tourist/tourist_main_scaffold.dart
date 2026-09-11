@@ -82,10 +82,7 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
     final langVM = context.watch<LanguageViewModel>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final isArtisanRejected = (user.isRejectedArtisan ||
-        user.status.toUpperCase() == 'REJECTED' ||
-        user.artisanStatus?.toUpperCase() == 'REJECTED') &&
-        user.isApprovedArtisan != true;
+    final isArtisanRejected = user.isRejectedArtisan;
 
     return Scaffold(
       backgroundColor: isDark

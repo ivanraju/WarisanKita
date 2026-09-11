@@ -89,9 +89,7 @@ class RoleSelectionScreen extends StatelessWidget {
     final authVM = context.watch<AuthViewModel>();
     final user = authVM.currentUser;
     final isArtisanSuspended = user?.isArtisanStudioSuspended == true;
-    final isArtisanRejected = user?.isRejectedArtisan == true ||
-        user?.status.toUpperCase() == 'REJECTED' ||
-        user?.artisanStatus?.toUpperCase() == 'REJECTED';
+    final isArtisanRejected = user?.isRejectedArtisan == true;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),

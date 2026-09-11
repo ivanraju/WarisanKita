@@ -730,9 +730,8 @@ class SupabaseService {
   }) async {
     final client = _authClient;
     final cleanEmail = email.trim().toLowerCase();
-    final isArtisan = const ['Artisan', 'Master Artisan', 'Artisan & Tourist',
-      'Tourist & Artisan', 'Artisan and Tourist', 'Dual Role'].contains(role);
-    if (!isArtisan && role != 'Tourist' && role != 'Cultural Tourist') {
+    final isArtisan = const ['Artisan', 'Master Artisan'].contains(role);
+    if (!isArtisan && role != 'Tourist') {
       throw const AuthException('This role cannot be created through registration.');
     }
     final finalRole = isArtisan ? 'Artisan' : 'Tourist';
@@ -1005,9 +1004,11 @@ class SupabaseService {
         'email': cleanEmail,
         'username': cleanEmail.split('@').first,
         'displayName': cleanEmail.split('@').first,
-        'role': 'Artisan & Tourist',
-        'roles': ['Tourist', 'Artisan'],
-        'status': 'PENDING_APPROVAL',
+        'role': 'Tourist',
+        'roles': ['Tourist'],
+        'status': 'ACTIVE',
+        'artisanStatus': 'PENDING_APPROVAL',
+        'artisan_status': 'PENDING_APPROVAL',
         'studioName': studioName,
         'craftCategory': craftCategory,
         'joinedDate': _formatMonthYear(DateTime.now()),
@@ -1033,7 +1034,7 @@ class SupabaseService {
       );
     }
 
-    // Update user record with pending artisan credentials
+    // Update user record with pending artisan credentials while preserving Tourist account
     userRecord['studioName'] = studioName;
     userRecord['craftCategory'] = craftCategory;
     userRecord['ssmNumber'] = ssmNumber;
@@ -1045,8 +1046,8 @@ class SupabaseService {
     userRecord['status'] = 'PENDING_APPROVAL';
     userRecord['artisanStatus'] = 'PENDING_APPROVAL';
     userRecord['artisan_status'] = 'PENDING_APPROVAL';
-    userRecord['role'] = 'Artisan & Tourist';
-    userRecord['roles'] = ['Tourist', 'Artisan'];
+    userRecord['role'] = 'Tourist';
+    userRecord['roles'] = ['Tourist'];
 
     if (client != null) {
       try {
@@ -1055,7 +1056,8 @@ class SupabaseService {
             UserAttributes(
               data: {
                 'status': 'PENDING_APPROVAL',
-                'role': 'Artisan & Tourist',
+                'role': 'Tourist',
+                'artisan_status': 'PENDING_APPROVAL',
                 'studio_name': studioName,
                 'craft_category': craftCategory,
                 'ssm_number': ssmNumber,
@@ -1084,12 +1086,12 @@ class SupabaseService {
                 .from('users')
                 .update({
                   'status': 'PENDING_APPROVAL',
-                  'role': 'Artisan & Tourist',
+                  'role': 'Tourist',
                   'artisan_status': 'PENDING_APPROVAL',
                   if (phone != null) 'phone_number': phone,
                   'updated_at': DateTime.now().toIso8601String(),
                 })
-                .ilike('email', cleanEmail);
+                .eq('id', userId);
           } catch (userUpdateErr) {
             debugPrint('linkArtisanRoleToTourist users update note: $userUpdateErr');
             try {
@@ -1097,10 +1099,11 @@ class SupabaseService {
                   .from('users')
                   .update({
                     'status': 'PENDING_APPROVAL',
-                    'role': 'Artisan & Tourist',
+                    'role': 'Tourist',
+                    'artisan_status': 'PENDING_APPROVAL',
                     'updated_at': DateTime.now().toIso8601String(),
                   })
-                  .ilike('email', cleanEmail);
+                  .eq('id', userId);
             } catch (err) {
               debugPrint('linkArtisanRoleToTourist users minimal update note: $err');
             }
@@ -1112,7 +1115,8 @@ class SupabaseService {
             'username': userRecord['username'] ?? cleanEmail.split('@').first,
             'full_name': userRecord['displayName'] ?? studioName,
             'status': 'PENDING_APPROVAL',
-            'role': 'Artisan & Tourist',
+            'role': 'Tourist',
+            'artisan_status': 'PENDING_APPROVAL',
             if (phone != null) 'phone_number': phone,
             'created_at': DateTime.now().toIso8601String(),
             'updated_at': DateTime.now().toIso8601String(),
@@ -2300,10 +2304,10 @@ class SupabaseService {
           _userStore[cleanEmail]!['suspensionReason'] = null;
           _userStore[cleanEmail]!['suspension_reason'] = null;
         }
-        if (newRole == 'Artisan & Tourist') {
-          _userStore[cleanEmail]!['roles'] = ['Tourist', 'Artisan'];
-        } else if (newRole == 'Artisan') {
+        if (newRole == 'Artisan') {
           _userStore[cleanEmail]!['roles'] = ['Artisan'];
+        } else if (newRole == 'Tourist') {
+          _userStore[cleanEmail]!['roles'] = ['Tourist'];
         }
       }
 
@@ -2379,7 +2383,12 @@ class SupabaseService {
           try {
             await client
                 .from('users')
-                .update({'status': 'ACTIVE', 'role': newRole, 'updated_at': DateTime.now().toIso8601String()})
+                .update({
+                  'status': 'ACTIVE',
+                  'role': newRole,
+                  'artisan_status': newStatus,
+                  'updated_at': DateTime.now().toIso8601String(),
+                })
                 .ilike('email', cleanEmail);
           } catch (fixErr) {
             debugPrint('Tourist status fix note: $fixErr');

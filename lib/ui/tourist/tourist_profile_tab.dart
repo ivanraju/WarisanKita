@@ -883,9 +883,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                       const SizedBox(height: 16),
                       Builder(
                         builder: (context) {
-                          final isAppRejected = authVM.currentUser?.isRejectedArtisan == true ||
-                              authVM.currentUser?.status.toUpperCase() == 'REJECTED' ||
-                              authVM.currentUser?.artisanStatus?.toUpperCase() == 'REJECTED';
+                          final isAppRejected = authVM.currentUser?.isRejectedArtisan == true;
                           return Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
