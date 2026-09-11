@@ -430,7 +430,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
       } else if (matLower.contains('timber') || matLower.contains('wood')) {
         materialKeywords.addAll(['wood', 'carv', 'ukir', 'kayu', 'timber']);
       } else if (matLower.contains('pewter') || matLower.contains('metal')) {
-        materialKeywords.addAll(['metal', 'pewter', 'keris', 'besi', 'tembaga', 'silver', 'perak']);
+        materialKeywords.addAll(['metal', 'pewter', 'keris', 'besi', 'tembaga', 'silver', 'perak', 'blade', 'forg']);
       }
       for (final mc in matchmakerVM.matchingCrafts) {
         materialKeywords.add(mc.toLowerCase().trim());
@@ -470,7 +470,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
         targetStates = {};
       }
 
-      final scoredArtisans = <Map<String, dynamic>, int>{};
+      final scoredArtisans = <Map<String, dynamic>, double>{};
 
       for (final a in allDirectoryArtisans) {
         final craft = a['craft']?.toString().toLowerCase() ?? '';
@@ -483,7 +483,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
             ? tags.map((t) => t.toString().toLowerCase()).toList()
             : (tags is String ? [tags.toLowerCase()] : <String>[]);
 
-        // 1. Material / Craft match (Strict prerequisite)
+        // 1. Material / Craft match (Strict prerequisite from Quiz Q3)
         bool matchesMaterial = false;
         for (final kw in materialKeywords) {
           if (craft.contains(kw) || cat.contains(kw) || name.contains(kw) || tagList.any((t) => t.contains(kw))) {
@@ -492,40 +492,44 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
           }
         }
 
-        // Only recommend artisans that match the chosen craft/material from the quiz
+        // Only recommend artisans that strictly match the chosen craft/material from the quiz
         if (matchesMaterial) {
-          int score = 60; // Base score for matching craft
+          double score = 100.0; // Base score for craft match
 
-          // 2. Region / State match bonus (Weight: 40)
+          // 2. Region / State match bonus from Quiz Q4 (Weight: +50)
           if (targetStates.contains(state)) {
-            score += 40;
+            score += 50.0;
           }
 
-          // 3. Experience style match bonus (Weight: 10)
+          // 3. Experience style match bonus from Quiz Q1 (Weight: +25)
           final expLower = chosenExp.toLowerCase();
           final workshopCount = (a['workshopCount'] as num?)?.toInt() ?? 0;
           if (expLower.contains('hands-on')) {
             if (workshopCount > 0 || tagList.any((t) => t.contains('workshop') || t.contains('hands-on') || t.contains('class'))) {
-              score += 10;
+              score += 25.0;
             }
           } else if (expLower.contains('observing')) {
             final expYears = a['experienceYears']?.toString().toLowerCase() ?? '';
             if (expYears.contains('10+') || expYears.contains('20+') || tagList.any((t) => t.contains('master') || t.contains('heritage'))) {
-              score += 10;
+              score += 25.0;
             }
           }
 
-          // 4. Studio setting / environment match bonus (Weight: 10)
+          // 4. Studio setting / environment match bonus from Quiz Q2 (Weight: +25)
           final envLower = chosenEnv.toLowerCase();
           if (envLower.contains('indoor')) {
             if (tagList.any((t) => t.contains('studio') || t.contains('gallery') || t.contains('indoor')) || bio.contains('studio') || bio.contains('gallery')) {
-              score += 10;
+              score += 25.0;
             }
           } else if (envLower.contains('outdoor') || envLower.contains('village')) {
             if (tagList.any((t) => t.contains('village') || t.contains('kampong') || t.contains('outdoor')) || bio.contains('village') || bio.contains('kampong')) {
-              score += 10;
+              score += 25.0;
             }
           }
+
+          // 5. Rating tiebreaker
+          final rating = (a['rating'] as num?)?.toDouble() ?? 0.0;
+          score += (rating * 2.0);
 
           scoredArtisans[a] = score;
         }
@@ -547,7 +551,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
           ? '${langVM.translate('Suggested for You')} • ${personality.title}'
           : '${langVM.translate('Suggested for You')} • $categoryName';
       recommendationSubtitle = chosenMaterial.isNotEmpty && chosenRegion.isNotEmpty
-          ? 'Matched with your quiz choices: $chosenMaterial ($chosenRegion)'
+          ? 'Suggested from your quiz: $chosenMaterial • $chosenRegion${chosenExp.isNotEmpty ? " • $chosenExp" : ""}'
           : (personality?.tagline.isNotEmpty == true ? personality!.tagline : null);
     }
 
