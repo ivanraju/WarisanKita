@@ -806,5 +806,57 @@ void main() {
       expect(reactivatedMaster.isSuspended, isFalse);
       expect(reactivatedMaster.isLiveOpen, isTrue);
     });
+
+    test('Artisan application rejection excludes profile from pending approvals across refresh', () async {
+      final backend = AuthBackend();
+      addTearDown(backend.client.dispose);
+      const applicantEmail = 'applicant.test@warisankita.my';
+      final record = backend.add(applicantEmail, role: 'Tourist', username: 'applicantstudio');
+      final applicantId = record['id'] as String;
+
+      final service = SupabaseService(client: backend.client);
+      final repo = UserRepository(service: service);
+      final modVM = ModerationViewModel(repository: repo);
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      final pendingProfile = PendingArtisanProfile(
+        id: applicantId,
+        name: 'Applicant Studio',
+        craftCategory: 'Batik Weaving',
+        state: 'Kelantan',
+        dateSubmitted: '2026-09-11',
+        imageUrl: 'https://example.com/avatar.jpg',
+        email: applicantEmail,
+        experience: '5 Years',
+        phone: '+60123456789',
+        ssmNumber: 'SSM-999888',
+        isUpgradeFromTourist: true,
+      );
+
+      modVM.addPendingArtisan(pendingProfile);
+
+      expect(modVM.filteredArtisans.any((p) => p.email == applicantEmail), isTrue);
+      expect(modVM.totalPendingCount, greaterThanOrEqualTo(1));
+
+      // 2. Admin rejects the artisan application
+      await modVM.rejectArtisan(applicantId);
+
+      // Immediately removed from in-memory lists
+      expect(modVM.filteredArtisans.any((p) => p.email == applicantEmail), isFalse);
+      expect(modVM.pendingArtisans.any((p) => p.email == applicantEmail), isFalse);
+
+      // Registered user state preserved as active Tourist with artisanStatus REJECTED
+      final userAfterReject = modVM.registeredUsers.firstWhere((u) => u.email == applicantEmail);
+      expect(userAfterReject.status, 'ACTIVE');
+      expect(userAfterReject.role, 'Tourist');
+      expect(userAfterReject.artisanStatus, 'REJECTED');
+
+      // 3. Admin refreshes or fetches data again
+      await modVM.refreshAllData();
+
+      // Application remains strictly excluded from pending approvals queue
+      expect(modVM.filteredArtisans.any((p) => p.email == applicantEmail), isFalse);
+      expect(modVM.pendingArtisans.any((p) => p.email == applicantEmail), isFalse);
+    });
   });
 }

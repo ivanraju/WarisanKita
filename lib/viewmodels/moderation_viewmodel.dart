@@ -178,6 +178,19 @@ class ModerationViewModel extends ChangeNotifier {
 
   List<PendingArtisanProfile> get filteredArtisans {
     return _pendingArtisans.where((artisan) {
+      // Strictly exclude rejected or approved profiles from the approval queue
+      final matchingUsers = _registeredUsers.where(
+        (u) => u.email.toLowerCase() == artisan.email.toLowerCase(),
+      );
+      if (matchingUsers.isNotEmpty) {
+        final regUser = matchingUsers.first;
+        if (regUser.status.toUpperCase() == 'REJECTED' ||
+            regUser.artisanStatus?.toUpperCase() == 'REJECTED' ||
+            regUser.artisanStatus?.toUpperCase() == 'APPROVED') {
+          return false;
+        }
+      }
+
       final matchesSearch = _searchQuery.isEmpty ||
           artisan.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           artisan.craftCategory.toLowerCase().contains(_searchQuery.toLowerCase()) ||
@@ -196,9 +209,9 @@ class ModerationViewModel extends ChangeNotifier {
   }
 
   List<PendingArtisanProfile> get pendingArtisans => List.unmodifiable(_pendingArtisans);
-  int get totalPendingCount => _pendingArtisans.length;
-  int get pendingRelocationCount => _pendingArtisans.where((p) => p.isRelocationRequest).length;
-  int get pendingNewProfilesCount => _pendingArtisans.where((p) => !p.isRelocationRequest).length;
+  int get totalPendingCount => filteredArtisans.length;
+  int get pendingRelocationCount => filteredArtisans.where((p) => p.isRelocationRequest).length;
+  int get pendingNewProfilesCount => filteredArtisans.where((p) => !p.isRelocationRequest).length;
 
   int _sessionApprovedToday = 0;
   final List<Duration> _reviewDurations = [];
@@ -357,6 +370,40 @@ class ModerationViewModel extends ChangeNotifier {
       for (final raw in dbPending) {
         final email = (raw['email'] ?? '').toString();
         if (email.isEmpty) continue;
+
+        final rawStatus = (raw['status'] ?? '').toString().toUpperCase();
+        final rawArtisanStatus = (raw['artisan_status'] ?? raw['artisanStatus'] ?? '').toString().toUpperCase();
+
+        Map<String, dynamic>? apMap;
+        if (raw['artisan_profiles'] is Map) {
+          apMap = Map<String, dynamic>.from(raw['artisan_profiles']);
+        } else if (raw['artisan_profiles'] is List && (raw['artisan_profiles'] as List).isNotEmpty) {
+          apMap = Map<String, dynamic>.from((raw['artisan_profiles'] as List).first);
+        }
+        final apStatus = (apMap?['status'] ?? '').toString().toUpperCase();
+
+        if (rawStatus == 'REJECTED' ||
+            rawArtisanStatus == 'REJECTED' ||
+            rawArtisanStatus == 'APPROVED' ||
+            rawArtisanStatus == 'CLOSED' ||
+            apStatus == 'REJECTED' ||
+            apStatus == 'APPROVED' ||
+            apStatus == 'CLOSED') {
+          continue;
+        }
+
+        // Also check if existing registered user is already marked REJECTED
+        final matchingRegistered = _registeredUsers.where(
+          (u) => u.email.toLowerCase() == email.toLowerCase(),
+        );
+        if (matchingRegistered.isNotEmpty) {
+          final existingUser = matchingRegistered.first;
+          if (existingUser.status.toUpperCase() == 'REJECTED' ||
+              existingUser.artisanStatus?.toUpperCase() == 'REJECTED' ||
+              existingUser.artisanStatus?.toUpperCase() == 'APPROVED') {
+            continue;
+          }
+        }
 
         final id = raw['id']?.toString() ?? 'p_${email.hashCode}';
         final name = (raw['studio_name'] ?? raw['studioName'] ?? raw['full_name'] ?? raw['displayName'] ?? raw['username'] ?? 'Artisan Studio').toString();
@@ -667,10 +714,16 @@ class ModerationViewModel extends ChangeNotifier {
   }
 
   Future<void> rejectArtisan(String id, {String? reason}) async {
-    final idx = _pendingArtisans.indexWhere((item) => item.id == id);
+    int idx = _pendingArtisans.indexWhere((item) => item.id == id);
+    if (idx == -1) {
+      idx = _pendingArtisans.indexWhere((item) => item.email.toLowerCase() == id.toLowerCase());
+    }
+
     if (idx != -1) {
       final artisan = _pendingArtisans[idx];
-      _pendingArtisans.removeAt(idx);
+      _pendingArtisans.removeWhere(
+        (p) => p.id == id || p.email.toLowerCase() == artisan.email.toLowerCase(),
+      );
       final submittedDate = _parseSubmissionDate(artisan.dateSubmitted);
       if (submittedDate != null) {
         final diff = DateTime.now().difference(submittedDate);
@@ -720,7 +773,37 @@ class ModerationViewModel extends ChangeNotifier {
         updateArtisanProfileOnly: isExistingTourist,
       );
 
+      // Final sweep to guarantee removal from pending approvals
+      _pendingArtisans.removeWhere(
+        (p) => p.id == id || p.email.toLowerCase() == artisan.email.toLowerCase(),
+      );
+
       notifyListeners();
+    } else {
+      // Fallback: search by id or email in _registeredUsers
+      final userIdx = _registeredUsers.indexWhere(
+        (u) => u.id == id || u.email.toLowerCase() == id.toLowerCase(),
+      );
+      if (userIdx != -1) {
+        final existingUser = _registeredUsers[userIdx];
+        final isTourist = existingUser.role.toLowerCase().contains('tourist');
+        _registeredUsers[userIdx] = existingUser.copyWith(
+          role: isTourist ? 'Tourist' : existingUser.role,
+          roles: isTourist ? const ['Tourist'] : existingUser.roles,
+          status: isTourist ? 'ACTIVE' : 'REJECTED',
+          artisanStatus: 'REJECTED',
+        );
+        await _repository.updateArtisanStatus(
+          email: existingUser.email,
+          newStatus: 'REJECTED',
+          newRole: isTourist ? 'Tourist' : 'Artisan',
+          updateArtisanProfileOnly: isTourist,
+        );
+        _pendingArtisans.removeWhere(
+          (p) => p.id == id || p.email.toLowerCase() == existingUser.email.toLowerCase(),
+        );
+        notifyListeners();
+      }
     }
   }
 

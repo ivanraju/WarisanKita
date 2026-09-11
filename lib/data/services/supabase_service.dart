@@ -1892,6 +1892,22 @@ class SupabaseService {
                 }
               }
             }
+
+            final userStatus = (rowMap['status'] ?? '').toString().toUpperCase();
+            final artisanStatus = (rowMap['artisan_status'] ?? rowMap['artisanStatus'] ?? ap?['status'] ?? '').toString().toUpperCase();
+            final apStatus = (ap?['status'] ?? '').toString().toUpperCase();
+
+            // Strictly exclude any rejected, approved, or closed applications
+            if (userStatus == 'REJECTED' ||
+                artisanStatus == 'REJECTED' ||
+                artisanStatus == 'APPROVED' ||
+                artisanStatus == 'CLOSED' ||
+                apStatus == 'REJECTED' ||
+                apStatus == 'APPROVED' ||
+                apStatus == 'CLOSED') {
+              continue;
+            }
+
             results.add(rowMap);
           }
         }
@@ -1904,7 +1920,16 @@ class SupabaseService {
     for (final entry in _userStore.entries) {
       final user = entry.value;
       final status = (user['status'] ?? '').toString().toUpperCase();
-      if (status.contains('PENDING')) {
+      final artisanStatus = (user['artisan_status'] ?? user['artisanStatus'] ?? '').toString().toUpperCase();
+
+      if (status == 'REJECTED' ||
+          artisanStatus == 'REJECTED' ||
+          artisanStatus == 'APPROVED' ||
+          artisanStatus == 'CLOSED') {
+        continue;
+      }
+
+      if (status.contains('PENDING') || artisanStatus.contains('PENDING')) {
         final userEmail = (user['email'] ?? entry.key).toString().toLowerCase();
         if (!results.any(
           (r) => (r['email'] ?? '').toString().toLowerCase() == userEmail,
@@ -1913,6 +1938,23 @@ class SupabaseService {
         }
       }
     }
+
+    // Safety purge: ensure any profiles marked REJECTED, APPROVED, or CLOSED in _userStore are excluded
+    results.removeWhere((r) {
+      final email = (r['email'] ?? '').toString().toLowerCase();
+      if (_userStore.containsKey(email)) {
+        final cached = _userStore[email]!;
+        final cStatus = (cached['status'] ?? '').toString().toUpperCase();
+        final cArtisanStatus = (cached['artisan_status'] ?? cached['artisanStatus'] ?? '').toString().toUpperCase();
+        if (cStatus == 'REJECTED' ||
+            cArtisanStatus == 'REJECTED' ||
+            cArtisanStatus == 'APPROVED' ||
+            cArtisanStatus == 'CLOSED') {
+          return true;
+        }
+      }
+      return false;
+    });
 
     return results;
   }
@@ -2123,6 +2165,8 @@ class SupabaseService {
         }
       } else {
         _userStore[cleanEmail]!['status'] = newStatus;
+        _userStore[cleanEmail]!['artisanStatus'] = newStatus;
+        _userStore[cleanEmail]!['artisan_status'] = newStatus;
         _userStore[cleanEmail]!['role'] = newRole;
         _userStore[cleanEmail]!['isSuspended'] = (newStatus == 'SUSPENDED');
         if (newStatus == 'SUSPENDED') {
@@ -2157,6 +2201,8 @@ class SupabaseService {
               }
             } else {
               map['status'] = newStatus;
+              map['artisanStatus'] = newStatus;
+              map['artisan_status'] = newStatus;
               map['isSuspended'] = (newStatus == 'SUSPENDED');
               if (newStatus == 'SUSPENDED') {
                 map['suspensionReason'] = suspensionReason;
@@ -2228,6 +2274,24 @@ class SupabaseService {
                 .from('users')
                 .update(updatePayload)
                 .ilike('email', cleanEmail);
+          }
+        } else {
+          // When updateArtisanProfileOnly is true (e.g. tourist whose artisan request was rejected),
+          // ensure users.status is ACTIVE and users.role is updated (e.g. Tourist) so they don't remain PENDING_APPROVAL
+          final userUpdate = <String, dynamic>{
+            'status': 'ACTIVE',
+            'updated_at': DateTime.now().toIso8601String(),
+          };
+          if (newRole.isNotEmpty) {
+            userUpdate['role'] = newRole;
+          }
+          try {
+            await client
+                .from('users')
+                .update(userUpdate)
+                .ilike('email', cleanEmail);
+          } catch (err) {
+            debugPrint('Direct user table active sync note: $err');
           }
         }
 
