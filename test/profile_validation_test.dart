@@ -1759,5 +1759,35 @@ void main() {
         expect(pendingUserWithResidualReason.isRejectedArtisan, isFalse);
         expect(pendingUserWithResidualReason.isPendingArtisan, isTrue);
       });
+
+      test('UserModel extracts ssm and cert document URLs and filenames from artisanDocuments', () {
+        const user = UserModel(
+          id: 'user-doc-test',
+          email: 'doc.test@warisankita.my',
+          role: 'Tourist',
+          artisanDocuments: [
+            {
+              'doc_type': 'SSM_BUSINESS_CERT',
+              'file_url': 'https://supabase.co/storage/v1/object/public/artisan_private_docs/ssm/my_ssm.pdf',
+              'file_name': 'my_ssm.pdf',
+            },
+            {
+              'doc_type': 'KRAFTANGAN_MASTER_CERT',
+              'file_url': 'https://supabase.co/storage/v1/object/public/artisan_private_docs/cert/kraftangan.png',
+              'file_name': 'kraftangan.png',
+            },
+            {
+              'doc_type': 'STUDIO_PHOTO',
+              'file_url': 'https://images.unsplash.com/studio.jpg',
+              'file_name': 'studio.jpg',
+            },
+          ],
+        );
+
+        expect(user.ssmFileUrl, contains('my_ssm.pdf'));
+        expect(user.ssmFileName, 'my_ssm.pdf');
+        expect(user.certFileUrl, contains('kraftangan.png'));
+        expect(user.certFileName, 'kraftangan.png');
+      });
     });
 }

@@ -133,6 +133,58 @@ class UserModel {
        (role != 'Tourist' && studioName != null && studioName!.trim().isNotEmpty)) &&
       !isArtisanStudioSuspended;
 
+  String? get ssmFileUrl {
+    for (final d in artisanDocuments) {
+      final type = d['doc_type']?.toString();
+      if (type == 'SSM_BUSINESS_CERT' || type == 'SSM_CERT' || type == 'SSM') {
+        final url = d['file_url']?.toString();
+        if (url != null && url.isNotEmpty) return url;
+      }
+    }
+    return null;
+  }
+
+  String? get ssmFileName {
+    for (final d in artisanDocuments) {
+      final type = d['doc_type']?.toString();
+      if (type == 'SSM_BUSINESS_CERT' || type == 'SSM_CERT' || type == 'SSM') {
+        final name = d['file_name']?.toString();
+        if (name != null && name.isNotEmpty) return name;
+        final url = d['file_url']?.toString();
+        if (url != null && url.isNotEmpty) return url.split('/').last;
+      }
+    }
+    return null;
+  }
+
+  String? get certFileUrl {
+    for (final d in artisanDocuments) {
+      final type = d['doc_type']?.toString();
+      if (type == 'KRAFTANGAN_MASTER_CERT' ||
+          type == 'KRAFTANGAN_CERT' ||
+          type == 'CERT') {
+        final url = d['file_url']?.toString();
+        if (url != null && url.isNotEmpty) return url;
+      }
+    }
+    return null;
+  }
+
+  String? get certFileName {
+    for (final d in artisanDocuments) {
+      final type = d['doc_type']?.toString();
+      if (type == 'KRAFTANGAN_MASTER_CERT' ||
+          type == 'KRAFTANGAN_CERT' ||
+          type == 'CERT') {
+        final name = d['file_name']?.toString();
+        if (name != null && name.isNotEmpty) return name;
+        final url = d['file_url']?.toString();
+        if (url != null && url.isNotEmpty) return url.split('/').last;
+      }
+    }
+    return null;
+  }
+
   String get handle {
     if (username != null && username!.trim().isNotEmpty) {
       return username!.trim().replaceAll('@', '');
