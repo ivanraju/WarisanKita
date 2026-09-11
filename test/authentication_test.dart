@@ -368,6 +368,71 @@ void main() {
     );
     expect(backend.passwordUpdates, 0);
   });
+  test('resetPasswordWithToken rejects reusing the same old password', () async {
+    backend.add('sametest@test.com');
+    await service.signIn('sametest@test.com', 'Password123!');
+    service.acceptPasswordRecovery(backend.client.auth.currentSession!);
+    await expectLater(
+      service.resetPasswordWithToken(
+        email: 'sametest@test.com',
+        token: '',
+        newPassword: 'Password123!',
+      ),
+      throwsA(
+        isA<AuthException>().having(
+          (error) => error.message,
+          'message',
+          contains('NEW PASSWORD CANNOT BE THE SAME AS YOUR CURRENT PASSWORD'),
+        ),
+      ),
+    );
+    expect(backend.passwordUpdates, 0);
+  });
+  test('changePassword rejects incorrect current password', () async {
+    backend.add('changepass@test.com', password: 'CurrentPassword123!');
+    final repo = UserRepository(service: service);
+    final vm = AuthViewModel(repository: repo);
+    await vm.login('changepass@test.com', 'CurrentPassword123!');
+
+    final result = await vm.changePassword(
+      currentPassword: 'WrongCurrentPassword!',
+      newPassword: 'BrandNewPassword456!',
+      confirmPassword: 'BrandNewPassword456!',
+    );
+    expect(result.success, isFalse);
+    expect(result.message, contains('INCORRECT CURRENT PASSWORD'));
+    expect(backend.passwordUpdates, 0);
+  });
+  test('changePassword rejects trivial casing variations (case-insensitive similarity)', () async {
+    backend.add('casetest@test.com', password: 'CurrentPassword123!');
+    final repo = UserRepository(service: service);
+    final vm = AuthViewModel(repository: repo);
+    await vm.login('casetest@test.com', 'CurrentPassword123!');
+
+    final result = await vm.changePassword(
+      currentPassword: 'CurrentPassword123!',
+      newPassword: 'currentpassword123!',
+      confirmPassword: 'currentpassword123!',
+    );
+    expect(result.success, isFalse);
+    expect(result.message, contains('NEW PASSWORD IS TOO SIMILAR TO YOUR CURRENT PASSWORD'));
+    expect(backend.passwordUpdates, 0);
+  });
+  test('changePassword successfully updates password with valid credentials', () async {
+    backend.add('validsuccess@test.com', password: 'CurrentPassword123!');
+    final repo = UserRepository(service: service);
+    final vm = AuthViewModel(repository: repo);
+    await vm.login('validsuccess@test.com', 'CurrentPassword123!');
+
+    final result = await vm.changePassword(
+      currentPassword: 'CurrentPassword123!',
+      newPassword: 'BrandNewPassword456!',
+      confirmPassword: 'BrandNewPassword456!',
+    );
+    expect(result.success, isTrue);
+    expect(result.message, contains('PASSWORD CHANGED SUCCESSFULLY'));
+    expect(backend.passwordUpdates, 1);
+  });
   test('failed login clears previous view model user', () async {
     final vm = AuthViewModel(repository: UserRepository(service: service));
     backend.add('old@test.com');

@@ -60,15 +60,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.initState();
     final authVM = context.read<AuthViewModel>();
     final user = authVM.currentUser;
-    final initialFullName = user?.displayName ?? user?.effectiveUsername ?? 'Aiman Haziq';
-    final initialUsername = (user?.username ?? user?.effectiveUsername ?? 'aiman_haziq').replaceAll('@', '');
+    final initialFullName = user?.displayName ?? user?.effectiveUsername ?? '';
+    final initialUsername = (user?.username ?? user?.effectiveUsername ?? '').replaceAll('@', '');
     _initialUsername = initialUsername;
     _fullNameController = TextEditingController(text: initialFullName);
     _usernameController = TextEditingController(text: initialUsername);
     _usernameController.addListener(_onUsernameChanged);
-    _phoneController = TextEditingController(text: user?.phone ?? '+60 12-345 6789');
-    _bioController = TextEditingController(text: user?.bio ?? 'Passionate Malaysian cultural explorer and craft preserver.');
-    _studioNameController = TextEditingController(text: user?.studioName ?? user?.displayName ?? 'Warisan Craft Studio');
+    _phoneController = TextEditingController(text: user?.phone ?? '');
+    _bioController = TextEditingController(text: user?.bio ?? '');
+    _studioNameController = TextEditingController(text: user?.studioName ?? user?.displayName ?? '');
 
     if (user?.craftCategory != null && _craftCategories.contains(user!.craftCategory)) {
       _selectedCraftCategory = user.craftCategory!;
@@ -279,9 +279,28 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Widget build(BuildContext context) {
     final authVM = context.watch<AuthViewModel>();
     final user = authVM.currentUser;
-    final initials = user?.initials ?? 'AH';
-    final isDual = user?.isDualRole ?? false || user?.role == 'Artisan';
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    if (user == null) {
+      return Scaffold(
+        backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
+        appBar: AppBar(
+          title: Text(
+            'Edit Profile',
+            style: GoogleFonts.dmSerifDisplay(
+              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+              fontSize: 22,
+            ),
+          ),
+          backgroundColor: isDark ? const Color(0xFF0D2825) : Colors.white,
+          elevation: 0,
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final initials = user.initials;
+    final isDual = user.isDualRole || user.role == 'Artisan';
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),

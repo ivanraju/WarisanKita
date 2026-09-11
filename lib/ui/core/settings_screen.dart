@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:warisan_kita/ui/auth/forgot_password_screen.dart';
+import 'package:warisan_kita/ui/core/widgets/change_password_dialog.dart';
 import 'package:warisan_kita/ui/matchmaker/craft_matchmaker_quiz_wizard.dart';
 import 'package:warisan_kita/ui/core/edit_profile_screen.dart';
 import 'package:warisan_kita/ui/core/widgets/translation_language_dialog.dart';
@@ -128,10 +129,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final isQuizCompleted = matchmakerVM.isQuizCompleted;
     final personality = matchmakerVM.currentPersonality;
     final user = authVM.currentUser;
-    final username = user?.effectiveUsername ?? 'Guest User';
-    final initials = user?.initials ?? 'G';
-    final email = user?.email ?? '';
-    final role = user?.role ?? 'Tourist';
+    if (user == null) {
+      return Scaffold(
+        backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
+        appBar: AppBar(
+          title: Text(
+            langVM.translate('Settings & Account'),
+            style: GoogleFonts.dmSerifDisplay(color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40), fontSize: 22),
+          ),
+          backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
+          elevation: 0,
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+    final username = user.effectiveUsername;
+    final initials = user.initials;
+    final email = user.email;
+    final role = user.role;
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
@@ -288,10 +303,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             isDark: isDark,
             icon: Icons.lock_reset_rounded,
             title: langVM.translate('Change Password'),
-            subtitle: langVM.translate('Reset account password via email instructions'),
+            subtitle: langVM.translate('Update password using your current password'),
             onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+              showDialog(
+                context: context,
+                builder: (_) => const ChangePasswordDialog(),
               );
             },
           ),

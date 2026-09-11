@@ -277,9 +277,12 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
     final authVM = context.watch<AuthViewModel>();
     final gameStat = context.watch<GamificationViewModel>();
     final user = authVM.currentUser;
-    final username = user?.effectiveUsername ?? 'Heritage Traveller';
-    final initials = user?.initials ?? 'WK';
-    final passportId = _passportId(user?.id);
+    if (user == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    final username = user.effectiveUsername;
+    final initials = user.initials;
+    final passportId = _passportId(user.id);
     final completedQuests = gameStat.hasPassportQuestStatistics
         ? '${gameStat.completedPassportQuests}'
         : '—';
