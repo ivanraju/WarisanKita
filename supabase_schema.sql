@@ -268,6 +268,42 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- 9. Public Security-Definer RPC Function for Moderation (Approve / Reject / Suspend)
 -- Drop ambiguous 3-parameter overload to resolve PGRST203 function resolution error
 DROP FUNCTION IF EXISTS public.admin_update_user_status(text, text, text);
+DROP FUNCTION IF EXISTS public.admin_update_user_status(text, text, text, text, text, text);
+DROP FUNCTION IF EXISTS public.deactivate_artisan_studio(uuid);
+
+-- Dedicated RPC for closing artisan studio cleanly
+CREATE OR REPLACE FUNCTION public.deactivate_artisan_studio(p_user_id uuid)
+RETURNS JSONB AS $$
+BEGIN
+    -- 1. Update public.users
+    UPDATE public.users
+    SET role = 'Tourist',
+        artisan_status = 'CLOSED',
+        status = 'ACTIVE',
+        updated_at = now()
+    WHERE id = p_user_id;
+
+    -- 2. Update auth.users metadata
+    UPDATE auth.users
+    SET raw_user_meta_data = raw_user_meta_data || '{"role": "Tourist", "artisan_status": "CLOSED", "status": "ACTIVE"}'::jsonb
+    WHERE id = p_user_id;
+
+    -- 3. Retire quests owned by this artisan
+    UPDATE public.quests
+    SET status = 'RETIRED'
+    WHERE artisan_id IN (SELECT id FROM public.artisan_profiles WHERE user_id = p_user_id);
+
+    -- 4. Mark artisan_profile as CLOSED
+    UPDATE public.artisan_profiles
+    SET status = 'CLOSED',
+        updated_at = now()
+    WHERE user_id = p_user_id;
+
+    RETURN jsonb_build_object('success', true);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+GRANT EXECUTE ON FUNCTION public.deactivate_artisan_studio(uuid) TO anon, authenticated, service_role;
 
 CREATE OR REPLACE FUNCTION public.admin_update_user_status(
     p_email text,
@@ -294,8 +330,12 @@ BEGIN
     END IF;
 
     -- 2. Resolve artisan_status
-    IF upper(p_status) IN ('ACTIVE', 'APPROVED') THEN
+    IF upper(p_status) = 'CLOSED' THEN
+        v_artisan_status := 'CLOSED';
+    ELSIF upper(p_status) IN ('ACTIVE', 'APPROVED') THEN
         v_artisan_status := 'APPROVED';
+    ELSIF upper(p_status) = 'REJECTED' THEN
+        v_artisan_status := 'REJECTED';
     ELSE
         v_artisan_status := upper(p_status);
     END IF;
@@ -304,7 +344,7 @@ BEGIN
     UPDATE public.users
     SET
         status = CASE 
-            WHEN COALESCE(p_role, role) = 'Tourist' AND upper(p_status) = 'REJECTED' THEN 'ACTIVE'
+            WHEN COALESCE(p_role, role) = 'Tourist' AND upper(p_status) IN ('REJECTED', 'CLOSED') THEN 'ACTIVE'
             ELSE p_status 
         END,
         role = COALESCE(p_role, role),
@@ -317,7 +357,7 @@ BEGIN
     SET raw_user_meta_data = raw_user_meta_data ||
         jsonb_build_object(
             'status', CASE 
-                WHEN COALESCE(p_role, raw_user_meta_data->>'role') = 'Tourist' AND upper(p_status) = 'REJECTED' THEN 'ACTIVE'
+                WHEN COALESCE(p_role, raw_user_meta_data->>'role') = 'Tourist' AND upper(p_status) IN ('REJECTED', 'CLOSED') THEN 'ACTIVE'
                 ELSE p_status 
             END,
             'artisan_status', v_artisan_status,
@@ -325,19 +365,39 @@ BEGIN
         )
     WHERE id = v_user_id;
 
-    -- 5. Fetch existing studio details from artisan_profiles table for fallback
+    -- 5. If status is CLOSED, update artisan_profiles to CLOSED and retire quests
+    IF v_artisan_status = 'CLOSED' THEN
+        UPDATE public.artisan_profiles
+        SET status = 'CLOSED', updated_at = now()
+        WHERE user_id = v_user_id;
+
+        UPDATE public.quests
+        SET status = 'RETIRED'
+        WHERE artisan_id IN (SELECT id FROM public.artisan_profiles WHERE user_id = v_user_id);
+
+        RETURN jsonb_build_object(
+            'success', true, 
+            'user_id', v_user_id, 
+            'status', p_status, 
+            'role', COALESCE(p_role, 'Tourist'),
+            'artisan_status', 'CLOSED'
+        );
+    END IF;
+
+    -- 6. Fetch existing studio details from artisan_profiles table for fallback
     SELECT studio_name, craft_category
     INTO v_existing_studio, v_existing_craft
     FROM public.artisan_profiles
     WHERE user_id = v_user_id;
 
-    -- 6. Upsert artisan_profiles (insert if missing, update status if exists)
+    -- 7. Upsert artisan_profiles (insert if missing, update status if exists)
     INSERT INTO public.artisan_profiles (
         user_id,
         status,
         studio_name,
         craft_category,
         ssm_number,
+        bio,
         created_at,
         updated_at
     ) VALUES (
@@ -346,14 +406,24 @@ BEGIN
         COALESCE(p_studio_name, v_existing_studio, 'Heritage Studio'),
         COALESCE(p_craft_category, v_existing_craft, 'Traditional Craft'),
         p_ssm_number,
+        'Heritage artisan studio bio',
         now(),
         now()
     )
     ON CONFLICT (user_id) DO UPDATE SET
         status = EXCLUDED.status,
+        studio_name = COALESCE(EXCLUDED.studio_name, artisan_profiles.studio_name),
+        craft_category = COALESCE(EXCLUDED.craft_category, artisan_profiles.craft_category),
+        ssm_number = COALESCE(EXCLUDED.ssm_number, artisan_profiles.ssm_number),
         updated_at = now();
 
-    RETURN jsonb_build_object('success', true, 'user_id', v_user_id, 'status', p_status, 'artisan_status', v_artisan_status);
+    RETURN jsonb_build_object(
+        'success', true, 
+        'user_id', v_user_id, 
+        'status', p_status, 
+        'role', COALESCE(p_role, 'Artisan'),
+        'artisan_status', v_artisan_status
+    );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -362,8 +432,7 @@ GRANT SELECT, INSERT, UPDATE ON public.users TO anon, authenticated;
 GRANT SELECT, INSERT, UPDATE ON public.artisan_profiles TO anon, authenticated;
 GRANT SELECT, INSERT, UPDATE ON public.artisan_documents TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.check_account_by_email(text) TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.admin_update_user_status(text, text, text) TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.admin_update_user_status(text, text, text, text, text, text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_update_user_status(text, text, text, text, text, text) TO anon, authenticated, service_role;
 
 
 -- Policies for public.users and public.artisan_profiles
@@ -500,66 +569,12 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 9. Public Security-Definer RPC Function for Moderation (Approve / Reject / Suspend)
-CREATE OR REPLACE FUNCTION public.admin_update_user_status(
-    p_email text,
-    p_status text,
-    p_role text DEFAULT NULL
-)
-RETURNS JSONB AS $$
-DECLARE
-    v_user_id uuid;
-    v_artisan_status text;
-BEGIN
-    -- 1. Find user id
-    SELECT id INTO v_user_id
-    FROM public.users
-    WHERE lower(trim(email)) = lower(trim(p_email));
-
-    IF v_user_id IS NULL THEN
-        RETURN jsonb_build_object('success', false, 'message', 'User not found');
-    END IF;
-
-    -- 2. Update public.users status and role
-    UPDATE public.users
-    SET 
-        status = p_status,
-        role = COALESCE(p_role, role),
-        updated_at = now()
-    WHERE id = v_user_id;
-
-    -- 3. Update auth.users user_metadata status and role if auth user exists
-    UPDATE auth.users
-    SET raw_user_meta_data = raw_user_meta_data || 
-        jsonb_build_object(
-            'status', p_status,
-            'role', COALESCE(p_role, raw_user_meta_data->>'role')
-        )
-    WHERE id = v_user_id;
-
-    -- 4. Update public.artisan_profiles status
-    IF upper(p_status) IN ('ACTIVE', 'APPROVED') THEN
-        v_artisan_status := 'APPROVED';
-    ELSE
-        v_artisan_status := p_status;
-    END IF;
-
-    UPDATE public.artisan_profiles
-    SET 
-        status = v_artisan_status,
-        updated_at = now()
-    WHERE user_id = v_user_id;
-
-    RETURN jsonb_build_object('success', true, 'user_id', v_user_id, 'status', p_status);
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
 -- Grant permissions on tables and RPC functions
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.users TO anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.artisan_profiles TO anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.artisan_documents TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.check_account_by_email(text) TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.admin_update_user_status(text, text, text) TO anon, authenticated;
+
 
 -- Policies for public.users and public.artisan_profiles
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;

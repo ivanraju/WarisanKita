@@ -176,7 +176,9 @@ class AuthBackend {
               row['status'] = 'ACTIVE';
             } else if (s == 'REJECTED') {
               row['artisan_status'] = 'REJECTED';
-              if (role == 'Tourist') {
+              if (role == 'Tourist' ||
+                  (role == null &&
+                      (row['role']?.toString().contains('Tourist') ?? false))) {
                 row['status'] = 'ACTIVE';
               } else {
                 row['status'] = 'REJECTED';

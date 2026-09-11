@@ -2699,7 +2699,10 @@ class SupabaseService {
           params: {
             'p_email': cleanEmail,
             'p_status': newStatus,
-            'p_role': newRole,
+            'p_role':
+                (newStatus.toUpperCase() == 'REJECTED' && newRole == 'Tourist')
+                    ? null
+                    : newRole,
           },
         );
         debugPrint(
