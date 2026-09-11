@@ -15,8 +15,6 @@ class ArtisanSettingsScreen extends StatefulWidget {
 }
 
 class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
-  bool _proximityAlerts = true;
-
   void _handleLogout() {
     final nav = Navigator.of(context, rootNavigator: true);
     final authVM = context.read<AuthViewModel>();
@@ -462,17 +460,9 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
 
           const SizedBox(height: 28),
 
-          // Section 2: Studio Proximity & Radar Controls
-          _buildSectionHeader('PROXIMITY RADAR & ALERTS'),
+          // Section 2: Preferences
+          _buildSectionHeader('PREFERENCES'),
           const SizedBox(height: 10),
-          _buildSwitchTile(
-            context,
-            icon: Icons.radar_rounded,
-            title: 'Tourist Proximity Alerts',
-            subtitle: 'Broadcast alerts when tourists enter 50m workshop geofence',
-            value: _proximityAlerts,
-            onChanged: (val) => setState(() => _proximityAlerts = val),
-          ),
           _buildSwitchTile(
             context,
             icon: Icons.dark_mode_outlined,

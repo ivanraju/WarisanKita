@@ -19,7 +19,6 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool _pushNotifications = true;
   bool _locationAlerts = true;
 
   void _handleLogout(LanguageViewModel langVM) {
@@ -414,15 +413,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           // Section 2: Preferences
           _buildSectionHeader(langVM.translate('PREFERENCES'), isDark: isDark),
           const SizedBox(height: 10),
-          _buildSwitchTile(
-            context,
-            isDark: isDark,
-            icon: Icons.notifications_none_rounded,
-            title: langVM.translate('Push Notifications'),
-            subtitle: langVM.translate('Workshop reminders and thread updates'),
-            value: _pushNotifications,
-            onChanged: (val) => setState(() => _pushNotifications = val),
-          ),
           _buildSwitchTile(
             context,
             isDark: isDark,
