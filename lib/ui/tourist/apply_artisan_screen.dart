@@ -180,7 +180,10 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
     });
 
     try {
-      final matches = await WorkshopPlaceSearch.search(query: query);
+      final matches = await WorkshopPlaceSearch.search(
+        query: query,
+        targetState: _selectedState,
+      );
       if (matches.isEmpty) {
         throw StateError('No matching place was found.');
       }
@@ -191,6 +194,15 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
           : await _chooseWorkshopPlace(matches);
       if (match == null || !mounted) return;
 
+      if (match.malaysiaState != null &&
+          match.malaysiaState!.toLowerCase() != _selectedState.toLowerCase()) {
+        setState(() {
+          _locationError =
+              'Selected location is in ${match.malaysiaState}, but workshop state is $_selectedState. Please select a location within $_selectedState.';
+        });
+        return;
+      }
+
       _applyWorkshopPlace(match);
       await _workshopMapController?.animateCamera(
         CameraUpdate.newLatLngZoom(match.position, 17),
@@ -199,7 +211,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
       if (!mounted) return;
       setState(() {
         _locationError =
-            'Place not found. Try a complete workshop name or street address.';
+            'Place not found in $_selectedState. Try a more complete address.';
       });
     } finally {
       if (mounted) setState(() => _isSearchingLocation = false);
@@ -207,13 +219,18 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
   }
 
   void _applyWorkshopPlace(WorkshopPlaceResult place) {
+    if (place.malaysiaState != null &&
+        place.malaysiaState!.toLowerCase() != _selectedState.toLowerCase()) {
+      setState(() {
+        _locationError =
+            'Selected location is in ${place.malaysiaState}, but workshop state is $_selectedState. Please select a location in $_selectedState.';
+      });
+      return;
+    }
     setState(() {
       _workshopLocation = place.position;
       _workshopAddress = place.displayName;
       _locationSearchController.text = place.displayName;
-      if (place.malaysiaState != null) {
-        _selectedState = place.malaysiaState!;
-      }
       _locationError = null;
     });
   }
@@ -288,6 +305,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
           initialLocation: _workshopLocation,
           initialAddress: _workshopAddress,
           stateCenters: _stateCenters,
+          lockedState: _selectedState,
         ),
       ),
     );
@@ -1187,7 +1205,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
           textInputAction: TextInputAction.search,
           onFieldSubmitted: (_) => _searchWorkshopLocation(),
           decoration: InputDecoration(
-            hintText: 'Search workshop name or full address',
+            hintText: 'Search workshop name or address in $_selectedState',
             prefixIcon: const Icon(
               Icons.search_rounded,
               color: Color(0xFF004D40),

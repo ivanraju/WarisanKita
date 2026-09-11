@@ -143,26 +143,37 @@ class WorkshopPlaceSearch {
 
   static Future<List<WorkshopPlaceResult>> search({
     required String query,
+    String? targetState,
   }) async {
     try {
-      final googleResults = await _searchGooglePlaces(query);
+      final googleResults = await _searchGooglePlaces(
+        query,
+        targetState: targetState,
+      );
       if (googleResults.isNotEmpty) return googleResults;
     } catch (_) {
       // Keep the location picker usable if Google Places is unavailable.
     }
 
-    return _searchOpenStreetMap(query);
+    return _searchOpenStreetMap(query, targetState: targetState);
   }
 
   static Future<List<WorkshopPlaceResult>> _searchGooglePlaces(
-    String query,
-  ) async {
+    String query, {
+    String? targetState,
+  }) async {
     final apiKey = await _mapsChannel.invokeMethod<String>('getApiKey');
     if (apiKey == null || apiKey.trim().isEmpty) return const [];
 
-    final malaysiaQuery = query.toLowerCase().contains('malaysia')
-        ? query
-        : '$query, Malaysia';
+    String textQuery = query;
+    if (targetState != null &&
+        targetState.trim().isNotEmpty &&
+        !textQuery.toLowerCase().contains(targetState.toLowerCase())) {
+      textQuery = '$textQuery, $targetState';
+    }
+    final malaysiaQuery = textQuery.toLowerCase().contains('malaysia')
+        ? textQuery
+        : '$textQuery, Malaysia';
     final response = await http
         .post(
           Uri.https('places.googleapis.com', '/v1/places:searchText'),
@@ -191,7 +202,7 @@ class WorkshopPlaceSearch {
     }
     final places = decoded['places'];
     if (places is! List) return const [];
-    return places
+    var results = places
         .whereType<Map>()
         .map(
           (place) => WorkshopPlaceResult.fromGooglePlace(
@@ -199,15 +210,33 @@ class WorkshopPlaceSearch {
           ),
         )
         .whereType<WorkshopPlaceResult>()
-        .where((place) => place.isInMalaysia)
-        .toList(growable: false);
+        .where((place) => place.isInMalaysia);
+
+    if (targetState != null && targetState.trim().isNotEmpty) {
+      final target = targetState.trim().toLowerCase();
+      results = results.where((place) {
+        if (place.malaysiaState != null) {
+          return place.malaysiaState!.toLowerCase() == target;
+        }
+        return place.displayName.toLowerCase().contains(target);
+      });
+    }
+
+    return results.toList(growable: false);
   }
 
   static Future<List<WorkshopPlaceResult>> _searchOpenStreetMap(
-    String query,
-  ) async {
+    String query, {
+    String? targetState,
+  }) async {
+    String searchQuery = query;
+    if (targetState != null &&
+        targetState.trim().isNotEmpty &&
+        !searchQuery.toLowerCase().contains(targetState.toLowerCase())) {
+      searchQuery = '$searchQuery, $targetState';
+    }
     final uri = Uri.https('nominatim.openstreetmap.org', '/search', {
-      'q': query,
+      'q': searchQuery,
       'format': 'jsonv2',
       'addressdetails': '1',
       'namedetails': '1',
@@ -223,12 +252,23 @@ class WorkshopPlaceSearch {
     if (decoded is! List) {
       throw const FormatException('Invalid place search response.');
     }
-    return decoded
+    var results = decoded
         .whereType<Map<String, dynamic>>()
         .map(WorkshopPlaceResult.fromMap)
         .whereType<WorkshopPlaceResult>()
-        .where((place) => place.isInMalaysia)
-        .toList(growable: false);
+        .where((place) => place.isInMalaysia);
+
+    if (targetState != null && targetState.trim().isNotEmpty) {
+      final target = targetState.trim().toLowerCase();
+      results = results.where((place) {
+        if (place.malaysiaState != null) {
+          return place.malaysiaState!.toLowerCase() == target;
+        }
+        return place.displayName.toLowerCase().contains(target);
+      });
+    }
+
+    return results.toList(growable: false);
   }
 
   static Future<WorkshopPlaceResult?> reverse(LatLng position) async {
@@ -257,6 +297,7 @@ class WorkshopMapPickerPage extends StatefulWidget {
   final LatLng? initialLocation;
   final String? initialAddress;
   final Map<String, LatLng> stateCenters;
+  final String? lockedState;
 
   const WorkshopMapPickerPage({
     super.key,
@@ -264,6 +305,7 @@ class WorkshopMapPickerPage extends StatefulWidget {
     required this.initialLocation,
     required this.initialAddress,
     required this.stateCenters,
+    this.lockedState,
   });
 
   @override
@@ -319,19 +361,36 @@ class _WorkshopMapPickerPageState extends State<WorkshopMapPickerPage> {
       _error = null;
     });
     try {
-      final results = await WorkshopPlaceSearch.search(query: query);
+      final results = await WorkshopPlaceSearch.search(
+        query: query,
+        targetState: widget.lockedState,
+      );
       if (results.isEmpty) {
-        throw StateError('No Malaysian place found.');
+        throw StateError('No matching place found.');
       }
       if (!mounted) return;
       final place = results.length == 1
           ? results.first
           : await _chooseResult(results);
-      if (place != null && mounted) await _applySelection(place);
+      if (place != null && mounted) {
+        if (widget.lockedState != null &&
+            place.malaysiaState != null &&
+            place.malaysiaState!.toLowerCase() !=
+                widget.lockedState!.toLowerCase()) {
+          setState(() {
+            _error =
+                'Location is in ${place.malaysiaState}. Please search within ${widget.lockedState}.';
+          });
+          return;
+        }
+        await _applySelection(place);
+      }
     } catch (_) {
       if (mounted) {
         setState(() {
-          _error = 'No Malaysian location found. Try a more complete address.';
+          _error = widget.lockedState != null
+              ? 'No location found in ${widget.lockedState}. Try a more complete address.'
+              : 'No Malaysian location found. Try a more complete address.';
         });
       }
     } finally {
@@ -362,6 +421,29 @@ class _WorkshopMapPickerPageState extends State<WorkshopMapPickerPage> {
       );
       return;
     }
+
+    if (widget.lockedState != null &&
+        place.malaysiaState != null &&
+        place.malaysiaState!.toLowerCase() !=
+            widget.lockedState!.toLowerCase()) {
+      setState(() {
+        _isLoading = false;
+        _pendingPosition = null;
+        _error =
+            'Location is in ${place.malaysiaState}. Must be within ${widget.lockedState}.';
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Selected location is in ${place.malaysiaState}. Workshop must be within ${widget.lockedState}.',
+          ),
+          backgroundColor: const Color(0xFFB42318),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     await _applySelection(
       WorkshopPlaceResult(
         displayName: place.displayName,
@@ -522,7 +604,9 @@ class _WorkshopMapPickerPageState extends State<WorkshopMapPickerPage> {
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF004D40),
         title: Text(
-          'Pin Workshop Location',
+          widget.lockedState != null
+              ? 'Pin Workshop (${widget.lockedState})'
+              : 'Pin Workshop Location',
           style: GoogleFonts.dmSerifDisplay(fontSize: 22),
         ),
         actions: [
@@ -636,7 +720,9 @@ class _WorkshopMapPickerPageState extends State<WorkshopMapPickerPage> {
                       textInputAction: TextInputAction.search,
                       onSubmitted: (_) => _search(),
                       decoration: InputDecoration(
-                        hintText: 'Search a workshop or address',
+                        hintText: widget.lockedState != null
+                            ? 'Search within ${widget.lockedState}...'
+                            : 'Search a workshop or address',
                         prefixIcon: const Icon(Icons.search_rounded),
                         suffixIcon: IconButton(
                           onPressed: _isLoading ? null : _search,
@@ -683,7 +769,9 @@ class _WorkshopMapPickerPageState extends State<WorkshopMapPickerPage> {
                               children: [
                                 Text(
                                   selected == null
-                                      ? 'Tap anywhere in Malaysia to place the pin'
+                                      ? (widget.lockedState != null
+                                          ? 'Tap within ${widget.lockedState} to place the pin'
+                                          : 'Tap anywhere in Malaysia to place the pin')
                                       : _detectedState,
                                   style: GoogleFonts.plusJakartaSans(
                                     fontWeight: FontWeight.w700,
