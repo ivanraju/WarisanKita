@@ -47,7 +47,6 @@ class ArtisanDetailScreen extends StatefulWidget {
 class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
   final PageController _pageController = PageController();
   int _currentCarouselIndex = 0;
-  bool _isPlayingAudioLore = false;
   GoogleMapController? _mapController;
   late final LatLng? _workshopPin;
   late final LatLng _mapTarget;
@@ -128,21 +127,6 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
         );
       }
     }
-  }
-
-  void _toggleAudioLore() {
-    setState(() => _isPlayingAudioLore = !_isPlayingAudioLore);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          _isPlayingAudioLore
-              ? '🎧 Playing Audio Story Lore: "${widget.artisanName} Craft History"'
-              : '⏸ Audio Story Lore Paused',
-        ),
-        backgroundColor: const Color(0xFF004D40),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
   }
 
   @override
@@ -494,80 +478,6 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                           ),
                         ),
                       ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Audio Lore Story Banner
-                  GestureDetector(
-                    onTap: _toggleAudioLore,
-                    child: Container(
-                      padding: const EdgeInsets.all(18),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: isDark
-                              ? [
-                                  const Color(0xFF0D2825),
-                                  const Color(0xFF061A18),
-                                ]
-                              : [
-                                  const Color(0xFF004D40),
-                                  const Color(0xFF00251A),
-                                ],
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                        border: isDark
-                            ? Border.all(color: const Color(0xFF1E3A34))
-                            : null,
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(
-                              0xFF004D40,
-                            ).withValues(alpha: 0.3),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            _isPlayingAudioLore
-                                ? Icons.pause_circle_filled_rounded
-                                : Icons.play_circle_fill_rounded,
-                            color: const Color(0xFFFFD54F),
-                            size: 38,
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  _isPlayingAudioLore
-                                      ? 'NOW PLAYING AUDIO LORE'
-                                      : 'LISTEN TO CULTURAL AUDIO STORY',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w900,
-                                    color: const Color(0xFFFFD54F),
-                                    letterSpacing: 1,
-                                  ),
-                                ),
-                                Text(
-                                  'Master Pak Mat: 4th Gen Labu Sayong Heritage Story',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
                     ),
                   ),
 
