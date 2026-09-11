@@ -594,7 +594,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
           dateSubmitted: 'Just Now',
           imageUrl: updatedUser?.avatarUrl ?? '',
           email: updatedUser?.email ?? '',
-          experience: expText.isNotEmpty ? expText : 'Craft Artisan',
+          experience: (experience != null && experience.isNotEmpty) ? experience : 'Craft Artisan',
           phone: phone ?? '',
           ssmNumber: ssm,
           ssmFileName: _ssmFile?.name ?? updatedUser?.ssmFileName,
