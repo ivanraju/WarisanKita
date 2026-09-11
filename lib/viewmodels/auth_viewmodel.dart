@@ -404,23 +404,7 @@ class AuthViewModel extends ChangeNotifier {
 
       _currentUser = user;
 
-      // Alternate Flow A5: Artisan Active Mode Selection (Master Artisan vs Cultural Tourist)
-      if (user.isArtisan || user.isApprovedArtisan || user.isPendingArtisan || user.isArtisanStudioSuspended) {
-        _requiresRoleSelection = true;
-        _availableRoles = const ['Master Artisan', 'Cultural Tourist'];
-        _statusMessage = 'SELECT YOUR ACTIVE ROLE MODE';
-        _isLoading = false;
-        notifyListeners();
-        return AuthResult(
-          success: true,
-          user: user,
-          requiresRoleSelection: true,
-          availableRoles: _availableRoles,
-          message: _statusMessage,
-        );
-      }
-
-      // Alternate Flow A4: Artisan Pending Approval
+      // Strict single-role routing
       String targetRoute = '/tourist';
       if (user.role == 'Admin') {
         targetRoute = '/admin';

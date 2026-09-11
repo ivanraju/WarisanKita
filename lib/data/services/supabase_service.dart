@@ -375,7 +375,7 @@ class SupabaseService {
       existingRoles: [role],
       isArtisan: isArtisan,
       isTourist: isTourist,
-      isDualRole: isArtisan && isTourist,
+      isDualRole: false,
       displayName: row['display_name'] ?? row['full_name'],
       username: row['username'],
     );
@@ -673,15 +673,8 @@ class SupabaseService {
   }) async {
     final client = _authClient;
     final cleanEmail = email.trim().toLowerCase();
-    final isArtisan = const [
-      'Artisan',
-      'Master Artisan',
-      'Artisan & Tourist',
-      'Tourist & Artisan',
-      'Artisan and Tourist',
-      'Dual Role',
-    ].contains(role);
-    if (!isArtisan && role != 'Tourist' && role != 'Cultural Tourist') {
+    final isArtisan = const ['Artisan', 'Master Artisan'].contains(role);
+    if (!isArtisan && role != 'Tourist') {
       throw const AuthException(
         'This role cannot be created through registration.',
       );
@@ -934,9 +927,11 @@ class SupabaseService {
         'email': cleanEmail,
         'username': cleanEmail.split('@').first,
         'displayName': cleanEmail.split('@').first,
-        'role': 'Artisan & Tourist',
-        'roles': ['Tourist', 'Artisan'],
-        'status': 'PENDING_APPROVAL',
+        'role': 'Tourist',
+        'roles': ['Tourist'],
+        'status': 'ACTIVE',
+        'artisanStatus': 'PENDING_APPROVAL',
+        'artisan_status': 'PENDING_APPROVAL',
         'studioName': studioName,
         'craftCategory': craftCategory,
         'joinedDate': _formatMonthYear(DateTime.now()),
@@ -972,8 +967,10 @@ class SupabaseService {
     if (address != null) userRecord['address'] = address;
     if (state != null) userRecord['state'] = state;
     userRecord['status'] = 'PENDING_APPROVAL';
-    userRecord['role'] = 'Artisan & Tourist';
-    userRecord['roles'] = ['Tourist', 'Artisan'];
+    userRecord['artisanStatus'] = 'PENDING_APPROVAL';
+    userRecord['artisan_status'] = 'PENDING_APPROVAL';
+    userRecord['role'] = 'Tourist';
+    userRecord['roles'] = ['Tourist'];
 
     final preservedDocuments = userRecord['artisan_documents'] is List
         ? List<Map<String, dynamic>>.from(
@@ -1012,8 +1009,9 @@ class SupabaseService {
           await client.auth.updateUser(
             UserAttributes(
               data: {
-                'status': 'PENDING_APPROVAL',
-                'role': 'Artisan & Tourist',
+                'status': 'ACTIVE',
+                'role': 'Tourist',
+                'artisan_status': 'PENDING_APPROVAL',
                 'studio_name': studioName,
                 'craft_category': craftCategory,
                 'ssm_number': ssmNumber,
@@ -1037,8 +1035,9 @@ class SupabaseService {
           await client
               .from('users')
               .update({
-                'status': 'PENDING_APPROVAL',
-                'role': 'Artisan & Tourist',
+                'status': 'ACTIVE',
+                'role': 'Tourist',
+                'artisan_status': 'PENDING_APPROVAL',
                 if (phone != null) 'phone_number': phone,
                 'updated_at': DateTime.now().toIso8601String(),
               })
@@ -1049,8 +1048,9 @@ class SupabaseService {
             'email': cleanEmail,
             'username': userRecord['username'] ?? cleanEmail.split('@').first,
             'full_name': userRecord['displayName'] ?? studioName,
-            'status': 'PENDING_APPROVAL',
-            'role': 'Artisan & Tourist',
+            'status': 'ACTIVE',
+            'role': 'Tourist',
+            'artisan_status': 'PENDING_APPROVAL',
             if (phone != null) 'phone_number': phone,
             'created_at': DateTime.now().toIso8601String(),
             'updated_at': DateTime.now().toIso8601String(),
@@ -2517,10 +2517,10 @@ class SupabaseService {
           _userStore[cleanEmail]!['suspensionReason'] = null;
           _userStore[cleanEmail]!['suspension_reason'] = null;
         }
-        if (newRole == 'Artisan & Tourist') {
-          _userStore[cleanEmail]!['roles'] = ['Tourist', 'Artisan'];
-        } else if (newRole == 'Artisan') {
+        if (newRole == 'Artisan') {
           _userStore[cleanEmail]!['roles'] = ['Artisan'];
+        } else if (newRole == 'Tourist') {
+          _userStore[cleanEmail]!['roles'] = ['Tourist'];
         }
       }
 

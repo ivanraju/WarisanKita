@@ -825,7 +825,7 @@ class ModerationViewModel extends ChangeNotifier {
               artisan.bio ??
               'Verified heritage master preserving traditional ${artisan.craftCategory}.',
           phone: artisan.phone,
-          isDualRole: isUpgrade,
+          isDualRole: false,
           isSuspended: false,
         ),
       );
@@ -886,7 +886,7 @@ class ModerationViewModel extends ChangeNotifier {
       await _repository.updateArtisanStatus(
         email: artisan.email,
         newStatus: 'SUSPENDED',
-        newRole: 'Artisan & Tourist',
+        newRole: 'Tourist',
         updateArtisanProfileOnly: true,
       );
 
@@ -895,6 +895,8 @@ class ModerationViewModel extends ChangeNotifier {
       );
       if (uIdx != -1) {
         _registeredUsers[uIdx] = _registeredUsers[uIdx].copyWith(
+          role: 'Tourist',
+          roles: const ['Tourist'],
           artisanStatus: 'SUSPENDED',
         );
       }
@@ -915,7 +917,7 @@ class ModerationViewModel extends ChangeNotifier {
       await _repository.updateArtisanStatus(
         email: artisan.email,
         newStatus: 'APPROVED',
-        newRole: 'Artisan & Tourist',
+        newRole: 'Artisan',
         updateArtisanProfileOnly: true,
       );
 
@@ -924,6 +926,8 @@ class ModerationViewModel extends ChangeNotifier {
       );
       if (uIdx != -1) {
         _registeredUsers[uIdx] = _registeredUsers[uIdx].copyWith(
+          role: 'Artisan',
+          roles: const ['Artisan'],
           artisanStatus: 'APPROVED',
         );
       }
