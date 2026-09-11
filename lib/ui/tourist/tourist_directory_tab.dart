@@ -452,9 +452,9 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
       // Target states from user's chosen region in quiz
       final regLower = chosenRegion.toLowerCase();
       final Set<String> targetStates;
-      if (regLower.contains('east coast')) {
+      if (regLower.contains('east coast') || regLower.contains('kelantan') || regLower.contains('terengganu') || regLower.contains('pahang')) {
         targetStates = {'kelantan', 'terengganu', 'pahang'};
-      } else if (regLower.contains('west coast')) {
+      } else if (regLower.contains('west coast') || regLower.contains('melaka') || regLower.contains('perak') || regLower.contains('selangor') || regLower.contains('penang') || regLower.contains('johor')) {
         targetStates = {
           'melaka',
           'perak',
@@ -466,6 +466,14 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
           'kuala lumpur',
           'negeri sembilan',
         };
+      } else if (regLower.contains('north')) {
+        targetStates = {'penang', 'kedah', 'perlis', 'perak'};
+      } else if (regLower.contains('central')) {
+        targetStates = {'selangor', 'kuala lumpur', 'negeri sembilan'};
+      } else if (regLower.contains('south')) {
+        targetStates = {'johor', 'melaka'};
+      } else if (regLower.contains('borneo') || regLower.contains('sabah') || regLower.contains('sarawak')) {
+        targetStates = {'sabah', 'sarawak'};
       } else {
         targetStates = {};
       }
@@ -477,6 +485,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
         final cat = a['category']?.toString().toLowerCase() ?? '';
         final name = a['name']?.toString().toLowerCase() ?? '';
         final state = a['state']?.toString().toLowerCase() ?? '';
+        final address = a['address']?.toString().toLowerCase() ?? '';
         final bio = a['bio']?.toString().toLowerCase() ?? '';
         final tags = a['tags'];
         final tagList = tags is List
@@ -492,14 +501,13 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
           }
         }
 
-        // Only recommend artisans that strictly match the chosen craft/material from the quiz
-        if (matchesMaterial) {
-          double score = 100.0; // Base score for craft match
+        // 2. Region / State match (Strict prerequisite from Quiz Q4)
+        bool matchesRegion = targetStates.isEmpty ||
+            targetStates.any((s) => state.contains(s) || address.contains(s));
 
-          // 2. Region / State match bonus from Quiz Q4 (Weight: +50)
-          if (targetStates.contains(state)) {
-            score += 50.0;
-          }
+        // Only recommend artisans that strictly match BOTH the chosen craft/material AND region from the quiz
+        if (matchesMaterial && matchesRegion) {
+          double score = 100.0; // Base score for exact craft + region match
 
           // 3. Experience style match bonus from Quiz Q1 (Weight: +25)
           final expLower = chosenExp.toLowerCase();

@@ -403,7 +403,7 @@ void main() {
       expect(find.text('Mak Jah'), findsWidgets);
     });
 
-    testWidgets('Strict craft filtering: does not suggest artisans of different crafts even if state matches', (tester) async {
+    testWidgets('Strict craft and region filtering: does not suggest artisans of different crafts or non-matching regions', (tester) async {
       tester.view.physicalSize = const Size(1200, 1000);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -415,13 +415,82 @@ void main() {
       final dirVM = DirectoryViewModel(repository: _MockArtisanRepository(mockArtisans));
       await dirVM.fetchArtisans();
 
-      // User chooses Pottery & Clay in East Coast
-      // Uncle Lim is Pottery in Perak (West Coast)
-      // Mak Jah is Batik in Kelantan (East Coast)
+      // User chooses Pottery & Clay in West Coast Historic
+      // Uncle Lim is Pottery in Perak (West Coast) -> MATCHES
+      // Mak Jah is Batik in Kelantan (East Coast) -> DOES NOT MATCH
       await matchmakerVM.saveQuizResults(
         experienceType: 'Hands-on Workshop',
         environment: 'Outdoor Village',
         material: 'Pottery & Clay',
+        region: 'West Coast Historic',
+        userEmail: 'tourist@warisankita.my',
+      );
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: authVM),
+            ChangeNotifierProvider.value(value: matchmakerVM),
+            ChangeNotifierProvider.value(value: langVM),
+            ChangeNotifierProvider.value(value: dirVM),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(
+              body: TouristDirectoryTab(),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      // Uncle Lim is Pottery in Perak (West Coast) -> Suggested
+      expect(find.textContaining('The Earthen Alchemist'), findsOneWidget);
+      expect(find.text('Uncle Lim'), findsWidgets);
+    });
+
+    testWidgets('East Coast region selection strictly excludes artisans from West Coast (Melaka/Perak)', (tester) async {
+      tester.view.physicalSize = const Size(1200, 1000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      SharedPreferences.setMockInitialValues({});
+      final authVM = AuthViewModel();
+      final matchmakerVM = MatchmakerViewModel();
+      final langVM = LanguageViewModel();
+      // Artisan list with Batik in Melaka and Batik in Kelantan
+      final regionalArtisans = [
+        ArtisanModel(
+          id: 'artisan_kelantan',
+          name: 'Che Minah Kelantan',
+          craftType: 'Batik Canting',
+          state: 'Kelantan',
+          description: 'East coast batik',
+          imageUrl: 'https://example.com/minah.png',
+          rating: 4.9,
+          tags: const ['batik', 'canting'],
+        ),
+        ArtisanModel(
+          id: 'artisan_melaka',
+          name: 'Madam Tan Melaka',
+          craftType: 'Batik Nyonya',
+          state: 'Melaka',
+          description: 'West coast heritage batik',
+          imageUrl: 'https://example.com/tan.png',
+          rating: 4.8,
+          tags: const ['batik', 'nyonya'],
+        ),
+      ];
+
+      final dirVM = DirectoryViewModel(repository: _MockArtisanRepository(regionalArtisans));
+      await dirVM.fetchArtisans();
+
+      // User selects Batik & Songket in East Coast (Kelantan & Terengganu)
+      await matchmakerVM.saveQuizResults(
+        experienceType: 'Hands-on Workshop',
+        environment: 'Indoor Studio',
+        material: 'Batik & Songket Textiles',
         region: 'East Coast Heritage',
         userEmail: 'tourist@warisankita.my',
       );
@@ -445,10 +514,11 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
-      // Mak Jah is in East Coast, but she does Batik, not Pottery -> Must NOT be in the recommendation header card
-      // Uncle Lim is Pottery -> IS suggested!
-      expect(find.textContaining('The Clay & Terra Sculptor'), findsOneWidget);
-      expect(find.text('Uncle Lim'), findsWidgets);
+      // Che Minah (Kelantan) MUST be suggested
+      expect(find.text('Che Minah Kelantan'), findsWidgets);
+      // Madam Tan (Melaka) must NOT be suggested in the recommendation section
+      // In the whole tree, Madam Tan is only in the bottom directory, not in the horizontal recommendation cards
+      expect(find.textContaining('The Royal Textile Connoisseur'), findsOneWidget);
     });
 
     testWidgets('Displays empty state when no artisans match chosen craft', (tester) async {
