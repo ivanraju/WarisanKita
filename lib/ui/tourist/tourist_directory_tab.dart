@@ -407,7 +407,8 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
       return matchesQuery && matchesCategory && matchesState;
     }).toList();
 
-    // Recommendations strictly based on user's quiz choices (Material, Region, Experience, Setting)
+    // Recommendations strictly based on user's 4 quiz choices (Q1: Experience, Q2: Setting, Q3: Material, Q4: Region)
+    // Completely self-contained and independent recommendation scoring pipeline
     final matchmakerVM = context.watch<MatchmakerViewModel>();
     List<Map<String, dynamic>> recommendedArtisans = [];
     String recommendationHeaderTitle = langVM.translate('Suggested for You (Based on Quiz)');
