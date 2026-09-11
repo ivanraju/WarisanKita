@@ -2561,6 +2561,46 @@ class SupabaseService {
           )
           .eq('quest_id', questId),
     );
+
+    // Auto-shift custom tasks that occupy canonical system slots (1 or 2)
+    final conflictingCustomTasks = taskRows.where((task) {
+      final isSystem = task['is_system_task'] == true;
+      final isArchived = task['is_archived'] == true;
+      final sortOrder = task['sort_order'] is num
+          ? (task['sort_order'] as num).toInt()
+          : null;
+      return !isSystem && !isArchived && (sortOrder == 1 || sortOrder == 2);
+    }).toList();
+
+    if (conflictingCustomTasks.isNotEmpty) {
+      int nextAvailableOrder = 2;
+      for (final task in taskRows) {
+        final order = task['sort_order'] is num
+            ? (task['sort_order'] as num).toInt()
+            : 0;
+        if (order > nextAvailableOrder) {
+          nextAvailableOrder = order;
+        }
+      }
+
+      for (final conflict in conflictingCustomTasks) {
+        nextAvailableOrder++;
+        final taskId = conflict['id']?.toString() ?? '';
+        if (taskId.isNotEmpty) {
+          try {
+            await client
+                .from('heritage_tasks')
+                .update({'sort_order': nextAvailableOrder})
+                .eq('id', taskId);
+            conflict['sort_order'] = nextAvailableOrder;
+          } catch (shiftErr) {
+            debugPrint('Auto-shift conflicting custom task note: $shiftErr');
+            conflict['sort_order'] = nextAvailableOrder;
+          }
+        }
+      }
+    }
+
     final plan = DefaultSystemTaskPolicy.plan(
       taskRows.map(
         (task) => ExistingQuestTaskSlot(
