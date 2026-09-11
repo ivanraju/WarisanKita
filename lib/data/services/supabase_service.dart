@@ -2370,7 +2370,13 @@ class SupabaseService {
           for (final row in res) {
             final rowMap = Map<String, dynamic>.from(row);
             final rowStatus = (rowMap['status'] ?? '').toString().toUpperCase();
-            if (rowStatus == 'DELETED') continue;
+            if (rowStatus == 'DELETED' || rowStatus == 'REJECTED') continue;
+
+            final role = (rowMap['role'] ?? '').toString();
+            if (!role.toLowerCase().contains('artisan')) continue;
+
+            final artisanStatus = (rowMap['artisan_status'] ?? '').toString().toUpperCase();
+            if (artisanStatus == 'CLOSED' || artisanStatus == 'REJECTED') continue;
 
             if (rowMap['artisan_profiles'] == null ||
                 (rowMap['artisan_profiles'] is List &&
@@ -2383,6 +2389,20 @@ class SupabaseService {
                     .maybeSingle();
                 if (ap != null) rowMap['artisan_profiles'] = ap;
               } catch (_) {}
+            }
+
+            Map<String, dynamic>? apMap;
+            if (rowMap['artisan_profiles'] is Map) {
+              apMap = Map<String, dynamic>.from(rowMap['artisan_profiles']);
+            } else if (rowMap['artisan_profiles'] is List &&
+                (rowMap['artisan_profiles'] as List).isNotEmpty) {
+              apMap = Map<String, dynamic>.from(
+                (rowMap['artisan_profiles'] as List).first,
+              );
+            }
+            if (apMap != null) {
+              final apStatus = (apMap['status'] ?? '').toString().toUpperCase();
+              if (apStatus == 'CLOSED' || apStatus == 'REJECTED') continue;
             }
 
             final a = ActiveArtisanMaster.fromMap(rowMap);
@@ -2401,9 +2421,16 @@ class SupabaseService {
       final user = entry.value;
       final role = (user['role'] ?? '').toString();
       final status = (user['status'] ?? '').toString().toUpperCase();
+      final artisanStatus = (user['artisan_status'] ?? user['artisanStatus'] ?? '')
+          .toString()
+          .toUpperCase();
       final isSuspended = user['isSuspended'] == true;
       final reason = (user['suspensionReason'] ?? '').toString();
-      if (status == 'DELETED' || (isSuspended && reason == 'ACCOUNT_DELETED')) {
+      if (status == 'DELETED' ||
+          status == 'REJECTED' ||
+          artisanStatus == 'CLOSED' ||
+          artisanStatus == 'REJECTED' ||
+          (isSuspended && reason == 'ACCOUNT_DELETED')) {
         continue;
       }
       final email = (user['email'] ?? entry.key).toString().toLowerCase();

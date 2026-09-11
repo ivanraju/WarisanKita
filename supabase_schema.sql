@@ -405,12 +405,12 @@ BEGIN
     ) VALUES (
         v_user_id,
         v_artisan_status,
-        COALESCE(p_studio_name, v_existing_studio, 'Heritage Studio'),
+        COALESCE(p_studio_name, v_existing_studio, 'Artisan Studio'),
         COALESCE(p_craft_category, v_existing_craft, 'Traditional Craft'),
         p_ssm_number,
-        'Heritage artisan studio bio',
-        COALESCE(v_existing_address, 'Melaka'),
-        COALESCE(v_existing_state, 'Melaka'),
+        'Master artisan dedicated to traditional Malaysian craft.',
+        COALESCE(v_existing_address, 'Malaysia'),
+        COALESCE(v_existing_state, 'Malaysia'),
         now(),
         now()
     )
@@ -1241,13 +1241,13 @@ BEGIN
     ) VALUES (
         v_user_id,
         v_artisan_status,
-        COALESCE(p_studio_name, v_existing_studio, 'Heritage Studio'),
-        COALESCE(p_craft_category, v_existing_craft, 'Woodwork'),
+        COALESCE(p_studio_name, v_existing_studio, 'Artisan Studio'),
+        COALESCE(p_craft_category, v_existing_craft, 'Traditional Craft'),
         p_ssm_number,
         CASE WHEN v_artisan_status = 'REJECTED' THEN p_rejection_reason ELSE NULL END,
-        'Heritage artisan studio bio',
-        COALESCE(v_existing_address, 'Melaka'),
-        COALESCE(v_existing_state, 'Melaka'),
+        'Master artisan dedicated to traditional Malaysian craft.',
+        COALESCE(v_existing_address, 'Malaysia'),
+        COALESCE(v_existing_state, 'Malaysia'),
         now(),
         now()
     )
