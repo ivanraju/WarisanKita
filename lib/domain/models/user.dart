@@ -103,6 +103,9 @@ class UserModel {
 
   bool get isApprovedArtisan {
     if (artisanStatus?.toUpperCase() == 'CLOSED') return false;
+    if (artisanStatus?.toUpperCase() == 'PENDING_APPROVAL' ||
+        artisanStatus?.toUpperCase() == 'PENDING' ||
+        artisanStatus?.toUpperCase() == 'REJECTED') return false;
     if (role == 'Tourist') return false;
     return (role == 'Artisan' ||
         role == 'Master Artisan' ||
@@ -467,12 +470,31 @@ class UserModel {
         ? rawWorkshops.toInt()
         : (rawWorkshops != null ? int.tryParse(rawWorkshops.toString()) : null);
 
-    final rawArtisanStatus = artisanMap?['status'] ?? map['artisanStatus'] ?? map['artisan_status'];
-    final String? resolvedArtisanStatus = rawArtisanStatus?.toString();
+    final String? mapArtisanStatus = (map['artisan_status'] ?? map['artisanStatus'])?.toString();
+    final String? profileArtisanStatus = artisanMap?['status']?.toString();
+
+    final String? resolvedArtisanStatus;
+    if (mapArtisanStatus != null &&
+        (mapArtisanStatus.toUpperCase() == 'PENDING_APPROVAL' ||
+         mapArtisanStatus.toUpperCase() == 'PENDING' ||
+         mapArtisanStatus.toUpperCase() == 'CLOSED' ||
+         mapArtisanStatus.toUpperCase() == 'REJECTED')) {
+      resolvedArtisanStatus = mapArtisanStatus;
+    } else {
+      resolvedArtisanStatus = profileArtisanStatus ?? mapArtisanStatus;
+    }
+
     final bool isClosedArtisan = resolvedArtisanStatus?.toUpperCase() == 'CLOSED' ||
         map['artisan_status']?.toString().toUpperCase() == 'CLOSED' ||
         map['artisanStatus']?.toString().toUpperCase() == 'CLOSED';
-    final bool isApprovedArtisanStatus = !isClosedArtisan && resolvedArtisanStatus?.toUpperCase() == 'APPROVED';
+    final bool isPendingArtisanStatus = !isClosedArtisan &&
+        (resolvedArtisanStatus?.toUpperCase() == 'PENDING_APPROVAL' ||
+         resolvedArtisanStatus?.toUpperCase() == 'PENDING' ||
+         map['artisan_status']?.toString().toUpperCase() == 'PENDING_APPROVAL' ||
+         map['artisanStatus']?.toString().toUpperCase() == 'PENDING_APPROVAL');
+    final bool isApprovedArtisanStatus = !isClosedArtisan &&
+        !isPendingArtisanStatus &&
+        resolvedArtisanStatus?.toUpperCase() == 'APPROVED';
 
     final String resolvedRole;
     final List<String> resolvedRoles;
@@ -481,7 +503,7 @@ class UserModel {
           ? map['role'] as String
           : 'Admin';
       resolvedRoles = roleList;
-    } else if (isClosedArtisan) {
+    } else if (isClosedArtisan || isPendingArtisanStatus) {
       resolvedRole = 'Tourist';
       resolvedRoles = const ['Tourist'];
     } else if (isApprovedArtisanStatus) {
@@ -515,7 +537,11 @@ class UserModel {
       phone: map['phone'] ?? map['phone_number'] ?? artisanMap?['phone'],
       experience: resolvedExp,
       artisanProfileId: artisanMap?['id'],
-      artisanStatus: isClosedArtisan ? 'CLOSED' : (artisanMap?['status'] ?? map['artisanStatus'] ?? map['artisan_status']),
+      artisanStatus: isClosedArtisan
+          ? 'CLOSED'
+          : (isPendingArtisanStatus
+              ? 'PENDING_APPROVAL'
+              : (artisanMap?['status'] ?? map['artisanStatus'] ?? map['artisan_status'])),
       artisanDocuments: docs,
       tags: tagsList,
       pendingRelocationAddress: map['pending_relocation_address'] ?? map['pendingRelocationAddress'] ?? artisanMap?['pending_relocation_address'],

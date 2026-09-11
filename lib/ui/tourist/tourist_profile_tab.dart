@@ -960,12 +960,13 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                             ],
                           ),
                         ),
-                      ] else if (authVM.currentUser?.isPendingArtisan == true ||
-                          authVM.currentUser?.isPendingApproval == true ||
-                          ((authVM.currentUser?.studioName != null &&
-                                  authVM.currentUser!.studioName!.trim().isNotEmpty) &&
-                              authVM.currentUser?.isApprovedArtisan != true &&
-                              authVM.currentUser?.isRejectedArtisan != true)) ...[
+                      ] else if (authVM.currentUser?.artisanStatus?.toUpperCase() != 'CLOSED' &&
+                          (authVM.currentUser?.isPendingArtisan == true ||
+                           authVM.currentUser?.isPendingApproval == true ||
+                           ((authVM.currentUser?.studioName != null &&
+                                   authVM.currentUser!.studioName!.trim().isNotEmpty) &&
+                               authVM.currentUser?.isApprovedArtisan != true &&
+                               authVM.currentUser?.isRejectedArtisan != true))) ...[
                         const SizedBox(height: 16),
                         Container(
                           padding: const EdgeInsets.all(16),

@@ -455,14 +455,29 @@ class SupabaseService {
             (artisan['years_experience'] as num) > 1) {
           row['experience'] = '${artisan['years_experience']} Years';
         }
+        final userArtisanStat = (row['artisan_status'] ?? '').toString().toUpperCase();
+        final isUserClosedOrPending = userArtisanStat == 'CLOSED' ||
+            userArtisanStat == 'PENDING_APPROVAL' ||
+            userArtisanStat == 'PENDING';
+
         if (artisan['status'] != null) {
           final artisanStatus = artisan['status'].toString().toUpperCase();
-          row['artisan_status'] = artisanStatus;
-          if (artisanStatus == 'CLOSED') {
+          if (!isUserClosedOrPending) {
+            row['artisan_status'] = artisanStatus;
+          }
+          if (artisanStatus == 'CLOSED' || userArtisanStat == 'CLOSED') {
             row['role'] = 'Tourist';
             row['roles'] = ['Tourist'];
             row['artisan_status'] = 'CLOSED';
-          } else if (artisanStatus == 'APPROVED') {
+          } else if (artisanStatus == 'PENDING_APPROVAL' ||
+              artisanStatus == 'PENDING' ||
+              userArtisanStat == 'PENDING_APPROVAL' ||
+              userArtisanStat == 'PENDING') {
+            row['role'] = 'Tourist';
+            row['roles'] = ['Tourist'];
+            row['artisan_status'] = 'PENDING_APPROVAL';
+            row['rejection_reason'] = null;
+          } else if (artisanStatus == 'APPROVED' && !isUserClosedOrPending) {
             row['role'] = 'Artisan';
             row['roles'] = ['Artisan'];
             row['artisan_status'] = 'APPROVED';
@@ -471,10 +486,6 @@ class SupabaseService {
             if (artisan['rejection_reason'] != null) {
               row['rejection_reason'] = artisan['rejection_reason'];
             }
-          } else if (artisanStatus == 'PENDING_APPROVAL' ||
-              artisanStatus == 'PENDING') {
-            row['artisan_status'] = 'PENDING_APPROVAL';
-            row['rejection_reason'] = null;
           }
         }
       }
@@ -531,14 +542,29 @@ class SupabaseService {
               (artisan['years_experience'] as num) > 1) {
             row['experience'] = '${artisan['years_experience']} Years';
           }
+          final userArtisanStat = (row['artisan_status'] ?? '').toString().toUpperCase();
+          final isUserClosedOrPending = userArtisanStat == 'CLOSED' ||
+              userArtisanStat == 'PENDING_APPROVAL' ||
+              userArtisanStat == 'PENDING';
+
           if (artisan['status'] != null) {
             final artisanStatus = artisan['status'].toString().toUpperCase();
-            row['artisan_status'] = artisanStatus;
-            if (artisanStatus == 'CLOSED') {
+            if (!isUserClosedOrPending) {
+              row['artisan_status'] = artisanStatus;
+            }
+            if (artisanStatus == 'CLOSED' || userArtisanStat == 'CLOSED') {
               row['role'] = 'Tourist';
               row['roles'] = ['Tourist'];
               row['artisan_status'] = 'CLOSED';
-            } else if (artisanStatus == 'APPROVED') {
+            } else if (artisanStatus == 'PENDING_APPROVAL' ||
+                artisanStatus == 'PENDING' ||
+                userArtisanStat == 'PENDING_APPROVAL' ||
+                userArtisanStat == 'PENDING') {
+              row['role'] = 'Tourist';
+              row['roles'] = ['Tourist'];
+              row['artisan_status'] = 'PENDING_APPROVAL';
+              row['rejection_reason'] = null;
+            } else if (artisanStatus == 'APPROVED' && !isUserClosedOrPending) {
               row['role'] = 'Artisan';
               row['roles'] = ['Artisan'];
               row['artisan_status'] = 'APPROVED';
@@ -547,10 +573,6 @@ class SupabaseService {
               if (artisan['rejection_reason'] != null) {
                 row['rejection_reason'] = artisan['rejection_reason'];
               }
-            } else if (artisanStatus == 'PENDING_APPROVAL' ||
-                artisanStatus == 'PENDING') {
-              row['artisan_status'] = 'PENDING_APPROVAL';
-              row['rejection_reason'] = null;
             }
           }
         }
@@ -564,16 +586,18 @@ class SupabaseService {
       row['role'] = 'Tourist';
       row['roles'] = ['Tourist'];
       row['artisan_status'] = 'CLOSED';
+    } else if (userArtisanStatus == 'PENDING_APPROVAL' ||
+        userArtisanStatus == 'PENDING') {
+      row['role'] = 'Tourist';
+      row['roles'] = ['Tourist'];
+      row['artisan_status'] = 'PENDING_APPROVAL';
+      row['rejection_reason'] = null;
     } else if (userArtisanStatus == 'APPROVED') {
       row['role'] = 'Artisan';
       row['roles'] = ['Artisan'];
       row['artisan_status'] = 'APPROVED';
     } else if (userArtisanStatus == 'REJECTED') {
       row['artisan_status'] = 'REJECTED';
-    } else if (userArtisanStatus == 'PENDING_APPROVAL' ||
-        userArtisanStatus == 'PENDING') {
-      row['artisan_status'] = 'PENDING_APPROVAL';
-      row['rejection_reason'] = null;
     }
 
     if (row['experience'] == null &&
@@ -1110,20 +1134,17 @@ class SupabaseService {
             await client
                 .from('users')
                 .update(userPayload)
-                .ilike('email', cleanEmail);
+                .eq('id', userId);
           } catch (uErr) {
-            debugPrint('users table full update note: $uErr');
-            await client
-                .from('users')
-                .update({
-                  'status': 'ACTIVE',
-                  'role': 'Tourist',
-                  'artisan_status': 'PENDING_APPROVAL',
-                  'rejection_reason': null,
-                  if (phone != null) 'phone_number': phone,
-                  'updated_at': DateTime.now().toIso8601String(),
-                })
-                .ilike('email', cleanEmail);
+            debugPrint('users table id update note: $uErr');
+            try {
+              await client
+                  .from('users')
+                  .update(userPayload)
+                  .ilike('email', cleanEmail);
+            } catch (uErr2) {
+              debugPrint('users table email update note: $uErr2');
+            }
           }
         } else {
           await client.from('users').insert({
@@ -1355,6 +1376,21 @@ class SupabaseService {
       } catch (e) {
         debugPrint('Supabase linkArtisanRoleToTourist note: $e');
       }
+    }
+
+    userRecord['role'] = 'Tourist';
+    userRecord['roles'] = const ['Tourist'];
+    userRecord['status'] = 'PENDING_APPROVAL';
+    userRecord['artisanStatus'] = 'PENDING_APPROVAL';
+    userRecord['artisan_status'] = 'PENDING_APPROVAL';
+    userRecord['rejectionReason'] = null;
+    userRecord['rejection_reason'] = null;
+    if (userRecord['artisan_profiles'] is Map) {
+      userRecord['artisan_profiles'] = {
+        ...(userRecord['artisan_profiles'] as Map),
+        'status': 'PENDING_APPROVAL',
+        'rejection_reason': null,
+      };
     }
 
     _userStore[cleanEmail] = userRecord;
@@ -3029,6 +3065,15 @@ class SupabaseService {
             .eq('user_id', userId);
       } catch (e) {
         debugPrint('deactivateArtisanStudio profile status note: $e');
+        try {
+          await client
+              .from('artisan_profiles')
+              .update({
+                'status': 'SUSPENDED',
+                'updated_at': DateTime.now().toIso8601String(),
+              })
+              .eq('user_id', userId);
+        } catch (_) {}
       }
       try {
         await client.from('artisan_profiles').delete().eq('user_id', userId);

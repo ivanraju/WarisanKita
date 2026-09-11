@@ -838,6 +838,7 @@ class AuthViewModel extends ChangeNotifier {
       );
 
       _currentUser = user;
+      _activeRole = 'Tourist';
       try {
         final prefs = await SharedPreferences.getInstance();
         await prefs.remove('dismissed_rejection_banner_${user.id}');

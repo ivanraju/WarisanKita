@@ -591,8 +591,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
           craftCategory: _selectedCraftCategory,
           state: _selectedState,
           dateSubmitted: 'Just Now',
-          imageUrl:
-              'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600',
+          imageUrl: updatedUser?.avatarUrl ?? '',
           email: updatedUser?.email ?? '',
           experience: expText.isNotEmpty ? expText : 'Craft Artisan',
           phone: phone ?? '',

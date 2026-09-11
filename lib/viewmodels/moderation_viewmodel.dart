@@ -459,23 +459,42 @@ class ModerationViewModel extends ChangeNotifier {
             .toString()
             .toUpperCase();
         const terminalStatuses = {'REJECTED', 'APPROVED', 'CLOSED'};
-        if (rawStatus == 'REJECTED' ||
-            terminalStatuses.contains(rawArtisanStatus) ||
-            terminalStatuses.contains(profileStatus)) {
-          continue;
-        }
+        final bool isExplicitlyPending = rawArtisanStatus == 'PENDING_APPROVAL' ||
+            rawArtisanStatus == 'PENDING' ||
+            rawStatus == 'PENDING_APPROVAL' ||
+            rawStatus == 'PENDING';
 
-        final matchingRegistered = _registeredUsers.where(
-          (u) => u.email.toLowerCase() == email.toLowerCase(),
-        );
-        if (matchingRegistered.isNotEmpty) {
-          final existingUser = matchingRegistered.first;
-          final existingArtisanStatus = existingUser.artisanStatus
-              ?.toUpperCase();
-          if (existingUser.status.toUpperCase() == 'REJECTED' ||
-              existingArtisanStatus == 'REJECTED' ||
-              existingArtisanStatus == 'APPROVED') {
+        if (!isExplicitlyPending) {
+          if (rawStatus == 'REJECTED' ||
+              terminalStatuses.contains(rawArtisanStatus) ||
+              terminalStatuses.contains(profileStatus)) {
             continue;
+          }
+
+          final matchingRegistered = _registeredUsers.where(
+            (u) => u.email.toLowerCase() == email.toLowerCase(),
+          );
+          if (matchingRegistered.isNotEmpty) {
+            final existingUser = matchingRegistered.first;
+            final existingArtisanStatus = existingUser.artisanStatus
+                ?.toUpperCase();
+            if (existingUser.status.toUpperCase() == 'REJECTED' ||
+                existingArtisanStatus == 'REJECTED' ||
+                existingArtisanStatus == 'APPROVED') {
+              continue;
+            }
+          }
+        } else {
+          final regIdx = _registeredUsers.indexWhere(
+            (u) => u.email.toLowerCase() == email.toLowerCase(),
+          );
+          if (regIdx != -1) {
+            _registeredUsers[regIdx] = _registeredUsers[regIdx].copyWith(
+              status: 'PENDING_APPROVAL',
+              artisanStatus: 'PENDING_APPROVAL',
+              role: 'Tourist',
+              roles: const ['Tourist'],
+            );
           }
         }
 

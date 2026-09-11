@@ -1806,6 +1806,31 @@ void main() {
         expect(closedUser.isRejectedArtisan, isFalse);
         expect(closedUser.isDualRole, isFalse);
       });
+
+      test('UserModel re-application after CLOSED correctly resolves to Tourist role and PENDING_APPROVAL', () {
+        // Simulates user re-applying: users table has artisan_status PENDING_APPROVAL, even if stale artisan_profiles join had APPROVED
+        final reappliedUser = UserModel.fromMap({
+          'id': 'reapplied-user-1',
+          'email': 'reapplied@warisankita.my',
+          'role': 'Tourist',
+          'artisan_status': 'PENDING_APPROVAL',
+          'status': 'ACTIVE',
+          'studio_name': 'My New Studio',
+          'craft_category': 'Woodwork',
+          'artisan_profiles': {
+            'id': 'stale-profile-id',
+            'status': 'APPROVED', // stale join from previous artisan lifetime
+            'studio_name': 'Old Studio',
+          },
+        });
+
+        expect(reappliedUser.role, 'Tourist');
+        expect(reappliedUser.roles, ['Tourist']);
+        expect(reappliedUser.artisanStatus, 'PENDING_APPROVAL');
+        expect(reappliedUser.isApprovedArtisan, isFalse);
+        expect(reappliedUser.isPendingArtisan, isTrue);
+        expect(reappliedUser.isRejectedArtisan, isFalse);
+      });
     });
 }
 
