@@ -375,7 +375,7 @@ class SupabaseService {
       existingRoles: [role],
       isArtisan: isArtisan,
       isTourist: isTourist,
-      isDualRole: isArtisan && isTourist,
+      isDualRole: false,
       displayName: row['display_name'] ?? row['full_name'],
       username: row['username'],
     );
@@ -456,12 +456,14 @@ class SupabaseService {
           row['experience'] = '${artisan['years_experience']} Years';
         }
         if (artisan['status'] != null) {
-          row['artisan_status'] = artisan['status'];
-          if (artisan['status'].toString().toUpperCase() == 'APPROVED') {
-            final currentRole = (row['role'] ?? '').toString();
-            if (currentRole.isEmpty || currentRole == 'Tourist') {
-              row['role'] = 'Artisan';
-            }
+          final artisanStatus = artisan['status'].toString().toUpperCase();
+          row['artisan_status'] = artisanStatus;
+          if (artisanStatus == 'APPROVED') {
+            row['role'] = 'Artisan';
+            row['roles'] = ['Artisan'];
+            row['artisan_status'] = 'APPROVED';
+          } else if (artisanStatus == 'REJECTED') {
+            row['artisan_status'] = 'REJECTED';
           }
         }
       }
@@ -518,10 +520,30 @@ class SupabaseService {
               (artisan['years_experience'] as num) > 1) {
             row['experience'] = '${artisan['years_experience']} Years';
           }
+          if (artisan['status'] != null) {
+            final artisanStatus = artisan['status'].toString().toUpperCase();
+            row['artisan_status'] = artisanStatus;
+            if (artisanStatus == 'APPROVED') {
+              row['role'] = 'Artisan';
+              row['roles'] = ['Artisan'];
+              row['artisan_status'] = 'APPROVED';
+            } else if (artisanStatus == 'REJECTED') {
+              row['artisan_status'] = 'REJECTED';
+            }
+          }
         }
       } catch (profileErr) {
         debugPrint('Error loading artisan_profiles fallback: $profileErr');
       }
+    }
+
+    final userArtisanStatus = (row['artisan_status'] ?? '').toString().toUpperCase();
+    if (userArtisanStatus == 'APPROVED') {
+      row['role'] = 'Artisan';
+      row['roles'] = ['Artisan'];
+      row['artisan_status'] = 'APPROVED';
+    } else if (userArtisanStatus == 'REJECTED') {
+      row['artisan_status'] = 'REJECTED';
     }
 
     if (row['experience'] == null &&
@@ -673,15 +695,8 @@ class SupabaseService {
   }) async {
     final client = _authClient;
     final cleanEmail = email.trim().toLowerCase();
-    final isArtisan = const [
-      'Artisan',
-      'Master Artisan',
-      'Artisan & Tourist',
-      'Tourist & Artisan',
-      'Artisan and Tourist',
-      'Dual Role',
-    ].contains(role);
-    if (!isArtisan && role != 'Tourist' && role != 'Cultural Tourist') {
+    final isArtisan = const ['Artisan', 'Master Artisan'].contains(role);
+    if (!isArtisan && role != 'Tourist') {
       throw const AuthException(
         'This role cannot be created through registration.',
       );
@@ -934,9 +949,11 @@ class SupabaseService {
         'email': cleanEmail,
         'username': cleanEmail.split('@').first,
         'displayName': cleanEmail.split('@').first,
-        'role': 'Artisan & Tourist',
-        'roles': ['Tourist', 'Artisan'],
-        'status': 'PENDING_APPROVAL',
+        'role': 'Tourist',
+        'roles': ['Tourist'],
+        'status': 'ACTIVE',
+        'artisanStatus': 'PENDING_APPROVAL',
+        'artisan_status': 'PENDING_APPROVAL',
         'studioName': studioName,
         'craftCategory': craftCategory,
         'joinedDate': _formatMonthYear(DateTime.now()),
@@ -972,8 +989,10 @@ class SupabaseService {
     if (address != null) userRecord['address'] = address;
     if (state != null) userRecord['state'] = state;
     userRecord['status'] = 'PENDING_APPROVAL';
-    userRecord['role'] = 'Artisan & Tourist';
-    userRecord['roles'] = ['Tourist', 'Artisan'];
+    userRecord['artisanStatus'] = 'PENDING_APPROVAL';
+    userRecord['artisan_status'] = 'PENDING_APPROVAL';
+    userRecord['role'] = 'Tourist';
+    userRecord['roles'] = ['Tourist'];
 
     final preservedDocuments = userRecord['artisan_documents'] is List
         ? List<Map<String, dynamic>>.from(
@@ -1012,8 +1031,9 @@ class SupabaseService {
           await client.auth.updateUser(
             UserAttributes(
               data: {
-                'status': 'PENDING_APPROVAL',
-                'role': 'Artisan & Tourist',
+                'status': 'ACTIVE',
+                'role': 'Tourist',
+                'artisan_status': 'PENDING_APPROVAL',
                 'studio_name': studioName,
                 'craft_category': craftCategory,
                 'ssm_number': ssmNumber,
@@ -1033,27 +1053,51 @@ class SupabaseService {
             userRecord['id'] ??
             '00000000-0000-4000-8000-000000000001';
 
+        final userPayload = <String, dynamic>{
+          'status': 'ACTIVE',
+          'role': 'Tourist',
+          'artisan_status': 'PENDING_APPROVAL',
+          'studio_name': studioName,
+          'craft_category': craftCategory,
+          'ssm_number': ssmNumber,
+          if (experience != null && experience.trim().isNotEmpty)
+            'experience': experience.trim(),
+          if (bio != null && bio.trim().isNotEmpty) 'bio': bio.trim(),
+          if (state != null && state.trim().isNotEmpty) 'state': state.trim(),
+          if (address != null && address.trim().isNotEmpty)
+            'address': address.trim(),
+          if (phone != null && phone.trim().isNotEmpty)
+            'phone_number': phone.trim(),
+          'updated_at': DateTime.now().toIso8601String(),
+        };
+
         if (existing != null) {
-          await client
-              .from('users')
-              .update({
-                'status': 'PENDING_APPROVAL',
-                'role': 'Artisan & Tourist',
-                if (phone != null) 'phone_number': phone,
-                'updated_at': DateTime.now().toIso8601String(),
-              })
-              .ilike('email', cleanEmail);
+          try {
+            await client
+                .from('users')
+                .update(userPayload)
+                .ilike('email', cleanEmail);
+          } catch (uErr) {
+            debugPrint('users table full update note: $uErr');
+            await client
+                .from('users')
+                .update({
+                  'status': 'ACTIVE',
+                  'role': 'Tourist',
+                  'artisan_status': 'PENDING_APPROVAL',
+                  if (phone != null) 'phone_number': phone,
+                  'updated_at': DateTime.now().toIso8601String(),
+                })
+                .ilike('email', cleanEmail);
+          }
         } else {
           await client.from('users').insert({
             'id': userId,
             'email': cleanEmail,
             'username': userRecord['username'] ?? cleanEmail.split('@').first,
             'full_name': userRecord['displayName'] ?? studioName,
-            'status': 'PENDING_APPROVAL',
-            'role': 'Artisan & Tourist',
-            if (phone != null) 'phone_number': phone,
+            ...userPayload,
             'created_at': DateTime.now().toIso8601String(),
-            'updated_at': DateTime.now().toIso8601String(),
           });
         }
 
@@ -1063,6 +1107,16 @@ class SupabaseService {
               .select('id')
               .eq('user_id', userId)
               .maybeSingle();
+
+          final resolvedBio = (bio != null && bio.trim().isNotEmpty)
+              ? bio.trim()
+              : 'Master artisan dedicated to traditional Malaysian craft.';
+          final resolvedState = (state != null && state.trim().isNotEmpty)
+              ? state.trim()
+              : 'Melaka';
+          final resolvedAddress = (address != null && address.trim().isNotEmpty)
+              ? address.trim()
+              : resolvedState;
 
           final profileData = {
             'studio_name': studioName,
@@ -1075,11 +1129,9 @@ class SupabaseService {
                   RegExp(r'\d+').firstMatch(experience)!.group(0)!,
                 ),
             },
-            'bio':
-                bio ??
-                'Master artisan dedicated to traditional Malaysian craft.',
-            'address': address ?? state ?? 'Malaysia',
-            'state': state ?? 'Malaysia',
+            'bio': resolvedBio,
+            'address': resolvedAddress,
+            'state': resolvedState,
             if (latitude != null) 'latitude': latitude,
             if (longitude != null) 'longitude': longitude,
             'status': 'PENDING_APPROVAL',
@@ -2002,18 +2054,25 @@ class SupabaseService {
               .select(
                 '*, artisan_profiles!artisan_profiles_user_id_fkey(*, artisan_documents(*))',
               )
-              .ilike('status', '%PENDING%');
+              .or('status.ilike.%PENDING%,artisan_status.ilike.%PENDING%');
         } catch (_) {
           try {
             res = await client
                 .from('users')
                 .select('*, artisan_profiles(*, artisan_documents(*))')
-                .ilike('status', '%PENDING%');
+                .or('status.ilike.%PENDING%,artisan_status.ilike.%PENDING%');
           } catch (_) {
-            res = await client
-                .from('users')
-                .select()
-                .ilike('status', '%PENDING%');
+            try {
+              res = await client
+                  .from('users')
+                  .select()
+                  .or('status.ilike.%PENDING%,artisan_status.ilike.%PENDING%');
+            } catch (_) {
+              res = await client
+                  .from('users')
+                  .select()
+                  .ilike('status', '%PENDING%');
+            }
           }
         }
         if (res is List && res.isNotEmpty) {
@@ -2091,6 +2150,66 @@ class SupabaseService {
             results.add(rowMap);
           }
         }
+
+        // Also query artisan_profiles table directly to catch any pending applications
+        try {
+          final pendingProfiles = await client
+              .from('artisan_profiles')
+              .select('*, users(*), artisan_documents(*)')
+              .ilike('status', '%PENDING%');
+          if (pendingProfiles is List) {
+            for (final p in pendingProfiles) {
+              final pMap = Map<String, dynamic>.from(p);
+              final u = pMap['users'] is Map
+                  ? Map<String, dynamic>.from(pMap['users'])
+                  : <String, dynamic>{};
+              final email = (u['email'] ?? pMap['email'] ?? '').toString().toLowerCase();
+              if (email.isNotEmpty &&
+                  !results.any(
+                    (r) =>
+                        (r['email'] ?? '').toString().toLowerCase() == email,
+                  )) {
+                final combined = <String, dynamic>{
+                  ...u,
+                  'id': u['id'] ?? pMap['user_id'] ?? pMap['id'],
+                  'email': email,
+                  'studio_name': pMap['studio_name'] ?? u['studio_name'],
+                  'craft_category': pMap['craft_category'] ?? u['craft_category'],
+                  'ssm_number': pMap['ssm_number'] ?? u['ssm_number'],
+                  'bio': pMap['bio'] ?? u['bio'],
+                  'state': pMap['state'] ?? u['state'],
+                  'address': pMap['address'] ?? u['address'],
+                  'experience': pMap['experience'] ?? u['experience'],
+                  'artisan_status': 'PENDING_APPROVAL',
+                  'artisan_profiles': pMap,
+                };
+                if (pMap['artisan_documents'] is List) {
+                  final docs = pMap['artisan_documents'] as List;
+                  List<String> photos = [];
+                  for (var d in docs) {
+                    final doc = d as Map;
+                    final type = doc['doc_type']?.toString();
+                    final url = doc['file_url']?.toString();
+                    final name = doc['file_name']?.toString();
+                    if ((type == 'PORTFOLIO_IMAGE' || type == 'STUDIO_PHOTO') && url != null) {
+                      photos.add(url);
+                    } else if (type == 'SSM_BUSINESS_CERT') {
+                      if (name != null) combined['ssm_file_name'] = name;
+                      if (url != null) combined['ssm_file_url'] = url;
+                    } else if (type == 'KRAFTANGAN_MASTER_CERT') {
+                      if (name != null) combined['cert_file_name'] = name;
+                      if (url != null) combined['cert_file_url'] = url;
+                    }
+                  }
+                  if (photos.isNotEmpty) combined['photos'] = photos;
+                }
+                results.add(combined);
+              }
+            }
+          }
+        } catch (apErr) {
+          debugPrint('Supabase getPendingArtisans artisan_profiles direct query note: $apErr');
+        }
       } catch (e) {
         debugPrint('Supabase getPendingArtisans note: $e');
       }
@@ -2100,7 +2219,10 @@ class SupabaseService {
     for (final entry in _userStore.entries) {
       final user = entry.value;
       final status = (user['status'] ?? '').toString().toUpperCase();
-      if (status.contains('PENDING')) {
+      final artisanStatus = (user['artisan_status'] ?? user['artisanStatus'] ?? '')
+          .toString()
+          .toUpperCase();
+      if (status.contains('PENDING') || artisanStatus.contains('PENDING')) {
         final userEmail = (user['email'] ?? entry.key).toString().toLowerCase();
         if (!results.any(
           (r) => (r['email'] ?? '').toString().toLowerCase() == userEmail,
@@ -2323,7 +2445,7 @@ class SupabaseService {
 
     final artisanProfile = await client
         .from('artisan_profiles')
-        .select('id')
+        .select('id, studio_name, craft_category')
         .eq('user_id', userId)
         .maybeSingle();
     final artisanId = artisanProfile?['id']?.toString().trim() ?? '';
@@ -2331,13 +2453,42 @@ class SupabaseService {
       throw StateError('The artisan profile could not be found.');
     }
 
-    final questRows = List<Map<String, dynamic>>.from(
+    List<Map<String, dynamic>> questRows = List<Map<String, dynamic>>.from(
       await client
           .from('quests')
           .select('id, status')
           .eq('artisan_id', artisanId)
           .inFilter('status', const ['PENDING_APPROVAL', 'APPROVED']),
     );
+    if (questRows.isEmpty) {
+      final studioName =
+          artisanProfile?['studio_name']?.toString().trim().isNotEmpty == true
+              ? artisanProfile!['studio_name'].toString().trim()
+              : 'Heritage Workshop';
+      final craftCategory =
+          artisanProfile?['craft_category']?.toString().trim().isNotEmpty == true
+              ? artisanProfile!['craft_category'].toString().trim()
+              : 'Malaysian craft';
+      try {
+        final createdQuest = await client
+            .from('quests')
+            .insert({
+              'artisan_id': artisanId,
+              'title': '$studioName Quest',
+              'category': 'Demonstration & Lore',
+              'description':
+                  'Visit $studioName and experience the heritage of $craftCategory.',
+              'status': 'APPROVED',
+            })
+            .select('id, status')
+            .maybeSingle();
+        if (createdQuest != null) {
+          questRows = [createdQuest];
+        }
+      } catch (questInsertErr) {
+        debugPrint('Auto-provisioning quest for approved artisan note: $questInsertErr');
+      }
+    }
     if (questRows.isEmpty) {
       throw StateError(
         'Approval cannot continue because this artisan has no current cultural quest.',
@@ -2454,6 +2605,10 @@ class SupabaseService {
   }) async {
     final cleanEmail = email.trim().toLowerCase();
     final client = _client;
+    final resolvedArtisanStatus = (newStatus.toUpperCase() == 'ACTIVE' ||
+            newStatus.toUpperCase() == 'APPROVED')
+        ? 'APPROVED'
+        : (newStatus.toUpperCase() == 'REJECTED' ? 'REJECTED' : newStatus);
     final isApproval =
         ensureSystemTasks &&
         (newStatus.toUpperCase() == 'ACTIVE' ||
@@ -2468,18 +2623,22 @@ class SupabaseService {
 
     if (_userStore.containsKey(cleanEmail)) {
       if (updateArtisanProfileOnly) {
-        _userStore[cleanEmail]!['artisanStatus'] = newStatus;
-        _userStore[cleanEmail]!['artisan_status'] = newStatus;
+        _userStore[cleanEmail]!['artisanStatus'] = resolvedArtisanStatus;
+        _userStore[cleanEmail]!['artisan_status'] = resolvedArtisanStatus;
         _userStore[cleanEmail]!['status'] = 'ACTIVE';
         _userStore[cleanEmail]!['isSuspended'] = false;
         _userStore[cleanEmail]!['suspensionReason'] = null;
         _userStore[cleanEmail]!['suspension_reason'] = null;
         if (newRole.isNotEmpty) {
           _userStore[cleanEmail]!['role'] = newRole;
+          _userStore[cleanEmail]!['roles'] = [newRole];
         }
       } else {
         _userStore[cleanEmail]!['status'] = newStatus;
         _userStore[cleanEmail]!['role'] = newRole;
+        _userStore[cleanEmail]!['roles'] = [newRole];
+        _userStore[cleanEmail]!['artisanStatus'] = resolvedArtisanStatus;
+        _userStore[cleanEmail]!['artisan_status'] = resolvedArtisanStatus;
         _userStore[cleanEmail]!['isSuspended'] = (newStatus == 'SUSPENDED');
         if (newStatus == 'SUSPENDED') {
           _userStore[cleanEmail]!['suspensionReason'] = suspensionReason;
@@ -2487,11 +2646,6 @@ class SupabaseService {
         } else {
           _userStore[cleanEmail]!['suspensionReason'] = null;
           _userStore[cleanEmail]!['suspension_reason'] = null;
-        }
-        if (newRole == 'Artisan & Tourist') {
-          _userStore[cleanEmail]!['roles'] = ['Tourist', 'Artisan'];
-        } else if (newRole == 'Artisan') {
-          _userStore[cleanEmail]!['roles'] = ['Artisan'];
         }
       }
 
@@ -2502,17 +2656,20 @@ class SupabaseService {
           final map = jsonDecode(rawUser) as Map<String, dynamic>;
           if ((map['email'] as String?)?.toLowerCase() == cleanEmail) {
             if (updateArtisanProfileOnly) {
-              map['artisanStatus'] = newStatus;
-              map['artisan_status'] = newStatus;
+              map['artisanStatus'] = resolvedArtisanStatus;
+              map['artisan_status'] = resolvedArtisanStatus;
               map['status'] = 'ACTIVE';
               map['isSuspended'] = false;
               map['suspensionReason'] = null;
               map['suspension_reason'] = null;
               if (newRole.isNotEmpty) {
                 map['role'] = newRole;
+                map['roles'] = [newRole];
               }
             } else {
               map['status'] = newStatus;
+              map['artisanStatus'] = resolvedArtisanStatus;
+              map['artisan_status'] = resolvedArtisanStatus;
               map['isSuspended'] = (newStatus == 'SUSPENDED');
               if (newStatus == 'SUSPENDED') {
                 map['suspensionReason'] = suspensionReason;
@@ -2523,6 +2680,7 @@ class SupabaseService {
               }
               if (newRole.isNotEmpty) {
                 map['role'] = newRole;
+                map['roles'] = [newRole];
               }
             }
             await prefs.setString(_keyAuthUser, jsonEncode(map));
@@ -2534,59 +2692,67 @@ class SupabaseService {
     }
 
     if (client != null) {
-      if (!updateArtisanProfileOnly) {
-        // 1. Try invoking PostgreSQL SECURITY DEFINER RPC
-        try {
-          await client.rpc(
-            'admin_update_user_status',
-            params: {
-              'p_email': cleanEmail,
-              'p_status': newStatus,
-              'p_role': newRole,
-            },
-          );
-          debugPrint(
-            'Supabase RPC admin_update_user_status succeeded for $cleanEmail',
-          );
-        } catch (rpcError) {
-          debugPrint('Supabase RPC admin_update_user_status note: $rpcError');
-        }
+      // 1. Try invoking PostgreSQL SECURITY DEFINER RPC
+      try {
+        await client.rpc(
+          'admin_update_user_status',
+          params: {
+            'p_email': cleanEmail,
+            'p_status': newStatus,
+            'p_role':
+                (newStatus.toUpperCase() == 'REJECTED' && newRole == 'Tourist')
+                    ? null
+                    : newRole,
+          },
+        );
+        debugPrint(
+          'Supabase RPC admin_update_user_status succeeded for $cleanEmail',
+        );
+      } catch (rpcError) {
+        debugPrint('Supabase RPC admin_update_user_status note: $rpcError');
       }
 
       // 2. Direct Table Updates Fallback
       try {
-        if (!updateArtisanProfileOnly) {
-          final updatePayload = <String, dynamic>{
-            'status': newStatus,
-            'role': newRole,
-            'updated_at': DateTime.now().toIso8601String(),
-          };
-          if (newStatus == 'SUSPENDED') {
-            updatePayload['is_suspended'] = true;
-            if (suspensionReason != null) {
-              updatePayload['suspension_reason'] = suspensionReason;
-            }
-          } else if (newStatus == 'ACTIVE') {
-            updatePayload['is_suspended'] = false;
-            updatePayload['suspension_reason'] = null;
+        final updatePayload = <String, dynamic>{
+          'status': updateArtisanProfileOnly ? 'ACTIVE' : newStatus,
+          'role': newRole,
+          'artisan_status': resolvedArtisanStatus,
+          'updated_at': DateTime.now().toIso8601String(),
+        };
+        if (newStatus == 'SUSPENDED') {
+          updatePayload['is_suspended'] = true;
+          if (suspensionReason != null) {
+            updatePayload['suspension_reason'] = suspensionReason;
           }
+        } else if (newStatus == 'ACTIVE') {
+          updatePayload['is_suspended'] = false;
+          updatePayload['suspension_reason'] = null;
+        }
+        try {
+          await client
+              .from('users')
+              .update(updatePayload)
+              .ilike('email', cleanEmail);
+        } catch (updateErr) {
+          // Fallback if remote table does not yet have suspension_reason/is_suspended column
+          debugPrint('Direct user table update note: $updateErr');
           try {
             await client
                 .from('users')
-                .update(updatePayload)
+                .update({
+                  'status': updateArtisanProfileOnly ? 'ACTIVE' : newStatus,
+                  'role': newRole,
+                  'artisan_status': resolvedArtisanStatus,
+                  'updated_at': DateTime.now().toIso8601String(),
+                })
                 .ilike('email', cleanEmail);
-          } catch (updateErr) {
-            // Fallback if remote table does not yet have suspension_reason column
-            debugPrint('Direct user table update note: $updateErr');
-            updatePayload.remove('suspension_reason');
-            await client
-                .from('users')
-                .update(updatePayload)
-                .ilike('email', cleanEmail);
+          } catch (retryErr) {
+            debugPrint('Direct user table fallback update note: $retryErr');
           }
         }
 
-        // Update artisan_profiles status matching user_id
+        // Update artisan_profiles status matching user_id if present
         final userRow = await client
             .from('users')
             .select('id')
@@ -2598,22 +2764,19 @@ class SupabaseService {
               .select('id, status, studio_name, craft_category')
               .eq('user_id', userRow['id'])
               .maybeSingle();
-          final artisanStatus =
-              (newStatus.toUpperCase() == 'ACTIVE' ||
-                  newStatus.toUpperCase() == 'APPROVED')
-              ? 'APPROVED'
-              : newStatus;
-          await client
-              .from('artisan_profiles')
-              .update({
-                'status': artisanStatus,
-                'updated_at': DateTime.now().toIso8601String(),
-              })
-              .eq('user_id', userRow['id']);
+          if (artisanProfileBeforeUpdate != null) {
+            await client
+                .from('artisan_profiles')
+                .update({
+                  'status': resolvedArtisanStatus,
+                  'updated_at': DateTime.now().toIso8601String(),
+                })
+                .eq('user_id', userRow['id']);
+          }
 
           // System tasks were verified before changing approval state. Keep
           // the one current quest aligned with the approved profile here.
-          if (artisanStatus == 'APPROVED' &&
+          if (resolvedArtisanStatus == 'APPROVED' &&
               artisanProfileBeforeUpdate != null) {
             final artisanProfileId = artisanProfileBeforeUpdate['id']
                 .toString();

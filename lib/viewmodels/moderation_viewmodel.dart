@@ -552,6 +552,51 @@ class ModerationViewModel extends ChangeNotifier {
       try {
         final allUsers = await _repository.getAllUsers();
         for (final u in allUsers) {
+          if (u.isPendingArtisan) {
+            if (!fetched.any(
+              (p) =>
+                  p.email.toLowerCase() == u.email.toLowerCase() &&
+                  !p.isRelocationRequest,
+            )) {
+              final photos = u.artisanDocuments
+                  .where(
+                    (d) =>
+                        d['doc_type'] == 'PORTFOLIO_IMAGE' ||
+                        d['doc_type'] == 'STUDIO_PHOTO',
+                  )
+                  .map((d) => (d['file_url'] ?? '').toString())
+                  .where((url) => url.isNotEmpty)
+                  .toList();
+              fetched.add(
+                PendingArtisanProfile(
+                  id: u.id,
+                  name: u.studioName ?? u.displayName ?? 'Artisan Studio',
+                  craftCategory: u.craftCategory ?? 'Handicraft & Heritage',
+                  state: u.state ?? 'Melaka',
+                  dateSubmitted: u.joinedDate.isNotEmpty ? u.joinedDate : 'Today',
+                  imageUrl:
+                      u.avatarUrl ??
+                      'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600',
+                  email: u.email,
+                  experience:
+                      (u.experience?.trim().isNotEmpty == true)
+                      ? u.experience!
+                      : 'Verified Studio',
+                  phone: u.phone ?? '+60 12-345 6789',
+                  ssmNumber: u.ssmNumber ?? 'Pending Document Verification',
+                  bio: u.bio,
+                  isUpgradeFromTourist: u.role == 'Tourist',
+                  photos: photos.isNotEmpty
+                      ? photos
+                      : [
+                          u.avatarUrl ??
+                              'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600',
+                        ],
+                ),
+              );
+            }
+          }
+
           if (u.hasPendingRelocation) {
             final relocId = 'reloc_${u.id}';
             if (!fetched.any(
@@ -825,7 +870,7 @@ class ModerationViewModel extends ChangeNotifier {
               artisan.bio ??
               'Verified heritage master preserving traditional ${artisan.craftCategory}.',
           phone: artisan.phone,
-          isDualRole: isUpgrade,
+          isDualRole: false,
           isSuspended: false,
         ),
       );
@@ -886,7 +931,7 @@ class ModerationViewModel extends ChangeNotifier {
       await _repository.updateArtisanStatus(
         email: artisan.email,
         newStatus: 'SUSPENDED',
-        newRole: 'Artisan & Tourist',
+        newRole: 'Tourist',
         updateArtisanProfileOnly: true,
       );
 
@@ -895,6 +940,8 @@ class ModerationViewModel extends ChangeNotifier {
       );
       if (uIdx != -1) {
         _registeredUsers[uIdx] = _registeredUsers[uIdx].copyWith(
+          role: 'Tourist',
+          roles: const ['Tourist'],
           artisanStatus: 'SUSPENDED',
         );
       }
@@ -915,7 +962,7 @@ class ModerationViewModel extends ChangeNotifier {
       await _repository.updateArtisanStatus(
         email: artisan.email,
         newStatus: 'APPROVED',
-        newRole: 'Artisan & Tourist',
+        newRole: 'Artisan',
         updateArtisanProfileOnly: true,
       );
 
@@ -924,6 +971,8 @@ class ModerationViewModel extends ChangeNotifier {
       );
       if (uIdx != -1) {
         _registeredUsers[uIdx] = _registeredUsers[uIdx].copyWith(
+          role: 'Artisan',
+          roles: const ['Artisan'],
           artisanStatus: 'APPROVED',
         );
       }

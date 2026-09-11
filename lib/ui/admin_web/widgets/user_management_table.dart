@@ -176,8 +176,7 @@ class UserManagementTable extends StatelessWidget {
             builder: (context) {
               final bool isAdmin = user.isAdmin;
               final r = user.role.toLowerCase();
-              final bool isDual = user.isDualRole || r.contains('&') || (r.contains('artisan') && r.contains('tourist'));
-              final bool isArt = !isDual && (r.contains('artisan') || user.isArtisan);
+              final bool isArt = r.contains('artisan') || user.isArtisan;
 
               Color bgColor;
               Color textColor;
@@ -189,11 +188,6 @@ class UserManagementTable extends StatelessWidget {
                 textColor = const Color(0xFF6D28D9);
                 borderColor = const Color(0xFFDDD6FE);
                 roleIcon = Icons.shield_rounded;
-              } else if (isDual) {
-                bgColor = const Color(0xFFF0FDF4);
-                textColor = const Color(0xFF15803D);
-                borderColor = const Color(0xFF86EFAC);
-                roleIcon = Icons.auto_awesome_rounded;
               } else if (isArt) {
                 bgColor = const Color(0xFFFEF3C7);
                 textColor = const Color(0xFFB45309);

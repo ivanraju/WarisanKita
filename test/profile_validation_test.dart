@@ -8,14 +8,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:warisan_kita/data/repositories/user_repository.dart';
 import 'package:warisan_kita/data/services/supabase_service.dart';
 import 'package:warisan_kita/domain/models/active_artisan_master.dart';
 import 'package:warisan_kita/domain/models/artisan_profile.dart';
 import 'package:warisan_kita/domain/models/pending_artisan_profile.dart';
 import 'package:warisan_kita/domain/models/user.dart';
-import 'package:warisan_kita/domain/validators/document_validator.dart';
 import 'package:warisan_kita/domain/validators/profile_validator.dart';
 import 'package:warisan_kita/ui/admin_web/widgets/artisan_review_dialog.dart';
 import 'package:warisan_kita/ui/artisan/profile_builder_tab.dart';
@@ -968,6 +966,88 @@ void main() {
       expect(approvedUser.role, 'Artisan');
       expect(approvedUser.artisanStatus, 'APPROVED');
       expect(modVM.activeArtisanMasters.any((a) => a.email == applicantEmail), isTrue);
+    });
+
+    test('Tourist upgrade approval promotes role to Artisan and artisanStatus to APPROVED in UserModel.fromMap and session', () async {
+      // 1. UserModel.fromMap promotion test
+      final rawRowApproved = {
+        'id': 'user-test-appr',
+        'email': 'tourist.upgrade@warisankita.my',
+        'role': 'Tourist',
+        'roles': ['Tourist'],
+        'status': 'ACTIVE',
+        'artisan_profiles': {
+          'status': 'APPROVED',
+          'studio_name': 'Silver Studio',
+          'craft_category': 'Pewter Craft',
+        },
+      };
+      final user = UserModel.fromMap(rawRowApproved);
+      expect(user.role, 'Artisan');
+      expect(user.roles, ['Artisan']);
+      expect(user.artisanStatus, 'APPROVED');
+      expect(user.isApprovedArtisan, isTrue);
+      expect(user.isRejectedArtisan, isFalse);
+
+      // 2. updateArtisanStatusInDb approval test
+      final backend = AuthBackend();
+      addTearDown(backend.client.dispose);
+      const targetEmail = 'tourist.upgrade@warisankita.my';
+      backend.add(targetEmail, role: 'Tourist');
+      final service = SupabaseService(client: backend.client);
+      await service.updateArtisanStatusInDb(
+        email: targetEmail,
+        newStatus: 'ACTIVE',
+        newRole: 'Artisan',
+      );
+      final users = await service.getAllUsers();
+      final updatedUser = users.firstWhere((u) => u.email == targetEmail);
+      expect(updatedUser.role, 'Artisan');
+      expect(updatedUser.artisanStatus, 'APPROVED');
+      expect(updatedUser.isApprovedArtisan, isTrue);
+    });
+
+    test('Tourist application rejection preserves role Tourist and sets artisanStatus to REJECTED in UserModel.fromMap and session', () async {
+      // 1. UserModel.fromMap rejection test
+      final rawRowRejected = {
+        'id': 'user-test-rej',
+        'email': 'tourist.rejected@warisankita.my',
+        'role': 'Tourist',
+        'roles': ['Tourist'],
+        'status': 'ACTIVE',
+        'artisan_profiles': {
+          'status': 'REJECTED',
+          'studio_name': 'Clay Studio',
+          'craft_category': 'Pottery & Ceramics',
+        },
+      };
+      final user = UserModel.fromMap(rawRowRejected);
+      expect(user.role, 'Tourist');
+      expect(user.roles, ['Tourist']);
+      expect(user.status, 'ACTIVE');
+      expect(user.artisanStatus, 'REJECTED');
+      expect(user.isRejectedArtisan, isTrue);
+      expect(user.isApprovedArtisan, isFalse);
+
+      // 2. updateArtisanStatusInDb rejection test
+      final backend = AuthBackend();
+      addTearDown(backend.client.dispose);
+      const targetEmail = 'tourist.rejected@warisankita.my';
+      backend.add(targetEmail, role: 'Tourist');
+      final service = SupabaseService(client: backend.client);
+      await service.updateArtisanStatusInDb(
+        email: targetEmail,
+        newStatus: 'REJECTED',
+        newRole: 'Tourist',
+        updateArtisanProfileOnly: true,
+      );
+      final users = await service.getAllUsers();
+      final updatedUser = users.firstWhere((u) => u.email == targetEmail);
+      expect(updatedUser.role, 'Tourist');
+      expect(updatedUser.status, 'ACTIVE');
+      expect(updatedUser.artisanStatus, 'REJECTED');
+      expect(updatedUser.isRejectedArtisan, isTrue);
+      expect(updatedUser.isApprovedArtisan, isFalse);
     });
   });
 

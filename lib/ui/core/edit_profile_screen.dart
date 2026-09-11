@@ -235,9 +235,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
     final user = authVM.currentUser;
     final phone = user?.phone;
-    final isDualOrArtisan = user?.isDualRole == true || user?.isArtisan == true || (user?.role.toLowerCase().contains('artisan') ?? false);
+    final isArtisan = user?.isArtisan == true || (user?.role.toLowerCase().contains('artisan') ?? false);
 
-    final finalStudioName = isDualOrArtisan
+    final finalStudioName = isArtisan
         ? (studioName.isNotEmpty ? studioName : (fullName.isNotEmpty ? fullName : username))
         : null;
 
@@ -248,8 +248,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         phone: phone,
         bio: bio,
         studioName: finalStudioName,
-        craftCategory: isDualOrArtisan ? _selectedCraftCategory : null,
-        state: isDualOrArtisan ? _selectedState : null,
+        craftCategory: isArtisan ? _selectedCraftCategory : null,
+        state: isArtisan ? _selectedState : null,
       );
     } catch (e) {
       if (!mounted) return;
@@ -271,8 +271,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           username: username,
           displayName: fullName.isNotEmpty ? fullName : username,
           studioName: finalStudioName,
-          craftCategory: isDualOrArtisan ? _selectedCraftCategory : null,
-          state: isDualOrArtisan ? _selectedState : null,
+          craftCategory: isArtisan ? _selectedCraftCategory : null,
+          state: isArtisan ? _selectedState : null,
           phone: phone,
           bio: bio,
         );
@@ -284,8 +284,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          isDualOrArtisan
-              ? 'Tourist Profile & Artisan Studio synced successfully!'
+          isArtisan
+              ? 'Artisan Studio profile synced successfully!'
               : 'Explorer profile updated successfully!',
         ),
         backgroundColor: const Color(0xFF004D40),
@@ -326,7 +326,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
 
     final initials = user.initials;
-    final isDual = user.isDualRole || user.isArtisan || user.role == 'Artisan' || user.role.toLowerCase().contains('artisan');
+    final isArtisan = user.isArtisan || user.role == 'Artisan' || user.role.toLowerCase().contains('artisan');
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
@@ -556,7 +556,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
             ),
 
-            if (isDual) ...[
+            if (isArtisan) ...[
               const SizedBox(height: 32),
               Container(
                 padding: const EdgeInsets.all(20),

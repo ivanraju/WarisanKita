@@ -908,14 +908,145 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                             ],
                           ),
                         ),
+                      ] else if (authVM.currentUser?.isRejectedArtisan == true) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? const Color(0xFF2A1215)
+                                : const Color(0xFFFEF2F2),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: isDark
+                                  ? const Color(0xFF5C1D24)
+                                  : const Color(0xFFFCA5A5),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFEF4444).withValues(alpha: 0.15),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.cancel_outlined,
+                                  color: Color(0xFFEF4444),
+                                  size: 24,
+                                ),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            'Artisan Application',
+                                            softWrap: true,
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13,
+                                              color: isDark
+                                                  ? const Color(0xFFFCA5A5)
+                                                  : const Color(0xFF991B1B),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: isDark
+                                                ? const Color(0xFF3F161A)
+                                                : const Color(0xFFFEE2E2),
+                                            borderRadius: BorderRadius.circular(6),
+                                            border: Border.all(
+                                              color: const Color(0xFFEF4444),
+                                            ),
+                                          ),
+                                          child: Text(
+                                            'REQUIRES REVISION',
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 8,
+                                              fontWeight: FontWeight.w900,
+                                              color: isDark
+                                                  ? const Color(0xFFFCA5A5)
+                                                  : const Color(0xFFB91C1C),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Kraftangan review requires document updates. Tap to revise and resubmit your application.',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 11,
+                                        color: isDark
+                                            ? Colors.white70
+                                            : const Color(0xFF7F1D1D),
+                                        height: 1.3,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              FilledButton(
+                                onPressed: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          ArtisanApplicationPendingScreen(
+                                            studioName:
+                                                authVM.currentUser?.studioName ??
+                                                'Your Craft Studio',
+                                            craftCategory:
+                                                authVM.currentUser?.craftCategory ??
+                                                'Malaysian Heritage Craft',
+                                            ssmNumber:
+                                                authVM.currentUser?.ssmNumber ??
+                                                'Pending Document Verification',
+                                          ),
+                                    ),
+                                  );
+                                },
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: const Color(0xFFEF4444),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: const Text(
+                                  'Re-apply',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ] else if (authVM.currentUser?.isPendingArtisan == true ||
                           authVM.currentUser?.isPendingApproval == true ||
-                          (authVM.currentUser?.studioName != null &&
-                              authVM.currentUser!.studioName!
-                                  .trim()
-                                  .isNotEmpty &&
-                              authVM.currentUser?.isApprovedArtisan !=
-                                  true)) ...[
+                          ((authVM.currentUser?.studioName != null &&
+                                  authVM.currentUser!.studioName!.trim().isNotEmpty) &&
+                              authVM.currentUser?.isApprovedArtisan != true &&
+                              authVM.currentUser?.isRejectedArtisan != true)) ...[
                         const SizedBox(height: 16),
                         Container(
                           padding: const EdgeInsets.all(16),

@@ -95,7 +95,7 @@ class ActiveArtisanMaster {
     final String role = (map['role'] ?? '').toString();
     final String status = (map['status'] ?? '').toString().toUpperCase();
     final bool isSuspended = status == 'SUSPENDED' || map['is_suspended'] == true;
-    final bool isDual = role.contains('Tourist') || role.contains('&') || (map['roles'] is List && (map['roles'] as List).contains('Tourist'));
+    final bool isDual = false;
 
     return ActiveArtisanMaster(
       id: (map['id'] ?? ap?['id'] ?? '').toString(),
