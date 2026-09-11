@@ -159,7 +159,7 @@ class RoleSelectionScreen extends StatelessWidget {
                     }
                     if (user.isApprovedArtisan) {
                       Navigator.of(context).pushReplacementNamed('/artisan');
-                    } else if (user.isPendingArtisan) {
+                    } else if (user.isPendingArtisan || user.artisanStatus?.toUpperCase() == 'REJECTED') {
                       Navigator.of(context).pushReplacement(
                         MaterialPageRoute(
                           builder: (_) => ArtisanApplicationPendingScreen(
