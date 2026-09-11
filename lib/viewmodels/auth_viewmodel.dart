@@ -798,6 +798,14 @@ class AuthViewModel extends ChangeNotifier {
         }
       }
 
+      if (targetEmail.isEmpty) {
+        _errorMessage =
+            'Authentication required: Please sign in with your tourist account or enter your account email to submit an artisan application.';
+        _isLoading = false;
+        notifyListeners();
+        return AuthResult(success: false, message: _errorMessage);
+      }
+
       final cleanSsm = ssmNumber.trim();
       final ssmError = SsmValidator.validate(cleanSsm);
       if (ssmError != null) {

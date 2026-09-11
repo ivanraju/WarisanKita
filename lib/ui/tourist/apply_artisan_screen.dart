@@ -43,6 +43,11 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
   void initState() {
     super.initState();
     _ssmController.addListener(_onSsmChanged);
+
+    Future.microtask(() async {
+      if (!mounted) return;
+      await context.read<AuthViewModel>().refreshCurrentUser();
+    });
   }
 
   @override
@@ -488,6 +493,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
     if (user == null || user.email.trim().isEmpty) {
       user = await authVM.restoreSession();
     }
+    if (!mounted) return;
     final studioName = _studioNameController.text.trim();
     final ssm = _ssmController.text.trim();
     final expText = _experienceController.text.trim();
@@ -497,6 +503,18 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
     final phone = phoneText.isNotEmpty ? phoneText : null;
 
     final effectiveEmail = user?.email.trim() ?? '';
+
+    if (effectiveEmail.isEmpty) {
+      setState(() => _isSubmitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please sign in with your tourist account to apply.'),
+          backgroundColor: Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
 
     final result = await authVM.linkArtisanToExistingTourist(
       email: effectiveEmail,
@@ -708,7 +726,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
 
                   // Craft Category Dropdown
                   DropdownButtonFormField<String>(
-                    value: _selectedCraftCategory,
+                    initialValue: _selectedCraftCategory,
                     decoration: InputDecoration(
                       labelText: 'Heritage Craft Category *',
                       prefixIcon: const Icon(
@@ -741,7 +759,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
 
                   // State / Location Dropdown
                   DropdownButtonFormField<String>(
-                    value: _selectedState,
+                    initialValue: _selectedState,
                     decoration: InputDecoration(
                       labelText: 'Workshop State / Region *',
                       prefixIcon: const Icon(
