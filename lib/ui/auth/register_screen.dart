@@ -286,6 +286,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     final authVM = context.watch<AuthViewModel>();
     final isDesktop = MediaQuery.of(context).size.width > 800;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
@@ -672,20 +673,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFFBEB),
+                      color: isDark ? const Color(0xFF231F10) : const Color(0xFFFFFBEB),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFFDE68A)),
+                      border: Border.all(
+                        color: isDark ? const Color(0xFF78350F) : const Color(0xFFFDE68A),
+                      ),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.palette_outlined, size: 18, color: Color(0xFFD97706)),
+                        Icon(
+                          Icons.palette_outlined,
+                          size: 18,
+                          color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFD97706),
+                        ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
                             'Are you a Master Artisan? You can register your heritage workshop inside your Profile anytime after joining!',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 11,
-                              color: const Color(0xFF92400E),
+                              color: isDark ? const Color(0xFFFFE082) : const Color(0xFF92400E),
                               fontWeight: FontWeight.w600,
                             ),
                           ),

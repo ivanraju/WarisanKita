@@ -328,7 +328,8 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
     
     // Wire up to DirectoryViewModel to get REAL artisans from Supabase
     final dirVM = context.watch<DirectoryViewModel>();
-    final realArtisans = dirVM.artisans.map((a) => {
+    final allArtisanModels = dirVM.allArtisans.isNotEmpty ? dirVM.allArtisans : dirVM.artisans;
+    final allDirectoryArtisans = allArtisanModels.map((a) => {
       'id': a.id,
       'name': a.name,
       'category': a.craftType,
@@ -349,6 +350,29 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
       'ssmNumber': a.ssmNumber,
       'documents': a.documents,
       'artisanModel': a, // pass the model for the detail screen
+    }).toList();
+
+    final realArtisans = dirVM.artisans.map((a) => {
+      'id': a.id,
+      'name': a.name,
+      'category': a.craftType,
+      'craft': a.craftType,
+      'state': a.state,
+      'rating': a.rating,
+      'image': a.imageUrl,
+      'images': a.images,
+      'bio': a.description,
+      'exp': '+150 EXP',
+      'experienceYears': a.experience,
+      'workshopCount': a.workshopCount,
+      'tags': a.tags,
+      'address': a.address,
+      'latitude': a.latitude,
+      'longitude': a.longitude,
+      'isLiveOpen': a.isLiveOpen,
+      'ssmNumber': a.ssmNumber,
+      'documents': a.documents,
+      'artisanModel': a,
     }).toList();
 
     // Directory is 100% bound to real artisans from Supabase
@@ -382,21 +406,144 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
       return matchesQuery && matchesCategory && matchesState;
     }).toList();
 
-    // Matchmaker recommendations
+    // Multi-Tiered Matchmaker Recommendations (Tier 1: Craft -> Tier 2: Region/Material -> Tier 3: Top Masters)
     final matchmakerVM = context.watch<MatchmakerViewModel>();
     List<Map<String, dynamic>> recommendedArtisans = [];
+    String recommendationHeaderTitle = langVM.translate('Recommended for You (Based on Preferences)');
+    String? recommendationSubtitle;
 
     if (matchmakerVM.isQuizCompleted && matchmakerVM.matchingCrafts.isNotEmpty) {
-      recommendedArtisans = artisans.where((a) {
+      final personality = matchmakerVM.currentPersonality;
+      final matchingKeywords = <String>{};
+      for (final mc in matchmakerVM.matchingCrafts) {
+        final mcLower = mc.toLowerCase().trim();
+        matchingKeywords.add(mcLower);
+        final words = mcLower
+            .split(RegExp(r'[\s&/,\-]+'))
+            .where((w) => w.length >= 3 && !{'and', 'the', 'arts', 'making', 'crafts', 'craft'}.contains(w));
+        matchingKeywords.addAll(words);
+      }
+
+      for (final filter in craftFilters) {
+        if (filter.key == 'ALL') continue;
+        final filterNameLower = filter.englishName.toLowerCase();
+        if (matchingKeywords.any((k) => filterNameLower.contains(k) || filter.key.toLowerCase().contains(k))) {
+          matchingKeywords.addAll(filter.matchKeywords);
+        }
+      }
+
+      // --- TIER 1: Direct & Category Craft Match ---
+      final tier1Matches = allDirectoryArtisans.where((a) {
         final craft = a['craft']?.toString().toLowerCase() ?? '';
         final cat = a['category']?.toString().toLowerCase() ?? '';
-        return matchmakerVM.matchingCrafts.any((mc) =>
-            craft.contains(mc.toLowerCase()) || cat.contains(mc.toLowerCase()));
-      }).toList();
-    }
+        final name = a['name']?.toString().toLowerCase() ?? '';
+        final tags = a['tags'];
+        final tagList = tags is List
+            ? tags.map((t) => t.toString().toLowerCase()).toList()
+            : (tags is String ? [tags.toLowerCase()] : <String>[]);
 
-    if (recommendedArtisans.isEmpty && artisans.isNotEmpty) {
-      recommendedArtisans = artisans.take(4).toList();
+        // Exact or substring match with any matchingCrafts item
+        for (final mc in matchmakerVM.matchingCrafts) {
+          final mcLower = mc.toLowerCase().trim();
+          if (craft.contains(mcLower) || mcLower.contains(craft) || cat.contains(mcLower) || mcLower.contains(cat)) {
+            return true;
+          }
+        }
+
+        // Token / Keyword match against craft, cat, name, tags
+        for (final kw in matchingKeywords) {
+          if (craft.contains(kw) || cat.contains(kw) || name.contains(kw) || tagList.any((t) => t.contains(kw))) {
+            return true;
+          }
+        }
+
+        // CraftFilter matching
+        for (final filter in craftFilters) {
+          if (filter.key == 'ALL') continue;
+          if (matchingKeywords.any((k) => filter.key.toLowerCase().contains(k) || filter.englishName.toLowerCase().contains(k))) {
+            if (filter.matches(cat, tagList) || filter.matches(craft, tagList)) {
+              return true;
+            }
+          }
+        }
+
+        return false;
+      }).toList();
+
+      if (tier1Matches.isNotEmpty) {
+        recommendedArtisans = tier1Matches;
+        recommendationHeaderTitle = personality != null
+            ? '${langVM.translate('Recommended for You')} • ${personality.title}'
+            : langVM.translate('Recommended for You (Based on Preferences)');
+        recommendationSubtitle = null;
+      } else {
+        // --- TIER 2: Regional & Material Family Match ---
+        final prefRegion = personality?.region?.toLowerCase() ?? '';
+        final prefMaterial = personality?.material?.toLowerCase() ?? '';
+        final materialTokens = prefMaterial
+            .split(RegExp(r'[\s&/,\-]+'))
+            .where((w) => w.length >= 3 && !{'and', 'the', 'crafts', 'craft'}.contains(w))
+            .toList();
+
+        final tier2Matches = allDirectoryArtisans.where((a) {
+          final state = a['state']?.toString().toLowerCase() ?? '';
+          final craft = a['craft']?.toString().toLowerCase() ?? '';
+          final tags = a['tags'];
+          final tagList = tags is List
+              ? tags.map((t) => t.toString().toLowerCase()).toList()
+              : (tags is String ? [tags.toLowerCase()] : <String>[]);
+
+          bool matchesRegion = false;
+          if (prefRegion.contains('east coast')) {
+            matchesRegion = {'kelantan', 'terengganu', 'pahang'}.contains(state);
+          } else if (prefRegion.contains('west coast')) {
+            matchesRegion = {
+              'melaka',
+              'perak',
+              'penang',
+              'selangor',
+              'johor',
+              'kedah',
+              'perlis',
+              'kuala lumpur',
+              'negeri sembilan',
+            }.contains(state);
+          }
+
+          final matchesMaterial = materialTokens.any((t) => craft.contains(t) || tagList.any((tag) => tag.contains(t)));
+
+          return matchesRegion || matchesMaterial;
+        }).toList();
+
+        if (tier2Matches.isNotEmpty) {
+          recommendedArtisans = tier2Matches.take(4).toList();
+          final regionName = prefRegion.contains('east') ? 'East Coast' : (prefRegion.contains('west') ? 'West Coast' : 'Regional');
+          recommendationHeaderTitle = 'Related $regionName Masters • ${personality?.title ?? "Preference Match"}';
+          recommendationSubtitle = 'Exploring authentic regional masters matching your cultural style';
+        } else {
+          // --- TIER 3: Curated Top-Rated Heritage Masters ---
+          final sortedMasters = List<Map<String, dynamic>>.from(allDirectoryArtisans)
+            ..sort((a, b) {
+              final rA = (a['rating'] as num?)?.toDouble() ?? 0.0;
+              final rB = (b['rating'] as num?)?.toDouble() ?? 0.0;
+              return rB.compareTo(rA);
+            });
+          recommendedArtisans = sortedMasters.take(4).toList();
+          recommendationHeaderTitle = 'Featured Malaysian Heritage Masters';
+          recommendationSubtitle = 'Curated top-rated master artisans across all disciplines';
+        }
+      }
+    } else if (!matchmakerVM.isQuizCompleted && allDirectoryArtisans.isNotEmpty) {
+      // Guest or uncompleted quiz
+      final sortedMasters = List<Map<String, dynamic>>.from(allDirectoryArtisans)
+        ..sort((a, b) {
+          final rA = (a['rating'] as num?)?.toDouble() ?? 0.0;
+          final rB = (b['rating'] as num?)?.toDouble() ?? 0.0;
+          return rB.compareTo(rA);
+        });
+      recommendedArtisans = sortedMasters.take(4).toList();
+      recommendationHeaderTitle = langVM.translate('Popular Heritage Masters');
+      recommendationSubtitle = null;
     }
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -812,14 +959,29 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                             Icon(Icons.auto_awesome_rounded, color: isDark ? const Color(0xFF34D399) : const Color(0xFF15803D), size: 16),
                             const SizedBox(width: 6),
                             Expanded(
-                              child: Text(
-                                langVM.translate('Recommended for You (Based on Preferences)'),
-                                softWrap: true,
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: isDark ? const Color(0xFF34D399) : const Color(0xFF15803D),
-                                ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    recommendationHeaderTitle,
+                                    softWrap: true,
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark ? const Color(0xFF34D399) : const Color(0xFF15803D),
+                                    ),
+                                  ),
+                                  if (recommendationSubtitle != null) ...[
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      recommendationSubtitle,
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 10,
+                                        color: isDark ? Colors.white60 : const Color(0xFF166534),
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
                             ),
                           ],
