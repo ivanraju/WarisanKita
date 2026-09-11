@@ -5,6 +5,7 @@ import 'package:warisan_kita/data/repositories/user_repository.dart';
 import 'package:warisan_kita/domain/models/user.dart';
 import 'package:warisan_kita/domain/validators/ssm_validator.dart';
 import 'package:warisan_kita/domain/validators/profile_validator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:warisan_kita/data/services/supabase_service.dart' show EmailVerificationRequired;
 
 enum AuthStatus { unauthenticated, authenticating, authenticated, error }
@@ -853,6 +854,10 @@ class AuthViewModel extends ChangeNotifier {
       );
 
       _currentUser = user;
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('dismissed_rejection_banner_${user.id}');
+      } catch (_) {}
       _statusMessage = 'ARTISAN PROFILE LINKED: Status set to PENDING_APPROVAL';
       _isLoading = false;
       notifyListeners();

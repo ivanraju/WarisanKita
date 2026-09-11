@@ -110,19 +110,34 @@ class UserModel {
   bool get isArtisanStudioSuspended =>
       artisanStatus?.toUpperCase() == 'SUSPENDED';
 
-  bool get isApprovedArtisan =>
-      (role == 'Artisan' ||
-       role == 'Master Artisan' ||
-       roles.contains('Artisan') ||
-       roles.contains('Master Artisan')) &&
-      isApproved &&
-      !isArtisanStudioSuspended;
+  bool get isApprovedArtisan {
+    if (artisanStatus?.toUpperCase() == 'CLOSED' || role == 'Tourist') return false;
+    return (role == 'Artisan' ||
+        role == 'Master Artisan' ||
+        roles.contains('Artisan') ||
+        roles.contains('Master Artisan') ||
+        artisanStatus?.toUpperCase() == 'APPROVED') &&
+       isApproved &&
+       !isArtisanStudioSuspended;
+  }
+
+  bool get isRejectedArtisan {
+    if (artisanStatus?.toUpperCase() == 'CLOSED') return false;
+    if (isApprovedArtisan) return false;
+    final artStatus = artisanStatus?.toUpperCase();
+    if (artStatus == 'PENDING_APPROVAL' || artStatus == 'PENDING') return false;
+    return artStatus == 'REJECTED' ||
+        (status.toUpperCase() == 'REJECTED' && artStatus == null);
+  }
 
   bool get isPendingArtisan =>
-      (artisanStatus == 'PENDING_APPROVAL' ||
-       artisanStatus == 'PENDING' ||
-       isPendingApproval ||
-       (studioName != null && studioName!.trim().isNotEmpty && !isApprovedArtisan)) &&
+      !isApprovedArtisan &&
+      !isRejectedArtisan &&
+      artisanStatus?.toUpperCase() != 'CLOSED' &&
+      (artisanStatus?.toUpperCase() == 'PENDING_APPROVAL' ||
+       artisanStatus?.toUpperCase() == 'PENDING' ||
+       (isPendingApproval && role != 'Tourist') ||
+       (role != 'Tourist' && studioName != null && studioName!.trim().isNotEmpty)) &&
       !isArtisanStudioSuspended;
 
   String get handle {
@@ -219,6 +234,7 @@ class UserModel {
     bool clearPendingRelocation = false,
     bool? isLiveOpen,
     int? workshopCount,
+    bool clearStudioDetails = false,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -232,20 +248,20 @@ class UserModel {
       joinedDate: joinedDate ?? this.joinedDate,
       isSuspended: isSuspended ?? this.isSuspended,
       suspensionReason: clearSuspensionReason ? null : (suspensionReason ?? this.suspensionReason),
-      studioName: studioName ?? this.studioName,
-      ssmNumber: ssmNumber ?? this.ssmNumber,
-      craftCategory: craftCategory ?? this.craftCategory,
-      bio: bio ?? this.bio,
+      studioName: clearStudioDetails ? null : (studioName ?? this.studioName),
+      ssmNumber: clearStudioDetails ? null : (ssmNumber ?? this.ssmNumber),
+      craftCategory: clearStudioDetails ? null : (craftCategory ?? this.craftCategory),
+      bio: clearStudioDetails ? null : (bio ?? this.bio),
       address: address ?? this.address,
       state: state ?? this.state,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       phone: phone ?? this.phone,
       experience: experience ?? this.experience,
-      artisanProfileId: artisanProfileId ?? this.artisanProfileId,
+      artisanProfileId: clearStudioDetails ? null : (artisanProfileId ?? this.artisanProfileId),
       artisanStatus: artisanStatus ?? this.artisanStatus,
-      artisanDocuments: artisanDocuments ?? this.artisanDocuments,
-      tags: tags ?? this.tags,
+      artisanDocuments: clearStudioDetails ? const [] : (artisanDocuments ?? this.artisanDocuments),
+      tags: clearStudioDetails ? const [] : (tags ?? this.tags),
       pendingRelocationAddress: clearPendingRelocation ? null : (pendingRelocationAddress ?? this.pendingRelocationAddress),
       pendingRelocationState: clearPendingRelocation ? null : (pendingRelocationState ?? this.pendingRelocationState),
       pendingRelocationLatitude: clearPendingRelocation ? null : (pendingRelocationLatitude ?? this.pendingRelocationLatitude),
