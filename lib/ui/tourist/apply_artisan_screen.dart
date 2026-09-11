@@ -8,6 +8,7 @@ import 'package:warisan_kita/domain/models/pending_artisan_profile.dart';
 import 'package:warisan_kita/domain/validators/profile_validator.dart';
 import 'package:warisan_kita/domain/validators/ssm_validator.dart';
 import 'package:warisan_kita/domain/validators/document_validator.dart';
+import 'package:warisan_kita/domain/models/user.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import 'widgets/workshop_map_picker.dart';
 import 'package:warisan_kita/viewmodels/moderation_viewmodel.dart';
@@ -42,11 +43,6 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
   void initState() {
     super.initState();
     _ssmController.addListener(_onSsmChanged);
-
-    Future.microtask(() async {
-      if (!mounted) return;
-      await context.read<AuthViewModel>().refreshCurrentUser();
-    });
   }
 
   @override
@@ -488,13 +484,10 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
     });
 
     final authVM = context.read<AuthViewModel>();
-    var user = authVM.currentUser;
+    UserModel? user = authVM.currentUser;
     if (user == null || user.email.trim().isEmpty) {
-      await authVM.refreshCurrentUser();
-      user = authVM.currentUser;
+      user = await authVM.restoreSession();
     }
-    if (!mounted) return;
-
     final studioName = _studioNameController.text.trim();
     final ssm = _ssmController.text.trim();
     final expText = _experienceController.text.trim();
@@ -504,18 +497,6 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
     final phone = phoneText.isNotEmpty ? phoneText : null;
 
     final effectiveEmail = user?.email.trim() ?? '';
-
-    if (effectiveEmail.isEmpty) {
-      setState(() => _isSubmitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please sign in with your tourist account to apply.'),
-          backgroundColor: Color(0xFFEF4444),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
 
     final result = await authVM.linkArtisanToExistingTourist(
       email: effectiveEmail,
@@ -559,7 +540,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
           dateSubmitted: 'Just Now',
           imageUrl:
               'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600',
-          email: effectiveEmail,
+          email: user?.email ?? '',
           experience: expText.isNotEmpty ? expText : 'Craft Artisan',
           phone: phone ?? '',
           ssmNumber: ssm,
@@ -727,7 +708,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
 
                   // Craft Category Dropdown
                   DropdownButtonFormField<String>(
-                    initialValue: _selectedCraftCategory,
+                    value: _selectedCraftCategory,
                     decoration: InputDecoration(
                       labelText: 'Heritage Craft Category *',
                       prefixIcon: const Icon(
@@ -760,7 +741,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
 
                   // State / Location Dropdown
                   DropdownButtonFormField<String>(
-                    initialValue: _selectedState,
+                    value: _selectedState,
                     decoration: InputDecoration(
                       labelText: 'Workshop State / Region *',
                       prefixIcon: const Icon(

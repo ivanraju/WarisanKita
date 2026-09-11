@@ -373,67 +373,11 @@ class SupabaseService {
           .eq('user_id', authUser.id)
           .maybeSingle();
       if (artisan != null) {
-        row['artisan_profiles'] = artisan;
-        if (artisan['bio'] != null && (artisan['bio'] as String).trim().isNotEmpty) {
-          row['bio'] = artisan['bio'];
-        }
-        if (artisan['studio_name'] != null && (artisan['studio_name'] as String).trim().isNotEmpty) {
-          row['studio_name'] = artisan['studio_name'];
-        }
-        if (artisan['craft_category'] != null && (artisan['craft_category'] as String).trim().isNotEmpty) {
-          row['craft_category'] = artisan['craft_category'];
-        }
-        if (artisan['address'] != null && (artisan['address'] as String).trim().isNotEmpty) {
-          row['address'] = artisan['address'];
-        }
-        if (artisan['state'] != null && (artisan['state'] as String).trim().isNotEmpty) {
-          row['state'] = artisan['state'];
-        }
-        if (artisan['latitude'] != null) {
-          row['latitude'] = artisan['latitude'];
-        }
-        if (artisan['longitude'] != null) {
-          row['longitude'] = artisan['longitude'];
-        }
-        if (artisan['tags'] != null) {
-          row['tags'] = artisan['tags'];
-        }
-        if (artisan['artisan_documents'] != null) {
-          row['artisan_documents'] = artisan['artisan_documents'];
-        }
-        if (artisan['experience'] != null && artisan['experience'].toString().trim().isNotEmpty) {
-          row['experience'] = artisan['experience'].toString().trim();
-        } else if (artisan['years_experience'] != null && (artisan['years_experience'] as num) > 1) {
-          row['experience'] = '${artisan['years_experience']} Years';
-        }
-        if (artisan['status'] != null) {
-          row['artisan_status'] = artisan['status'];
-          if (artisan['status'].toString().toUpperCase() == 'APPROVED') {
-            final currentRole = (row['role'] ?? '').toString();
-            if (currentRole.isEmpty || currentRole == 'Tourist') {
-              row['role'] = 'Artisan';
-            }
-          }
-        }
-      }
-    } catch (e) {
-      debugPrint('Error loading artisan_profiles join: $e');
-      try {
-        final artisan = await client
-            .from('artisan_profiles')
-            .select()
-            .eq('user_id', authUser.id)
-            .maybeSingle();
-        if (artisan != null) {
-          try {
-            final docs = await client
-                .from('artisan_documents')
-                .select()
-                .eq('artisan_id', artisan['id']);
-            artisan['artisan_documents'] = docs;
-          } catch (docErr) {
-            debugPrint('Error loading artisan_documents fallback: $docErr');
-          }
+        final artisanStatus = (artisan['status'] ?? '').toString().toUpperCase();
+        row['artisan_status'] = artisanStatus;
+        final currentRole = (row['role'] ?? '').toString();
+
+        if (artisanStatus == 'APPROVED' && currentRole != 'Tourist') {
           row['artisan_profiles'] = artisan;
           if (artisan['bio'] != null && (artisan['bio'] as String).trim().isNotEmpty) {
             row['bio'] = artisan['bio'];
@@ -450,14 +394,90 @@ class SupabaseService {
           if (artisan['state'] != null && (artisan['state'] as String).trim().isNotEmpty) {
             row['state'] = artisan['state'];
           }
-          if (artisan['latitude'] != null) row['latitude'] = artisan['latitude'];
-          if (artisan['longitude'] != null) row['longitude'] = artisan['longitude'];
-          if (artisan['tags'] != null) row['tags'] = artisan['tags'];
-          if (artisan['artisan_documents'] != null) row['artisan_documents'] = artisan['artisan_documents'];
+          if (artisan['latitude'] != null) {
+            row['latitude'] = artisan['latitude'];
+          }
+          if (artisan['longitude'] != null) {
+            row['longitude'] = artisan['longitude'];
+          }
+          if (artisan['tags'] != null) {
+            row['tags'] = artisan['tags'];
+          }
+          if (artisan['artisan_documents'] != null) {
+            row['artisan_documents'] = artisan['artisan_documents'];
+          }
           if (artisan['experience'] != null && artisan['experience'].toString().trim().isNotEmpty) {
             row['experience'] = artisan['experience'].toString().trim();
           } else if (artisan['years_experience'] != null && (artisan['years_experience'] as num) > 1) {
             row['experience'] = '${artisan['years_experience']} Years';
+          }
+          if (currentRole.isEmpty) {
+            row['role'] = 'Artisan';
+          }
+        } else {
+          // Studio is closed or user reverted to Tourist
+          row['artisan_profiles'] = null;
+          row['studio_name'] = null;
+          row['craft_category'] = null;
+          row['ssm_number'] = null;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading artisan_profiles join: $e');
+      try {
+        final artisan = await client
+            .from('artisan_profiles')
+            .select()
+            .eq('user_id', authUser.id)
+            .maybeSingle();
+        if (artisan != null) {
+          final artisanStatus = (artisan['status'] ?? '').toString().toUpperCase();
+          row['artisan_status'] = artisanStatus;
+          final currentRole = (row['role'] ?? '').toString();
+
+          if (artisanStatus == 'APPROVED' && currentRole != 'Tourist') {
+            try {
+              final docs = await client
+                  .from('artisan_documents')
+                  .select()
+                  .eq('artisan_id', artisan['id']);
+              artisan['artisan_documents'] = docs;
+            } catch (docErr) {
+              debugPrint('Error loading artisan_documents fallback: $docErr');
+            }
+            row['artisan_profiles'] = artisan;
+            if (artisan['bio'] != null && (artisan['bio'] as String).trim().isNotEmpty) {
+              row['bio'] = artisan['bio'];
+            }
+            if (artisan['studio_name'] != null && (artisan['studio_name'] as String).trim().isNotEmpty) {
+              row['studio_name'] = artisan['studio_name'];
+            }
+            if (artisan['craft_category'] != null && (artisan['craft_category'] as String).trim().isNotEmpty) {
+              row['craft_category'] = artisan['craft_category'];
+            }
+            if (artisan['address'] != null && (artisan['address'] as String).trim().isNotEmpty) {
+              row['address'] = artisan['address'];
+            }
+            if (artisan['state'] != null && (artisan['state'] as String).trim().isNotEmpty) {
+              row['state'] = artisan['state'];
+            }
+            if (artisan['latitude'] != null) row['latitude'] = artisan['latitude'];
+            if (artisan['longitude'] != null) row['longitude'] = artisan['longitude'];
+            if (artisan['tags'] != null) row['tags'] = artisan['tags'];
+            if (artisan['artisan_documents'] != null) row['artisan_documents'] = artisan['artisan_documents'];
+            if (artisan['experience'] != null && artisan['experience'].toString().trim().isNotEmpty) {
+              row['experience'] = artisan['experience'].toString().trim();
+            } else if (artisan['years_experience'] != null && (artisan['years_experience'] as num) > 1) {
+              row['experience'] = '${artisan['years_experience']} Years';
+            }
+            if (currentRole.isEmpty) {
+              row['role'] = 'Artisan';
+            }
+          } else {
+            row['artisan_profiles'] = null;
+            row['studio_name'] = null;
+            row['craft_category'] = null;
+            row['ssm_number'] = null;
           }
         }
       } catch (profileErr) {
@@ -815,18 +835,35 @@ class SupabaseService {
         client.auth.currentUser != null) {
       cleanEmail = client.auth.currentUser!.email?.toLowerCase() ?? '';
     }
+
     if (cleanEmail.isEmpty) {
       try {
         final prefs = await SharedPreferences.getInstance();
-        final rawUser = prefs.getString(_keyAuthUser);
-        if (rawUser != null && rawUser.isNotEmpty) {
-          final cachedUser = jsonDecode(rawUser) as Map<String, dynamic>;
-          cleanEmail = (cachedUser['email'] ?? '').toString().trim().toLowerCase();
+        final storedEmail = prefs.getString(_keyAuthEmail)?.trim().toLowerCase();
+        if (storedEmail != null && storedEmail.isNotEmpty) {
+          cleanEmail = storedEmail;
+        }
+        if (cleanEmail.isEmpty) {
+          final rawUser = prefs.getString(_keyAuthUser);
+          if (rawUser != null && rawUser.isNotEmpty) {
+            final map = jsonDecode(rawUser) as Map<String, dynamic>;
+            final e = (map['email'] ?? '').toString().trim().toLowerCase();
+            if (e.isNotEmpty) cleanEmail = e;
+          }
         }
       } catch (_) {}
     }
+
+    if (cleanEmail.isEmpty && _userStore.isNotEmpty) {
+      final active = _userStore.entries.firstWhere(
+        (e) => (e.value['role'] ?? '').toString().toLowerCase().contains('tourist'),
+        orElse: () => _userStore.entries.first,
+      );
+      cleanEmail = active.key.trim().toLowerCase();
+    }
+
     if (cleanEmail.isEmpty) {
-      throw Exception('User email is required to submit artisan application.');
+      throw Exception('User email is required to submit artisan application. Please ensure you are signed in.');
     }
 
     await Future.delayed(const Duration(milliseconds: 300));
@@ -897,59 +934,6 @@ class SupabaseService {
     userRecord['status'] = 'PENDING_APPROVAL';
     userRecord['role'] = 'Artisan & Tourist';
     userRecord['roles'] = ['Tourist', 'Artisan'];
-
-    // In-memory document preservation & type-safe merging for local session:
-    final List<Map<String, dynamic>> existingLocalDocs = [];
-    if (userRecord['artisan_documents'] is List) {
-      existingLocalDocs.addAll(
-        List<Map<String, dynamic>>.from(userRecord['artisan_documents'] as List),
-      );
-    } else if (userRecord['artisanDocuments'] is List) {
-      existingLocalDocs.addAll(
-        List<Map<String, dynamic>>.from(userRecord['artisanDocuments'] as List),
-      );
-    }
-
-    final List<Map<String, dynamic>> newLocalDocs = [];
-    if (ssmFile != null) {
-      newLocalDocs.add({
-        'artisan_id': userRecord['id'],
-        'doc_type': 'SSM_BUSINESS_CERT',
-        'file_url': 'local://ssm/${ssmFile.name}',
-        'file_name': ssmFile.name,
-      });
-    }
-    if (certFile != null) {
-      newLocalDocs.add({
-        'artisan_id': userRecord['id'],
-        'doc_type': 'KRAFTANGAN_MASTER_CERT',
-        'file_url': 'local://cert/${certFile.name}',
-        'file_name': certFile.name,
-      });
-    }
-    if (photos != null && photos.isNotEmpty) {
-      for (var p in photos) {
-        newLocalDocs.add({
-          'artisan_id': userRecord['id'],
-          'doc_type': 'STUDIO_PHOTO',
-          'file_url': 'local://studio/${p.name}',
-          'file_name': p.name,
-        });
-      }
-    }
-
-    if (newLocalDocs.isNotEmpty) {
-      final replacedTypes = newLocalDocs.map((d) => d['doc_type'] as String).toSet();
-      final mergedLocalDocs = [
-        ...existingLocalDocs.where((d) => !replacedTypes.contains(d['doc_type'])),
-        ...newLocalDocs,
-      ];
-      userRecord['artisan_documents'] = mergedLocalDocs;
-      userRecord['artisanDocuments'] = mergedLocalDocs;
-    } else if (existingLocalDocs.isNotEmpty) {
-      userRecord['artisan_documents'] = existingLocalDocs;
-      userRecord['artisanDocuments'] = existingLocalDocs;
-    }
 
     if (client != null) {
       try {
@@ -1046,7 +1030,11 @@ class SupabaseService {
           }
 
           if (profileRes != null) {
-            final artisanId = profileRes['id'];
+            final artisanId = profileRes is Map
+                ? profileRes['id']
+                : (profileRes is List && profileRes.isNotEmpty && profileRes.first is Map
+                    ? profileRes.first['id']
+                    : null);
 
             Future<Map<String, String>?> uploadDoc(
               PlatformFile? file,
@@ -1120,20 +1108,6 @@ class SupabaseService {
             }
 
             try {
-              // 1. Fetch backup of existing artisan documents BEFORE any mutation
-              final List<Map<String, dynamic>> backupDocs = [];
-              try {
-                final existingRes = await client
-                    .from('artisan_documents')
-                    .select()
-                    .eq('artisan_id', artisanId);
-                for (final item in existingRes) {
-                  backupDocs.add(Map<String, dynamic>.from(item));
-                }
-              } catch (backupErr) {
-                debugPrint('Supabase backup existing artisan_documents note: $backupErr');
-              }
-
               final ssmUpload = await uploadDoc(
                 ssmFile,
                 'artisan_private_docs',
@@ -1183,49 +1157,12 @@ class SupabaseService {
                 }
               }
 
-              // 2. Only delete and replace the document types that have valid new uploads ready
+              await client
+                  .from('artisan_documents')
+                  .delete()
+                  .eq('artisan_id', artisanId);
               if (docsToInsert.isNotEmpty) {
-                final Set<String> typesToReplace = docsToInsert
-                    .map((d) => d['doc_type'] as String)
-                    .toSet();
-
-                // Keep track of which documents are about to be replaced for rollback
-                final deletedBackup = backupDocs
-                    .where((d) => typesToReplace.contains(d['doc_type']))
-                    .toList();
-
-                try {
-                  // Selectively delete only the document types being replaced
-                  for (final type in typesToReplace) {
-                    await client
-                        .from('artisan_documents')
-                        .delete()
-                        .eq('artisan_id', artisanId)
-                        .eq('doc_type', type);
-                  }
-
-                  // Insert new documents
-                  await client.from('artisan_documents').insert(docsToInsert);
-                } catch (insertErr) {
-                  debugPrint(
-                    'Supabase insert failed, initiating rollback: $insertErr',
-                  );
-                  // ROLLBACK: restore previous documents from deletedBackup
-                  if (deletedBackup.isNotEmpty) {
-                    try {
-                      final restoreList = deletedBackup.map((d) {
-                        final copy = Map<String, dynamic>.from(d);
-                        copy.remove('id');
-                        return copy;
-                      }).toList();
-                      await client.from('artisan_documents').insert(restoreList);
-                      debugPrint('Supabase rollback succeeded: restored previous documents.');
-                    } catch (rollbackErr) {
-                      debugPrint('Supabase rollback failed: $rollbackErr');
-                    }
-                  }
-                  rethrow;
-                }
+                await client.from('artisan_documents').insert(docsToInsert);
               }
             } catch (docErr) {
               debugPrint(
@@ -2451,41 +2388,198 @@ class SupabaseService {
     }
   }
 
+  Future<UserModel> deactivateArtisanStudio() async {
+    final client = _client;
+    if (client != null) {
+      final currentUser = client.auth.currentUser;
+      if (currentUser == null) {
+        throw const AuthException('No active user session found. Please sign in again.');
+      }
+      final userId = currentUser.id;
+      final email = currentUser.email?.toLowerCase() ?? '';
+
+      // 1. Try dedicated PostgreSQL RPC if available
+      try {
+        await client.rpc('deactivate_artisan_studio', params: {'p_user_id': userId});
+      } catch (rpcErr) {
+        debugPrint('deactivate_artisan_studio RPC note: $rpcErr');
+      }
+
+      // 2. Query artisan_profiles ID for attached records cleanup
+      String? artisanProfileId;
+      try {
+        final apRow = await client
+            .from('artisan_profiles')
+            .select('id')
+            .eq('user_id', userId)
+            .maybeSingle();
+        artisanProfileId = apRow?['id']?.toString();
+      } catch (e) {
+        debugPrint('deactivateArtisanStudio apRow lookup note: $e');
+      }
+
+      // 3. Clean up attached documents and retire quests
+      if (artisanProfileId != null) {
+        try {
+          await client.from('artisan_documents').delete().eq('artisan_id', artisanProfileId);
+        } catch (e) {
+          debugPrint('deactivateArtisanStudio artisan_documents note: $e');
+        }
+        try {
+          await client.from('quests').update({'status': 'RETIRED'}).eq('artisan_id', artisanProfileId);
+        } catch (e) {
+          debugPrint('deactivateArtisanStudio quests retire note: $e');
+        }
+      }
+
+      // 4. Delete or mark artisan_profiles as CLOSED
+      bool apDeleted = false;
+      try {
+        await client.from('artisan_profiles').delete().eq('user_id', userId);
+        apDeleted = true;
+      } catch (e) {
+        debugPrint('deactivateArtisanStudio artisan_profiles delete note: $e');
+      }
+      if (!apDeleted) {
+        try {
+          await client.from('artisan_profiles').update({
+            'status': 'CLOSED',
+            'updated_at': DateTime.now().toIso8601String(),
+          }).eq('user_id', userId);
+        } catch (e) {
+          debugPrint('deactivateArtisanStudio artisan_profiles status update note: $e');
+        }
+      }
+
+      // 5. Demote user role in public.users to Tourist and clear studio columns
+      final updateMap = {
+        'role': 'Tourist',
+        'roles': ['Tourist'],
+        'studio_name': null,
+        'craft_category': null,
+        'ssm_number': null,
+        'is_approved_artisan': false,
+        'artisan_status': 'CLOSED',
+        'is_live_open': false,
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+      try {
+        await client.from('users').update(updateMap).eq('id', userId);
+      } catch (e) {
+        debugPrint('deactivateArtisanStudio public.users update note: $e');
+      }
+
+      // 6. Invoke admin_update_user_status RPC to sync role securely
+      try {
+        await client.rpc('admin_update_user_status', params: {
+          'p_email': email,
+          'p_status': 'ACTIVE',
+          'p_role': 'Tourist',
+        });
+      } catch (rpcErr) {
+        debugPrint('deactivateArtisanStudio admin_update_user_status RPC note: $rpcErr');
+      }
+
+      // 7. Update auth metadata
+      try {
+        await client.auth.updateUser(
+          UserAttributes(
+            data: {
+              'role': 'Tourist',
+              'roles': ['Tourist'],
+              'studio_name': null,
+              'craft_category': null,
+              'ssm_number': null,
+              'artisan_status': 'CLOSED',
+            },
+          ),
+        );
+      } catch (e) {
+        debugPrint('deactivateArtisanStudio auth.updateUser note: $e');
+      }
+
+      // 8. Update in-memory user store if present
+      if (_userStore.containsKey(email)) {
+        _userStore[email]!['role'] = 'Tourist';
+        _userStore[email]!['roles'] = ['Tourist'];
+        _userStore[email]!['studio_name'] = null;
+        _userStore[email]!['craft_category'] = null;
+        _userStore[email]!['ssm_number'] = null;
+        _userStore[email]!['is_approved_artisan'] = false;
+        _userStore[email]!['artisan_status'] = 'CLOSED';
+        _userStore[email]!['is_live_open'] = false;
+      }
+
+      // 9. Reload and save updated authenticated profile
+      var updatedUser = await _loadAuthenticatedProfile();
+      if (updatedUser.role == 'Tourist' && updatedUser.studioName != null) {
+        updatedUser = updatedUser.copyWith(
+          studioName: null,
+          craftCategory: null,
+          ssmNumber: null,
+          artisanStatus: 'CLOSED',
+        );
+      }
+      await _saveAuthSession(updatedUser);
+      return updatedUser;
+    }
+
+    // Offline / unit test branch
+    final prefs = await SharedPreferences.getInstance();
+    final rawUser = prefs.getString(_keyAuthUser);
+    if (rawUser != null && rawUser.isNotEmpty) {
+      final map = jsonDecode(rawUser) as Map<String, dynamic>;
+      map['role'] = 'Tourist';
+      map['roles'] = ['Tourist'];
+      map['studio_name'] = null;
+      map['craft_category'] = null;
+      map['ssm_number'] = null;
+      map['is_approved_artisan'] = false;
+      map['artisan_status'] = 'CLOSED';
+      map['is_live_open'] = false;
+      final email = (map['email'] ?? '').toString().toLowerCase();
+      if (_userStore.containsKey(email)) {
+        _userStore[email]!['role'] = 'Tourist';
+        _userStore[email]!['roles'] = ['Tourist'];
+        _userStore[email]!['studio_name'] = null;
+        _userStore[email]!['craft_category'] = null;
+        _userStore[email]!['ssm_number'] = null;
+        _userStore[email]!['is_approved_artisan'] = false;
+        _userStore[email]!['artisan_status'] = 'CLOSED';
+        _userStore[email]!['is_live_open'] = false;
+      }
+      final updated = UserModel.fromMap(map);
+      await _saveAuthSession(updated);
+      return updated;
+    }
+    throw const AuthException('No local authenticated session to update.');
+  }
+
   Future<void> deleteAccount({
     required String userId,
     required String email,
     String? username,
+    String? password,
   }) async {
     await Future.delayed(const Duration(milliseconds: 200));
     final cleanEmail = email.trim().toLowerCase();
 
-    // 1. Record in persistent deleted accounts and usernames store
-    await _recordDeletedAccount(cleanEmail);
-    if (username != null && username.trim().isNotEmpty) {
-      await _recordDeletedUsername(username);
-    }
-    final inMemoryUsername =
-        (_userStore[cleanEmail]?['username'] as String?)?.trim();
-    if (inMemoryUsername != null && inMemoryUsername.isNotEmpty) {
-      await _recordDeletedUsername(inMemoryUsername);
-    }
-
-    // 2. Remove user from local in-memory store
-    _userStore.remove(cleanEmail);
-    _userStore.removeWhere(
-      (key, value) =>
-          key.toLowerCase() == cleanEmail ||
-          (userId.isNotEmpty && value['id'] == userId),
-    );
-
-    // 3. Clear any pending OTPs or reset tokens for this account
-    _recoveryAccessToken = null;
-
-    // 4. Clear local session from SharedPreferences
-    await _clearAuthSession();
-
-    // 5. Delete or deactivate in Supabase if connected
+    // 0. If password is provided, verify credentials with Supabase
     final client = _client;
+    if (client != null && password != null && password.trim().isNotEmpty) {
+      try {
+        await client.auth.signInWithPassword(
+          email: cleanEmail,
+          password: password.trim(),
+        );
+      } on AuthException catch (_) {
+        throw const AuthException(
+          'Incorrect password. Please check your password and try again.',
+        );
+      }
+    }
+
+    // 1. Delete or deactivate in Supabase if connected
     if (client != null) {
       final effectiveUserId = userId.isNotEmpty
           ? userId
@@ -2545,7 +2639,7 @@ class SupabaseService {
           }
         }
 
-        // D. Try direct DELETE on public.users table
+        // D. Try direct DELETE on public.users table if not already deleted by RPC
         bool usersDeleted = false;
         if (!rpcDeleted && effectiveUserId.isNotEmpty) {
           try {
@@ -2593,18 +2687,20 @@ class SupabaseService {
           }
         }
 
-        // F. Update Supabase Auth user metadata so it flags as DELETED
-        try {
-          await client.auth.updateUser(
-            UserAttributes(
-              data: {
-                'status': 'DELETED',
-                'is_deleted': true,
-              },
-            ),
-          );
-        } catch (metaErr) {
-          debugPrint('deleteAccount auth.updateUser note: $metaErr');
+        // F. Update Supabase Auth user metadata ONLY if user was not deleted from auth.users
+        if (!rpcDeleted) {
+          try {
+            await client.auth.updateUser(
+              UserAttributes(
+                data: {
+                  'status': 'DELETED',
+                  'is_deleted': true,
+                },
+              ),
+            );
+          } catch (metaErr) {
+            debugPrint('deleteAccount auth.updateUser note: $metaErr');
+          }
         }
 
         // G. Sign out Supabase auth session
@@ -2617,6 +2713,31 @@ class SupabaseService {
         debugPrint('Supabase deleteAccount general note: $e');
       }
     }
+
+    // 2. Record in persistent deleted accounts and usernames store
+    await _recordDeletedAccount(cleanEmail);
+    if (username != null && username.trim().isNotEmpty) {
+      await _recordDeletedUsername(username);
+    }
+    final inMemoryUsername =
+        (_userStore[cleanEmail]?['username'] as String?)?.trim();
+    if (inMemoryUsername != null && inMemoryUsername.isNotEmpty) {
+      await _recordDeletedUsername(inMemoryUsername);
+    }
+
+    // 3. Remove user from local in-memory store
+    _userStore.remove(cleanEmail);
+    _userStore.removeWhere(
+      (key, value) =>
+          key.toLowerCase() == cleanEmail ||
+          (userId.isNotEmpty && value['id'] == userId),
+    );
+
+    // 4. Clear any pending OTPs or reset tokens for this account
+    _recoveryAccessToken = null;
+
+    // 5. Clear local session from SharedPreferences
+    await _clearAuthSession();
   }
 
   // --- Directory Services ---
