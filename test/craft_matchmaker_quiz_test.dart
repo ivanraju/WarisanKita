@@ -12,6 +12,8 @@ import 'package:warisan_kita/ui/tourist/tourist_directory_tab.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/directory_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
+import 'package:warisan_kita/domain/validators/profile_validator.dart';
+import 'package:warisan_kita/domain/validators/ssm_validator.dart';
 import 'package:warisan_kita/viewmodels/matchmaker_viewmodel.dart';
 
 class _MockHttpOverrides extends HttpOverrides {
@@ -634,6 +636,115 @@ void main() {
       expect(find.text('Siti Hands-On Batik Studio'), findsWidgets);
       // Pak Hassan does NOT match material/region/env -> Not suggested in recommendations
       expect(find.textContaining('The Royal Textile Connoisseur'), findsOneWidget);
+    });
+  });
+
+  group('QA Test Suite: Profile Validator Constraints & Character Counts', () {
+    test('Username character count, pattern, and reserved keyword validation', () {
+      // Empty
+      expect(ProfileValidator.validateUsername(''), 'Username handle cannot be empty');
+      expect(ProfileValidator.validateUsername(null), 'Username handle cannot be empty');
+
+      // Min length: < 3 chars
+      expect(ProfileValidator.validateUsername('ab'), 'Username must be at least 3 characters');
+
+      // Max length: > 20 chars
+      expect(ProfileValidator.validateUsername('a_very_long_username_exceeding_twenty'), 'Username cannot exceed 20 characters');
+
+      // Invalid characters
+      expect(ProfileValidator.validateUsername('user!name'), 'Username can only contain letters, numbers, and underscores');
+      expect(ProfileValidator.validateUsername('user name'), 'Username can only contain letters, numbers, and underscores');
+      expect(ProfileValidator.validateUsername('user-name'), 'Username can only contain letters, numbers, and underscores');
+
+      // Must contain at least one letter
+      expect(ProfileValidator.validateUsername('12345'), 'Username must contain at least one letter');
+      expect(ProfileValidator.validateUsername('____'), 'Username must contain at least one letter');
+
+      // Reserved keywords
+      expect(ProfileValidator.validateUsername('admin'), 'This username is reserved and cannot be used');
+      expect(ProfileValidator.validateUsername('system'), 'This username is reserved and cannot be used');
+      expect(ProfileValidator.validateUsername('null'), 'This username is reserved and cannot be used');
+      expect(ProfileValidator.validateUsername('test'), 'This username is reserved and cannot be used');
+
+      // Valid handles
+      expect(ProfileValidator.validateUsername('ahmad_craft'), isNull);
+      expect(ProfileValidator.validateUsername('batik_master99'), isNull);
+      expect(ProfileValidator.validateUsername('@tourist_ali'), isNull);
+    });
+
+    test('Full name length, pattern, and character count validation', () {
+      expect(ProfileValidator.validateFullName(''), 'Full name cannot be empty');
+      expect(ProfileValidator.validateFullName('A'), 'Full name must be at least 2 characters');
+      expect(ProfileValidator.validateFullName('A' * 51), 'Full name cannot exceed 50 characters');
+      expect(ProfileValidator.validateFullName('Ali123'), 'Full name can only contain letters, spaces, hyphens, and apostrophes');
+      expect(ProfileValidator.validateFullName('Dato\' Sri Dr. Haji Ismail-Ali'), isNull);
+    });
+
+    test('Studio name length and placeholder blocklist validation', () {
+      expect(ProfileValidator.validateStudioName(''), 'Studio name cannot be empty');
+      expect(ProfileValidator.validateStudioName('AB'), 'Studio name must be at least 3 characters');
+      expect(ProfileValidator.validateStudioName('S' * 61), 'Studio name cannot exceed 60 characters');
+
+      // Blocklist
+      expect(ProfileValidator.validateStudioName('na'), 'Studio name must be at least 3 characters');
+      expect(ProfileValidator.validateStudioName('none'), 'Please enter a genuine, recognizable studio or workshop name');
+      expect(ProfileValidator.validateStudioName('test'), 'Please enter a genuine, recognizable studio or workshop name');
+      expect(ProfileValidator.validateStudioName('tiada'), 'Please enter a genuine, recognizable studio or workshop name');
+      expect(ProfileValidator.validateStudioName('dummy'), 'Please enter a genuine, recognizable studio or workshop name');
+
+      expect(ProfileValidator.validateStudioName('Adiguru Batik Studio Heritage'), isNull);
+    });
+
+    test('Phone number validation for Malaysian and International formats', () {
+      // Required check
+      expect(ProfileValidator.validatePhone('', isRequired: true), 'Phone number is required');
+      expect(ProfileValidator.validatePhone(null, isRequired: false), isNull);
+
+      // Repetitive dummy sequences
+      expect(ProfileValidator.validatePhone('0000000000'), 'Please provide a valid, active contact phone number');
+      expect(ProfileValidator.validatePhone('1111111111'), 'Please provide a valid, active contact phone number');
+      expect(ProfileValidator.validatePhone('12345678'), 'Please provide a valid, active contact phone number');
+
+      // Valid Malaysian formats
+      expect(ProfileValidator.validatePhone('012-3456789'), isNull);
+      expect(ProfileValidator.validatePhone('+60198765432'), isNull);
+      expect(ProfileValidator.validatePhone('03-87654321'), isNull);
+
+      // Valid International formats
+      expect(ProfileValidator.validatePhone('+65 9123 4567'), isNull);
+      expect(ProfileValidator.validatePhone('+44 20 7183 8750'), isNull);
+
+      // Invalid
+      expect(ProfileValidator.validatePhone('12345'), 'Invalid phone format (e.g. +60 12-345 6789 or 012-3456789)');
+    });
+
+    test('Bio character count limits (10 to 1000 characters)', () {
+      expect(ProfileValidator.validateBio('', isRequired: true), 'Please enter a biography or craft story');
+      expect(ProfileValidator.validateBio('Short', isRequired: true), 'Bio must be at least 10 characters');
+      expect(ProfileValidator.validateBio('B' * 1001, isRequired: true), 'Bio cannot exceed 1000 characters');
+      expect(ProfileValidator.validateBio('Authentic heritage woodcarver creating traditional Malay panels.'), isNull);
+    });
+
+    test('SSM registration number validation (Old and New format)', () {
+      expect(SsmValidator.isValid(''), isFalse);
+      // Old format (6-8 digits + letter)
+      expect(SsmValidator.isValid('123456-A'), isTrue);
+      expect(SsmValidator.isValid('9876543-X'), isTrue);
+      // New 12-digit format
+      expect(SsmValidator.isValid('202101012345'), isTrue);
+      // Invalid
+      expect(SsmValidator.isValid('INVALIDSSM'), isFalse);
+    });
+
+    test('Password complexity and confirmation match validation', () {
+      expect(ProfileValidator.validatePassword(''), 'Password cannot be empty');
+      expect(ProfileValidator.validatePassword('short1'), 'Password must be at least 8 characters');
+      expect(ProfileValidator.validatePassword('12345678'), 'Password must contain at least one letter');
+      expect(ProfileValidator.validatePassword('abcdefgh'), 'Password must contain at least one number');
+      expect(ProfileValidator.validatePassword('Secret123'), isNull);
+
+      expect(ProfileValidator.validateConfirmPassword('Pass123', 'Pass456'), 'Passwords do not match');
+      expect(ProfileValidator.validateConfirmPassword('Pass123', 'Pass123'), isNull);
     });
   });
 }
