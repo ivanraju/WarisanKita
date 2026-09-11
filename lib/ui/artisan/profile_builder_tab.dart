@@ -711,6 +711,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
           imageUrl: _portfolioImages.isNotEmpty
               ? _portfolioImages.first
               : (user?.avatarUrl ?? ''),
+          imageUrls: _portfolioImages.isNotEmpty ? _portfolioImages : null,
           tags: _toolsAndMaterials,
           address: _workshopAddress,
           latitude: _selectedWorkshopPin?.latitude,
