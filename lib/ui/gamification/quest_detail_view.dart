@@ -11,7 +11,7 @@ import 'package:warisan_kita/viewmodels/map_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/gamification_viewmodel.dart';
 import 'package:warisan_kita/ui/gamification/active_quest_conflict_dialog.dart';
 import 'package:warisan_kita/ui/gamification/qr_scanner_view.dart';
-import 'package:warisan_kita/ui/gamification/quest_view.dart';
+import 'package:warisan_kita/ui/gamification/workshop_quest_navigation.dart';
 
 class QuestDetailView extends StatefulWidget {
   final Quest quest;
@@ -69,9 +69,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
     if (!mounted) return;
     final distance = mapViewModel.getDistanceToWorkshop(workshop);
     if (distance == null) return;
-    final inside = distance <= quest.geofenceRadiusMeters;
-    _lastReportedInside = inside;
-    await _viewModel.handleQuestProximityChanged(inside);
+    _reportProximityAfterBuild(_viewModel, distance);
   }
 
   @override
@@ -92,6 +90,10 @@ class _QuestDetailViewState extends State<QuestDetailView>
     return Scaffold(
       backgroundColor: _pageBackground,
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () => Navigator.maybePop(context),
+        ),
         title: Text(
           'Cultural Quest',
           style: GoogleFonts.dmSerifDisplay(fontSize: 23),
@@ -781,9 +783,12 @@ class _QuestDetailViewState extends State<QuestDetailView>
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
-                onPressed: () => Navigator.of(dialogContext).pop(),
+                onPressed: () {
+                  Navigator.of(dialogContext).pop();
+                  Navigator.maybePop(context);
+                },
                 icon: const Icon(Icons.workspace_premium_rounded),
-                label: const Text('Collect Badge'),
+                label: const Text('Collect Badge & Return'),
                 style: FilledButton.styleFrom(
                   backgroundColor: const Color(0xFF005B4F),
                   padding: const EdgeInsets.symmetric(vertical: 13),
@@ -960,7 +965,6 @@ class _QuestDetailViewState extends State<QuestDetailView>
         !isBlockedByAnotherQuest &&
         !isOutsideBeforeStart &&
         !viewModel.isStartingQuest;
-
     return Container(
       decoration: BoxDecoration(
         color: _isDark ? const Color(0xFF0B211D) : const Color(0xFFFFFCF5),
@@ -1049,8 +1053,6 @@ class _QuestDetailViewState extends State<QuestDetailView>
                             ? Icons.location_off_rounded
                             : canResume
                             ? Icons.play_arrow_rounded
-                            : isInProgress
-                            ? Icons.directions_walk_rounded
                             : Icons.play_arrow_rounded,
                       ),
                 label: Text(
@@ -1064,10 +1066,10 @@ class _QuestDetailViewState extends State<QuestDetailView>
                       ? 'Return to Quest Area'
                       : canResume
                       ? 'Resume Quest'
-                      : isInProgress
-                      ? 'Quest In Progress'
                       : isOutsideBeforeStart
                       ? 'Move Within Quest Zone'
+                      : isInProgress
+                      ? 'Quest In Progress'
                       : 'Start Quest',
                   style: GoogleFonts.plusJakartaSans(
                     fontWeight: FontWeight.w800,
@@ -1188,9 +1190,11 @@ class _QuestDetailViewState extends State<QuestDetailView>
       );
       return;
     }
-    await Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => QuestView(workshop: activeWorkshop!)),
-    );
+    final navigator = Navigator.of(context);
+    navigator.pop();
+    await Future<void>.delayed(Duration.zero);
+    if (!navigator.mounted) return;
+    await openWorkshopQuest(navigator.context, activeWorkshop);
   }
 
   Widget _buildSectionCard({

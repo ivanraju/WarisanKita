@@ -6,9 +6,12 @@ import 'package:warisan_kita/ui/tourist/apply_artisan_screen.dart';
 import 'package:warisan_kita/ui/core/edit_profile_screen.dart';
 import 'package:warisan_kita/ui/core/settings_screen.dart';
 import 'package:warisan_kita/domain/models/badge.dart';
+import 'package:warisan_kita/domain/models/workshop_location.dart';
+import 'package:warisan_kita/ui/gamification/workshop_quest_navigation.dart';
 import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/gamification_viewmodel.dart';
+import 'package:warisan_kita/viewmodels/map_viewmodel.dart';
 
 class TouristProfileTab extends StatefulWidget {
   const TouristProfileTab({super.key});
@@ -125,6 +128,34 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                     ),
                   ],
                   const SizedBox(height: 24),
+                  if (stamp.questId.isNotEmpty) ...[
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: OutlinedButton.icon(
+                        onPressed: () => _openPassportQuest(
+                          dialogContext: context,
+                          stamp: stamp,
+                        ),
+                        icon: const Icon(Icons.explore_rounded),
+                        label: const Text('VIEW QUEST'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: isDark
+                              ? const Color(0xFFFFD54F)
+                              : const Color(0xFF004D40),
+                          side: BorderSide(
+                            color: isDark
+                                ? const Color(0xFFFFD54F)
+                                : const Color(0xFF004D40),
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
                   SizedBox(
                     width: double.infinity,
                     height: 48,
@@ -154,6 +185,49 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
         );
       },
     );
+  }
+
+  Future<void> _openPassportQuest({
+    required BuildContext dialogContext,
+    required HeritageStamp stamp,
+  }) async {
+    Navigator.of(dialogContext).pop();
+
+    final mapViewModel = context.read<MapViewModel>();
+    if (mapViewModel.workshops.isEmpty) {
+      await mapViewModel.loadWorkshops();
+    }
+    if (!mounted) return;
+    if (mapViewModel.journeysByWorkshopId.values.every(
+      (journey) => journey.questId != stamp.questId,
+    )) {
+      await mapViewModel.loadJourneyData();
+    }
+    if (!mounted) return;
+
+    WorkshopLocation? workshop;
+    for (final candidate in mapViewModel.workshops) {
+      if (mapViewModel.journeyForWorkshop(candidate.id)?.questId ==
+          stamp.questId) {
+        workshop = candidate;
+        break;
+      }
+    }
+
+    if (workshop == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Quest unavailable for this Passport stamp.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    await openWorkshopQuest(context, workshop);
+    if (mounted) {
+      await context.read<GamificationViewModel>().loadPassport();
+    }
   }
 
   Widget _buildStampDetailRow(IconData icon, String text) {
@@ -908,7 +982,8 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                             ],
                           ),
                         ),
-                      ] else if (authVM.currentUser?.isRejectedArtisan == true) ...[
+                      ] else if (authVM.currentUser?.isRejectedArtisan ==
+                          true) ...[
                         const SizedBox(height: 16),
                         Container(
                           padding: const EdgeInsets.all(16),
@@ -928,7 +1003,9 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                               Container(
                                 padding: const EdgeInsets.all(10),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFEF4444).withValues(alpha: 0.15),
+                                  color: const Color(
+                                    0xFFEF4444,
+                                  ).withValues(alpha: 0.15),
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(
@@ -967,7 +1044,9 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                             color: isDark
                                                 ? const Color(0xFF3F161A)
                                                 : const Color(0xFFFEE2E2),
-                                            borderRadius: BorderRadius.circular(6),
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
                                             border: Border.all(
                                               color: const Color(0xFFEF4444),
                                             ),
@@ -1007,10 +1086,14 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                       builder: (_) =>
                                           ArtisanApplicationPendingScreen(
                                             studioName:
-                                                authVM.currentUser?.studioName ??
+                                                authVM
+                                                    .currentUser
+                                                    ?.studioName ??
                                                 'Your Craft Studio',
                                             craftCategory:
-                                                authVM.currentUser?.craftCategory ??
+                                                authVM
+                                                    .currentUser
+                                                    ?.craftCategory ??
                                                 'Malaysian Heritage Craft',
                                             ssmNumber:
                                                 authVM.currentUser?.ssmNumber ??
@@ -1044,9 +1127,12 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                       ] else if (authVM.currentUser?.isPendingArtisan == true ||
                           authVM.currentUser?.isPendingApproval == true ||
                           ((authVM.currentUser?.studioName != null &&
-                                  authVM.currentUser!.studioName!.trim().isNotEmpty) &&
+                                  authVM.currentUser!.studioName!
+                                      .trim()
+                                      .isNotEmpty) &&
                               authVM.currentUser?.isApprovedArtisan != true &&
-                              authVM.currentUser?.isRejectedArtisan != true)) ...[
+                              authVM.currentUser?.isRejectedArtisan !=
+                                  true)) ...[
                         const SizedBox(height: 16),
                         Container(
                           padding: const EdgeInsets.all(16),

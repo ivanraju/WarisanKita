@@ -63,6 +63,17 @@ void main() {
     expect(source, isNot(contains('showActiveQuestConflictDialog')));
   });
 
+  test('Explore quest actions use the live quest flow', () {
+    final source = File(
+      'lib/ui/tourist/tourist_directory_tab.dart',
+    ).readAsStringSync();
+
+    expect(source, isNot(contains('QuestCompletionScreen')));
+    expect(source, contains('openWorkshopQuest(context, workshop)'));
+    expect(source, contains('_openArtisanQuest(context, artisan)'));
+    expect(source, contains('id: id'));
+  });
+
   test('journey refresh is deferred until after the widget update frame', () {
     final source = File(
       'lib/ui/matchmaker/tourist_matchmaker_view.dart',

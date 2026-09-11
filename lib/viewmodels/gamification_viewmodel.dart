@@ -549,6 +549,7 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
         }
         await _restorePersistedDwellAsPaused();
         _syncDisplayedDwellProgress();
+        _isInsideQuestGeofence = true;
         _requiresManualResume = true;
         return true;
       }
@@ -787,8 +788,6 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
       return;
     }
 
-    final dwellTask = _stayFifteenMinutesTask;
-
     if (isInside) {
       _isInsideQuestGeofence = true;
       notifyListeners();
@@ -796,15 +795,23 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
     }
 
     _isInsideQuestGeofence = false;
+    final dwellTask = _stayFifteenMinutesTask;
     if (dwellTask != null && !isTaskCompleted(dwellTask)) {
       _requiresManualResume = true;
+      await _pauseDwellTracking();
     }
-    await _pauseDwellTracking();
     notifyListeners();
   }
 
   Future<void> pauseDwellTrackingForInterruption() async {
-    await handleQuestProximityChanged(false);
+    final dwellTask = _stayFifteenMinutesTask;
+    if (_questProgressStatus?.toUpperCase() == 'IN_PROGRESS' &&
+        dwellTask != null &&
+        !isTaskCompleted(dwellTask)) {
+      _requiresManualResume = true;
+      await _pauseDwellTracking();
+      notifyListeners();
+    }
   }
 
   Future<void> _pauseDwellTracking() async {

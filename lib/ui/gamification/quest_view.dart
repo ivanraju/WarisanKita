@@ -9,8 +9,16 @@ import 'package:warisan_kita/viewmodels/gamification_viewmodel.dart';
 
 class QuestView extends StatefulWidget {
   final WorkshopLocation workshop;
+  final bool questsAlreadyLoaded;
+  final Future<void> Function(BuildContext context, Quest quest)?
+  onQuestSelected;
 
-  const QuestView({super.key, required this.workshop});
+  const QuestView({
+    super.key,
+    required this.workshop,
+    this.questsAlreadyLoaded = false,
+    this.onQuestSelected,
+  });
 
   @override
   State<QuestView> createState() => _QuestViewState();
@@ -24,9 +32,11 @@ class _QuestViewState extends State<QuestView> {
   void initState() {
     super.initState();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadQuests();
-    });
+    if (!widget.questsAlreadyLoaded) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _loadQuests();
+      });
+    }
   }
 
   Future<void> _loadQuests() async {
@@ -56,6 +66,19 @@ class _QuestViewState extends State<QuestView> {
       _pendingQuest = quest;
     });
 
+    final onQuestSelected = widget.onQuestSelected;
+    if (onQuestSelected != null) {
+      _isNavigating = true;
+      await onQuestSelected(context, quest);
+      if (mounted) {
+        setState(() {
+          _isNavigating = false;
+          _pendingQuest = null;
+        });
+      }
+      return;
+    }
+
     await gamificationVM.selectQuest(quest);
 
     if (!mounted || gamificationVM.error != null) {
@@ -67,11 +90,6 @@ class _QuestViewState extends State<QuestView> {
     final detailRoute = MaterialPageRoute(
       builder: (_) => QuestDetailView(quest: quest, workshop: widget.workshop),
     );
-
-    if (gamificationVM.availableQuests.length == 1) {
-      Navigator.of(context).pushReplacement(detailRoute);
-      return;
-    }
 
     await Navigator.of(context).push(detailRoute);
 

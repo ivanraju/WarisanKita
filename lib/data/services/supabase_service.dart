@@ -537,7 +537,9 @@ class SupabaseService {
       }
     }
 
-    final userArtisanStatus = (row['artisan_status'] ?? '').toString().toUpperCase();
+    final userArtisanStatus = (row['artisan_status'] ?? '')
+        .toString()
+        .toUpperCase();
     if (userArtisanStatus == 'APPROVED') {
       row['role'] = 'Artisan';
       row['roles'] = ['Artisan'];
@@ -2163,18 +2165,20 @@ class SupabaseService {
               final u = pMap['users'] is Map
                   ? Map<String, dynamic>.from(pMap['users'])
                   : <String, dynamic>{};
-              final email = (u['email'] ?? pMap['email'] ?? '').toString().toLowerCase();
+              final email = (u['email'] ?? pMap['email'] ?? '')
+                  .toString()
+                  .toLowerCase();
               if (email.isNotEmpty &&
                   !results.any(
-                    (r) =>
-                        (r['email'] ?? '').toString().toLowerCase() == email,
+                    (r) => (r['email'] ?? '').toString().toLowerCase() == email,
                   )) {
                 final combined = <String, dynamic>{
                   ...u,
                   'id': u['id'] ?? pMap['user_id'] ?? pMap['id'],
                   'email': email,
                   'studio_name': pMap['studio_name'] ?? u['studio_name'],
-                  'craft_category': pMap['craft_category'] ?? u['craft_category'],
+                  'craft_category':
+                      pMap['craft_category'] ?? u['craft_category'],
                   'ssm_number': pMap['ssm_number'] ?? u['ssm_number'],
                   'bio': pMap['bio'] ?? u['bio'],
                   'state': pMap['state'] ?? u['state'],
@@ -2191,7 +2195,8 @@ class SupabaseService {
                     final type = doc['doc_type']?.toString();
                     final url = doc['file_url']?.toString();
                     final name = doc['file_name']?.toString();
-                    if ((type == 'PORTFOLIO_IMAGE' || type == 'STUDIO_PHOTO') && url != null) {
+                    if ((type == 'PORTFOLIO_IMAGE' || type == 'STUDIO_PHOTO') &&
+                        url != null) {
                       photos.add(url);
                     } else if (type == 'SSM_BUSINESS_CERT') {
                       if (name != null) combined['ssm_file_name'] = name;
@@ -2208,7 +2213,9 @@ class SupabaseService {
             }
           }
         } catch (apErr) {
-          debugPrint('Supabase getPendingArtisans artisan_profiles direct query note: $apErr');
+          debugPrint(
+            'Supabase getPendingArtisans artisan_profiles direct query note: $apErr',
+          );
         }
       } catch (e) {
         debugPrint('Supabase getPendingArtisans note: $e');
@@ -2219,9 +2226,10 @@ class SupabaseService {
     for (final entry in _userStore.entries) {
       final user = entry.value;
       final status = (user['status'] ?? '').toString().toUpperCase();
-      final artisanStatus = (user['artisan_status'] ?? user['artisanStatus'] ?? '')
-          .toString()
-          .toUpperCase();
+      final artisanStatus =
+          (user['artisan_status'] ?? user['artisanStatus'] ?? '')
+              .toString()
+              .toUpperCase();
       if (status.contains('PENDING') || artisanStatus.contains('PENDING')) {
         final userEmail = (user['email'] ?? entry.key).toString().toLowerCase();
         if (!results.any(
@@ -2463,12 +2471,13 @@ class SupabaseService {
     if (questRows.isEmpty) {
       final studioName =
           artisanProfile?['studio_name']?.toString().trim().isNotEmpty == true
-              ? artisanProfile!['studio_name'].toString().trim()
-              : 'Heritage Workshop';
+          ? artisanProfile!['studio_name'].toString().trim()
+          : 'Heritage Workshop';
       final craftCategory =
-          artisanProfile?['craft_category']?.toString().trim().isNotEmpty == true
-              ? artisanProfile!['craft_category'].toString().trim()
-              : 'Malaysian craft';
+          artisanProfile?['craft_category']?.toString().trim().isNotEmpty ==
+              true
+          ? artisanProfile!['craft_category'].toString().trim()
+          : 'Malaysian craft';
       try {
         final createdQuest = await client
             .from('quests')
@@ -2486,7 +2495,9 @@ class SupabaseService {
           questRows = [createdQuest];
         }
       } catch (questInsertErr) {
-        debugPrint('Auto-provisioning quest for approved artisan note: $questInsertErr');
+        debugPrint(
+          'Auto-provisioning quest for approved artisan note: $questInsertErr',
+        );
       }
     }
     if (questRows.isEmpty) {
@@ -2605,7 +2616,8 @@ class SupabaseService {
   }) async {
     final cleanEmail = email.trim().toLowerCase();
     final client = _client;
-    final resolvedArtisanStatus = (newStatus.toUpperCase() == 'ACTIVE' ||
+    final resolvedArtisanStatus =
+        (newStatus.toUpperCase() == 'ACTIVE' ||
             newStatus.toUpperCase() == 'APPROVED')
         ? 'APPROVED'
         : (newStatus.toUpperCase() == 'REJECTED' ? 'REJECTED' : newStatus);
@@ -2701,8 +2713,8 @@ class SupabaseService {
             'p_status': newStatus,
             'p_role':
                 (newStatus.toUpperCase() == 'REJECTED' && newRole == 'Tourist')
-                    ? null
-                    : newRole,
+                ? null
+                : newRole,
           },
         );
         debugPrint(

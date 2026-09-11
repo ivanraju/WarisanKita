@@ -306,7 +306,9 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                       right: 68,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.black.withValues(alpha: 0.55),
                           borderRadius: BorderRadius.circular(12),
@@ -413,38 +415,61 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                   // Live Demo Availability Banner
                   Container(
                     margin: const EdgeInsets.only(bottom: 16),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
                     decoration: BoxDecoration(
                       color: widget.isLiveOpen
-                          ? (isDark ? const Color(0xFF0D2825) : const Color(0xFFECFDF5))
-                          : (isDark ? const Color(0xFF2A1215) : const Color(0xFFFEF2F2)),
+                          ? (isDark
+                                ? const Color(0xFF0D2825)
+                                : const Color(0xFFECFDF5))
+                          : (isDark
+                                ? const Color(0xFF2A1215)
+                                : const Color(0xFFFEF2F2)),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: widget.isLiveOpen
-                            ? (isDark ? const Color(0xFF1E3A34) : const Color(0xFF10B981))
-                            : (isDark ? const Color(0xFF5C1D24) : const Color(0xFFEF4444)),
+                            ? (isDark
+                                  ? const Color(0xFF1E3A34)
+                                  : const Color(0xFF10B981))
+                            : (isDark
+                                  ? const Color(0xFF5C1D24)
+                                  : const Color(0xFFEF4444)),
                       ),
                     ),
                     child: Row(
                       children: [
                         Icon(
-                          widget.isLiveOpen ? Icons.check_circle_rounded : Icons.pause_circle_filled_rounded,
-                          color: widget.isLiveOpen ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                          widget.isLiveOpen
+                              ? Icons.check_circle_rounded
+                              : Icons.pause_circle_filled_rounded,
+                          color: widget.isLiveOpen
+                              ? const Color(0xFF10B981)
+                              : const Color(0xFFEF4444),
                           size: 18,
                         ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             widget.isLiveOpen
-                                ? tr('LIVE: OPEN FOR EDUCATIONAL DEMOS & WORKSHOPS')
-                                : tr('DEMOS TEMPORARILY PAUSED / NOT ACCEPTING VISITORS'),
+                                ? tr(
+                                    'LIVE: OPEN FOR EDUCATIONAL DEMOS & WORKSHOPS',
+                                  )
+                                : tr(
+                                    'DEMOS TEMPORARILY PAUSED / NOT ACCEPTING VISITORS',
+                                  ),
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
                               letterSpacing: 0.3,
                               color: widget.isLiveOpen
-                                  ? (isDark ? const Color(0xFF34D399) : const Color(0xFF047857))
-                                  : (isDark ? const Color(0xFFF87171) : const Color(0xFFB91C1C)),
+                                  ? (isDark
+                                        ? const Color(0xFF34D399)
+                                        : const Color(0xFF047857))
+                                  : (isDark
+                                        ? const Color(0xFFF87171)
+                                        : const Color(0xFFB91C1C)),
                             ),
                           ),
                         ),
@@ -476,36 +501,38 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? const Color(0xFF1E3A34)
-                              : const Color(0xFFFEF3C7),
-                          borderRadius: BorderRadius.circular(10),
-                          border: isDark
-                              ? Border.all(
-                                  color: const Color(
-                                    0xFF34D399,
-                                  ).withValues(alpha: 0.3),
-                                )
-                              : null,
-                        ),
-                        child: Text(
-                          widget.experience,
-                          style: GoogleFonts.plusJakartaSans(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 11,
+                      if (widget.experience.trim().isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
                             color: isDark
-                                ? const Color(0xFFFFD54F)
-                                : const Color(0xFFB45309),
+                                ? const Color(0xFF1E3A34)
+                                : const Color(0xFFFEF3C7),
+                            borderRadius: BorderRadius.circular(10),
+                            border: isDark
+                                ? Border.all(
+                                    color: const Color(
+                                      0xFF34D399,
+                                    ).withValues(alpha: 0.3),
+                                  )
+                                : null,
+                          ),
+                          child: Text(
+                            widget.experience,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                              color: isDark
+                                  ? const Color(0xFFFFD54F)
+                                  : const Color(0xFFB45309),
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
 
@@ -608,7 +635,9 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    tr(widget.bio),
+                    widget.bio.trim().isNotEmpty
+                        ? tr(widget.bio.trim())
+                        : tr('Biography not provided.'),
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 13,
                       color: isDark ? Colors.white70 : const Color(0xFF475569),
@@ -618,45 +647,58 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
 
                   const SizedBox(height: 24),
 
-                  // 🏆 AUTHENTICITY & CERTIFICATION CREDENTIALS
-                  Text(
-                    tr('Master Authenticity & Credentials'),
-                    style: GoogleFonts.dmSerifDisplay(
-                      fontSize: 20,
-                      color: isDark
-                          ? const Color(0xFFFFD54F)
-                          : const Color(0xFF004D40),
+                  if (widget.documents.any((d) {
+                        final type =
+                            d['doc_type']?.toString().toUpperCase() ?? '';
+                        return type == 'KRAFTANGAN_MASTER_CERT' ||
+                            type == 'KRAFTANGAN_CERT';
+                      }) ||
+                      (widget.ssmNumber?.trim().isNotEmpty ?? false) ||
+                      widget.experience.trim().isNotEmpty) ...[
+                    Text(
+                      tr('Master Authenticity & Credentials'),
+                      style: GoogleFonts.dmSerifDisplay(
+                        fontSize: 20,
+                        color: isDark
+                            ? const Color(0xFFFFD54F)
+                            : const Color(0xFF004D40),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
+                    const SizedBox(height: 12),
 
-                  _buildCredentialTile(
-                    icon: Icons.verified_rounded,
-                    title: tr('Kraftangan Malaysia Accredited Master'),
-                    subtitle: widget.documents.any((d) {
-                      final t = d['doc_type']?.toString().toUpperCase() ?? '';
-                      return t == 'KRAFTANGAN_MASTER_CERT' || t == 'KRAFTANGAN_CERT';
-                    })
-                        ? tr('Accredited in ${widget.craftCategory} (${widget.state}) • Official Certificate Verified')
-                        : tr('Accredited in ${widget.craftCategory} (${widget.state}) • Verified Master Craftsman'),
-                    isDark: isDark,
-                  ),
-                  _buildCredentialTile(
-                    icon: Icons.business_rounded,
-                    title: tr('SSM Business Registration'),
-                    subtitle: (widget.ssmNumber != null && widget.ssmNumber!.trim().isNotEmpty)
-                        ? tr('Registration #${widget.ssmNumber!.trim()} • Official Registered Heritage Studio')
-                        : tr('Official Registered Heritage Studio Premise'),
-                    isDark: isDark,
-                  ),
-                  _buildCredentialTile(
-                    icon: Icons.workspace_premium_rounded,
-                    title: tr('Heritage Craft Practitioner'),
-                    subtitle: widget.experience.trim().isNotEmpty
-                        ? tr('${widget.experience.trim()} of authentic ${widget.craftCategory} heritage mastery in ${widget.state}')
-                        : tr('Dedicated authentic ${widget.craftCategory} practitioner in ${widget.state}'),
-                    isDark: isDark,
-                  ),
+                    if (widget.documents.any((d) {
+                      final type =
+                          d['doc_type']?.toString().toUpperCase() ?? '';
+                      return type == 'KRAFTANGAN_MASTER_CERT' ||
+                          type == 'KRAFTANGAN_CERT';
+                    }))
+                      _buildCredentialTile(
+                        icon: Icons.verified_rounded,
+                        title: tr('Kraftangan Malaysia Accredited Master'),
+                        subtitle: tr(
+                          'Accredited in ${widget.craftCategory} (${widget.state}) • Official Certificate Verified',
+                        ),
+                        isDark: isDark,
+                      ),
+                    if (widget.ssmNumber?.trim().isNotEmpty ?? false)
+                      _buildCredentialTile(
+                        icon: Icons.business_rounded,
+                        title: tr('SSM Business Registration'),
+                        subtitle: tr(
+                          'Registration #${widget.ssmNumber!.trim()} • Official Registered Heritage Studio',
+                        ),
+                        isDark: isDark,
+                      ),
+                    if (widget.experience.trim().isNotEmpty)
+                      _buildCredentialTile(
+                        icon: Icons.workspace_premium_rounded,
+                        title: tr('Heritage Craft Practitioner'),
+                        subtitle: tr(
+                          '${widget.experience.trim()} of authentic ${widget.craftCategory} heritage mastery in ${widget.state}',
+                        ),
+                        isDark: isDark,
+                      ),
+                  ],
 
                   if (widget.tags.isNotEmpty) ...[
                     const SizedBox(height: 24),
@@ -699,17 +741,15 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                           .toList(),
                     ),
                   ],
-                  const SizedBox(height: 28),
-
-                  // Craft Experience Highlight Chip
-                  _buildHighlightChip(
-                    icon: Icons.workspace_premium_rounded,
-                    title: tr('Craft Experience'),
-                    value: widget.experience.trim().isNotEmpty
-                        ? tr(widget.experience.trim())
-                        : tr('10+ Years'),
-                    isDark: isDark,
-                  ),
+                  if (widget.experience.trim().isNotEmpty) ...[
+                    const SizedBox(height: 28),
+                    _buildHighlightChip(
+                      icon: Icons.workspace_premium_rounded,
+                      title: tr('Craft Experience'),
+                      value: tr(widget.experience.trim()),
+                      isDark: isDark,
+                    ),
+                  ],
 
                   const SizedBox(height: 28),
 

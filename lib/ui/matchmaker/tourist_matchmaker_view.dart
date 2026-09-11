@@ -8,8 +8,10 @@ import 'package:provider/provider.dart';
 import 'package:warisan_kita/viewmodels/map_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/gamification_viewmodel.dart';
+import 'package:warisan_kita/viewmodels/directory_viewmodel.dart';
 
 import 'package:warisan_kita/domain/models/nearby_artisan.dart';
+import 'package:warisan_kita/domain/models/artisan_profile.dart';
 import 'package:warisan_kita/domain/models/workshop_location.dart';
 import 'package:warisan_kita/domain/models/workshop_quest_journey.dart';
 
@@ -19,7 +21,7 @@ import 'package:warisan_kita/ui/matchmaker/widgets/empty_matchmaker_widget.dart'
 import 'package:warisan_kita/ui/matchmaker/widgets/shimmer_loading_card.dart';
 
 import 'package:warisan_kita/ui/map/widgets/google_map_widget.dart';
-import 'package:warisan_kita/ui/gamification/quest_view.dart';
+import 'package:warisan_kita/ui/gamification/workshop_quest_navigation.dart';
 
 import 'package:warisan_kita/ui/tourist/artisan_detail_screen.dart';
 
@@ -58,6 +60,7 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
   bool _isOpeningQuest = false;
   String? _proximityQuestId;
   bool? _lastReportedQuestInside;
+  DateTime? _lastProcessedProximityReadingAt;
   final Set<String> _discoveredQuestIds = <String>{};
 
   // ============================================================
@@ -239,20 +242,51 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
   // VIEW ARTISAN PROFILE
   // ============================================================
 
-  void _handleViewProfile(BuildContext context, NearbyArtisan artisan) {
+  Future<void> _handleViewProfile(
+    BuildContext context,
+    NearbyArtisan artisan,
+  ) async {
+    final directory = context.read<DirectoryViewModel>();
+    ArtisanModel? profile;
+    for (final candidate in directory.allArtisans) {
+      if (candidate.id == artisan.id) {
+        profile = candidate;
+        break;
+      }
+    }
+
+    if (profile == null) {
+      await directory.fetchArtisans();
+      if (!context.mounted) return;
+      for (final candidate in directory.allArtisans) {
+        if (candidate.id == artisan.id) {
+          profile = candidate;
+          break;
+        }
+      }
+    }
+
+    if (!context.mounted) return;
+    final workshop = artisan.workshop;
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => ArtisanDetailScreen(
-          artisanName: artisan.name,
-          craftCategory: artisan.craftCategory,
-          state: artisan.locationName,
-          imageUrl: artisan.imageUrl,
-          rating: artisan.rating,
-          experience: '10+ Years',
-          workshopsHosted: artisan.workshop != null ? 1 : 0,
-          address: artisan.workshop?.address,
+          artisanName: profile?.name ?? artisan.name,
+          craftCategory: profile?.craftType ?? artisan.craftCategory,
+          state: profile?.state ?? workshop?.state ?? '',
+          imageUrl: profile?.imageUrl ?? artisan.imageUrl,
+          imageUrls: profile?.images,
+          bio: profile?.description ?? '',
+          rating: profile?.rating ?? 0,
+          experience: profile?.experience ?? '',
+          workshopsHosted: profile?.workshopCount,
+          tags: profile?.tags ?? const [],
+          address: profile?.address ?? workshop?.address,
           latitude: artisan.latitude,
           longitude: artisan.longitude,
+          isLiveOpen: profile?.isLiveOpen ?? artisan.isOpenNow,
+          ssmNumber: profile?.ssmNumber,
+          documents: profile?.documents ?? const [],
           onViewQuest: () => _handleViewQuest(context, artisan),
         ),
       ),
@@ -286,14 +320,11 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
     _isOpeningQuest = true;
 
     try {
-      await Navigator.of(
-        context,
-      ).push(MaterialPageRoute(builder: (_) => QuestView(workshop: workshop)));
+      await openWorkshopQuest(context, workshop);
     } finally {
       _isOpeningQuest = false;
       if (context.mounted) {
         unawaited(context.read<MapViewModel>().loadJourneyData());
-        unawaited(context.read<GamificationViewModel>().loadPassport());
       }
     }
   }
@@ -441,8 +472,24 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
         gamificationViewModel.questProgressStatus?.toUpperCase() ==
         'IN_PROGRESS';
     if (quest == null || !isQuestInProgress) {
-      _proximityQuestId = null;
-      _lastReportedQuestInside = null;
+      return;
+    }
+
+    final location = mapViewModel.userLocation;
+    final recordedAt = location?.recordedAt?.toUtc();
+    if (location == null || recordedAt == null) return;
+
+    final readingAge = DateTime.now().toUtc().difference(recordedAt);
+    if (readingAge.isNegative ||
+        readingAge > MapViewModel.maximumQuestLocationAge ||
+        !location.accuracy.isFinite ||
+        location.accuracy <= 0 ||
+        location.accuracy > MapViewModel.maximumQuestLocationAccuracyMeters) {
+      return;
+    }
+
+    if (_proximityQuestId == quest.id &&
+        _lastProcessedProximityReadingAt == recordedAt) {
       return;
     }
 
@@ -458,7 +505,14 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
     final distance = mapViewModel.getDistanceToWorkshop(workshop);
     if (distance == null) return;
 
-    final isInside = distance <= quest.geofenceRadiusMeters;
+    final wasInside = _proximityQuestId == quest.id
+        ? _lastReportedQuestInside
+        : null;
+    final exitRadius = quest.geofenceRadiusMeters + location.accuracy;
+    final isInside = wasInside == true
+        ? distance <= exitRadius
+        : distance <= quest.geofenceRadiusMeters;
+    _lastProcessedProximityReadingAt = recordedAt;
     if (_proximityQuestId == quest.id && _lastReportedQuestInside == isInside) {
       return;
     }

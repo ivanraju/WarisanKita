@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:warisan_kita/domain/models/workshop_location.dart';
+import 'package:warisan_kita/ui/gamification/workshop_quest_navigation.dart';
 import 'package:warisan_kita/ui/tourist/artisan_detail_screen.dart';
-import 'package:warisan_kita/ui/tourist/quest_completion_screen.dart';
 import 'package:warisan_kita/ui/core/widgets/translation_language_dialog.dart';
 import 'package:warisan_kita/ui/tourist/widgets/rotating_artisan_image_carousel.dart';
 import 'package:warisan_kita/ui/tourist/widgets/shimmer_directory_loading.dart';
 import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/directory_viewmodel.dart';
+import 'package:warisan_kita/viewmodels/gamification_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/matchmaker_viewmodel.dart';
 
 class CraftCategoryFilterItem {
@@ -99,6 +101,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
   String _selectedState = 'All States';
   String _selectedCategoryKey = 'ALL';
   bool _hasPreferences = true;
+  bool _isOpeningQuest = false;
 
   @override
   void initState() {
@@ -123,6 +126,61 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
       _selectedState = 'All States';
       _selectedCategoryKey = 'ALL';
     });
+  }
+
+  WorkshopLocation? _workshopForArtisan(Map<String, dynamic> artisan) {
+    final id = artisan['id']?.toString().trim() ?? '';
+    final latitude = (artisan['latitude'] as num?)?.toDouble();
+    final longitude = (artisan['longitude'] as num?)?.toDouble();
+    if (id.isEmpty ||
+        latitude == null ||
+        longitude == null ||
+        !latitude.isFinite ||
+        !longitude.isFinite ||
+        latitude < -90 ||
+        latitude > 90 ||
+        longitude < -180 ||
+        longitude > 180) {
+      return null;
+    }
+
+    return WorkshopLocation(
+      id: id,
+      name: artisan['name']?.toString().trim() ?? '',
+      craftCategory: artisan['category']?.toString().trim() ?? '',
+      address: artisan['address']?.toString().trim() ?? '',
+      state: artisan['state']?.toString().trim() ?? '',
+      latitude: latitude,
+      longitude: longitude,
+    );
+  }
+
+  Future<void> _openArtisanQuest(
+    BuildContext context,
+    Map<String, dynamic> artisan,
+  ) async {
+    if (_isOpeningQuest) return;
+
+    final workshop = _workshopForArtisan(artisan);
+    if (workshop == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Workshop location is unavailable for this quest.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    _isOpeningQuest = true;
+    try {
+      await openWorkshopQuest(context, workshop);
+    } finally {
+      _isOpeningQuest = false;
+      if (context.mounted) {
+        await context.read<GamificationViewModel>().loadActiveQuestState();
+      }
+    }
   }
 
   final List<String> _malaysianStates = const [
@@ -1173,6 +1231,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                     isLiveOpen: artisan['isLiveOpen'] ?? true,
                     ssmNumber: artisan['ssmNumber'] as String?,
                     documents: (artisan['documents'] as List<Map<String, dynamic>>?) ?? const [],
+                    onViewQuest: () => _openArtisanQuest(context, artisan),
                   ),
                 ),
               );
@@ -1403,6 +1462,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                                 isLiveOpen: artisan['isLiveOpen'] ?? true,
                                 ssmNumber: artisan['ssmNumber'] as String?,
                                 documents: (artisan['documents'] as List<Map<String, dynamic>>?) ?? const [],
+                                onViewQuest: () => _openArtisanQuest(context, artisan),
                               ),
                             ),
                           );
@@ -1428,17 +1488,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: FilledButton.icon(
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => QuestCompletionScreen(
-                                workshopName: artisan['name'] ?? 'Artisan Workshop',
-                                craftCategory: artisan['category'] ?? 'Heritage Craft',
-                                locationName: artisan['address'] ?? artisan['state'] ?? 'Malaysia',
-                              ),
-                            ),
-                          );
-                        },
+                        onPressed: () => _openArtisanQuest(context, artisan),
                         style: FilledButton.styleFrom(
                           backgroundColor: isDark ? const Color(0xFF00695C) : const Color(0xFF004D40),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -1530,6 +1580,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                   isLiveOpen: artisan['isLiveOpen'] ?? true,
                   ssmNumber: artisan['ssmNumber'] as String?,
                   documents: (artisan['documents'] as List<Map<String, dynamic>>?) ?? const [],
+                  onViewQuest: () => _openArtisanQuest(context, artisan),
                 ),
               ),
             );

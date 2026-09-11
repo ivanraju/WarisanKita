@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -57,6 +58,10 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget>
 
   bool _hasAutoCentered = false;
   bool _autoCenterScheduled = false;
+  bool _followUserLocation = false;
+  bool _programmaticCameraMove = false;
+  bool _followCameraUpdateInProgress = false;
+  LatLng? _lastFollowedLocation;
 
   BitmapDescriptor _touristMarkerIcon = BitmapDescriptor.defaultMarkerWithHue(
     BitmapDescriptor.hueCyan,
@@ -157,8 +162,16 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget>
       _animateTouristHeading(widget.userLocation?.heading);
     }
 
+    final locationChanged =
+        widget.userLocation?.latitude != oldWidget.userLocation?.latitude ||
+        widget.userLocation?.longitude != oldWidget.userLocation?.longitude;
+    if (locationChanged) {
+      _followLatestUserLocation();
+    }
+
     if (widget.selectedWorkshop?.id != oldWidget.selectedWorkshop?.id &&
         widget.selectedWorkshop != null) {
+      _followUserLocation = false;
       _centerOnWorkshop(widget.selectedWorkshop!);
     }
 
@@ -585,7 +598,14 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget>
             ),
           ),
         );
-        if (mounted && widget.isActive) _hasAutoCentered = true;
+        if (mounted && widget.isActive) {
+          _hasAutoCentered = true;
+          _followUserLocation = true;
+          _lastFollowedLocation = LatLng(
+            latestLocation.latitude,
+            latestLocation.longitude,
+          );
+        }
       } catch (error) {
         debugPrint('Initial map centering failed: $error');
       } finally {
@@ -616,15 +636,100 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget>
       return;
     }
 
-    await controller.animateCamera(
+    final target = LatLng(location.latitude, location.longitude);
+    _followUserLocation = true;
+    _lastFollowedLocation = target;
+    await _runProgrammaticCameraUpdate(
+      controller,
       CameraUpdate.newCameraPosition(
-        CameraPosition(
-          target: LatLng(location.latitude, location.longitude),
-          zoom: _locationZoom,
-        ),
+        CameraPosition(target: target, zoom: _locationZoom),
       ),
     );
   }
+
+  Future<void> _followLatestUserLocation() async {
+    final controller = _mapController;
+    final location = widget.userLocation;
+    if (!_followUserLocation ||
+        _followCameraUpdateInProgress ||
+        controller == null ||
+        !widget.isActive ||
+        !widget.myLocationEnabled ||
+        !_hasValidUserLocation() ||
+        location == null) {
+      return;
+    }
+
+    final target = LatLng(location.latitude, location.longitude);
+    final previousTarget = _lastFollowedLocation;
+    if (previousTarget != null &&
+        _distanceMeters(previousTarget, target) < 2.0) {
+      return;
+    }
+
+    _followCameraUpdateInProgress = true;
+    _lastFollowedLocation = target;
+    try {
+      final zoom = await controller.getZoomLevel();
+      if (!mounted || !_followUserLocation || !widget.isActive) return;
+      await _runProgrammaticCameraUpdate(
+        controller,
+        CameraUpdate.newCameraPosition(
+          CameraPosition(target: target, zoom: zoom),
+        ),
+      );
+    } catch (error) {
+      debugPrint('Live map following failed: $error');
+    } finally {
+      _followCameraUpdateInProgress = false;
+      if (mounted && _followUserLocation) {
+        final latest = widget.userLocation;
+        if (latest != null &&
+            _distanceMeters(
+                  target,
+                  LatLng(latest.latitude, latest.longitude),
+                ) >=
+                2.0) {
+          _followLatestUserLocation();
+        }
+      }
+    }
+  }
+
+  Future<void> _runProgrammaticCameraUpdate(
+    GoogleMapController controller,
+    CameraUpdate update,
+  ) async {
+    _programmaticCameraMove = true;
+    try {
+      await controller.animateCamera(update);
+    } finally {
+      _programmaticCameraMove = false;
+    }
+  }
+
+  double _distanceMeters(LatLng from, LatLng to) {
+    const earthRadiusMeters = 6371000.0;
+    final latitudeDelta = _toRadians(to.latitude - from.latitude);
+    final longitudeDelta = _toRadians(to.longitude - from.longitude);
+    final fromLatitude = _toRadians(from.latitude);
+    final toLatitude = _toRadians(to.latitude);
+    final haversine =
+        math.sin(latitudeDelta / 2) * math.sin(latitudeDelta / 2) +
+        math.cos(fromLatitude) *
+            math.cos(toLatitude) *
+            math.sin(longitudeDelta / 2) *
+            math.sin(longitudeDelta / 2);
+    final boundedHaversine = haversine.clamp(0.0, 1.0);
+    return earthRadiusMeters *
+        2 *
+        math.atan2(
+          math.sqrt(boundedHaversine),
+          math.sqrt(1 - boundedHaversine),
+        );
+  }
+
+  double _toRadians(double degrees) => degrees * math.pi / 180;
 
   Future<void> _centerOnWorkshop(WorkshopLocation workshop) async {
     final controller = _mapController;
@@ -656,7 +761,10 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget>
         .clamp(_minimumZoom, _maximumZoom)
         .toDouble();
 
-    await controller.animateCamera(CameraUpdate.zoomTo(newZoom));
+    await _runProgrammaticCameraUpdate(
+      controller,
+      CameraUpdate.zoomTo(newZoom),
+    );
   }
 
   // ============================================================
@@ -676,7 +784,10 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget>
         .clamp(_minimumZoom, _maximumZoom)
         .toDouble();
 
-    await controller.animateCamera(CameraUpdate.zoomTo(newZoom));
+    await _runProgrammaticCameraUpdate(
+      controller,
+      CameraUpdate.zoomTo(newZoom),
+    );
   }
 
   // ============================================================
@@ -786,6 +897,11 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget>
             onMapCreated: (controller) {
               _mapController = controller;
               _tryAutoCenterOnUser();
+            },
+            onCameraMoveStarted: () {
+              if (!_programmaticCameraMove) {
+                _followUserLocation = false;
+              }
             },
           ),
         ),
