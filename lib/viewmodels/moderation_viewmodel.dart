@@ -573,7 +573,7 @@ class ModerationViewModel extends ChangeNotifier {
                   name: u.studioName ?? u.displayName ?? 'Artisan Studio',
                   craftCategory: u.craftCategory ?? 'Handicraft & Heritage',
                   state: u.state ?? 'Melaka',
-                  dateSubmitted: u.joinedDate ?? 'Today',
+                  dateSubmitted: u.joinedDate.isNotEmpty ? u.joinedDate : 'Today',
                   imageUrl:
                       u.avatarUrl ??
                       'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600',

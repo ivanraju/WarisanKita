@@ -456,12 +456,14 @@ class SupabaseService {
           row['experience'] = '${artisan['years_experience']} Years';
         }
         if (artisan['status'] != null) {
-          row['artisan_status'] = artisan['status'];
-          if (artisan['status'].toString().toUpperCase() == 'APPROVED') {
-            final currentRole = (row['role'] ?? '').toString();
-            if (currentRole.isEmpty || currentRole == 'Tourist') {
-              row['role'] = 'Artisan';
-            }
+          final artisanStatus = artisan['status'].toString().toUpperCase();
+          row['artisan_status'] = artisanStatus;
+          if (artisanStatus == 'APPROVED') {
+            row['role'] = 'Artisan';
+            row['roles'] = ['Artisan'];
+            row['artisan_status'] = 'APPROVED';
+          } else if (artisanStatus == 'REJECTED') {
+            row['artisan_status'] = 'REJECTED';
           }
         }
       }
@@ -518,10 +520,30 @@ class SupabaseService {
               (artisan['years_experience'] as num) > 1) {
             row['experience'] = '${artisan['years_experience']} Years';
           }
+          if (artisan['status'] != null) {
+            final artisanStatus = artisan['status'].toString().toUpperCase();
+            row['artisan_status'] = artisanStatus;
+            if (artisanStatus == 'APPROVED') {
+              row['role'] = 'Artisan';
+              row['roles'] = ['Artisan'];
+              row['artisan_status'] = 'APPROVED';
+            } else if (artisanStatus == 'REJECTED') {
+              row['artisan_status'] = 'REJECTED';
+            }
+          }
         }
       } catch (profileErr) {
         debugPrint('Error loading artisan_profiles fallback: $profileErr');
       }
+    }
+
+    final userArtisanStatus = (row['artisan_status'] ?? '').toString().toUpperCase();
+    if (userArtisanStatus == 'APPROVED') {
+      row['role'] = 'Artisan';
+      row['roles'] = ['Artisan'];
+      row['artisan_status'] = 'APPROVED';
+    } else if (userArtisanStatus == 'REJECTED') {
+      row['artisan_status'] = 'REJECTED';
     }
 
     if (row['experience'] == null &&
@@ -2583,6 +2605,10 @@ class SupabaseService {
   }) async {
     final cleanEmail = email.trim().toLowerCase();
     final client = _client;
+    final resolvedArtisanStatus = (newStatus.toUpperCase() == 'ACTIVE' ||
+            newStatus.toUpperCase() == 'APPROVED')
+        ? 'APPROVED'
+        : (newStatus.toUpperCase() == 'REJECTED' ? 'REJECTED' : newStatus);
     final isApproval =
         ensureSystemTasks &&
         (newStatus.toUpperCase() == 'ACTIVE' ||
@@ -2597,18 +2623,22 @@ class SupabaseService {
 
     if (_userStore.containsKey(cleanEmail)) {
       if (updateArtisanProfileOnly) {
-        _userStore[cleanEmail]!['artisanStatus'] = newStatus;
-        _userStore[cleanEmail]!['artisan_status'] = newStatus;
+        _userStore[cleanEmail]!['artisanStatus'] = resolvedArtisanStatus;
+        _userStore[cleanEmail]!['artisan_status'] = resolvedArtisanStatus;
         _userStore[cleanEmail]!['status'] = 'ACTIVE';
         _userStore[cleanEmail]!['isSuspended'] = false;
         _userStore[cleanEmail]!['suspensionReason'] = null;
         _userStore[cleanEmail]!['suspension_reason'] = null;
         if (newRole.isNotEmpty) {
           _userStore[cleanEmail]!['role'] = newRole;
+          _userStore[cleanEmail]!['roles'] = [newRole];
         }
       } else {
         _userStore[cleanEmail]!['status'] = newStatus;
         _userStore[cleanEmail]!['role'] = newRole;
+        _userStore[cleanEmail]!['roles'] = [newRole];
+        _userStore[cleanEmail]!['artisanStatus'] = resolvedArtisanStatus;
+        _userStore[cleanEmail]!['artisan_status'] = resolvedArtisanStatus;
         _userStore[cleanEmail]!['isSuspended'] = (newStatus == 'SUSPENDED');
         if (newStatus == 'SUSPENDED') {
           _userStore[cleanEmail]!['suspensionReason'] = suspensionReason;
@@ -2616,11 +2646,6 @@ class SupabaseService {
         } else {
           _userStore[cleanEmail]!['suspensionReason'] = null;
           _userStore[cleanEmail]!['suspension_reason'] = null;
-        }
-        if (newRole == 'Artisan') {
-          _userStore[cleanEmail]!['roles'] = ['Artisan'];
-        } else if (newRole == 'Tourist') {
-          _userStore[cleanEmail]!['roles'] = ['Tourist'];
         }
       }
 
@@ -2631,17 +2656,20 @@ class SupabaseService {
           final map = jsonDecode(rawUser) as Map<String, dynamic>;
           if ((map['email'] as String?)?.toLowerCase() == cleanEmail) {
             if (updateArtisanProfileOnly) {
-              map['artisanStatus'] = newStatus;
-              map['artisan_status'] = newStatus;
+              map['artisanStatus'] = resolvedArtisanStatus;
+              map['artisan_status'] = resolvedArtisanStatus;
               map['status'] = 'ACTIVE';
               map['isSuspended'] = false;
               map['suspensionReason'] = null;
               map['suspension_reason'] = null;
               if (newRole.isNotEmpty) {
                 map['role'] = newRole;
+                map['roles'] = [newRole];
               }
             } else {
               map['status'] = newStatus;
+              map['artisanStatus'] = resolvedArtisanStatus;
+              map['artisan_status'] = resolvedArtisanStatus;
               map['isSuspended'] = (newStatus == 'SUSPENDED');
               if (newStatus == 'SUSPENDED') {
                 map['suspensionReason'] = suspensionReason;
@@ -2652,6 +2680,7 @@ class SupabaseService {
               }
               if (newRole.isNotEmpty) {
                 map['role'] = newRole;
+                map['roles'] = [newRole];
               }
             }
             await prefs.setString(_keyAuthUser, jsonEncode(map));
@@ -2663,56 +2692,54 @@ class SupabaseService {
     }
 
     if (client != null) {
-      if (!updateArtisanProfileOnly) {
-        // 1. Try invoking PostgreSQL SECURITY DEFINER RPC
-        try {
-          await client.rpc(
-            'admin_update_user_status',
-            params: {
-              'p_email': cleanEmail,
-              'p_status': newStatus,
-              'p_role': newRole,
-            },
-          );
-          debugPrint(
-            'Supabase RPC admin_update_user_status succeeded for $cleanEmail',
-          );
-        } catch (rpcError) {
-          debugPrint('Supabase RPC admin_update_user_status note: $rpcError');
-        }
+      // 1. Try invoking PostgreSQL SECURITY DEFINER RPC
+      try {
+        await client.rpc(
+          'admin_update_user_status',
+          params: {
+            'p_email': cleanEmail,
+            'p_status': newStatus,
+            'p_role': newRole,
+          },
+        );
+        debugPrint(
+          'Supabase RPC admin_update_user_status succeeded for $cleanEmail',
+        );
+      } catch (rpcError) {
+        debugPrint('Supabase RPC admin_update_user_status note: $rpcError');
       }
 
       // 2. Direct Table Updates Fallback
       try {
-        if (!updateArtisanProfileOnly) {
-          final updatePayload = <String, dynamic>{
-            'status': newStatus,
-            'role': newRole,
-            'updated_at': DateTime.now().toIso8601String(),
-          };
-          if (newStatus == 'SUSPENDED') {
-            updatePayload['is_suspended'] = true;
-            if (suspensionReason != null) {
-              updatePayload['suspension_reason'] = suspensionReason;
-            }
-          } else if (newStatus == 'ACTIVE') {
-            updatePayload['is_suspended'] = false;
-            updatePayload['suspension_reason'] = null;
+        final updatePayload = <String, dynamic>{
+          'status': updateArtisanProfileOnly ? 'ACTIVE' : newStatus,
+          'role': newRole,
+          'roles': [newRole],
+          'artisan_status': resolvedArtisanStatus,
+          'updated_at': DateTime.now().toIso8601String(),
+        };
+        if (newStatus == 'SUSPENDED') {
+          updatePayload['is_suspended'] = true;
+          if (suspensionReason != null) {
+            updatePayload['suspension_reason'] = suspensionReason;
           }
-          try {
-            await client
-                .from('users')
-                .update(updatePayload)
-                .ilike('email', cleanEmail);
-          } catch (updateErr) {
-            // Fallback if remote table does not yet have suspension_reason column
-            debugPrint('Direct user table update note: $updateErr');
-            updatePayload.remove('suspension_reason');
-            await client
-                .from('users')
-                .update(updatePayload)
-                .ilike('email', cleanEmail);
-          }
+        } else if (newStatus == 'ACTIVE') {
+          updatePayload['is_suspended'] = false;
+          updatePayload['suspension_reason'] = null;
+        }
+        try {
+          await client
+              .from('users')
+              .update(updatePayload)
+              .ilike('email', cleanEmail);
+        } catch (updateErr) {
+          // Fallback if remote table does not yet have suspension_reason column
+          debugPrint('Direct user table update note: $updateErr');
+          updatePayload.remove('suspension_reason');
+          await client
+              .from('users')
+              .update(updatePayload)
+              .ilike('email', cleanEmail);
         }
 
         // Update artisan_profiles status matching user_id
@@ -2727,22 +2754,17 @@ class SupabaseService {
               .select('id, status, studio_name, craft_category')
               .eq('user_id', userRow['id'])
               .maybeSingle();
-          final artisanStatus =
-              (newStatus.toUpperCase() == 'ACTIVE' ||
-                  newStatus.toUpperCase() == 'APPROVED')
-              ? 'APPROVED'
-              : newStatus;
           await client
               .from('artisan_profiles')
               .update({
-                'status': artisanStatus,
+                'status': resolvedArtisanStatus,
                 'updated_at': DateTime.now().toIso8601String(),
               })
               .eq('user_id', userRow['id']);
 
           // System tasks were verified before changing approval state. Keep
           // the one current quest aligned with the approved profile here.
-          if (artisanStatus == 'APPROVED' &&
+          if (resolvedArtisanStatus == 'APPROVED' &&
               artisanProfileBeforeUpdate != null) {
             final artisanProfileId = artisanProfileBeforeUpdate['id']
                 .toString();

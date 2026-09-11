@@ -100,7 +100,8 @@ class UserModel {
       artisanStatus?.toUpperCase() == 'SUSPENDED';
 
   bool get isApprovedArtisan {
-    if (artisanStatus?.toUpperCase() == 'CLOSED' || role == 'Tourist') return false;
+    if (artisanStatus?.toUpperCase() == 'CLOSED') return false;
+    if (role == 'Tourist' && artisanStatus?.toUpperCase() != 'APPROVED') return false;
     return (role == 'Artisan' ||
         role == 'Master Artisan' ||
         roles.contains('Artisan') ||
@@ -407,16 +408,31 @@ class UserModel {
         ? rawWorkshops.toInt()
         : (rawWorkshops != null ? int.tryParse(rawWorkshops.toString()) : null);
 
+    final rawArtisanStatus = artisanMap?['status'] ?? map['artisanStatus'] ?? map['artisan_status'];
+    final String? resolvedArtisanStatus = rawArtisanStatus?.toString();
+    final bool isApprovedArtisanStatus = resolvedArtisanStatus?.toUpperCase() == 'APPROVED';
+
+    final String resolvedRole;
+    final List<String> resolvedRoles;
+    if (isDedicatedAdmin) {
+      resolvedRole = (map['role'] != null && (map['role'] as String).toLowerCase().contains('admin'))
+          ? map['role'] as String
+          : 'Admin';
+      resolvedRoles = roleList;
+    } else if (isApprovedArtisanStatus) {
+      resolvedRole = 'Artisan';
+      resolvedRoles = const ['Artisan'];
+    } else {
+      resolvedRole = (map['role'] ?? 'Tourist').toString();
+      resolvedRoles = roleList;
+    }
+
     return UserModel(
       id: map['id'] ?? '',
       email: map['email'] ?? '',
       username: map['username'] ?? map['user_name'],
-      role: isDedicatedAdmin
-          ? (map['role'] != null && (map['role'] as String).toLowerCase().contains('admin')
-              ? map['role'] as String
-              : 'Admin')
-          : (map['role'] ?? 'Tourist'),
-      roles: roleList,
+      role: resolvedRole,
+      roles: resolvedRoles,
       status: map['status'] ?? 'ACTIVE',
       displayName: map['displayName'] ?? map['display_name'] ?? map['full_name'],
       avatarUrl: map['avatarUrl'] ?? map['avatar_url'],

@@ -159,12 +159,34 @@ class AuthBackend {
     if (path.endsWith('/rpc/admin_update_user_status')) {
       final email = body['p_email'];
       final role = body['p_role'];
-      if (email != null && role != null) {
+      final status = body['p_status'];
+      if (email != null) {
         final row = accounts[email.toString().toLowerCase()];
         if (row != null) {
-          row['role'] = role;
-          row['roles'] = [role];
-          if (role == 'Tourist') {
+          if (role != null) {
+            row['role'] = role;
+            row['roles'] = [role];
+          }
+          if (status != null) {
+            final s = status.toString().toUpperCase();
+            if (s == 'ACTIVE' || s == 'APPROVED') {
+              if (role == 'Artisan') {
+                row['artisan_status'] = 'APPROVED';
+              }
+              row['status'] = 'ACTIVE';
+            } else if (s == 'REJECTED') {
+              row['artisan_status'] = 'REJECTED';
+              if (role == 'Tourist') {
+                row['status'] = 'ACTIVE';
+              } else {
+                row['status'] = 'REJECTED';
+              }
+            } else {
+              row['status'] = status;
+              row['artisan_status'] = status;
+            }
+          }
+          if (role == 'Tourist' && status == null) {
             row['studio_name'] = null;
             row['craft_category'] = null;
             row['ssm_number'] = null;
@@ -178,9 +200,16 @@ class AuthBackend {
       if (request.method == 'PATCH') {
         final query = request.url.queryParameters;
         final idFilter = query['id']?.replaceFirst('eq.', '');
+        final emailFilter = query['email']?.replaceFirst('ilike.', '').replaceFirst('eq.', '');
         if (idFilter != null) {
           for (final row in accounts.values) {
             if (row['id'] == idFilter) {
+              row.addAll(body);
+            }
+          }
+        } else if (emailFilter != null) {
+          for (final row in accounts.values) {
+            if (row['email'].toString().toLowerCase() == emailFilter.toLowerCase()) {
               row.addAll(body);
             }
           }
