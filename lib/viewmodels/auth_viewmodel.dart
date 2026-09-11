@@ -133,12 +133,22 @@ class AuthViewModel extends ChangeNotifier {
             _relocationResolutionNotice = 'REJECTED';
           }
         }
-        _currentUser = user;
+        var resolvedUser = user;
+        if (_currentUser?.artisanStatus?.toUpperCase() == 'CLOSED' &&
+            user.artisanStatus?.toUpperCase() != 'CLOSED') {
+          resolvedUser = user.copyWith(
+            role: 'Tourist',
+            roles: const ['Tourist'],
+            artisanStatus: 'CLOSED',
+            clearStudioDetails: true,
+          );
+        }
+        _currentUser = resolvedUser;
         if (_currentUser!.isArtisanStudioSuspended &&
             (_activeRole == 'Artisan' || _activeRole == 'Master Artisan')) {
           _activeRole = 'Cultural Tourist';
         }
-        if (user.status == 'SUSPENDED' || user.isSuspended) {
+        if (resolvedUser.status == 'SUSPENDED' || resolvedUser.isSuspended) {
           _errorMessage = 'ACCOUNT SUSPENDED BY ADMINISTRATOR: CONTACT SUPPORT';
         }
         notifyListeners();
@@ -1076,7 +1086,12 @@ class AuthViewModel extends ChangeNotifier {
 
     try {
       final updatedUser = await _repository.deactivateArtisanStudio();
-      _currentUser = updatedUser;
+      _currentUser = updatedUser.copyWith(
+        role: 'Tourist',
+        roles: const ['Tourist'],
+        artisanStatus: 'CLOSED',
+        clearStudioDetails: true,
+      );
       _activeRole = 'Tourist';
       _requiresRoleSelection = false;
       _errorMessage = null;
