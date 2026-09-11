@@ -1085,6 +1085,7 @@ class SupabaseService {
                   'studio_name': studioName,
                   'craft_category': craftCategory,
                   'ssm_number': ssmNumber,
+                  'artisan_status': 'PENDING_APPROVAL',
                   if (phone != null) 'phone_number': phone,
                   'updated_at': DateTime.now().toIso8601String(),
                 })
@@ -2356,23 +2357,44 @@ class SupabaseService {
 
     final client = _client;
     if (client != null) {
-      if (!updateArtisanProfileOnly) {
-        // 1. Try invoking PostgreSQL SECURITY DEFINER RPC
-        try {
-          await client.rpc(
-            'admin_update_user_status',
-            params: {
-              'p_email': cleanEmail,
-              'p_status': newStatus,
-              'p_role': newRole,
-            },
-          );
-          debugPrint(
-            'Supabase RPC admin_update_user_status succeeded for $cleanEmail',
-          );
-        } catch (rpcError) {
-          debugPrint('Supabase RPC admin_update_user_status note: $rpcError');
+      // Always call the SECURITY DEFINER RPC – it bypasses RLS and can upsert
+      // artisan_profiles rows even when the authenticated user is a Tourist.
+      // For tourist-upgrade rejections (updateArtisanProfileOnly=true), we
+      // pass p_status as the artisan_status value ('REJECTED') but keep the
+      // user's DB role as Tourist and their account status as ACTIVE via the
+      // direct table update below.
+      try {
+        final rpcStatus = updateArtisanProfileOnly ? newStatus : newStatus;
+        final rpcRole = updateArtisanProfileOnly ? newRole : newRole;
+        // Fetch cached studio info to seed the artisan_profiles upsert
+        final cached = _userStore[cleanEmail];
+        final rpcParams = <String, dynamic>{
+          'p_email': cleanEmail,
+          'p_status': rpcStatus,
+          'p_role': rpcRole,
+        };
+        final studioName = cached?['studioName'] ?? cached?['studio_name'];
+        final craftCategory = cached?['craftCategory'] ?? cached?['craft_category'];
+        final ssmNumber = cached?['ssmNumber'] ?? cached?['ssm_number'];
+        if (studioName != null) rpcParams['p_studio_name'] = studioName;
+        if (craftCategory != null) rpcParams['p_craft_category'] = craftCategory;
+        if (ssmNumber != null) rpcParams['p_ssm_number'] = ssmNumber;
+        await client.rpc('admin_update_user_status', params: rpcParams);
+        debugPrint('Supabase RPC admin_update_user_status succeeded for $cleanEmail');
+        // For tourist-upgrade rejections the RPC sets users.status=REJECTED
+        // which would lock out the tourist account. Fix it back to ACTIVE now.
+        if (updateArtisanProfileOnly) {
+          try {
+            await client
+                .from('users')
+                .update({'status': 'ACTIVE', 'role': newRole, 'updated_at': DateTime.now().toIso8601String()})
+                .ilike('email', cleanEmail);
+          } catch (fixErr) {
+            debugPrint('Tourist status fix note: $fixErr');
+          }
         }
+      } catch (rpcError) {
+        debugPrint('Supabase RPC admin_update_user_status note: $rpcError');
       }
 
       // 2. Direct Table Updates Fallback
