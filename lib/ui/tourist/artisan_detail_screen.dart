@@ -505,64 +505,6 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
 
                   const SizedBox(height: 24),
 
-                  // Historical Lore Card
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? const Color(0xFF0D2825)
-                          : const Color(0xFFFFFBEB),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: isDark
-                            ? const Color(0xFF1E3A34)
-                            : const Color(0xFFF59E0B),
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.history_edu_rounded,
-                              color: isDark
-                                  ? const Color(0xFFFFD54F)
-                                  : const Color(0xFFD97706),
-                              size: 22,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'Historical Origin & Cultural Lore',
-                                softWrap: true,
-                                style: GoogleFonts.dmSerifDisplay(
-                                  fontSize: 16,
-                                  color: isDark
-                                      ? const Color(0xFFFFD54F)
-                                      : const Color(0xFF78350F),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          'Labu Sayong origin dates back to 19th Century Sayong, Kuala Kangsar, Perak. Hand-shaped using iron-rich riverbank clay and kilned under paddy husk ash to achieve its iconic matte black porous finish for natural water cooling thermal insulation.',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 12,
-                            color: isDark
-                                ? Colors.white70
-                                : const Color(0xFFB45309),
-                            height: 1.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
                   // 🏆 AUTHENTICITY & CERTIFICATION CREDENTIALS
                   Text(
                     'Master Authenticity & Credentials',
