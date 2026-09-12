@@ -809,7 +809,10 @@ class ModerationViewModel extends ChangeNotifier {
             final name = d['file_name']?.toString();
             if (type == 'SSM_BUSINESS_CERT' ||
                 type == 'SSM_CERT' ||
-                type == 'SSM') {
+                type == 'SSM' ||
+                type == 'CRAFTING_PHOTO' ||
+                type == 'VILLAGE_HEAD_ENDORSEMENT' ||
+                type == 'VILLAGE_CRAFTING_PHOTO') {
               resolvedSsmUrl ??= url;
               resolvedSsmName ??= name ?? url?.split('/').last;
             } else if (type == 'KRAFTANGAN_MASTER_CERT' ||
@@ -822,6 +825,36 @@ class ModerationViewModel extends ChangeNotifier {
                 resolvedPhotos.add(url);
               }
             }
+          }
+        }
+
+        // Resolve premise_type
+        String? resolvedPremiseType = raw['premise_type']?.toString() ??
+            raw['premiseType']?.toString() ??
+            artisanProfile?['premise_type']?.toString();
+        if (resolvedPremiseType == null) {
+          final tags = (artisanProfile?['tags'] is List)
+              ? List<String>.from(artisanProfile!['tags'])
+              : (raw['tags'] is List ? List<String>.from(raw['tags']) : <String>[]);
+          for (final t in tags) {
+            if (t.startsWith('premise:')) {
+              resolvedPremiseType = t.substring('premise:'.length);
+              break;
+            }
+          }
+        }
+        if (resolvedPremiseType == null) {
+          final hasVillageDoc = rawDocs.any((d) =>
+              d is Map &&
+              (d['doc_type'] == 'CRAFTING_PHOTO' ||
+                  d['doc_type'] == 'VILLAGE_HEAD_ENDORSEMENT' ||
+                  d['doc_type'] == 'VILLAGE_CRAFTING_PHOTO'));
+          if (hasVillageDoc ||
+              raw['ssm_number'] == 'VILLAGE_EXEMPT' ||
+              raw['ssmNumber'] == 'VILLAGE_EXEMPT' ||
+              artisanProfile?['ssm_number'] == 'VILLAGE_EXEMPT') {
+            resolvedPremiseType =
+                'Home / Village Workshop (Bengkel Kediaman / Desa)';
           }
         }
 
@@ -880,6 +913,7 @@ class ModerationViewModel extends ChangeNotifier {
           photos: resolvedPhotos,
           bio: raw['bio']?.toString() ?? artisanProfile?['bio']?.toString(),
           isUpgradeFromTourist: isUpgrade,
+          premiseType: resolvedPremiseType,
         );
 
         fetched.add(newProfile);

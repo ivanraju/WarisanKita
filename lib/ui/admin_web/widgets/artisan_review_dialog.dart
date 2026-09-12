@@ -328,16 +328,17 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
                         url: widget.artisan.certFileUrl,
                         missingLabel: '⚠️ Kraftangan Master Accreditation Cert Not Attached',
                       ),
-                    _buildAdminDocChip(
-                      Icons.photo_library_rounded,
-                      widget.artisan.photos.isNotEmpty
-                          ? '${widget.artisan.photos.length} Studio & Workshop Photos Attached'
-                          : null,
-                      url: widget.artisan.photos.isNotEmpty
-                          ? widget.artisan.photos.first
-                          : null,
-                      missingLabel: '⚠️ No Studio Photos Attached',
-                    ),
+                    if (!widget.artisan.isVillageWorkshop || widget.artisan.photos.isNotEmpty)
+                      _buildAdminDocChip(
+                        Icons.photo_library_rounded,
+                        widget.artisan.photos.isNotEmpty
+                            ? '${widget.artisan.photos.length} Studio & Workshop Photos Attached'
+                            : null,
+                        url: widget.artisan.photos.isNotEmpty
+                            ? widget.artisan.photos.first
+                            : null,
+                        missingLabel: '⚠️ No Studio Photos Attached',
+                      ),
 
                     const SizedBox(height: 18),
 
