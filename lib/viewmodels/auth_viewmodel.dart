@@ -297,6 +297,8 @@ class AuthViewModel extends ChangeNotifier {
     required double latitude,
     required double longitude,
     required String reason,
+    String? certUrl,
+    String? certName,
   }) async {
     final email = _currentUser?.email ?? '';
     if (email.isEmpty) return;
@@ -310,6 +312,8 @@ class AuthViewModel extends ChangeNotifier {
         latitude: latitude,
         longitude: longitude,
         reason: reason,
+        certUrl: certUrl,
+        certName: certName,
       );
       if (_currentUser != null) {
         _currentUser = _currentUser!.copyWith(
@@ -320,6 +324,8 @@ class AuthViewModel extends ChangeNotifier {
           pendingRelocationReason: reason.trim(),
           pendingRelocationDate:
               updated.pendingRelocationDate ?? DateTime.now().toIso8601String(),
+          pendingRelocationCertUrl: certUrl,
+          pendingRelocationCertName: certName,
         );
       } else {
         _currentUser = updated;

@@ -23,6 +23,8 @@ class PendingArtisanProfile {
   final double? proposedLongitude;
   final String? proposedState;
   final String? relocationReason;
+  final String? relocationCertFileName;
+  final String? relocationCertFileUrl;
 
   const PendingArtisanProfile({
     required this.id,
@@ -49,5 +51,7 @@ class PendingArtisanProfile {
     this.proposedLongitude,
     this.proposedState,
     this.relocationReason,
+    this.relocationCertFileName,
+    this.relocationCertFileUrl,
   });
 }

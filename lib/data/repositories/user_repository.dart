@@ -183,6 +183,8 @@ class UserRepository {
     required double latitude,
     required double longitude,
     required String reason,
+    String? certUrl,
+    String? certName,
   }) {
     return _service.submitRelocationRequest(
       email: email,
@@ -191,6 +193,8 @@ class UserRepository {
       latitude: latitude,
       longitude: longitude,
       reason: reason,
+      certUrl: certUrl,
+      certName: certName,
     );
   }
 

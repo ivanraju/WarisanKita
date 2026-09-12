@@ -35,6 +35,8 @@ class UserModel {
   final double? pendingRelocationLongitude;
   final String? pendingRelocationReason;
   final String? pendingRelocationDate;
+  final String? pendingRelocationCertUrl;
+  final String? pendingRelocationCertName;
   final String? rejectionReason;
   final bool isLiveOpen;
   final int? workshopCount;
@@ -71,6 +73,8 @@ class UserModel {
     this.pendingRelocationLongitude,
     this.pendingRelocationReason,
     this.pendingRelocationDate,
+    this.pendingRelocationCertUrl,
+    this.pendingRelocationCertName,
     this.rejectionReason,
     this.isLiveOpen = true,
     this.workshopCount,
@@ -310,6 +314,8 @@ class UserModel {
     double? pendingRelocationLongitude,
     String? pendingRelocationReason,
     String? pendingRelocationDate,
+    String? pendingRelocationCertUrl,
+    String? pendingRelocationCertName,
     bool clearPendingRelocation = false,
     String? rejectionReason,
     bool clearRejectionReason = false,
@@ -349,6 +355,8 @@ class UserModel {
       pendingRelocationLongitude: clearPendingRelocation ? null : (pendingRelocationLongitude ?? this.pendingRelocationLongitude),
       pendingRelocationReason: clearPendingRelocation ? null : (pendingRelocationReason ?? this.pendingRelocationReason),
       pendingRelocationDate: clearPendingRelocation ? null : (pendingRelocationDate ?? this.pendingRelocationDate),
+      pendingRelocationCertUrl: clearPendingRelocation ? null : (pendingRelocationCertUrl ?? this.pendingRelocationCertUrl),
+      pendingRelocationCertName: clearPendingRelocation ? null : (pendingRelocationCertName ?? this.pendingRelocationCertName),
       rejectionReason: clearRejectionReason ? null : (rejectionReason ?? this.rejectionReason),
       isLiveOpen: isLiveOpen ?? this.isLiveOpen,
       workshopCount: workshopCount ?? this.workshopCount,
@@ -392,6 +400,8 @@ class UserModel {
       'pending_relocation_lng': pendingRelocationLongitude,
       'pending_relocation_reason': pendingRelocationReason,
       'pending_relocation_date': pendingRelocationDate,
+      'pending_relocation_cert_url': pendingRelocationCertUrl,
+      'pending_relocation_cert_name': pendingRelocationCertName,
       'rejectionReason': rejectionReason,
       'rejection_reason': rejectionReason,
       'is_live_open': isLiveOpen,
@@ -596,6 +606,8 @@ class UserModel {
       pendingRelocationLongitude: pLon,
       pendingRelocationReason: map['pending_relocation_reason'] ?? map['pendingRelocationReason'] ?? artisanMap?['pending_relocation_reason'],
       pendingRelocationDate: map['pending_relocation_date'] ?? map['pendingRelocationDate'] ?? artisanMap?['pending_relocation_date'],
+      pendingRelocationCertUrl: map['pending_relocation_cert_url'] ?? map['pendingRelocationCertUrl'] ?? artisanMap?['pending_relocation_cert_url'],
+      pendingRelocationCertName: map['pending_relocation_cert_name'] ?? map['pendingRelocationCertName'] ?? artisanMap?['pending_relocation_cert_name'],
       rejectionReason: map['rejectionReason'] ?? map['rejection_reason'] ?? artisanMap?['rejection_reason'],
       isLiveOpen: map['is_live_open'] ?? map['isLiveOpen'] ?? artisanMap?['is_live_open'] ?? !isClosedTag,
       workshopCount: resolvedWorkshops,

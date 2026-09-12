@@ -592,44 +592,108 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
           ),
         ),
         const SizedBox(height: 20),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF8FAFC),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Row(
-                children: [
-                  const Icon(Icons.assignment_outlined, size: 16, color: Color(0xFF64748B)),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Relocation Justification & Reason',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF334155),
-                    ),
+              Expanded(
+                flex: 5,
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
                   ),
-                ],
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.assignment_outlined, size: 16, color: Color(0xFF64748B)),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Relocation Justification',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF334155),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        widget.artisan.relocationReason?.trim().isNotEmpty == true
+                            ? widget.artisan.relocationReason!
+                            : 'No relocation justification provided by artisan.',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          fontStyle: FontStyle.italic,
+                          color: const Color(0xFF475569),
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                widget.artisan.relocationReason?.trim().isNotEmpty == true
-                    ? widget.artisan.relocationReason!
-                    : 'No relocation justification provided by artisan.',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 12,
-                  fontStyle: FontStyle.italic,
-                  color: const Color(0xFF475569),
-                  height: 1.5,
+              const SizedBox(width: 14),
+              Expanded(
+                flex: 5,
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.verified_user_rounded, size: 16, color: Color(0xFF10B981)),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Updated Premise Certificate',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF334155),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      _buildAdminDocChip(
+                        Icons.article_rounded,
+                        widget.artisan.relocationCertFileName ??
+                            widget.artisan.certFileName ??
+                            widget.artisan.ssmFileName,
+                        url: widget.artisan.relocationCertFileUrl ??
+                            widget.artisan.certFileUrl ??
+                            widget.artisan.ssmFileUrl,
+                        missingLabel: '⚠️ No Updated Premise Certificate Attached',
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        TextField(
+          controller: _feedbackController,
+          maxLines: 2,
+          decoration: InputDecoration(
+            labelText: 'Rejection Feedback (Required if rejecting relocation)',
+            hintText: 'Specify reason for relocation rejection or required document updates...',
+            hintStyle: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[400]),
+            alignLabelWithHint: true,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            contentPadding: const EdgeInsets.all(12),
           ),
         ),
       ],
