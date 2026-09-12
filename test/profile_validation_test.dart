@@ -422,6 +422,76 @@ void main() {
       expect(modVM.filteredArtisans.any((p) => p.id == 'reloc_filter_1'), isFalse);
     });
 
+    test('Approved artisan relocation request is NOT filtered out by registered user APPROVED status', () async {
+      final modVM = ModerationViewModel(repository: repository);
+      const email = 'approved.master@example.com';
+
+      // Simulate registered user with artisanStatus: 'APPROVED'
+      modVM.addUserForTesting(
+        const UserModel(
+          id: 'u_master_approved',
+          email: email,
+          displayName: 'Pak Mat Songket',
+          role: 'Artisan',
+          status: 'ACTIVE',
+          artisanStatus: 'APPROVED',
+          state: 'Kelantan',
+          address: 'Old Premise, Kota Bharu',
+        ),
+      );
+
+      // Add relocation request for this approved artisan
+      const reloc = PendingArtisanProfile(
+        id: 'reloc_approved_artisan_1',
+        name: 'Pak Mat Songket',
+        craftCategory: 'Songket Weaving',
+        state: 'Kelantan',
+        dateSubmitted: 'Today',
+        imageUrl: 'https://example.com/mat.jpg',
+        email: email,
+        experience: 'Accredited Master',
+        phone: '+60 12-345 6789',
+        isRelocationRequest: true,
+        currentAddress: 'Old Premise, Kota Bharu',
+        proposedAddress: 'New Premise, Wakaf Bharu',
+        proposedState: 'Kelantan',
+        proposedLatitude: 6.12,
+        proposedLongitude: 102.25,
+      );
+      modVM.addRelocationRequest(reloc);
+
+      // Add a regular new profile application
+      const newProfile = PendingArtisanProfile(
+        id: 'new_applicant_1',
+        name: 'New Potter',
+        craftCategory: 'Pottery',
+        state: 'Perak',
+        dateSubmitted: 'Today',
+        imageUrl: 'https://example.com/potter.jpg',
+        email: 'new.potter@example.com',
+        experience: '3 years',
+        phone: '+60 19-876 5432',
+        isRelocationRequest: false,
+      );
+      modVM.addPendingArtisan(newProfile);
+
+      // Verify separated counts
+      expect(modVM.pendingRelocationCount, equals(1));
+      expect(modVM.pendingNewProfilesCount, equals(1));
+      expect(modVM.totalPendingCount, equals(2));
+
+      // Verify dedicated filteredRelocations includes relocation despite registered user artisanStatus == 'APPROVED'
+      expect(modVM.filteredRelocations.any((p) => p.id == 'reloc_approved_artisan_1'), isTrue);
+      expect(modVM.filteredRelocations.any((p) => p.id == 'new_applicant_1'), isFalse);
+
+      // Verify dedicated filteredPendingProfiles only includes new profiles and excludes relocations
+      expect(modVM.filteredPendingProfiles.any((p) => p.id == 'new_applicant_1'), isTrue);
+      expect(modVM.filteredPendingProfiles.any((p) => p.id == 'reloc_approved_artisan_1'), isFalse);
+
+      // Verify general filteredArtisans does not drop the relocation
+      expect(modVM.filteredArtisans.any((p) => p.id == 'reloc_approved_artisan_1'), isTrue);
+    });
+
     test('Pending relocation persists across AuthViewModel.refreshCurrentUser and getAllUsers', () async {
       const email = 'persist.artisan@warisankita.my';
       final authVM = AuthViewModel(repository: repository);

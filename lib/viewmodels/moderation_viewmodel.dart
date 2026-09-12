@@ -221,6 +221,50 @@ class ModerationViewModel extends ChangeNotifier {
         final artisanStatus = registeredUser.artisanStatus?.toUpperCase();
         if (registeredUser.status.toUpperCase() == 'REJECTED' ||
             artisanStatus == 'REJECTED' ||
+            (!artisan.isRelocationRequest && artisanStatus == 'APPROVED')) {
+          return false;
+        }
+      }
+
+      final matchesSearch =
+          _searchQuery.isEmpty ||
+          artisan.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          artisan.craftCategory.toLowerCase().contains(
+            _searchQuery.toLowerCase(),
+          ) ||
+          artisan.state.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          artisan.email.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          (artisan.currentAddress?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false) ||
+          (artisan.proposedAddress?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false) ||
+          (artisan.proposedState?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false);
+
+      final matchesCategory =
+          _selectedCategory == 'All Categories' ||
+          artisan.craftCategory == _selectedCategory;
+
+      final matchesType =
+          _applicationTypeFilter == 'All' ||
+          (_applicationTypeFilter == 'New Profiles' &&
+              !artisan.isRelocationRequest) ||
+          (_applicationTypeFilter == 'Relocations' &&
+              artisan.isRelocationRequest);
+
+      return matchesSearch && matchesCategory && matchesType;
+    }).toList();
+  }
+
+  List<PendingArtisanProfile> get filteredPendingProfiles {
+    return _pendingArtisans.where((artisan) {
+      if (artisan.isRelocationRequest) return false;
+
+      final matchingUsers = _registeredUsers.where(
+        (u) => u.email.toLowerCase() == artisan.email.toLowerCase(),
+      );
+      if (matchingUsers.isNotEmpty) {
+        final registeredUser = matchingUsers.first;
+        final artisanStatus = registeredUser.artisanStatus?.toUpperCase();
+        if (registeredUser.status.toUpperCase() == 'REJECTED' ||
+            artisanStatus == 'REJECTED' ||
             artisanStatus == 'APPROVED') {
           return false;
         }
@@ -239,14 +283,44 @@ class ModerationViewModel extends ChangeNotifier {
           _selectedCategory == 'All Categories' ||
           artisan.craftCategory == _selectedCategory;
 
-      final matchesType =
-          _applicationTypeFilter == 'All' ||
-          (_applicationTypeFilter == 'New Profiles' &&
-              !artisan.isRelocationRequest) ||
-          (_applicationTypeFilter == 'Relocations' &&
-              artisan.isRelocationRequest);
+      return matchesSearch && matchesCategory;
+    }).toList();
+  }
 
-      return matchesSearch && matchesCategory && matchesType;
+  List<PendingArtisanProfile> get filteredRelocations {
+    return _pendingArtisans.where((artisan) {
+      if (!artisan.isRelocationRequest) return false;
+
+      final matchingUsers = _registeredUsers.where(
+        (u) => u.email.toLowerCase() == artisan.email.toLowerCase(),
+      );
+      if (matchingUsers.isNotEmpty) {
+        final registeredUser = matchingUsers.first;
+        final artisanStatus = registeredUser.artisanStatus?.toUpperCase();
+        if (registeredUser.status.toUpperCase() == 'REJECTED' ||
+            artisanStatus == 'REJECTED' ||
+            registeredUser.isSuspended) {
+          return false;
+        }
+      }
+
+      final matchesSearch =
+          _searchQuery.isEmpty ||
+          artisan.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          artisan.craftCategory.toLowerCase().contains(
+            _searchQuery.toLowerCase(),
+          ) ||
+          artisan.state.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          artisan.email.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          (artisan.currentAddress?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false) ||
+          (artisan.proposedAddress?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false) ||
+          (artisan.proposedState?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false);
+
+      final matchesCategory =
+          _selectedCategory == 'All Categories' ||
+          artisan.craftCategory == _selectedCategory;
+
+      return matchesSearch && matchesCategory;
     }).toList();
   }
 
@@ -760,6 +834,14 @@ class ModerationViewModel extends ChangeNotifier {
           p.isRelocationRequest,
     );
     _pendingArtisans.insert(0, profile);
+    notifyListeners();
+  }
+
+  void addUserForTesting(UserModel user) {
+    _registeredUsers.removeWhere(
+      (u) => u.email.toLowerCase() == user.email.toLowerCase() || u.id == user.id,
+    );
+    _registeredUsers.add(user);
     notifyListeners();
   }
 

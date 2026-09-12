@@ -31,7 +31,8 @@ class AdminSidebar extends StatelessWidget {
     final username = user?.effectiveUsername ?? 'Admin';
     final email = user?.email ?? 'admin@warisankita.my';
     final initials = user?.initials ?? 'AD';
-    final pendingCount = modVM?.totalPendingCount ?? 0;
+    final pendingApprovalsCount = modVM?.pendingNewProfilesCount ?? 0;
+    final pendingRelocationsCount = modVM?.pendingRelocationCount ?? 0;
 
     return Container(
       width: double.infinity,
@@ -101,7 +102,15 @@ class AdminSidebar extends StatelessWidget {
                     icon: Icons.verified_user_rounded,
                     tabId: 'Pending Approvals',
                     label: 'Artisan Verification',
-                    badgeText: pendingCount > 0 ? '$pendingCount' : 'CLEAR',
+                    badgeText: pendingApprovalsCount > 0 ? '$pendingApprovalsCount' : 'CLEAR',
+                  ),
+                  const SizedBox(height: 4),
+                  _buildNavItem(
+                    context,
+                    icon: Icons.edit_location_alt_rounded,
+                    tabId: 'Workshop Relocations',
+                    label: 'Premise Relocations',
+                    badgeText: pendingRelocationsCount > 0 ? '$pendingRelocationsCount' : 'CLEAR',
                   ),
                   const SizedBox(height: 4),
                   _buildNavItem(
