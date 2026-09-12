@@ -83,11 +83,13 @@ class UserModel {
   });
 
   bool get isVillageWorkshop =>
-      premiseType != null &&
-      (premiseType!.contains('Village') ||
-          premiseType!.contains('Desa') ||
-          premiseType!.contains('Home') ||
-          premiseType!.contains('Kediaman'));
+      (premiseType != null &&
+          (premiseType!.contains('Village') ||
+              premiseType!.contains('Desa') ||
+              premiseType!.contains('Home') ||
+              premiseType!.contains('Kediaman'))) ||
+      ssmNumber == 'VILLAGE_EXEMPT' ||
+      (ssmNumber != null && ssmNumber!.toLowerCase().contains('village'));
 
   String get premiseTypeDisplay =>
       isVillageWorkshop ? 'Home / Village Workshop' : 'Commercial Studio';
@@ -604,6 +606,25 @@ class UserModel {
       resolvedRoles = roleList;
     }
 
+    String? resolvedPremiseType = (map['premise_type'] ??
+        map['premiseType'] ??
+        artisanMap?['premise_type'] ??
+        artisanMap?['premiseType'])?.toString();
+    if (resolvedPremiseType == null) {
+      for (final t in allTagsList) {
+        if (t.startsWith('premise:')) {
+          resolvedPremiseType = t.substring('premise:'.length);
+          break;
+        }
+      }
+    }
+    final rawSsmVal = (map['ssmNumber'] ?? map['ssm_number'] ?? artisanMap?['ssm_number'])?.toString();
+    if (resolvedPremiseType == null) {
+      if (rawSsmVal == 'VILLAGE_EXEMPT' || (rawSsmVal != null && rawSsmVal.toLowerCase().contains('village'))) {
+        resolvedPremiseType = 'Home / Village Workshop (Bengkel Kediaman / Desa)';
+      }
+    }
+
     return UserModel(
       id: map['id'] ?? '',
       email: map['email'] ?? '',
@@ -652,7 +673,7 @@ class UserModel {
       rejectionReason: map['rejectionReason'] ?? map['rejection_reason'] ?? artisanMap?['rejection_reason'],
       isLiveOpen: map['is_live_open'] ?? map['isLiveOpen'] ?? artisanMap?['is_live_open'] ?? !isClosedTag,
       workshopCount: resolvedWorkshops,
-      premiseType: map['premise_type'] ?? map['premiseType'] ?? artisanMap?['premise_type'] ?? artisanMap?['premiseType'],
+      premiseType: resolvedPremiseType,
     );
   }
 }

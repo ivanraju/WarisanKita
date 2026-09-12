@@ -58,9 +58,12 @@ class PendingArtisanProfile {
   });
 
   bool get isVillageWorkshop =>
-      premiseType != null &&
-      (premiseType!.contains('Village') ||
-          premiseType!.contains('Desa') ||
-          premiseType!.contains('Home') ||
-          premiseType!.contains('Kediaman'));
+      (premiseType != null &&
+          (premiseType!.contains('Village') ||
+              premiseType!.contains('Desa') ||
+              premiseType!.contains('Home') ||
+              premiseType!.contains('Kediaman'))) ||
+      ssmNumber == 'VILLAGE_EXEMPT' ||
+      (ssmNumber != null && ssmNumber!.toLowerCase().contains('village')) ||
+      (ssmNumber != null && ssmNumber!.toLowerCase().contains('exempt'));
 }

@@ -132,7 +132,9 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Submitted Portfolio Images (${widget.artisan.photos.length})',
+                      widget.artisan.isVillageWorkshop
+                          ? 'Crafting & Workshop Proof'
+                          : 'Submitted Portfolio Images (${widget.artisan.photos.length})',
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
@@ -140,12 +142,30 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
-                      children: widget.artisan.photos.isEmpty
-                          ? [_buildPortfolioThumbnail(widget.artisan.imageUrl)]
-                          : widget.artisan.photos.map((url) => _buildPortfolioThumbnail(url)).toList(),
+                    Builder(
+                      builder: (context) {
+                        final List<String> displayImages = [];
+                        if (widget.artisan.isVillageWorkshop &&
+                            widget.artisan.ssmFileUrl != null &&
+                            widget.artisan.ssmFileUrl!.isNotEmpty) {
+                          displayImages.add(widget.artisan.ssmFileUrl!);
+                        }
+                        for (final p in widget.artisan.photos) {
+                          if (!displayImages.contains(p) && p.isNotEmpty) {
+                            displayImages.add(p);
+                          }
+                        }
+                        if (displayImages.isEmpty) {
+                          displayImages.add(widget.artisan.imageUrl);
+                        }
+                        return Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: displayImages
+                              .map((url) => _buildPortfolioThumbnail(url))
+                              .toList(),
+                        );
+                      },
                     ),
                   ],
                 );
@@ -279,12 +299,16 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
                     _buildDetailRow(
                       widget.artisan.isVillageWorkshop ? Icons.cottage_outlined : Icons.store_outlined,
                       'Premise Type',
-                      widget.artisan.premiseType ?? (widget.artisan.isVillageWorkshop ? 'Home / Village Workshop' : 'Commercial Studio'),
+                      (widget.artisan.isVillageWorkshop
+                          ? (widget.artisan.premiseType ?? 'Home / Village Workshop (Bengkel Kediaman / Desa)')
+                          : (widget.artisan.premiseType ?? 'Commercial Studio')),
                     ),
                     _buildDetailRow(
                       Icons.verified_user_outlined,
                       widget.artisan.isVillageWorkshop ? 'SSM / Reg No (Optional)' : 'SSM License / Reg No',
-                      widget.artisan.ssmNumber?.isNotEmpty == true
+                      (widget.artisan.ssmNumber?.isNotEmpty == true &&
+                              widget.artisan.ssmNumber != 'VILLAGE_EXEMPT' &&
+                              !widget.artisan.ssmNumber!.toLowerCase().contains('village'))
                           ? widget.artisan.ssmNumber!
                           : (widget.artisan.isVillageWorkshop
                               ? 'Exempted (Village Crafter - Crafting Photo Only)'
@@ -310,25 +334,58 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
 
                     // 📜 SUBMITTED VERIFICATION DOCUMENTS FOR ADMIN VERIFICATION
                     Text(
-                      'Submitted Proof Documents',
-                      style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF334155)),
+                      widget.artisan.isVillageWorkshop
+                          ? 'Submitted Verification Proof (Home / Village Workshop)'
+                          : 'Submitted Proof Documents (Commercial Studio)',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF334155),
+                      ),
                     ),
-                    _buildAdminDocChip(
-                      widget.artisan.isVillageWorkshop ? Icons.photo_camera_rounded : Icons.article_rounded,
-                      widget.artisan.ssmFileName,
-                      url: widget.artisan.ssmFileUrl,
-                      missingLabel: widget.artisan.isVillageWorkshop
-                          ? '⚠️ Crafting Photo Evidence Not Attached'
-                          : '⚠️ SSM Registration Certificate Not Attached',
-                    ),
-                    if (!widget.artisan.isVillageWorkshop || widget.artisan.certFileName != null)
+                    const SizedBox(height: 6),
+                    if (widget.artisan.isVillageWorkshop) ...[
+                      _buildAdminDocChip(
+                        Icons.photo_camera_rounded,
+                        widget.artisan.ssmFileName != null &&
+                                widget.artisan.ssmFileName!.isNotEmpty
+                            ? 'Crafting Proof Photo: ${widget.artisan.ssmFileName}'
+                            : null,
+                        url: widget.artisan.ssmFileUrl,
+                        missingLabel: '⚠️ Crafting Proof Photo Not Attached',
+                      ),
+                      if (widget.artisan.photos.isNotEmpty)
+                        _buildAdminDocChip(
+                          Icons.photo_library_rounded,
+                          'Optional Studio Photos (${widget.artisan.photos.length} Attached)',
+                          url: widget.artisan.photos.first,
+                        ),
+                      if (widget.artisan.certFileName != null &&
+                          widget.artisan.certFileName!.isNotEmpty)
+                        _buildAdminDocChip(
+                          Icons.workspace_premium_rounded,
+                          'Optional Kraftangan Cert: ${widget.artisan.certFileName}',
+                          url: widget.artisan.certFileUrl,
+                        ),
+                    ] else ...[
+                      _buildAdminDocChip(
+                        Icons.article_rounded,
+                        widget.artisan.ssmFileName != null &&
+                                widget.artisan.ssmFileName!.isNotEmpty
+                            ? 'SSM Certificate: ${widget.artisan.ssmFileName}'
+                            : null,
+                        url: widget.artisan.ssmFileUrl,
+                        missingLabel: '⚠️ SSM Registration Certificate Not Attached',
+                      ),
                       _buildAdminDocChip(
                         Icons.workspace_premium_rounded,
-                        widget.artisan.certFileName,
+                        widget.artisan.certFileName != null &&
+                                widget.artisan.certFileName!.isNotEmpty
+                            ? 'Kraftangan Master Cert: ${widget.artisan.certFileName}'
+                            : null,
                         url: widget.artisan.certFileUrl,
                         missingLabel: '⚠️ Kraftangan Master Accreditation Cert Not Attached',
                       ),
-                    if (!widget.artisan.isVillageWorkshop || widget.artisan.photos.isNotEmpty)
                       _buildAdminDocChip(
                         Icons.photo_library_rounded,
                         widget.artisan.photos.isNotEmpty
@@ -339,6 +396,7 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
                             : null,
                         missingLabel: '⚠️ No Studio Photos Attached',
                       ),
+                    ],
 
                     const SizedBox(height: 18),
 

@@ -164,6 +164,55 @@ void main() {
       expect(pending.premiseType, equals('Home / Village Workshop (Bengkel Kediaman / Desa)'));
       expect(pending.isVillageWorkshop, isTrue);
     });
+
+    test('Identifies village workshop when ssmNumber is VILLAGE_EXEMPT even if premiseType is null', () {
+      const pending = PendingArtisanProfile(
+        id: 'p-2',
+        name: 'Pak Dollah Woodcraft',
+        craftCategory: 'Wood Carving',
+        state: 'Kelantan',
+        dateSubmitted: '2026-03-15T09:00:00Z',
+        imageUrl: 'https://example.com/photo.jpg',
+        email: 'pakdollah@village.com',
+        experience: '25 Years',
+        phone: '0112345678',
+        ssmNumber: 'VILLAGE_EXEMPT',
+      );
+
+      expect(pending.isVillageWorkshop, isTrue);
+    });
+  });
+
+  group('UserModel Tag and VILLAGE_EXEMPT Fallback Tests', () {
+    test('Extracts premise type from tags when premise_type column is absent', () {
+      final user = UserModel.fromMap({
+        'id': 'u-tags-1',
+        'email': 'tagcrafter@village.com',
+        'username': 'tag_crafter',
+        'artisan_profiles': {
+          'tags': ['woodwork', 'premise:Home / Village Workshop (Bengkel Kediaman / Desa)'],
+          'studio_name': 'Tag Village Studio',
+        },
+      });
+
+      expect(user.isVillageWorkshop, isTrue);
+      expect(user.premiseType, equals('Home / Village Workshop (Bengkel Kediaman / Desa)'));
+    });
+
+    test('Infers village workshop when ssm_number is VILLAGE_EXEMPT and premise_type is null', () {
+      final user = UserModel.fromMap({
+        'id': 'u-exempt-1',
+        'email': 'exempt@village.com',
+        'username': 'exempt_crafter',
+        'artisan_profiles': {
+          'ssm_number': 'VILLAGE_EXEMPT',
+          'studio_name': 'Exempt Craft Studio',
+        },
+      });
+
+      expect(user.isVillageWorkshop, isTrue);
+      expect(user.premiseType, contains('Village Workshop'));
+    });
   });
 
   group('Premise Type Conditional SSM Validation Tests', () {

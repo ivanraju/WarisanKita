@@ -88,6 +88,7 @@ class ModerationViewModel extends ChangeNotifier {
     'All Types',
     'Artisan Profiles',
     'Premise Relocations',
+    'Rejected Applications',
   ];
 
   void setHistorySearchQuery(String query) {
@@ -107,13 +108,17 @@ class ModerationViewModel extends ChangeNotifier {
           record.targetEmail.toLowerCase().contains(_historySearchQuery.toLowerCase()) ||
           record.craftCategory.toLowerCase().contains(_historySearchQuery.toLowerCase()) ||
           record.state.toLowerCase().contains(_historySearchQuery.toLowerCase()) ||
+          record.status.toLowerCase().contains(_historySearchQuery.toLowerCase()) ||
+          record.title.toLowerCase().contains(_historySearchQuery.toLowerCase()) ||
+          record.details.toLowerCase().contains(_historySearchQuery.toLowerCase()) ||
           (record.ssmNumber?.toLowerCase().contains(_historySearchQuery.toLowerCase()) ?? false) ||
           (record.previousPremise?.toLowerCase().contains(_historySearchQuery.toLowerCase()) ?? false) ||
           (record.newPremise?.toLowerCase().contains(_historySearchQuery.toLowerCase()) ?? false);
 
       final matchesType = _historyTypeFilter == 'All Types' ||
-          (_historyTypeFilter == 'Artisan Profiles' && !record.isRelocation) ||
-          (_historyTypeFilter == 'Premise Relocations' && record.isRelocation);
+          (_historyTypeFilter == 'Artisan Profiles' && !record.isRelocation && record.status != 'REJECTED') ||
+          (_historyTypeFilter == 'Premise Relocations' && record.isRelocation && record.status != 'REJECTED') ||
+          (_historyTypeFilter == 'Rejected Applications' && record.status == 'REJECTED');
 
       return matchesSearch && matchesType;
     }).toList();
@@ -121,9 +126,11 @@ class ModerationViewModel extends ChangeNotifier {
 
   int get totalApprovalHistoryCount => _approvalHistory.length;
   int get profileApprovalCount =>
-      _approvalHistory.where((r) => !r.isRelocation).length;
+      _approvalHistory.where((r) => !r.isRelocation && r.status != 'REJECTED').length;
   int get relocationApprovalCount =>
-      _approvalHistory.where((r) => r.isRelocation).length;
+      _approvalHistory.where((r) => r.isRelocation && r.status != 'REJECTED').length;
+  int get rejectionHistoryCount =>
+      _approvalHistory.where((r) => r.status == 'REJECTED').length;
   int get todayApprovalHistoryCount {
     final now = DateTime.now();
     return _approvalHistory.where((r) {
@@ -197,6 +204,41 @@ class ModerationViewModel extends ChangeNotifier {
         }
       }
 
+      // Merge rejected users so historical rejection decisions are visible even on fresh sessions
+      for (final user in _registeredUsers) {
+        if (user.artisanStatus?.toUpperCase() == 'REJECTED') {
+          final alreadyLogged = loaded.any(
+            (r) =>
+                r.targetEmail.toLowerCase() == user.email.toLowerCase() &&
+                r.status == 'REJECTED',
+          );
+          if (!alreadyLogged) {
+            loaded.add(
+              ApprovalHistoryRecord(
+                id: 'hist_rej_${user.id}',
+                title: 'Artisan Profile Application Rejected',
+                targetName: user.displayName ??
+                    user.studioName ??
+                    user.username ??
+                    user.email,
+                targetEmail: user.email,
+                approvalType: 'Artisan Profile',
+                craftCategory: user.craftCategory ?? 'Heritage Craft',
+                state: user.state ?? 'Malaysia',
+                details: (user.rejectionReason != null &&
+                        user.rejectionReason!.trim().isNotEmpty)
+                    ? 'Rejected by Moderator: "${user.rejectionReason}"'
+                    : 'Application rejected by Moderator.',
+                ssmNumber: user.ssmNumber,
+                approvedAt: DateTime.now(),
+                approvedBy: 'Admin Moderator',
+                status: 'REJECTED',
+              ),
+            );
+          }
+        }
+      }
+
       loaded.sort((a, b) => b.approvedAt.compareTo(a.approvedAt));
       _approvalHistory.clear();
       _approvalHistory.addAll(loaded);
@@ -218,6 +260,7 @@ class ModerationViewModel extends ChangeNotifier {
     String? newPremise,
     String? ssmNumber,
     String approvedBy = 'Admin Moderator',
+    String status = 'APPROVED',
   }) async {
     try {
       final newRecord = ApprovalHistoryRecord(
@@ -234,7 +277,7 @@ class ModerationViewModel extends ChangeNotifier {
         ssmNumber: ssmNumber,
         approvedAt: DateTime.now(),
         approvedBy: approvedBy,
-        status: 'APPROVED',
+        status: status,
       );
 
       _approvalHistory.removeWhere((r) => r.id == newRecord.id);
@@ -1520,6 +1563,21 @@ class ModerationViewModel extends ChangeNotifier {
             clearPendingRelocation: true,
           );
         }
+        await _recordApprovalHistory(
+          title: 'Workshop Premise Relocation Rejected',
+          targetName: artisan.name,
+          targetEmail: artisan.email,
+          approvalType: 'Premise Relocation',
+          craftCategory: artisan.craftCategory,
+          state: artisan.proposedState ?? artisan.state,
+          details: (reason != null && reason.trim().isNotEmpty)
+              ? 'Rejected by Moderator: "$reason"'
+              : 'Relocation request rejected by Moderator.',
+          previousPremise: artisan.currentAddress ?? artisan.state,
+          newPremise: artisan.proposedAddress ?? artisan.proposedState,
+          ssmNumber: artisan.ssmNumber,
+          status: 'REJECTED',
+        );
         notifyListeners();
         return;
       }
@@ -1581,6 +1639,22 @@ class ModerationViewModel extends ChangeNotifier {
             p.id == id || p.email.toLowerCase() == artisan.email.toLowerCase(),
       );
 
+      await _recordApprovalHistory(
+        title: 'Artisan Profile Application Rejected',
+        targetName: artisan.name,
+        targetEmail: artisan.email,
+        approvalType: 'Artisan Profile',
+        craftCategory: artisan.craftCategory,
+        state: artisan.state,
+        details: (reason != null && reason.trim().isNotEmpty)
+            ? 'Rejected by Moderator: "$reason"'
+            : 'Application rejected by Moderator.',
+        previousPremise: isExistingTourist ? 'Tourist Account' : null,
+        newPremise: '${artisan.name} Studio (${artisan.state})',
+        ssmNumber: artisan.ssmNumber,
+        status: 'REJECTED',
+      );
+
       notifyListeners();
     } else {
       final userIdx = _registeredUsers.indexWhere(
@@ -1608,6 +1682,24 @@ class ModerationViewModel extends ChangeNotifier {
               p.id == id ||
               p.email.toLowerCase() == existingUser.email.toLowerCase(),
         );
+
+        await _recordApprovalHistory(
+          title: 'Artisan Profile Application Rejected',
+          targetName: existingUser.displayName ??
+              existingUser.studioName ??
+              existingUser.email,
+          targetEmail: existingUser.email,
+          approvalType: 'Artisan Profile',
+          craftCategory: existingUser.craftCategory ?? 'Heritage Craft',
+          state: existingUser.state ?? 'Malaysia',
+          details: (reason != null && reason.trim().isNotEmpty)
+              ? 'Rejected by Moderator: "$reason"'
+              : 'Application rejected by Moderator.',
+          previousPremise: isTourist ? 'Tourist Account' : null,
+          ssmNumber: existingUser.ssmNumber,
+          status: 'REJECTED',
+        );
+
         notifyListeners();
       }
     }

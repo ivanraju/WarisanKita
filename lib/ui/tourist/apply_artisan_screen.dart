@@ -670,6 +670,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
           studioName: studioName,
           craftCategory: _selectedCraftCategory,
           ssmNumber: ssm,
+          premiseType: _selectedPremiseType,
         ),
       ),
     );
