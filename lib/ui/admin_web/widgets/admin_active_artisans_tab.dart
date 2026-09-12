@@ -32,7 +32,10 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
     'Pewter Craft',
   ];
 
-  void _showArtisanProfileModal(BuildContext context, ActiveArtisanMaster artisan) {
+  void _showArtisanProfileModal(
+    BuildContext context,
+    ActiveArtisanMaster artisan,
+  ) {
     showDialog(
       context: context,
       builder: (dialogCtx) => Dialog(
@@ -55,10 +58,16 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF004D40).withValues(alpha: 0.1),
+                              color: const Color(
+                                0xFF004D40,
+                              ).withValues(alpha: 0.1),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.storefront_rounded, color: Color(0xFF004D40), size: 24),
+                            child: const Icon(
+                              Icons.storefront_rounded,
+                              color: Color(0xFF004D40),
+                              size: 24,
+                            ),
                           ),
                           const SizedBox(width: 14),
                           Expanded(
@@ -90,7 +99,10 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
                     ),
                     const SizedBox(width: 8),
                     IconButton(
-                      icon: const Icon(Icons.close_rounded, color: Color(0xFF94A3B8)),
+                      icon: const Icon(
+                        Icons.close_rounded,
+                        color: Color(0xFF94A3B8),
+                      ),
                       onPressed: () => Navigator.of(dialogCtx).pop(),
                     ),
                   ],
@@ -106,7 +118,11 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.swap_horiz_rounded, color: Color(0xFF16A34A), size: 20),
+                        const Icon(
+                          Icons.swap_horiz_rounded,
+                          color: Color(0xFF16A34A),
+                          size: 20,
+                        ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
@@ -140,7 +156,11 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
                       const Divider(height: 20),
                       _buildModalInfoRow('Craft Specialization', artisan.category, Icons.category_outlined),
                       const Divider(height: 20),
-                      _buildModalInfoRow('Location & State', '${artisan.state}, Malaysia', Icons.location_on_outlined),
+                      _buildModalInfoRow(
+                        'Location & State',
+                        '${artisan.state}, Malaysia',
+                        Icons.location_on_outlined,
+                      ),
                       const Divider(height: 20),
                       _buildModalInfoRow(
                         artisan.isVillageWorkshop ? 'SSM / Reg No. (Optional)' : 'SSM License No.',
@@ -150,11 +170,23 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
                         Icons.verified_user_outlined,
                       ),
                       const Divider(height: 20),
-                      _buildModalInfoRow('Experience & Mastery', artisan.experience, Icons.history_edu_outlined),
+                      _buildModalInfoRow(
+                        'Experience & Mastery',
+                        artisan.experience,
+                        Icons.history_edu_outlined,
+                      ),
                       const Divider(height: 20),
-                      _buildModalInfoRow('Contact Phone', artisan.phone, Icons.phone_outlined),
+                      _buildModalInfoRow(
+                        'Contact Phone',
+                        artisan.phone,
+                        Icons.phone_outlined,
+                      ),
                       const Divider(height: 20),
-                      _buildModalInfoRow('Contact Email', artisan.email, Icons.email_outlined),
+                      _buildModalInfoRow(
+                        'Contact Email',
+                        artisan.email,
+                        Icons.email_outlined,
+                      ),
                     ],
                   ),
                 ),
@@ -184,10 +216,20 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
                       onPressed: () => Navigator.of(dialogCtx).pop(),
                       style: FilledButton.styleFrom(
                         backgroundColor: const Color(0xFF004D40),
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
-                      child: Text('Close Profile', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold)),
+                      child: Text(
+                        'Close Profile',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -206,7 +248,10 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
         const SizedBox(width: 10),
         Text(
           label,
-          style: GoogleFonts.plusJakartaSans(fontSize: 12, color: const Color(0xFF64748B)),
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 12,
+            color: const Color(0xFF64748B),
+          ),
         ),
         const SizedBox(width: 16),
         Expanded(
@@ -214,14 +259,22 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
             value,
             textAlign: TextAlign.end,
             overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.plusJakartaSans(fontSize: 12.5, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 12.5,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF0F172A),
+            ),
           ),
         ),
       ],
     );
   }
 
-  void _confirmSuspendDialog(BuildContext context, ModerationViewModel vm, ActiveArtisanMaster artisan) {
+  void _confirmSuspendDialog(
+    BuildContext context,
+    ModerationViewModel vm,
+    ActiveArtisanMaster artisan,
+  ) {
     showDialog(
       context: context,
       builder: (dialogCtx) => AlertDialog(
@@ -230,17 +283,29 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
           children: [
             const Icon(Icons.warning_amber_rounded, color: Color(0xFFEF4444)),
             const SizedBox(width: 10),
-            Text('Suspend Master License?', style: GoogleFonts.dmSerifDisplay(fontSize: 20)),
+            Text(
+              'Suspend Master License?',
+              style: GoogleFonts.dmSerifDisplay(fontSize: 20),
+            ),
           ],
         ),
         content: Text(
           'Are you sure you want to suspend license ${artisan.licenseNo} (${artisan.name})? The studio will be hidden from the tourist directory until reactivated.',
-          style: GoogleFonts.plusJakartaSans(fontSize: 13, color: const Color(0xFF475569)),
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 13,
+            color: const Color(0xFF475569),
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogCtx).pop(),
-            child: Text('Cancel', style: GoogleFonts.plusJakartaSans(color: Colors.grey[600], fontWeight: FontWeight.bold)),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.plusJakartaSans(
+                color: Colors.grey[600],
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
           FilledButton.icon(
             onPressed: () async {
@@ -255,7 +320,9 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
                 ),
               );
             },
-            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444),
+            ),
             icon: const Icon(Icons.block_rounded, size: 16),
             label: const Text('Suspend License'),
           ),
@@ -264,7 +331,11 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
     );
   }
 
-  void _confirmReactivateDialog(BuildContext context, ModerationViewModel vm, ActiveArtisanMaster artisan) {
+  void _confirmReactivateDialog(
+    BuildContext context,
+    ModerationViewModel vm,
+    ActiveArtisanMaster artisan,
+  ) {
     showDialog(
       context: context,
       builder: (dialogCtx) => AlertDialog(
@@ -273,17 +344,29 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
           children: [
             const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981)),
             const SizedBox(width: 10),
-            Text('Reactivate Master Studio?', style: GoogleFonts.dmSerifDisplay(fontSize: 20)),
+            Text(
+              'Reactivate Master Studio?',
+              style: GoogleFonts.dmSerifDisplay(fontSize: 20),
+            ),
           ],
         ),
         content: Text(
           'Reactivate license ${artisan.licenseNo} (${artisan.name})? The studio will become visible to cultural tourists again.',
-          style: GoogleFonts.plusJakartaSans(fontSize: 13, color: const Color(0xFF475569)),
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 13,
+            color: const Color(0xFF475569),
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogCtx).pop(),
-            child: Text('Cancel', style: GoogleFonts.plusJakartaSans(color: Colors.grey[600], fontWeight: FontWeight.bold)),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.plusJakartaSans(
+                color: Colors.grey[600],
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
           FilledButton.icon(
             onPressed: () async {
@@ -298,7 +381,9 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
                 ),
               );
             },
-            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF10B981),
+            ),
             icon: const Icon(Icons.check_circle_outline_rounded, size: 16),
             label: const Text('Reactivate Studio'),
           ),
@@ -314,20 +399,26 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
     final isMobile = screenWidth < 768;
 
     final filteredList = vm.activeArtisanMasters.where((artisan) {
-      final matchesSearch = _searchQuery.isEmpty ||
+      final matchesSearch =
+          _searchQuery.isEmpty ||
           artisan.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           artisan.category.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           artisan.state.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          artisan.licenseNo.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          artisan.licenseNo.toLowerCase().contains(
+            _searchQuery.toLowerCase(),
+          ) ||
           artisan.email.toLowerCase().contains(_searchQuery.toLowerCase());
 
-      final matchesCategory = _selectedCategory == 'All Categories' ||
+      final matchesCategory =
+          _selectedCategory == 'All Categories' ||
           artisan.category == _selectedCategory;
 
       return matchesSearch && matchesCategory;
     }).toList();
 
-    final liveCount = vm.activeArtisanMasters.where((a) => !a.isSuspended).length;
+    final liveCount = vm.activeArtisanMasters
+        .where((a) => !a.isSuspended)
+        .length;
 
     final searchField = TextField(
       onChanged: (val) => setState(() => _searchQuery = val),
@@ -340,7 +431,10 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide(color: Colors.black.withValues(alpha: 0.08)),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
       ),
     );
 
@@ -360,7 +454,10 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
           items: _categories.map((cat) {
             return DropdownMenuItem(
               value: cat,
-              child: Text(cat, style: GoogleFonts.plusJakartaSans(fontSize: 13)),
+              child: Text(
+                cat,
+                style: GoogleFonts.plusJakartaSans(fontSize: 13),
+              ),
             );
           }).toList(),
         ),
@@ -397,7 +494,10 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
                     ),
                     const SizedBox(height: 12),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFECFDF5),
                         borderRadius: BorderRadius.circular(12),
@@ -406,7 +506,11 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.verified_rounded, color: Color(0xFF10B981), size: 18),
+                          const Icon(
+                            Icons.verified_rounded,
+                            color: Color(0xFF10B981),
+                            size: 18,
+                          ),
                           const SizedBox(width: 8),
                           Text(
                             '$liveCount Verified Masters Live',
@@ -451,7 +555,10 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
                     ),
                     const SizedBox(width: 16),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFECFDF5),
                         borderRadius: BorderRadius.circular(16),
@@ -460,7 +567,11 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.verified_rounded, color: Color(0xFF10B981), size: 20),
+                          const Icon(
+                            Icons.verified_rounded,
+                            color: Color(0xFF10B981),
+                            size: 20,
+                          ),
                           const SizedBox(width: 8),
                           Text(
                             '$liveCount Verified Masters Live',
@@ -510,7 +621,7 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
                   color: Colors.black.withValues(alpha: 0.02),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
-                )
+                ),
               ],
             ),
             child: filteredList.isEmpty
@@ -520,11 +631,18 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.search_off_rounded, size: 48, color: Color(0xFF94A3B8)),
+                          const Icon(
+                            Icons.search_off_rounded,
+                            size: 48,
+                            color: Color(0xFF94A3B8),
+                          ),
                           const SizedBox(height: 12),
                           Text(
                             'No active artisans match the selected filters.',
-                            style: GoogleFonts.plusJakartaSans(fontSize: 14, color: const Color(0xFF64748B)),
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 14,
+                              color: const Color(0xFF64748B),
+                            ),
                           ),
                         ],
                       ),
@@ -540,11 +658,51 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
                         horizontalMargin: 20,
                         columnSpacing: 24,
                         columns: const [
-                          DataColumn(label: Text('MASTER ARTISAN & STUDIO', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
-                          DataColumn(label: Text('CRAFT & STATE', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
-                          DataColumn(label: Text('LICENSE & PLAQUES', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
-                          DataColumn(label: Text('STUDIO LIVE STATUS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
-                          DataColumn(label: Text('ACTIONS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+                          DataColumn(
+                            label: Text(
+                              'MASTER ARTISAN & STUDIO',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                          DataColumn(
+                            label: Text(
+                              'CRAFT & STATE',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                          DataColumn(
+                            label: Text(
+                              'LICENSE',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                          DataColumn(
+                            label: Text(
+                              'STUDIO LIVE STATUS',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                          DataColumn(
+                            label: Text(
+                              'ACTIONS',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
                         ],
                         rows: filteredList.map((artisan) {
                           return DataRow(
@@ -555,25 +713,37 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
                                   children: [
                                     CircleAvatar(
                                       radius: 20,
-                                      backgroundImage: NetworkImage(artisan.imageUrl),
+                                      backgroundImage: NetworkImage(
+                                        artisan.imageUrl,
+                                      ),
                                       onBackgroundImageError: (_, __) {},
-                                      child: Text(artisan.name[0], style: const TextStyle(fontWeight: FontWeight.bold)),
+                                      child: Text(
+                                        artisan.name[0],
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
                                     ),
                                     const SizedBox(width: 12),
                                     Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
                                         Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
                                             Text(
                                               artisan.name,
-                                              style: GoogleFonts.plusJakartaSans(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 13,
-                                                color: const Color(0xFF0F172A),
-                                              ),
+                                              style:
+                                                  GoogleFonts.plusJakartaSans(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 13,
+                                                    color: const Color(
+                                                      0xFF0F172A,
+                                                    ),
+                                                  ),
                                             ),
                                             const SizedBox(width: 6),
                                             Container(
@@ -597,19 +767,34 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
                                             if (artisan.isDualRole) ...[
                                               const SizedBox(width: 6),
                                               Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 6,
+                                                      vertical: 2,
+                                                    ),
                                                 decoration: BoxDecoration(
-                                                  color: const Color(0xFFF0FDF4),
-                                                  borderRadius: BorderRadius.circular(6),
-                                                  border: Border.all(color: const Color(0xFF86EFAC)),
+                                                  color: const Color(
+                                                    0xFFF0FDF4,
+                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(6),
+                                                  border: Border.all(
+                                                    color: const Color(
+                                                      0xFF86EFAC,
+                                                    ),
+                                                  ),
                                                 ),
                                                 child: Text(
                                                   'Dual Role',
-                                                  style: GoogleFonts.plusJakartaSans(
-                                                    fontSize: 9,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: const Color(0xFF16A34A),
-                                                  ),
+                                                  style:
+                                                      GoogleFonts.plusJakartaSans(
+                                                        fontSize: 9,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color: const Color(
+                                                          0xFF16A34A,
+                                                        ),
+                                                      ),
                                                 ),
                                               ),
                                             ],
@@ -617,7 +802,10 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
                                         ),
                                         Text(
                                           '${artisan.experience} Experience • ${artisan.email}',
-                                          style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[600]),
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 11,
+                                            color: Colors.grey[600],
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -629,8 +817,20 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Text(artisan.category, style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, fontSize: 12)),
-                                    Text('📍 ${artisan.state}, Malaysia', style: GoogleFonts.plusJakartaSans(fontSize: 10.5, color: Colors.grey[600])),
+                                    Text(
+                                      artisan.category,
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    Text(
+                                      '📍 ${artisan.state}, Malaysia',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 10.5,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -651,19 +851,30 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
                               ),
                               DataCell(
                                 InkWell(
-                                  onTap: artisan.isSuspended ? null : () => vm.toggleActiveArtisanLiveStatus(artisan.id),
+                                  onTap: artisan.isSuspended
+                                      ? null
+                                      : () => vm.toggleActiveArtisanLiveStatus(
+                                          artisan.id,
+                                        ),
                                   borderRadius: BorderRadius.circular(10),
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 6,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: artisan.isSuspended
                                           ? const Color(0xFFFEF2F2)
-                                          : (artisan.isLiveOpen ? const Color(0xFFECFDF5) : const Color(0xFFFFFBEB)),
+                                          : (artisan.isLiveOpen
+                                                ? const Color(0xFFECFDF5)
+                                                : const Color(0xFFFFFBEB)),
                                       borderRadius: BorderRadius.circular(10),
                                       border: Border.all(
                                         color: artisan.isSuspended
                                             ? const Color(0xFFEF4444)
-                                            : (artisan.isLiveOpen ? const Color(0xFF10B981) : const Color(0xFFF59E0B)),
+                                            : (artisan.isLiveOpen
+                                                  ? const Color(0xFF10B981)
+                                                  : const Color(0xFFF59E0B)),
                                       ),
                                     ),
                                     child: Text(
@@ -673,7 +884,9 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
                                         fontWeight: FontWeight.bold,
                                         color: artisan.isSuspended
                                             ? const Color(0xFFB91C1C)
-                                            : (artisan.isLiveOpen ? const Color(0xFF047857) : const Color(0xFFB45309)),
+                                            : (artisan.isLiveOpen
+                                                  ? const Color(0xFF047857)
+                                                  : const Color(0xFFB45309)),
                                       ),
                                     ),
                                   ),
@@ -684,13 +897,29 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     OutlinedButton.icon(
-                                      onPressed: () => _showArtisanProfileModal(context, artisan),
-                                      style: OutlinedButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                        side: const BorderSide(color: Color(0xFF004D40)),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                      onPressed: () => _showArtisanProfileModal(
+                                        context,
+                                        artisan,
                                       ),
-                                      icon: const Icon(Icons.visibility_rounded, size: 14, color: Color(0xFF004D40)),
+                                      style: OutlinedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 6,
+                                        ),
+                                        side: const BorderSide(
+                                          color: Color(0xFF004D40),
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                        ),
+                                      ),
+                                      icon: const Icon(
+                                        Icons.visibility_rounded,
+                                        size: 14,
+                                        color: Color(0xFF004D40),
+                                      ),
                                       label: Text(
                                         'Details',
                                         style: GoogleFonts.plusJakartaSans(
@@ -703,15 +932,32 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
                                     const SizedBox(width: 8),
                                     if (artisan.isSuspended)
                                       IconButton(
-                                        icon: const Icon(Icons.replay_rounded, color: Color(0xFF10B981), size: 18),
+                                        icon: const Icon(
+                                          Icons.replay_rounded,
+                                          color: Color(0xFF10B981),
+                                          size: 18,
+                                        ),
                                         tooltip: 'Reactivate Studio',
-                                        onPressed: () => _confirmReactivateDialog(context, vm, artisan),
+                                        onPressed: () =>
+                                            _confirmReactivateDialog(
+                                              context,
+                                              vm,
+                                              artisan,
+                                            ),
                                       )
                                     else
                                       IconButton(
-                                        icon: const Icon(Icons.block_rounded, color: Color(0xFFEF4444), size: 18),
+                                        icon: const Icon(
+                                          Icons.block_rounded,
+                                          color: Color(0xFFEF4444),
+                                          size: 18,
+                                        ),
                                         tooltip: 'Suspend Master License',
-                                        onPressed: () => _confirmSuspendDialog(context, vm, artisan),
+                                        onPressed: () => _confirmSuspendDialog(
+                                          context,
+                                          vm,
+                                          artisan,
+                                        ),
                                       ),
                                   ],
                                 ),

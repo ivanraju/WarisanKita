@@ -77,28 +77,34 @@ void main() {
     );
 
     test('tier values continue to come from the progression model', () {
-      final progress = HeritageProgression.fromXp(650);
+      final progress = HeritageProgression.fromXp(1000);
 
       expect(progress.currentTier.level, 3);
       expect(progress.currentTier.title, 'Heritage Apprentice');
       expect(progress.nextTier?.title, 'Heritage Guardian');
-      expect(progress.nextTier!.minimumXp - progress.totalXp, 350);
-      expect(progress.progress, closeTo(150 / 500, 0.0001));
+      expect(progress.nextTier!.minimumXp - progress.totalXp, 500);
+      expect(progress.progress, closeTo(200 / 700, 0.0001));
     });
 
     test('uses increasing cumulative XP thresholds at every boundary', () {
       expect(
         HeritageProgression.tiers.map((tier) => tier.minimumXp),
-        orderedEquals([0, 200, 500, 1000, 2000]),
+        orderedEquals([0, 300, 800, 1500, 3000]),
       );
-      expect(HeritageProgression.fromXp(199).currentTier.level, 1);
-      expect(HeritageProgression.fromXp(200).currentTier.level, 2);
-      expect(HeritageProgression.fromXp(499).currentTier.level, 2);
-      expect(HeritageProgression.fromXp(500).currentTier.level, 3);
-      expect(HeritageProgression.fromXp(999).currentTier.level, 3);
-      expect(HeritageProgression.fromXp(1000).currentTier.level, 4);
-      expect(HeritageProgression.fromXp(1999).currentTier.level, 4);
-      expect(HeritageProgression.fromXp(2000).currentTier.level, 5);
+      expect(HeritageProgression.fromXp(299).currentTier.level, 1);
+      expect(HeritageProgression.fromXp(300).currentTier.level, 2);
+      expect(HeritageProgression.fromXp(799).currentTier.level, 2);
+      expect(HeritageProgression.fromXp(800).currentTier.level, 3);
+      expect(HeritageProgression.fromXp(1499).currentTier.level, 3);
+      expect(HeritageProgression.fromXp(1500).currentTier.level, 4);
+      expect(HeritageProgression.fromXp(2999).currentTier.level, 4);
+      expect(HeritageProgression.fromXp(3000).currentTier.level, 5);
+    });
+
+    test('does not expose the retired passport certificate popup', () {
+      expect(source, isNot(contains('_showCertificateModal')));
+      expect(source, isNot(contains('NATIONAL HERITAGE GUARDIAN')));
+      expect(source, isNot(contains('CLOSE PASSPORT SEAL')));
     });
 
     for (final brightness in [Brightness.light, Brightness.dark]) {

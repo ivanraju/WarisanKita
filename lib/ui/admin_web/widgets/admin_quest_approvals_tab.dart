@@ -12,6 +12,9 @@ class AdminQuestApprovalsTab extends StatefulWidget {
 }
 
 class _AdminQuestApprovalsTabState extends State<AdminQuestApprovalsTab> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
   @override
   void initState() {
     super.initState();
@@ -20,6 +23,12 @@ class _AdminQuestApprovalsTabState extends State<AdminQuestApprovalsTab> {
         context.read<GamificationModerationViewModel>().loadRequests();
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
@@ -34,13 +43,230 @@ class _AdminQuestApprovalsTabState extends State<AdminQuestApprovalsTab> {
         children: [
           _buildHeader(viewModel, isMobile),
           const SizedBox(height: 20),
-          _buildFilters(viewModel),
+          _buildStatistics(viewModel),
+          const SizedBox(height: 20),
+          _buildToolbar(viewModel),
           const SizedBox(height: 20),
           if (viewModel.error != null) ...[
             _buildError(viewModel),
             const SizedBox(height: 14),
           ],
           Expanded(child: _buildBody(viewModel, isMobile)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildToolbar(GamificationModerationViewModel viewModel) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: _buildSearchField(),
+        ),
+        const SizedBox(height: 14),
+        _buildFilters(viewModel),
+      ],
+    );
+  }
+
+  Widget _buildSearchField() {
+    return SizedBox(
+      height: 44,
+      child: TextField(
+        controller: _searchController,
+        onChanged: (value) => setState(() => _searchQuery = value),
+        style: GoogleFonts.plusJakartaSans(
+          color: const Color(0xFF0F172A),
+          fontSize: 13,
+        ),
+        decoration: InputDecoration(
+          hintText: 'Search task, artisan, or category…',
+          hintStyle: GoogleFonts.plusJakartaSans(
+            color: const Color(0xFF94A3B8),
+            fontSize: 13,
+          ),
+          prefixIcon: const Icon(
+            Icons.search_rounded,
+            color: Color(0xFF64748B),
+            size: 20,
+          ),
+          suffixIcon: _searchController.text.isEmpty
+              ? null
+              : IconButton(
+                  tooltip: 'Clear search',
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() => _searchQuery = '');
+                  },
+                  icon: const Icon(Icons.close_rounded, size: 19),
+                  color: const Color(0xFF64748B),
+                ),
+          filled: true,
+          fillColor: const Color(0xFFF8FAFC),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: Color(0xFF00695C)),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatistics(GamificationModerationViewModel viewModel) {
+    final items = [
+      (
+        title: 'Total Pending',
+        count: viewModel.totalCount,
+        description: 'All requests awaiting review',
+        icon: Icons.pending_actions_rounded,
+        color: const Color(0xFF2563EB),
+      ),
+      (
+        title: 'New Task Requests',
+        count: viewModel.newTaskCount,
+        description: 'New activities submitted by artisans',
+        icon: Icons.add_task_rounded,
+        color: const Color(0xFF059669),
+      ),
+      (
+        title: 'Task Changes',
+        count: viewModel.taskChangeCount,
+        description: 'Updates to approved activities',
+        icon: Icons.edit_note_rounded,
+        color: const Color(0xFFEA580C),
+      ),
+      (
+        title: 'Delete Requests',
+        count: viewModel.deleteRequestCount,
+        description: 'Activities proposed for removal',
+        icon: Icons.delete_outline_rounded,
+        color: const Color(0xFFDC2626),
+      ),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const spacing = 14.0;
+        final columns = constraints.maxWidth >= 1100
+            ? 4
+            : constraints.maxWidth >= 620
+            ? 2
+            : 1;
+        final cardWidth =
+            (constraints.maxWidth - (spacing * (columns - 1))) / columns;
+
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: [
+            for (final item in items)
+              SizedBox(
+                width: cardWidth,
+                height: 142,
+                child: _statisticsCard(
+                  title: item.title,
+                  count: item.count,
+                  description: item.description,
+                  icon: item.icon,
+                  color: item.color,
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _statisticsCard({
+    required String title,
+    required int count,
+    required String description,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0F0F172A),
+            blurRadius: 16,
+            offset: Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            alignment: Alignment.center,
+            child: Icon(icon, color: color, size: 22),
+          ),
+          const SizedBox(width: 13),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.plusJakartaSans(
+                    color: const Color(0xFF475569),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '$count',
+                  style: GoogleFonts.plusJakartaSans(
+                    color: const Color(0xFF0F172A),
+                    fontSize: 28,
+                    height: 1.1,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  description,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.plusJakartaSans(
+                    color: const Color(0xFF64748B),
+                    fontSize: 11,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -190,20 +416,33 @@ class _AdminQuestApprovalsTabState extends State<AdminQuestApprovalsTab> {
       );
     }
 
-    final requests = viewModel.filteredRequests;
+    final selectedTypeRequests = viewModel.filteredRequests;
+    final query = _searchQuery.trim().toLowerCase();
+    final requests = query.isEmpty
+        ? selectedTypeRequests
+        : selectedTypeRequests
+              .where((request) => _matchesSearch(request, query))
+              .toList(growable: false);
     if (requests.isEmpty) {
+      final hasPendingRequests = viewModel.requests.isNotEmpty;
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.task_alt_rounded,
+            Icon(
+              hasPendingRequests
+                  ? Icons.search_off_rounded
+                  : Icons.task_alt_rounded,
               size: 56,
-              color: Color(0xFF10B981),
+              color: hasPendingRequests
+                  ? const Color(0xFF94A3B8)
+                  : const Color(0xFF10B981),
             ),
             const SizedBox(height: 12),
             Text(
-              'No Task Requests Pending',
+              hasPendingRequests
+                  ? 'No matching requests'
+                  : 'No Task Requests Pending',
               textAlign: TextAlign.center,
               style: GoogleFonts.dmSerifDisplay(
                 fontSize: 21,
@@ -212,7 +451,9 @@ class _AdminQuestApprovalsTabState extends State<AdminQuestApprovalsTab> {
             ),
             const SizedBox(height: 6),
             Text(
-              'New task submissions and proposed task changes will appear here.',
+              hasPendingRequests
+                  ? 'Try another task, artisan, or category.'
+                  : 'New task submissions and proposed task changes will appear here.',
               textAlign: TextAlign.center,
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 12,
@@ -246,6 +487,28 @@ class _AdminQuestApprovalsTabState extends State<AdminQuestApprovalsTab> {
     );
   }
 
+  bool _matchesSearch(
+    GamificationModerationRequest request,
+    String normalizedQuery,
+  ) {
+    final requestType = request.isNewTask
+        ? 'new task request new task'
+        : request.isDeleteRequest
+        ? 'delete request delete task'
+        : 'task change request task change';
+    final searchableValues = <String>[
+      request.task?.title ?? '',
+      request.taskChange?.proposedTitle ?? '',
+      request.artisanName,
+      request.quest.category,
+      requestType,
+    ];
+
+    return searchableValues.any(
+      (value) => value.trim().toLowerCase().contains(normalizedQuery),
+    );
+  }
+
   Widget _buildNewTaskCard(
     GamificationModerationViewModel viewModel,
     GamificationModerationRequest request,
@@ -263,11 +526,6 @@ class _AdminQuestApprovalsTabState extends State<AdminQuestApprovalsTab> {
             '+  NEW TASK',
             const Color(0xFF047857),
             const Color(0xFFD1FAE5),
-          ),
-          _pill(
-            request.quest.category,
-            background: const Color(0xFFEFF6FF),
-            foreground: const Color(0xFF1D4ED8),
           ),
           _pill(
             task.isRequired ? 'REQUIRED' : 'OPTIONAL',
@@ -351,11 +609,6 @@ class _AdminQuestApprovalsTabState extends State<AdminQuestApprovalsTab> {
             isDelete ? '−  DELETE TASK' : '✎  TASK CHANGE',
             isDelete ? const Color(0xFFB91C1C) : const Color(0xFF7C3AED),
             isDelete ? const Color(0xFFFEE2E2) : const Color(0xFFEDE9FE),
-          ),
-          _pill(
-            request.quest.category,
-            background: const Color(0xFFEFF6FF),
-            foreground: const Color(0xFF1D4ED8),
           ),
           _pill(
             task.isRequired ? 'REQUIRED' : 'OPTIONAL',

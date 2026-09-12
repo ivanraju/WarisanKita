@@ -18,6 +18,7 @@ class ArtisanModel {
   final List<Map<String, dynamic>> documents;
   final String? phone;
   final String? premiseType;
+  final int? questPotentialXp;
 
   ArtisanModel({
     required this.id,
@@ -39,6 +40,7 @@ class ArtisanModel {
     this.documents = const [],
     this.phone,
     this.premiseType,
+    this.questPotentialXp,
   });
 
   bool get isVillageWorkshop =>
@@ -72,6 +74,7 @@ class ArtisanModel {
     List<Map<String, dynamic>>? documents,
     String? phone,
     String? premiseType,
+    int? questPotentialXp,
   }) {
     return ArtisanModel(
       id: id ?? this.id,
@@ -93,6 +96,7 @@ class ArtisanModel {
       documents: documents ?? this.documents,
       phone: phone ?? this.phone,
       premiseType: premiseType ?? this.premiseType,
+      questPotentialXp: questPotentialXp ?? this.questPotentialXp,
     );
   }
 
@@ -224,6 +228,7 @@ class ArtisanModel {
       documents: docsList,
       phone: phone,
       premiseType: premiseType,
+      questPotentialXp: (map['quest_potential_xp'] as num?)?.toInt(),
     );
   }
 }

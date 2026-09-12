@@ -254,96 +254,6 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
     );
   }
 
-  void _showCertificateModal(
-    String username,
-    String completedQuests,
-    String visitedStudios,
-  ) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(28),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? const Color(0xFF78350F).withValues(alpha: 0.3)
-                        : const Color(0xFFFEF3C7),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: const Color(0xFFD97706),
-                      width: 2,
-                    ),
-                  ),
-                  child: const Icon(
-                    Icons.workspace_premium_rounded,
-                    size: 48,
-                    color: Color(0xFFB45309),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'NATIONAL HERITAGE GUARDIAN',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.dmSerifDisplay(
-                    fontSize: 20,
-                    color: const Color(0xFF004D40),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'OFFICIAL DIGITAL CERTIFICATE OF APPRECIATION',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w900,
-                    color: const Color(0xFFD97706),
-                    letterSpacing: 1,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Divider(color: isDark ? const Color(0xFF1E3A34) : null),
-                const SizedBox(height: 12),
-                Text(
-                  'This certifies that $username has actively supported Malaysian craft preservation by completing $completedQuests cultural quests across $visitedStudios verified master studios.',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 12,
-                    height: 1.4,
-                    color: const Color(0xFF334155),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  height: 44,
-                  child: FilledButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF004D40),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    child: const Text('CLOSE PASSPORT SEAL'),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -476,12 +386,8 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // 🛂 POLARSTEPS INSPIRED ROYAL PASSPORT BOOKLET CARD
-                      GestureDetector(
-                        onTap: () => _showCertificateModal(
-                          username,
-                          completedQuests,
-                          visitedStudios,
-                        ),
+                      Semantics(
+                        container: true,
                         child: Container(
                           padding: const EdgeInsets.all(24),
                           decoration: BoxDecoration(

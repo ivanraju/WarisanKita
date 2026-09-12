@@ -119,10 +119,6 @@ class GamificationRepository {
     final completedQuestRows = List<Map<String, dynamic>>.from(
       data['completed_quests'] as List? ?? const [],
     );
-    final plaqueCountValue = data['digital_plaque_count'];
-    final plaqueCount = plaqueCountValue is num
-        ? plaqueCountValue.toInt()
-        : int.tryParse(plaqueCountValue?.toString() ?? '') ?? 0;
     return PassportSnapshot.fromData(
       totalXp: totalXp,
       taskAwards: taskAwardRows.map(EarnedTaskXp.fromMap),
@@ -131,12 +127,10 @@ class GamificationRepository {
           .toList(growable: false),
       availableQuests: availableQuestRows,
       completedQuests: completedQuestRows.map(CompletedPassportQuest.fromMap),
-      digitalPlaqueCount: plaqueCount,
       hasXpData: data['xp_available'] != false,
       hasStampData: data['stamps_available'] != false,
       hasQuestStatistics: data['quest_statistics_available'] != false,
       hasVisitedStudioData: data['task_awards_available'] != false,
-      hasDigitalPlaqueData: data['digital_plaques_available'] != false,
       hasAvailableStampData: data['available_quests_available'] != false,
       warnings: List<String>.from(data['warnings'] as List? ?? const []),
     );
