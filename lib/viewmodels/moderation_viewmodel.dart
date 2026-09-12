@@ -1,8 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:warisan_kita/data/repositories/user_repository.dart';
 import 'package:warisan_kita/data/services/supabase_service.dart';
 import 'package:warisan_kita/domain/models/active_artisan_master.dart';
+import 'package:warisan_kita/domain/models/approval_history_record.dart';
 import 'package:warisan_kita/domain/models/pending_artisan_profile.dart';
 import 'package:warisan_kita/domain/models/user.dart';
 
@@ -12,6 +14,7 @@ class ModerationViewModel extends ChangeNotifier {
   ModerationViewModel({UserRepository? repository, SupabaseService? service})
     : _repository = repository ?? UserRepository(service: service) {
     _loadTodayStats();
+    loadApprovalHistory();
     refreshAllData();
   }
 
@@ -68,6 +71,182 @@ class ModerationViewModel extends ChangeNotifier {
 
       return matchesSearch && matchesCategory;
     }).toList();
+  }
+
+  // Approval History State
+  final List<ApprovalHistoryRecord> _approvalHistory = [];
+  List<ApprovalHistoryRecord> get approvalHistory =>
+      List.unmodifiable(_approvalHistory);
+
+  String _historySearchQuery = '';
+  String get historySearchQuery => _historySearchQuery;
+
+  String _historyTypeFilter = 'All Types';
+  String get historyTypeFilter => _historyTypeFilter;
+
+  final List<String> historyTypeFilters = const [
+    'All Types',
+    'Artisan Profiles',
+    'Premise Relocations',
+  ];
+
+  void setHistorySearchQuery(String query) {
+    _historySearchQuery = query;
+    notifyListeners();
+  }
+
+  void setHistoryTypeFilter(String filter) {
+    _historyTypeFilter = filter;
+    notifyListeners();
+  }
+
+  List<ApprovalHistoryRecord> get filteredApprovalHistory {
+    return _approvalHistory.where((record) {
+      final matchesSearch = _historySearchQuery.isEmpty ||
+          record.targetName.toLowerCase().contains(_historySearchQuery.toLowerCase()) ||
+          record.targetEmail.toLowerCase().contains(_historySearchQuery.toLowerCase()) ||
+          record.craftCategory.toLowerCase().contains(_historySearchQuery.toLowerCase()) ||
+          record.state.toLowerCase().contains(_historySearchQuery.toLowerCase()) ||
+          (record.ssmNumber?.toLowerCase().contains(_historySearchQuery.toLowerCase()) ?? false) ||
+          (record.previousPremise?.toLowerCase().contains(_historySearchQuery.toLowerCase()) ?? false) ||
+          (record.newPremise?.toLowerCase().contains(_historySearchQuery.toLowerCase()) ?? false);
+
+      final matchesType = _historyTypeFilter == 'All Types' ||
+          (_historyTypeFilter == 'Artisan Profiles' && !record.isRelocation) ||
+          (_historyTypeFilter == 'Premise Relocations' && record.isRelocation);
+
+      return matchesSearch && matchesType;
+    }).toList();
+  }
+
+  int get totalApprovalHistoryCount => _approvalHistory.length;
+  int get profileApprovalCount =>
+      _approvalHistory.where((r) => !r.isRelocation).length;
+  int get relocationApprovalCount =>
+      _approvalHistory.where((r) => r.isRelocation).length;
+  int get todayApprovalHistoryCount {
+    final now = DateTime.now();
+    return _approvalHistory.where((r) {
+      return r.approvedAt.year == now.year &&
+          r.approvedAt.month == now.month &&
+          r.approvedAt.day == now.day;
+    }).length;
+  }
+
+  static const String _approvalHistoryKey = 'wk_admin_approval_history';
+
+  Future<void> loadApprovalHistory() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final rawJson = prefs.getString(_approvalHistoryKey);
+      final List<ApprovalHistoryRecord> loaded = [];
+
+      if (rawJson != null && rawJson.isNotEmpty) {
+        try {
+          final decoded = jsonDecode(rawJson) as List<dynamic>;
+          for (final item in decoded) {
+            if (item is Map<String, dynamic>) {
+              loaded.add(ApprovalHistoryRecord.fromMap(item));
+            } else if (item is Map) {
+              loaded.add(
+                ApprovalHistoryRecord.fromMap(Map<String, dynamic>.from(item)),
+              );
+            }
+          }
+        } catch (e) {
+          debugPrint('Error parsing saved approval history: $e');
+        }
+      }
+
+      // Merge verified active masters so historical records are visible
+      for (final artisan in _activeArtisanMasters) {
+        final alreadyLogged = loaded.any(
+          (r) =>
+              r.targetEmail.toLowerCase() == artisan.email.toLowerCase() &&
+              !r.isRelocation,
+        );
+        if (!alreadyLogged) {
+          DateTime approvedDate;
+          try {
+            approvedDate =
+                DateTime.tryParse(artisan.verifiedDate) ??
+                _parseSubmissionDate(artisan.verifiedDate) ??
+                DateTime(2026, 1, 15);
+          } catch (_) {
+            approvedDate = DateTime(2026, 1, 15);
+          }
+
+          loaded.add(
+            ApprovalHistoryRecord(
+              id: 'hist_${artisan.id}',
+              title: 'Master Artisan Profile Approved',
+              targetName: artisan.name,
+              targetEmail: artisan.email,
+              approvalType: 'Artisan Profile',
+              craftCategory: artisan.category,
+              state: artisan.state,
+              details:
+                  'SSM License: ${artisan.licenseNo} • Experience: ${artisan.experience}',
+              newPremise: '${artisan.name} Studio (${artisan.state})',
+              ssmNumber: artisan.licenseNo,
+              approvedAt: approvedDate,
+              approvedBy: 'Admin Moderator',
+              status: 'APPROVED',
+            ),
+          );
+        }
+      }
+
+      loaded.sort((a, b) => b.approvedAt.compareTo(a.approvedAt));
+      _approvalHistory.clear();
+      _approvalHistory.addAll(loaded);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error loading approval history: $e');
+    }
+  }
+
+  Future<void> _recordApprovalHistory({
+    required String title,
+    required String targetName,
+    required String targetEmail,
+    required String approvalType,
+    required String craftCategory,
+    required String state,
+    required String details,
+    String? previousPremise,
+    String? newPremise,
+    String? ssmNumber,
+    String approvedBy = 'Admin Moderator',
+  }) async {
+    try {
+      final newRecord = ApprovalHistoryRecord(
+        id: 'hist_${DateTime.now().millisecondsSinceEpoch}',
+        title: title,
+        targetName: targetName,
+        targetEmail: targetEmail,
+        approvalType: approvalType,
+        craftCategory: craftCategory,
+        state: state,
+        details: details,
+        previousPremise: previousPremise,
+        newPremise: newPremise,
+        ssmNumber: ssmNumber,
+        approvedAt: DateTime.now(),
+        approvedBy: approvedBy,
+        status: 'APPROVED',
+      );
+
+      _approvalHistory.removeWhere((r) => r.id == newRecord.id);
+      _approvalHistory.insert(0, newRecord);
+
+      final prefs = await SharedPreferences.getInstance();
+      final listMap = _approvalHistory.map((r) => r.toMap()).toList();
+      await prefs.setString(_approvalHistoryKey, jsonEncode(listMap));
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Failed to save approval history record: $e');
+    }
   }
 
   // User Management State
@@ -842,6 +1021,7 @@ class ModerationViewModel extends ChangeNotifier {
       fetchActiveArtisans(),
       fetchAllUsers(),
     ]);
+    await loadApprovalHistory();
   }
 
   void addPendingArtisan(PendingArtisanProfile profile) {
@@ -938,6 +1118,19 @@ class ModerationViewModel extends ChangeNotifier {
           );
         }
         await _persistApprovalCount();
+        _recordApprovalHistory(
+          title: 'Workshop Premise Relocation Approved',
+          targetName: artisan.name,
+          targetEmail: artisan.email,
+          approvalType: 'Premise Relocation',
+          craftCategory: artisan.craftCategory,
+          state: artisan.proposedState ?? artisan.state,
+          details:
+              'Relocated from ${artisan.currentAddress ?? artisan.state} to ${artisan.proposedAddress ?? artisan.proposedState}',
+          previousPremise: artisan.currentAddress ?? artisan.state,
+          newPremise: artisan.proposedAddress ?? artisan.proposedState,
+          ssmNumber: artisan.ssmNumber,
+        );
         notifyListeners();
         return true;
       }
@@ -1050,6 +1243,22 @@ class ModerationViewModel extends ChangeNotifier {
           isDualRole: false,
           isSuspended: false,
         ),
+      );
+
+      _recordApprovalHistory(
+        title: isUpgrade
+            ? 'Tourist Upgraded to Master Artisan'
+            : 'Master Artisan Profile Approved',
+        targetName: artisan.name,
+        targetEmail: artisan.email,
+        approvalType: 'Artisan Profile',
+        craftCategory: artisan.craftCategory,
+        state: artisan.state,
+        details:
+            'Approved with SSM license ${artisan.ssmNumber ?? 'Verified'} • Experience: ${artisan.experience}',
+        ssmNumber: artisan.ssmNumber,
+        previousPremise: isUpgrade ? 'Tourist Account' : null,
+        newPremise: '${artisan.name} Studio (${artisan.state})',
       );
 
       notifyListeners();

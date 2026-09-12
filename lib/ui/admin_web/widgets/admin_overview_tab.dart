@@ -261,6 +261,7 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
                   moderationHistory,
                   allUsers,
                   activeArtisans,
+                  modVM.approvalHistory,
                 ),
                 const SizedBox(height: 24),
                 _buildStateDistributionCard(activeArtisans),
@@ -287,6 +288,7 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
                         moderationHistory,
                         allUsers,
                         activeArtisans,
+                        modVM.approvalHistory,
                       ),
                       const SizedBox(height: 24),
                       _buildCategoryAndUserAnalyticsCard(
@@ -770,6 +772,7 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
     List<Map<String, dynamic>> moderationHistory,
     List<dynamic> allUsers,
     List<dynamic> activeArtisans,
+    List<dynamic> approvalHistory,
   ) {
     // Generate unified real activity items
     final List<Map<String, dynamic>> events = [];
@@ -804,19 +807,37 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
       });
     }
 
-    // 2. Active Artisan activations
-    for (final artisan in activeArtisans.take(3)) {
+    // 2. Approval History records
+    for (final dynamic record in approvalHistory.take(4)) {
+      final isReloc = record.isRelocation == true;
       events.add({
-        'icon': Icons.verified_user_rounded,
-        'color': const Color(0xFF10B981),
-        'title': '${artisan.name} Studio Verified',
-        'time': artisan.verifiedDate,
-        'subtitle':
-            'License ${artisan.licenseNo} • ${artisan.plaques} Digital Plaques Issued (${artisan.state})',
+        'icon': isReloc
+            ? Icons.swap_horiz_rounded
+            : Icons.verified_user_rounded,
+        'color': isReloc
+            ? const Color(0xFFD97706)
+            : const Color(0xFF10B981),
+        'title': (record.title ?? 'Approved Record').toString(),
+        'time': (record.formattedDate ?? 'Recently').toString(),
+        'subtitle': '${record.targetName} • ${record.details}',
       });
     }
 
-    // 3. User Suspensions
+    // 3. Active Artisan activations fallback
+    if (approvalHistory.isEmpty) {
+      for (final artisan in activeArtisans.take(3)) {
+        events.add({
+          'icon': Icons.verified_user_rounded,
+          'color': const Color(0xFF10B981),
+          'title': '${artisan.name} Studio Verified',
+          'time': artisan.verifiedDate,
+          'subtitle':
+              'License ${artisan.licenseNo} • ${artisan.plaques} Digital Plaques Issued (${artisan.state})',
+        });
+      }
+    }
+
+    // 4. User Suspensions
     for (final user in allUsers.where((u) => u.isSuspended).take(2)) {
       events.add({
         'icon': Icons.block_rounded,
@@ -849,7 +870,7 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
                 ),
               ),
               TextButton.icon(
-                onPressed: () => widget.onNavigateTab('Forum Moderation'),
+                onPressed: () => widget.onNavigateTab('Approval History'),
                 icon: const Icon(Icons.history_rounded, size: 16),
                 label: const Text('View All Logs'),
               ),

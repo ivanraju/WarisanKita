@@ -11,6 +11,7 @@ import 'package:warisan_kita/ui/admin_web/widgets/admin_quest_approvals_tab.dart
 import 'package:warisan_kita/ui/admin_web/widgets/admin_sidebar.dart';
 import 'package:warisan_kita/ui/admin_web/widgets/admin_overview_tab.dart';
 import 'package:warisan_kita/ui/admin_web/widgets/admin_active_artisans_tab.dart';
+import 'package:warisan_kita/ui/admin_web/widgets/admin_approval_history_tab.dart';
 import 'package:warisan_kita/ui/admin_web/widgets/pending_artisans_table.dart';
 import 'package:warisan_kita/ui/admin_web/widgets/pending_relocations_table.dart';
 import 'package:warisan_kita/ui/admin_web/widgets/user_management_table.dart';
@@ -353,7 +354,9 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
                                       ? const AdminQuestApprovalsTab()
                                       : viewModel.activeTab == 'Forum Moderation'
                                           ? const AdminForumModerationTab()
-                                          : SingleChildScrollView(
+                                          : viewModel.activeTab == 'Approval History'
+                                              ? const AdminApprovalHistoryTab()
+                                              : SingleChildScrollView(
                                   padding: EdgeInsets.all(isMobile ? 16.0 : 32.0),
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
