@@ -292,6 +292,20 @@ void main() {
       expect(secondCall, resolvedId);
     });
 
+    test('SupabaseService.ensureArtisanProfileId respects initialStatus without auto-approving unapproved users', () async {
+      final service = SupabaseService();
+      final resolvedId = await service.ensureArtisanProfileId(
+        'user_unapproved_123',
+        email: 'unapproved@warisankita.my',
+        initialStatus: 'PENDING_APPROVAL',
+      );
+      expect(resolvedId, isNotNull);
+      expect(resolvedId!.isNotEmpty, isTrue);
+
+      final secondCall = await service.ensureArtisanProfileId('user_unapproved_123', email: 'unapproved@warisankita.my');
+      expect(secondCall, resolvedId);
+    });
+
     test('UserModel dynamically resolves joinedDate from created_at and formats to Mmm yyyy', () {
       final userWithTimestamp = UserModel.fromMap({
         'id': 'u456',
