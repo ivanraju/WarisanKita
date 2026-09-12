@@ -183,6 +183,11 @@ class ModerationViewModel extends ChangeNotifier {
             approvedDate = DateTime(2026, 1, 15);
           }
 
+          final matchingUser = _registeredUsers.firstWhere(
+            (u) => u.email.toLowerCase() == artisan.email.toLowerCase(),
+            orElse: () => const UserModel(id: '', email: '', role: 'Artisan'),
+          );
+
           loaded.add(
             ApprovalHistoryRecord(
               id: 'hist_${artisan.id}',
@@ -196,6 +201,7 @@ class ModerationViewModel extends ChangeNotifier {
                   'SSM License: ${artisan.licenseNo} • Experience: ${artisan.experience}',
               newPremise: '${artisan.name} Studio (${artisan.state})',
               ssmNumber: artisan.licenseNo,
+              documents: matchingUser.artisanDocuments,
               approvedAt: approvedDate,
               approvedBy: 'Admin Moderator',
               status: 'APPROVED',
@@ -230,6 +236,7 @@ class ModerationViewModel extends ChangeNotifier {
                     ? 'Rejected by Moderator: "${user.rejectionReason}"'
                     : 'Application rejected by Moderator.',
                 ssmNumber: user.ssmNumber,
+                documents: user.artisanDocuments,
                 approvedAt: DateTime.now(),
                 approvedBy: 'Admin Moderator',
                 status: 'REJECTED',
@@ -259,6 +266,14 @@ class ModerationViewModel extends ChangeNotifier {
     String? previousPremise,
     String? newPremise,
     String? ssmNumber,
+    String? ssmFileName,
+    String? ssmFileUrl,
+    String? certFileName,
+    String? certFileUrl,
+    List<String> photos = const [],
+    String? relocationCertFileName,
+    String? relocationCertFileUrl,
+    List<Map<String, dynamic>> documents = const [],
     String approvedBy = 'Admin Moderator',
     String status = 'APPROVED',
   }) async {
@@ -275,6 +290,14 @@ class ModerationViewModel extends ChangeNotifier {
         previousPremise: previousPremise,
         newPremise: newPremise,
         ssmNumber: ssmNumber,
+        ssmFileName: ssmFileName,
+        ssmFileUrl: ssmFileUrl,
+        certFileName: certFileName,
+        certFileUrl: certFileUrl,
+        photos: photos,
+        relocationCertFileName: relocationCertFileName,
+        relocationCertFileUrl: relocationCertFileUrl,
+        documents: documents,
         approvedAt: DateTime.now(),
         approvedBy: approvedBy,
         status: status,
@@ -1335,6 +1358,13 @@ class ModerationViewModel extends ChangeNotifier {
           previousPremise: artisan.currentAddress ?? artisan.state,
           newPremise: artisan.proposedAddress ?? artisan.proposedState,
           ssmNumber: artisan.ssmNumber,
+          ssmFileName: artisan.ssmFileName,
+          ssmFileUrl: artisan.ssmFileUrl,
+          certFileName: artisan.certFileName,
+          certFileUrl: artisan.certFileUrl,
+          photos: artisan.photos,
+          relocationCertFileName: artisan.relocationCertFileName,
+          relocationCertFileUrl: artisan.relocationCertFileUrl,
         );
         notifyListeners();
         return true;
@@ -1464,6 +1494,11 @@ class ModerationViewModel extends ChangeNotifier {
         ssmNumber: artisan.ssmNumber,
         previousPremise: isUpgrade ? 'Tourist Account' : null,
         newPremise: '${artisan.name} Studio (${artisan.state})',
+        ssmFileName: artisan.ssmFileName,
+        ssmFileUrl: artisan.ssmFileUrl,
+        certFileName: artisan.certFileName,
+        certFileUrl: artisan.certFileUrl,
+        photos: artisan.photos,
       );
 
       notifyListeners();
@@ -1620,6 +1655,13 @@ class ModerationViewModel extends ChangeNotifier {
           previousPremise: artisan.currentAddress ?? artisan.state,
           newPremise: artisan.proposedAddress ?? artisan.proposedState,
           ssmNumber: artisan.ssmNumber,
+          ssmFileName: artisan.ssmFileName,
+          ssmFileUrl: artisan.ssmFileUrl,
+          certFileName: artisan.certFileName,
+          certFileUrl: artisan.certFileUrl,
+          photos: artisan.photos,
+          relocationCertFileName: artisan.relocationCertFileName,
+          relocationCertFileUrl: artisan.relocationCertFileUrl,
           status: 'REJECTED',
         );
         notifyListeners();
@@ -1696,6 +1738,11 @@ class ModerationViewModel extends ChangeNotifier {
         previousPremise: isExistingTourist ? 'Tourist Account' : null,
         newPremise: '${artisan.name} Studio (${artisan.state})',
         ssmNumber: artisan.ssmNumber,
+        ssmFileName: artisan.ssmFileName,
+        ssmFileUrl: artisan.ssmFileUrl,
+        certFileName: artisan.certFileName,
+        certFileUrl: artisan.certFileUrl,
+        photos: artisan.photos,
         status: 'REJECTED',
       );
 
@@ -1741,6 +1788,7 @@ class ModerationViewModel extends ChangeNotifier {
               : 'Application rejected by Moderator.',
           previousPremise: isTourist ? 'Tourist Account' : null,
           ssmNumber: existingUser.ssmNumber,
+          documents: existingUser.artisanDocuments,
           status: 'REJECTED',
         );
 
