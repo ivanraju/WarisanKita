@@ -5,6 +5,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
+import 'package:warisan_kita/data/services/google_map_service.dart';
 
 class WorkshopPlaceResult {
   final String displayName;
@@ -298,6 +300,8 @@ class WorkshopMapPickerPage extends StatefulWidget {
   final String? initialAddress;
   final Map<String, LatLng> stateCenters;
   final String? lockedState;
+  final bool isReadOnly;
+  final String? artisanName;
 
   const WorkshopMapPickerPage({
     super.key,
@@ -306,6 +310,8 @@ class WorkshopMapPickerPage extends StatefulWidget {
     required this.initialAddress,
     required this.stateCenters,
     this.lockedState,
+    this.isReadOnly = false,
+    this.artisanName,
   });
 
   @override
@@ -588,6 +594,20 @@ class _WorkshopMapPickerPageState extends State<WorkshopMapPickerPage> {
     );
   }
 
+  Future<void> _openDirections(LatLng target) async {
+    final uri = await const GoogleMapService().directionsTo(
+      latitude: target.latitude,
+      longitude: target.longitude,
+    );
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open map directions')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final selected = _selection;
@@ -604,19 +624,32 @@ class _WorkshopMapPickerPageState extends State<WorkshopMapPickerPage> {
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF004D40),
         title: Text(
-          widget.lockedState != null
-              ? 'Pin Workshop (${widget.lockedState})'
-              : 'Pin Workshop Location',
-          style: GoogleFonts.dmSerifDisplay(fontSize: 22),
+          widget.isReadOnly
+              ? (widget.artisanName != null && widget.artisanName!.isNotEmpty
+                  ? '${widget.artisanName}\'s Workshop'
+                  : 'Workshop Location')
+              : (widget.lockedState != null
+                  ? 'Pin Workshop (${widget.lockedState})'
+                  : 'Pin Workshop Location'),
+          style: GoogleFonts.dmSerifDisplay(fontSize: 20),
         ),
         actions: [
-          TextButton(
-            onPressed: selected == null
-                ? null
-                : () => Navigator.of(context).pop(selected),
-            child: const Text('Done'),
-          ),
-          const SizedBox(width: 8),
+          if (!widget.isReadOnly) ...[
+            TextButton(
+              onPressed: selected == null
+                  ? null
+                  : () => Navigator.of(context).pop(selected),
+              child: const Text('Done'),
+            ),
+            const SizedBox(width: 8),
+          ] else if (markerPosition != null) ...[
+            IconButton(
+              icon: const Icon(Icons.directions_rounded),
+              tooltip: 'Get Directions',
+              onPressed: () => _openDirections(markerPosition),
+            ),
+            const SizedBox(width: 8),
+          ],
         ],
       ),
       body: Stack(
@@ -629,16 +662,24 @@ class _WorkshopMapPickerPageState extends State<WorkshopMapPickerPage> {
               ),
               mapType: _mapType,
               onMapCreated: (controller) => _mapController = controller,
-              onTap: _isLoading ? null : _pin,
-              onLongPress: _isLoading ? null : _pin,
+              onTap: widget.isReadOnly || _isLoading ? null : _pin,
+              onLongPress: widget.isReadOnly || _isLoading ? null : _pin,
               markers: markerPosition == null
                   ? const <Marker>{}
                   : {
                       Marker(
                         markerId: const MarkerId('large-workshop-pin'),
                         position: markerPosition,
-                        draggable: !_isLoading,
-                        onDragEnd: _pin,
+                        draggable: !widget.isReadOnly && !_isLoading,
+                        onDragEnd: widget.isReadOnly ? null : _pin,
+                        infoWindow: InfoWindow(
+                          title: widget.artisanName != null && widget.artisanName!.isNotEmpty
+                              ? widget.artisanName
+                              : 'Accredited Workshop',
+                          snippet: selected?.displayName.isNotEmpty == true
+                              ? selected!.displayName
+                              : (widget.initialAddress ?? _detectedState),
+                        ),
                         icon: BitmapDescriptor.defaultMarkerWithHue(
                           BitmapDescriptor.hueOrange,
                         ),
@@ -712,40 +753,87 @@ class _WorkshopMapPickerPageState extends State<WorkshopMapPickerPage> {
               padding: const EdgeInsets.all(14),
               child: Column(
                 children: [
-                  Material(
-                    elevation: 5,
-                    borderRadius: BorderRadius.circular(16),
-                    child: TextField(
-                      controller: _searchController,
-                      textInputAction: TextInputAction.search,
-                      onSubmitted: (_) => _search(),
-                      decoration: InputDecoration(
-                        hintText: widget.lockedState != null
-                            ? 'Search within ${widget.lockedState}...'
-                            : 'Search a workshop or address',
-                        prefixIcon: const Icon(Icons.search_rounded),
-                        suffixIcon: IconButton(
-                          onPressed: _isLoading ? null : _search,
-                          icon: const Icon(Icons.arrow_forward_rounded),
-                        ),
-                        errorText: _error,
-                        filled: true,
-                        fillColor: Colors.white,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide.none,
+                  if (!widget.isReadOnly) ...[
+                    Material(
+                      elevation: 5,
+                      borderRadius: BorderRadius.circular(16),
+                      child: TextField(
+                        controller: _searchController,
+                        textInputAction: TextInputAction.search,
+                        onSubmitted: (_) => _search(),
+                        decoration: InputDecoration(
+                          hintText: widget.lockedState != null
+                              ? 'Search within ${widget.lockedState}...'
+                              : 'Search a workshop or address',
+                          prefixIcon: const Icon(Icons.search_rounded),
+                          suffixIcon: IconButton(
+                            onPressed: _isLoading ? null : _search,
+                            icon: const Icon(Icons.arrow_forward_rounded),
+                          ),
+                          errorText: _error,
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  if (_isLoading)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 12),
-                      child: LinearProgressIndicator(
-                        color: Color(0xFFD97706),
-                        minHeight: 3,
+                    if (_isLoading)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        child: LinearProgressIndicator(
+                          color: Color(0xFFD97706),
+                          minHeight: 3,
+                        ),
+                      ),
+                  ] else ...[
+                    Material(
+                      elevation: 4,
+                      borderRadius: BorderRadius.circular(16),
+                      color: Colors.white,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFE8F5E9),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.verified_rounded, color: Color(0xFF16A34A), size: 20),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'Verified Heritage Workshop',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: const Color(0xFF14532D),
+                                    ),
+                                  ),
+                                  Text(
+                                    'Official accredited premise verified by Kraftangan Malaysia',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 11,
+                                      color: const Color(0xFF15803D),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
+                  ],
                   const Spacer(),
                   Material(
                     elevation: 5,
@@ -753,46 +841,78 @@ class _WorkshopMapPickerPageState extends State<WorkshopMapPickerPage> {
                     color: Colors.white,
                     child: Padding(
                       padding: const EdgeInsets.all(14),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
-                            selected == null
-                                ? Icons.touch_app_rounded
-                                : Icons.location_on_rounded,
-                            color: const Color(0xFFD97706),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                widget.isReadOnly
+                                    ? Icons.location_on_rounded
+                                    : (selected == null
+                                        ? Icons.touch_app_rounded
+                                        : Icons.location_on_rounded),
+                                color: const Color(0xFFD97706),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      widget.isReadOnly
+                                          ? (widget.artisanName != null && widget.artisanName!.isNotEmpty
+                                              ? '${widget.artisanName} • $_detectedState'
+                                              : _detectedState)
+                                          : (selected == null
+                                              ? (widget.lockedState != null
+                                                  ? 'Tap within ${widget.lockedState} to place the pin'
+                                                  : 'Tap anywhere in Malaysia to place the pin')
+                                              : _detectedState),
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFF004D40),
+                                      ),
+                                    ),
+                                    if (selected != null || widget.initialAddress != null) ...[
+                                      const SizedBox(height: 3),
+                                      Text(
+                                        selected?.displayName.isNotEmpty == true
+                                            ? selected!.displayName
+                                            : (widget.initialAddress ?? 'Accredited Workshop Location'),
+                                        maxLines: 3,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 11,
+                                          color: const Color(0xFF64748B),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  selected == null
-                                      ? (widget.lockedState != null
-                                          ? 'Tap within ${widget.lockedState} to place the pin'
-                                          : 'Tap anywhere in Malaysia to place the pin')
-                                      : _detectedState,
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontWeight: FontWeight.w700,
-                                    color: const Color(0xFF004D40),
+                          if (widget.isReadOnly && markerPosition != null) ...[
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              child: FilledButton.icon(
+                                onPressed: () => _openDirections(markerPosition),
+                                icon: const Icon(Icons.directions_rounded, size: 18),
+                                label: const Text('Get Directions'),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: const Color(0xFF004D40),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
                                 ),
-                                if (selected != null) ...[
-                                  const SizedBox(height: 3),
-                                  Text(
-                                    selected.displayName,
-                                    maxLines: 3,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 10.5,
-                                      color: const Color(0xFF64748B),
-                                    ),
-                                  ),
-                                ],
-                              ],
+                              ),
                             ),
-                          ),
+                          ],
                         ],
                       ),
                     ),

@@ -168,6 +168,8 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
           initialLocation: _workshopPin,
           initialAddress: widget.address,
           stateCenters: _stateCenters,
+          isReadOnly: true,
+          artisanName: widget.artisanName,
         ),
       ),
     );
