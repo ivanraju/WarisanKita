@@ -12,6 +12,7 @@ import 'package:warisan_kita/viewmodels/directory_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/gamification_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/matchmaker_viewmodel.dart';
 import 'package:warisan_kita/ui/matchmaker/craft_matchmaker_quiz_wizard.dart';
+import 'package:warisan_kita/ui/core/widgets/heritage_background.dart';
 
 class CraftCategoryFilterItem {
   final String key;
@@ -1008,16 +1009,15 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return CustomScrollView(
-      physics: const BouncingScrollPhysics(),
-      slivers: [
-        // Klook / Polarsteps Inspired Hero Header App Bar
-        SliverAppBar(
-          floating: true,
-          pinned: true,
-          backgroundColor: isDark
-              ? const Color(0xFF041412)
-              : const Color(0xFFF8F9FA),
+    return HeritageBackground(
+      child: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          // Klook / Polarsteps Inspired Hero Header App Bar
+          SliverAppBar(
+            floating: true,
+            pinned: true,
+            backgroundColor: Colors.transparent,
           elevation: 0,
           expandedHeight: 126.0,
           flexibleSpace: FlexibleSpaceBar(
@@ -1968,8 +1968,9 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
 
         const SliverToBoxAdapter(child: SizedBox(height: 100)),
       ],
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildArtisanCard(
     BuildContext context,

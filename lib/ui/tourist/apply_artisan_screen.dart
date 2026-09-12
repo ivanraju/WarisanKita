@@ -14,6 +14,7 @@ import '../../viewmodels/auth_viewmodel.dart';
 import 'widgets/workshop_map_picker.dart';
 import 'package:warisan_kita/viewmodels/moderation_viewmodel.dart';
 import 'package:warisan_kita/ui/artisan/artisan_application_pending_screen.dart';
+import 'package:warisan_kita/ui/core/widgets/heritage_background.dart';
 
 class ApplyArtisanScreen extends StatefulWidget {
   const ApplyArtisanScreen({super.key});
@@ -89,7 +90,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
 
     setState(() {
       _isCheckingSsm = true;
-      _ssmStatusMessage = 'Verifying SSM availability...';
+      _ssmStatusMessage = 'Validating SSM availability...';
     });
 
     _ssmDebounce = Timer(const Duration(milliseconds: 350), () async {
@@ -100,7 +101,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
         _isCheckingSsm = false;
         _isSsmAvailable = isAvailable;
         _ssmStatusMessage = isAvailable
-            ? '✓ Verified & Available SSM Registration ID'
+            ? '✓ Validated & Available SSM Registration ID'
             : '⚠️ This SSM is already registered by another artisan studio';
       });
     });
@@ -354,7 +355,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('📄 SSM Document verified & attached: ${_ssmFile!.name}'),
+              content: Text('📄 SSM Document validated & attached: ${_ssmFile!.name}'),
               backgroundColor: const Color(0xFF004D40),
               behavior: SnackBarBehavior.floating,
             ),
@@ -401,7 +402,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                '🏆 Kraftangan Certificate verified & attached: ${_kraftanganFile!.name}',
+                '🏆 Kraftangan Certificate validated & attached: ${_kraftanganFile!.name}',
               ),
               backgroundColor: const Color(0xFF004D40),
               behavior: SnackBarBehavior.floating,
@@ -643,11 +644,12 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width > 800;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
+    return HeritageBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF004D40)),
           onPressed: () => Navigator.of(context).pop(),
@@ -663,10 +665,13 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
       ),
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          padding: EdgeInsets.symmetric(
+            horizontal: isDesktop ? 24 : 16,
+            vertical: 20,
+          ),
           child: Container(
             width: isDesktop ? 600 : double.infinity,
-            padding: const EdgeInsets.all(28.0),
+            padding: EdgeInsets.all(isDesktop ? 28.0 : 20.0),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(24),
@@ -763,6 +768,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
 
                   // Craft Category Dropdown
                   DropdownButtonFormField<String>(
+                    isExpanded: true,
                     initialValue: _selectedCraftCategory,
                     decoration: InputDecoration(
                       labelText: 'Heritage Craft Category *',
@@ -783,6 +789,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                             value: c,
                             child: Text(
                               c,
+                              overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.plusJakartaSans(fontSize: 13),
                             ),
                           ),
@@ -796,6 +803,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
 
                   // State / Location Dropdown
                   DropdownButtonFormField<String>(
+                    isExpanded: true,
                     initialValue: _selectedState,
                     decoration: InputDecoration(
                       labelText: 'Workshop State / Region *',
@@ -1067,7 +1075,10 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
 
                   const SizedBox(height: 24),
 
-                  Row(
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 6,
                     children: [
                       Text(
                         'Proof of Authenticity & Credentials',
@@ -1076,7 +1087,6 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                           color: const Color(0xFF004D40),
                         ),
                       ),
-                      const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 8,
@@ -1211,8 +1221,9 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildWorkshopLocationPicker() {
     final pin = _workshopLocation;
@@ -1433,7 +1444,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                 children: [
                   Text(
                     title,
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.plusJakartaSans(
                       fontWeight: FontWeight.bold,

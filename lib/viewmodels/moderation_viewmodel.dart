@@ -758,6 +758,12 @@ class ModerationViewModel extends ChangeNotifier {
                   proposedLongitude: u.pendingRelocationLongitude,
                   proposedState: u.pendingRelocationState,
                   relocationReason: u.pendingRelocationReason,
+                  ssmFileName: u.pendingRelocationCertName ?? u.ssmFileName,
+                  ssmFileUrl: u.pendingRelocationCertUrl ?? u.ssmFileUrl,
+                  certFileName: u.pendingRelocationCertName ?? u.certFileName,
+                  certFileUrl: u.pendingRelocationCertUrl ?? u.certFileUrl,
+                  relocationCertFileName: u.pendingRelocationCertName,
+                  relocationCertFileUrl: u.pendingRelocationCertUrl,
                 ),
               );
             }

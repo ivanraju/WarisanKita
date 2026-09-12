@@ -111,77 +111,81 @@ class PendingRelocationsTable extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         child: LayoutBuilder(
           builder: (context, constraints) {
-            return SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minWidth: constraints.maxWidth > 1080 ? constraints.maxWidth : 1080,
-                ),
-                child: DataTable(
-                  headingRowHeight: 52,
-                  dataRowMinHeight: 76,
-                  dataRowMaxHeight: 88,
-                  horizontalMargin: 24,
-                  columnSpacing: 24,
-                  headingRowColor: WidgetStateProperty.all(const Color(0xFFF8FAFC)),
-                  columns: [
-                    DataColumn(
-                      label: Text(
-                        'MASTER ARTISAN / STUDIO',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFF64748B),
-                          letterSpacing: 0.8,
+            return Scrollbar(
+              thumbVisibility: true,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minWidth: constraints.maxWidth > 960 ? constraints.maxWidth : 960,
+                  ),
+                  child: DataTable(
+                    showCheckboxColumn: false,
+                    headingRowHeight: 52,
+                    dataRowMinHeight: 88,
+                    dataRowMaxHeight: 124,
+                    horizontalMargin: 20,
+                    columnSpacing: 18,
+                    headingRowColor: WidgetStateProperty.all(const Color(0xFFF8FAFC)),
+                    columns: [
+                      DataColumn(
+                        label: Text(
+                          'MASTER ARTISAN / STUDIO',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF64748B),
+                            letterSpacing: 0.8,
+                          ),
                         ),
                       ),
-                    ),
-                    DataColumn(
-                      label: Text(
-                        'CURRENT PREMISE',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFF64748B),
-                          letterSpacing: 0.8,
+                      DataColumn(
+                        label: Text(
+                          'CURRENT PREMISE',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF64748B),
+                            letterSpacing: 0.8,
+                          ),
                         ),
                       ),
-                    ),
-                    DataColumn(
-                      label: Text(
-                        'PROPOSED NEW PREMISE',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFF64748B),
-                          letterSpacing: 0.8,
+                      DataColumn(
+                        label: Text(
+                          'PROPOSED NEW PREMISE',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF64748B),
+                            letterSpacing: 0.8,
+                          ),
                         ),
                       ),
-                    ),
-                    DataColumn(
-                      label: Text(
-                        'DATE REQUESTED',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFF64748B),
-                          letterSpacing: 0.8,
+                      DataColumn(
+                        label: Text(
+                          'DATE REQUESTED',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF64748B),
+                            letterSpacing: 0.8,
+                          ),
                         ),
                       ),
-                    ),
-                    DataColumn(
-                      label: Text(
-                        'ACTIONS',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFF64748B),
-                          letterSpacing: 0.8,
+                      DataColumn(
+                        label: Text(
+                          'ACTIONS',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF64748B),
+                            letterSpacing: 0.8,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                  rows: relocations.map((artisan) => _buildRow(context, artisan)).toList(),
+                    ],
+                    rows: relocations.map((artisan) => _buildRow(context, artisan)).toList(),
+                  ),
                 ),
               ),
             );
@@ -193,6 +197,7 @@ class PendingRelocationsTable extends StatelessWidget {
 
   DataRow _buildRow(BuildContext context, PendingArtisanProfile artisan) {
     return DataRow(
+      onSelectChanged: (_) => _openReviewDialog(context, artisan),
       cells: [
         // Artisan / Studio Cell
         DataCell(
@@ -205,18 +210,18 @@ class PendingRelocationsTable extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                   child: Image.network(
                     artisan.imageUrl,
-                    width: 44,
-                    height: 44,
+                    width: 42,
+                    height: 42,
                     fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) => Container(
-                      width: 44,
-                      height: 44,
+                      width: 42,
+                      height: 42,
                       color: const Color(0xFFE2E8F0),
                       child: const Icon(Icons.storefront_rounded, color: Color(0xFF64748B)),
                     ),
                   ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 12),
                 Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -225,7 +230,7 @@ class PendingRelocationsTable extends StatelessWidget {
                     Text(
                       artisan.name,
                       style: GoogleFonts.plusJakartaSans(
-                        fontSize: 14,
+                        fontSize: 13.5,
                         fontWeight: FontWeight.bold,
                         color: const Color(0xFF1E293B),
                       ),
@@ -269,35 +274,46 @@ class PendingRelocationsTable extends StatelessWidget {
         // Current Premise Cell
         DataCell(
           ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 240),
+            constraints: const BoxConstraints(maxWidth: 220),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.place_outlined, size: 14, color: Color(0xFF64748B)),
-                    const SizedBox(width: 4),
-                    Text(
-                      artisan.state,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF334155),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: const Color(0xFFCBD5E1)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.place_rounded, size: 11, color: Color(0xFF475569)),
+                      const SizedBox(width: 4),
+                      Text(
+                        artisan.state,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF334155),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 4),
                 Text(
-                  artisan.currentAddress ?? 'Accredited Studio Location',
-                  maxLines: 2,
+                  artisan.currentAddress?.trim().isNotEmpty == true
+                      ? artisan.currentAddress!
+                      : 'Accredited Studio Location',
+                  maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 11,
                     color: const Color(0xFF64748B),
+                    height: 1.35,
                   ),
                 ),
               ],
@@ -308,7 +324,7 @@ class PendingRelocationsTable extends StatelessWidget {
         // Proposed New Premise Cell
         DataCell(
           ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 260),
+            constraints: const BoxConstraints(maxWidth: 250),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -318,7 +334,7 @@ class PendingRelocationsTable extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                       decoration: BoxDecoration(
                         color: const Color(0xFFFEF3C7),
                         borderRadius: BorderRadius.circular(4),
@@ -327,7 +343,7 @@ class PendingRelocationsTable extends StatelessWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.edit_location_alt_rounded, size: 12, color: Color(0xFFB45309)),
+                          const Icon(Icons.near_me_rounded, size: 11, color: Color(0xFFB45309)),
                           const SizedBox(width: 4),
                           Text(
                             artisan.proposedState ?? 'Pending State',
@@ -344,8 +360,9 @@ class PendingRelocationsTable extends StatelessWidget {
                       const SizedBox(width: 6),
                       Text(
                         '(${artisan.proposedLatitude!.toStringAsFixed(3)}, ${artisan.proposedLongitude!.toStringAsFixed(3)})',
-                        style: GoogleFonts.plusJakartaSans(
+                        style: GoogleFonts.jetBrainsMono(
                           fontSize: 10,
+                          fontWeight: FontWeight.w500,
                           color: const Color(0xFF94A3B8),
                         ),
                       ),
@@ -354,15 +371,44 @@ class PendingRelocationsTable extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  artisan.proposedAddress ?? 'New Premise Address',
+                  artisan.proposedAddress?.trim().isNotEmpty == true
+                      ? artisan.proposedAddress!
+                      : 'New Premise Address Not Specified',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: const Color(0xFF0F172A),
+                    height: 1.35,
                   ),
                 ),
+                if (artisan.relocationReason != null && artisan.relocationReason!.trim().isNotEmpty) ...[
+                  const SizedBox(height: 3),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.only(top: 2.0),
+                        child: Icon(Icons.notes_rounded, size: 10, color: Color(0xFFD97706)),
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          artisan.relocationReason!,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 10,
+                            fontStyle: FontStyle.italic,
+                            color: const Color(0xFF64748B),
+                            height: 1.25,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
@@ -400,28 +446,28 @@ class PendingRelocationsTable extends StatelessWidget {
               IconButton(
                 icon: const Icon(Icons.remove_red_eye_outlined, color: Color(0xFF2563EB), size: 18),
                 onPressed: () => _openReviewDialog(context, artisan),
-                tooltip: 'Review Workshop Relocation Premise Details',
+                tooltip: 'Review Full Relocation Request',
                 padding: const EdgeInsets.all(6),
                 constraints: const BoxConstraints(),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
 
-              // Approve Relocation Button
+              // Approve Button
               ElevatedButton.icon(
                 onPressed: () => onApprove(artisan),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFD97706),
+                  backgroundColor: const Color(0xFF10B981),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                   minimumSize: const Size(0, 34),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   elevation: 0,
                 ),
-                icon: const Icon(Icons.pin_drop_rounded, size: 15),
+                icon: const Icon(Icons.check_rounded, size: 14),
                 label: Text(
-                  'Approve Relocation',
+                  'Approve',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -429,21 +475,21 @@ class PendingRelocationsTable extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
 
               // Reject Button
               OutlinedButton.icon(
                 onPressed: () => _openReviewDialog(context, artisan),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: const Color(0xFFEF4444),
-                  side: const BorderSide(color: Color(0xFFEF4444), width: 1.5),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  side: const BorderSide(color: Color(0xFFEF4444), width: 1.2),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                   minimumSize: const Size(0, 34),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                icon: const Icon(Icons.close_rounded, size: 15),
+                icon: const Icon(Icons.close_rounded, size: 14),
                 label: Text(
                   'Reject',
                   style: GoogleFonts.plusJakartaSans(

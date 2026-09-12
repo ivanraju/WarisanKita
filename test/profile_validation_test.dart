@@ -17,6 +17,7 @@ import 'package:warisan_kita/domain/models/user.dart';
 import 'package:warisan_kita/domain/validators/profile_validator.dart';
 import 'package:warisan_kita/ui/admin_web/widgets/artisan_review_dialog.dart';
 import 'package:warisan_kita/ui/artisan/profile_builder_tab.dart';
+import 'package:warisan_kita/ui/tourist/apply_artisan_screen.dart';
 import 'package:cross_file/cross_file.dart';
 import 'package:warisan_kita/ui/core/edit_profile_screen.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
@@ -237,6 +238,8 @@ void main() {
         pendingRelocationLongitude: 102.26,
         pendingRelocationReason: 'Expanded workshop capacity',
         pendingRelocationDate: '2026-09-08',
+        pendingRelocationCertUrl: 'https://storage.warisankita.my/cert.pdf',
+        pendingRelocationCertName: 'SSM_Registration_2026.pdf',
       );
 
       expect(user.hasPendingRelocation, isTrue);
@@ -244,15 +247,21 @@ void main() {
       final map = user.toMap();
       expect(map['pending_relocation_address'], 'New Premise, Jonker St, Melaka');
       expect(map['pending_relocation_reason'], 'Expanded workshop capacity');
+      expect(map['pending_relocation_cert_url'], 'https://storage.warisankita.my/cert.pdf');
+      expect(map['pending_relocation_cert_name'], 'SSM_Registration_2026.pdf');
 
       final fromMapUser = UserModel.fromMap(map);
       expect(fromMapUser.hasPendingRelocation, isTrue);
       expect(fromMapUser.pendingRelocationAddress, 'New Premise, Jonker St, Melaka');
       expect(fromMapUser.pendingRelocationLatitude, 2.20);
+      expect(fromMapUser.pendingRelocationCertUrl, 'https://storage.warisankita.my/cert.pdf');
+      expect(fromMapUser.pendingRelocationCertName, 'SSM_Registration_2026.pdf');
 
       final cleared = fromMapUser.copyWith(clearPendingRelocation: true);
       expect(cleared.hasPendingRelocation, isFalse);
       expect(cleared.pendingRelocationAddress, isNull);
+      expect(cleared.pendingRelocationCertUrl, isNull);
+      expect(cleared.pendingRelocationCertName, isNull);
     });
 
     test('UserModel serialization preserves artisanProfileId across toMap and fromMap', () {
@@ -694,9 +703,77 @@ void main() {
         while (tester.takeException() != null) {}
 
         expect(find.text('Relocation Request Pending Administrative Review'), findsOneWidget);
+        expect(find.text('Change Location'), findsOneWidget);
         expect(find.text('Withdraw Request'), findsOneWidget);
         expect(find.textContaining('Proposed Lot 10, Jonker Street, Melaka'), findsOneWidget);
         expect(find.textContaining('Opening cultural tourist workshop gallery'), findsOneWidget);
+
+        await tester.tap(find.text('Change Location'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Update Relocation Request'), findsOneWidget);
+        expect(find.text('Update Request'), findsOneWidget);
+        expect(find.text('Change Selected Location'), findsOneWidget);
+        expect(find.text('Opening cultural tourist workshop gallery'), findsOneWidget);
+      }, createHttpClient: (context) => _MockHttpClient());
+    });
+
+    testWidgets('Premise relocation dialog blocks submission without mandatory certificate evidence', (tester) async {
+      await HttpOverrides.runZoned(() async {
+        tester.view.physicalSize = const Size(1080, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+
+        final service = SupabaseService();
+        final userRepo = UserRepository(service: service);
+        final authVM = AuthViewModel(repository: userRepo);
+        final modVM = ModerationViewModel(repository: userRepo);
+
+        authVM.setCurrentUserForTesting(
+          const UserModel(
+            id: 'artisan_tester_mandatory_cert',
+            email: 'tester_cert@warisankita.my',
+            displayName: 'Mak Siti Labu Sayong',
+            role: 'Artisan',
+            address: 'Verified Heritage Premise, Kuala Kangsar',
+            state: 'Perak',
+            latitude: 4.77,
+            longitude: 100.94,
+            pendingRelocationAddress: 'Proposed Lot 12, Craft Village, Perak',
+            pendingRelocationState: 'Perak',
+            pendingRelocationLatitude: 4.78,
+            pendingRelocationLongitude: 100.95,
+            pendingRelocationReason: 'Relocating closer to pottery clay reserves',
+            pendingRelocationDate: '2026-09-08',
+          ),
+        );
+
+        await tester.pumpWidget(
+          MultiProvider(
+            providers: [
+              ChangeNotifierProvider.value(value: authVM),
+              ChangeNotifierProvider.value(value: modVM),
+            ],
+            child: const MaterialApp(
+              home: ProfileBuilderTab(),
+            ),
+          ),
+        );
+        await tester.pump();
+        while (tester.takeException() != null) {}
+
+        await tester.tap(find.text('Change Location'));
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('Updated Premise Certificate / License (Required):'), findsOneWidget);
+
+        // Tap submit without attaching evidence
+        await tester.tap(find.text('Update Request'));
+        await tester.pumpAndSettle();
+
+        // Must show error and dialog must still be open
+        expect(find.text('Supporting relocation evidence document is required.'), findsOneWidget);
+        expect(find.text('Update Relocation Request'), findsOneWidget);
       }, createHttpClient: (context) => _MockHttpClient());
     });
 
@@ -747,7 +824,9 @@ void main() {
       expect(find.text('Reject Relocation'), findsOneWidget);
       expect(find.text('Approve Relocation & Update Map'), findsOneWidget);
       expect(find.textContaining('Relocating to larger lot to accommodate master apprentices'), findsOneWidget);
+      expect(find.text('Updated Premise Certificate'), findsOneWidget);
 
+      await tester.ensureVisible(find.text('Approve Relocation & Update Map'));
       await tester.tap(find.text('Approve Relocation & Update Map'));
       await tester.pump();
       expect(approved, isTrue);
@@ -1928,6 +2007,69 @@ void main() {
         expect(reappliedUser.isApprovedArtisan, isFalse);
         expect(reappliedUser.isPendingArtisan, isTrue);
         expect(reappliedUser.isRejectedArtisan, isFalse);
+      });
+
+      testWidgets('ApplyArtisanScreen renders without overflow on 360px and 320px mobile viewports', (tester) async {
+        await HttpOverrides.runZoned(() async {
+          for (final width in [360.0, 320.0]) {
+            tester.view.physicalSize = Size(width, 800);
+            tester.view.devicePixelRatio = 1.0;
+
+            final service = SupabaseService();
+            final userRepo = UserRepository(service: service);
+            final authVM = AuthViewModel(repository: userRepo);
+            final modVM = ModerationViewModel(repository: userRepo);
+
+            authVM.setCurrentUserForTesting(
+              const UserModel(
+                id: 'tourist_applicant_1',
+                email: 'tourist@warisankita.my',
+                displayName: 'Ali Tourist',
+                role: 'Tourist',
+              ),
+            );
+
+            await tester.pumpWidget(
+              MultiProvider(
+                providers: [
+                  ChangeNotifierProvider.value(value: authVM),
+                  ChangeNotifierProvider.value(value: modVM),
+                ],
+                child: const MaterialApp(
+                  home: ApplyArtisanScreen(),
+                ),
+              ),
+            );
+
+            await tester.pump();
+            await tester.pump(const Duration(milliseconds: 300));
+
+            // Verify top elements rendered
+            expect(find.text('Apply for Master Artisan'), findsOneWidget);
+
+            // Scroll down to the Proof of Authenticity & Credentials section
+            await tester.scrollUntilVisible(
+              find.text('Proof of Authenticity & Credentials'),
+              300.0,
+              scrollable: find.byType(Scrollable).first,
+            );
+            await tester.pump();
+
+            expect(find.text('Proof of Authenticity & Credentials'), findsOneWidget);
+            expect(find.text('MANDATORY'), findsOneWidget);
+
+            // Scroll down to the submit button
+            await tester.scrollUntilVisible(
+              find.text('Submit Artisan Application'),
+              300.0,
+              scrollable: find.byType(Scrollable).first,
+            );
+            await tester.pump();
+
+            expect(find.text('Submit Artisan Application'), findsOneWidget);
+          }
+          tester.view.resetPhysicalSize();
+        }, createHttpClient: (context) => _MockHttpClient());
       });
     });
 }

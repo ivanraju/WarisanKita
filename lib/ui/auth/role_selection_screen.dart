@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:warisan_kita/ui/artisan/artisan_application_pending_screen.dart';
 import 'package:warisan_kita/ui/tourist/apply_artisan_screen.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
+import 'package:warisan_kita/ui/core/widgets/heritage_background.dart';
 
 class RoleSelectionScreen extends StatelessWidget {
   const RoleSelectionScreen({super.key});
@@ -91,8 +92,9 @@ class RoleSelectionScreen extends StatelessWidget {
     final isArtisanSuspended = user?.isArtisanStudioSuspended == true;
     final isArtisanRejected = user?.isRejectedArtisan == true;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+    return HeritageBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: Text('Select Your Role', style: GoogleFonts.dmSerifDisplay(color: const Color(0xFF004D40))),
         centerTitle: true,
@@ -207,8 +209,9 @@ class RoleSelectionScreen extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildRoleCard({
     required BuildContext context,

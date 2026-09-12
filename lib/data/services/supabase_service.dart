@@ -1943,6 +1943,8 @@ class SupabaseService {
     required double latitude,
     required double longitude,
     required String reason,
+    String? certUrl,
+    String? certName,
   }) async {
     final cleanEmail = email.trim().toLowerCase();
     await Future.delayed(const Duration(milliseconds: 200));
@@ -1955,6 +1957,14 @@ class SupabaseService {
       'pending_relocation_reason': reason.trim(),
       'pending_relocation_date': DateTime.now().toIso8601String(),
     };
+    if (certUrl != null) {
+      relocData['pending_relocation_cert_url'] = certUrl;
+      relocData['pendingRelocationCertUrl'] = certUrl;
+    }
+    if (certName != null) {
+      relocData['pending_relocation_cert_name'] = certName;
+      relocData['pendingRelocationCertName'] = certName;
+    }
 
     await _savePendingRelocation(cleanEmail, relocData);
 
@@ -1984,6 +1994,8 @@ class SupabaseService {
                   'pending_relocation_reason': reason.trim(),
                   'pending_relocation_date':
                       relocData['pending_relocation_date'],
+                  if (certUrl != null) 'pending_relocation_cert_url': certUrl,
+                  if (certName != null) 'pending_relocation_cert_name': certName,
                   'updated_at': DateTime.now().toIso8601String(),
                 })
                 .eq('user_id', userId);
@@ -2001,6 +2013,8 @@ class SupabaseService {
                   'pending_relocation_reason': reason.trim(),
                   'pending_relocation_date':
                       relocData['pending_relocation_date'],
+                  if (certUrl != null) 'pending_relocation_cert_url': certUrl,
+                  if (certName != null) 'pending_relocation_cert_name': certName,
                   'updated_at': DateTime.now().toIso8601String(),
                 })
                 .eq('id', userId);
@@ -2018,6 +2032,8 @@ class SupabaseService {
       pendingRelocationLongitude: longitude,
       pendingRelocationReason: reason.trim(),
       pendingRelocationDate: relocData['pending_relocation_date'],
+      pendingRelocationCertUrl: certUrl,
+      pendingRelocationCertName: certName,
     );
     await _saveAuthSession(updatedModel);
     return updatedModel;
@@ -2037,12 +2053,16 @@ class SupabaseService {
     userRecord.remove('pending_relocation_lng');
     userRecord.remove('pending_relocation_reason');
     userRecord.remove('pending_relocation_date');
+    userRecord.remove('pending_relocation_cert_url');
+    userRecord.remove('pending_relocation_cert_name');
     userRecord.remove('pendingRelocationAddress');
     userRecord.remove('pendingRelocationState');
     userRecord.remove('pendingRelocationLatitude');
     userRecord.remove('pendingRelocationLongitude');
     userRecord.remove('pendingRelocationReason');
     userRecord.remove('pendingRelocationDate');
+    userRecord.remove('pendingRelocationCertUrl');
+    userRecord.remove('pendingRelocationCertName');
 
     _userStore[cleanEmail] = userRecord;
 

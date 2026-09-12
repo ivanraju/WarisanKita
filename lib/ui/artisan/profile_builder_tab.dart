@@ -11,10 +11,12 @@ import 'package:warisan_kita/data/services/supabase_service.dart';
 import 'package:warisan_kita/domain/models/pending_artisan_profile.dart';
 import 'package:warisan_kita/domain/models/user.dart';
 import 'package:warisan_kita/domain/validators/profile_validator.dart';
+import 'package:warisan_kita/domain/validators/document_validator.dart';
 import 'package:warisan_kita/ui/tourist/artisan_detail_screen.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/moderation_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/directory_viewmodel.dart';
+import 'package:warisan_kita/ui/core/widgets/heritage_background.dart';
 
 class ProfileBuilderTab extends StatefulWidget {
   const ProfileBuilderTab({super.key});
@@ -253,7 +255,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
       _phoneController.text = user.phone ?? '';
     }
 
-    if (force || _workshopAddress == null) {
+    if (force || _workshopAddress == null || (user.address != null && _workshopAddress != user.address)) {
       if (user.address != null && user.address!.isNotEmpty) {
         _workshopAddress = user.address;
       }
@@ -265,6 +267,11 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
       } else if (user.state != null && user.state!.isNotEmpty) {
         _selectedWorkshopPin = _resolveStateCenter(user.state);
       }
+    } else if (user.latitude != null &&
+        user.longitude != null &&
+        user.latitude != 0.0 &&
+        (_selectedWorkshopPin?.latitude != user.latitude || _selectedWorkshopPin?.longitude != user.longitude)) {
+      _selectedWorkshopPin = LatLng(user.latitude!, user.longitude!);
     }
 
     if (force || _portfolioImages.isEmpty) {
@@ -424,25 +431,52 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     final currentUser = authVM.currentUser;
     if (currentUser == null) return;
 
-    LatLng? proposedPin;
-    String? proposedAddress;
-    String? proposedState;
-    final reasonController = TextEditingController();
+    final isUpdating = currentUser.hasPendingRelocation;
+
+    LatLng? proposedPin = isUpdating &&
+            currentUser.pendingRelocationLatitude != null &&
+            currentUser.pendingRelocationLongitude != null
+        ? LatLng(currentUser.pendingRelocationLatitude!, currentUser.pendingRelocationLongitude!)
+        : null;
+    String? proposedAddress = isUpdating ? currentUser.pendingRelocationAddress : null;
+    String? proposedState = isUpdating ? currentUser.pendingRelocationState : null;
+    final reasonController = TextEditingController(
+      text: isUpdating ? (currentUser.pendingRelocationReason ?? '') : '',
+    );
+    fp.PlatformFile? attachedCertFile;
+    String? certFileName = isUpdating ? currentUser.pendingRelocationCertName : null;
+    String? certFileUrl = isUpdating ? currentUser.pendingRelocationCertUrl : null;
+    String? certFileSizeLabel;
+    bool isUploadingCert = false;
+    bool showCertError = false;
+    String? dialogErrorMessage;
     final formKey = GlobalKey<FormState>();
 
     await showDialog<void>(
       context: context,
       builder: (dialogCtx) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            final isDark = Theme.of(context).brightness == Brightness.dark;
-            return AlertDialog(
+        return ScaffoldMessenger(
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
+            body: StatefulBuilder(
+              builder: (dialogContentCtx, setDialogState) {
+                final isDark = Theme.of(dialogContentCtx).brightness == Brightness.dark;
+                return Stack(
+                  children: [
+                    Positioned.fill(
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: isUploadingCert ? null : () => Navigator.pop(dialogCtx),
+                      ),
+                    ),
+                    Center(
+                      child: AlertDialog(
               title: Row(
                 children: [
                   const Icon(Icons.swap_horiz_rounded, color: Color(0xFFD97706)),
                   const SizedBox(width: 8),
                   Text(
-                    'Request Premise Relocation',
+                    isUpdating ? 'Update Relocation Request' : 'Request Premise Relocation',
                     style: GoogleFonts.dmSerifDisplay(fontSize: 18),
                   ),
                 ],
@@ -515,6 +549,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                                 if (reasonController.text.trim().isEmpty) {
                                   reasonController.text = 'Premise relocation to ${result.displayName}';
                                 }
+                                dialogErrorMessage = null;
                               });
                             }
                           },
@@ -564,91 +599,350 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                           ),
                         ),
+                        const SizedBox(height: 16),
+                        Text.rich(
+                          TextSpan(
+                            text: 'Updated Premise Certificate / License (Required):',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
+                            children: const [
+                              TextSpan(
+                                text: ' *',
+                                style: TextStyle(
+                                  color: Color(0xFFDC2626),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Attach updated SSM business registration, council premise license, or tenancy agreement so administrators can verify premise legitimacy.',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11,
+                            color: isDark ? Colors.white60 : Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        if (attachedCertFile != null || (certFileName != null && certFileName!.isNotEmpty)) ...[
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF0FDF4),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: const Color(0xFF86EFAC)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.verified_rounded, color: Color(0xFF16A34A), size: 20),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        attachedCertFile?.name ?? certFileName ?? 'Premise Certificate',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: const Color(0xFF14532D),
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      if (certFileSizeLabel != null)
+                                        Text(
+                                          certFileSizeLabel!,
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 10,
+                                            color: const Color(0xFF15803D),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    setDialogState(() {
+                                      attachedCertFile = null;
+                                      certFileName = null;
+                                      certFileUrl = null;
+                                      certFileSizeLabel = null;
+                                    });
+                                  },
+                                  child: const Text('Remove', style: TextStyle(fontSize: 11, color: Color(0xFFDC2626))),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ] else ...[
+                          OutlinedButton.icon(
+                            onPressed: isUploadingCert
+                                ? null
+                                : () async {
+                                    try {
+                                      final picked = await fp.FilePicker.pickFiles(
+                                        type: fp.FileType.custom,
+                                        allowedExtensions: ['pdf', 'png', 'jpg', 'jpeg'],
+                                      );
+                                      if (picked.isNotEmpty) {
+                                        final file = picked.first;
+                                        final error = await DocumentValidator.validateDocument(
+                                          file,
+                                          documentTitle: 'Premise Verification Certificate',
+                                        );
+                                         if (error != null) {
+                                           if (dialogContentCtx.mounted) {
+                                             ScaffoldMessenger.of(dialogContentCtx).hideCurrentSnackBar();
+                                             ScaffoldMessenger.of(dialogContentCtx).showSnackBar(
+                                               SnackBar(
+                                                 content: Text(error),
+                                                 backgroundColor: const Color(0xFFEF4444),
+                                                 behavior: SnackBarBehavior.floating,
+                                               ),
+                                             );
+                                           }
+                                           return;
+                                         }
+                                         final sizeLabel = DocumentValidator.formatFileSize(
+                                           await file.length(),
+                                         );
+                                         setDialogState(() {
+                                           attachedCertFile = file;
+                                           certFileName = file.name;
+                                           certFileSizeLabel = sizeLabel;
+                                           showCertError = false;
+                                           dialogErrorMessage = null;
+                                         });
+                                       }
+                                     } catch (_) {}
+                                   },
+                             icon: const Icon(Icons.upload_file_rounded, size: 18),
+                             label: Text(
+                               'Attach Updated Certificate / License (PDF/Image)',
+                               style: GoogleFonts.plusJakartaSans(fontSize: 12),
+                             ),
+                           ),
+                         ],
+                         if (showCertError && attachedCertFile == null && (certFileName == null || certFileName!.isEmpty)) ...[
+                           const SizedBox(height: 8),
+                           Container(
+                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                             decoration: BoxDecoration(
+                               color: const Color(0xFFFEF2F2),
+                               borderRadius: BorderRadius.circular(8),
+                               border: Border.all(color: const Color(0xFFFCA5A5)),
+                             ),
+                             child: Row(
+                               children: [
+                                 const Icon(Icons.error_outline_rounded, color: Color(0xFFDC2626), size: 16),
+                                 const SizedBox(width: 8),
+                                 Expanded(
+                                   child: Text(
+                                     'Supporting relocation evidence document is required.',
+                                     style: GoogleFonts.plusJakartaSans(
+                                       fontSize: 11,
+                                       fontWeight: FontWeight.w600,
+                                       color: const Color(0xFFDC2626),
+                                     ),
+                                   ),
+                                 ),
+                               ],
+                             ),
+                           ),
+                         ],
+                         if (dialogErrorMessage != null &&
+                             !(showCertError && attachedCertFile == null && (certFileName == null || certFileName!.isEmpty))) ...[
+                           const SizedBox(height: 8),
+                           Container(
+                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                             decoration: BoxDecoration(
+                               color: const Color(0xFFFEF2F2),
+                               borderRadius: BorderRadius.circular(8),
+                               border: Border.all(color: const Color(0xFFFCA5A5)),
+                             ),
+                             child: Row(
+                               children: [
+                                 const Icon(Icons.error_outline_rounded, color: Color(0xFFDC2626), size: 16),
+                                 const SizedBox(width: 8),
+                                 Expanded(
+                                   child: Text(
+                                     dialogErrorMessage!,
+                                     style: GoogleFonts.plusJakartaSans(
+                                       fontSize: 11,
+                                       fontWeight: FontWeight.w600,
+                                       color: const Color(0xFFDC2626),
+                                     ),
+                                   ),
+                                 ),
+                               ],
+                             ),
+                           ),
+                         ],
                       ],
                     ),
                   ),
                 ),
               ),
               actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(dialogCtx),
-                  child: const Text('Cancel'),
-                ),
-                FilledButton(
-                  onPressed: () async {
-                    if (proposedAddress == null || proposedPin == null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Please select the proposed new workshop location on the map.'),
-                          backgroundColor: Color(0xFFEF4444),
-                        ),
-                      );
-                      return;
-                    }
-                    if (!(formKey.currentState?.validate() ?? false)) {
-                      return;
-                    }
+                 TextButton(
+                   onPressed: isUploadingCert ? null : () => Navigator.pop(dialogCtx),
+                   child: const Text('Cancel'),
+                 ),
+                 FilledButton(
+                   onPressed: isUploadingCert
+                       ? null
+                       : () async {
+                           if (proposedAddress == null || proposedPin == null) {
+                             setDialogState(() {
+                               dialogErrorMessage = 'Please select the proposed new workshop location on the map.';
+                             });
+                             ScaffoldMessenger.of(dialogContentCtx).hideCurrentSnackBar();
+                             ScaffoldMessenger.of(dialogContentCtx).showSnackBar(
+                               const SnackBar(
+                                 content: Text('Please select the proposed new workshop location on the map.'),
+                                 backgroundColor: Color(0xFFEF4444),
+                                 behavior: SnackBarBehavior.floating,
+                               ),
+                             );
+                             return;
+                           }
+                           final formValid = formKey.currentState?.validate() ?? false;
+                           final hasCert = attachedCertFile != null ||
+                               (certFileName != null && certFileName!.isNotEmpty) ||
+                               (certFileUrl != null && certFileUrl!.isNotEmpty);
 
-                    final reason = reasonController.text.trim().isNotEmpty
-                        ? reasonController.text.trim()
-                        : 'Premise relocation to $proposedAddress';
-                    await authVM.submitRelocationRequest(
-                      address: proposedAddress!,
-                      state: proposedState ?? currentUser.state ?? 'Melaka',
-                      latitude: proposedPin!.latitude,
-                      longitude: proposedPin!.longitude,
-                      reason: reason,
-                    );
+                           if (!hasCert) {
+                             setDialogState(() {
+                               showCertError = true;
+                               dialogErrorMessage = 'Please attach supporting evidence (e.g. updated SSM registration or council permit) for premise relocation.';
+                             });
+                           }
 
-                    if (mounted) {
-                      try {
-                        context.read<ModerationViewModel>().addRelocationRequest(
-                          PendingArtisanProfile(
-                            id: 'reloc_${currentUser.id}',
-                            name: currentUser.studioName ?? currentUser.displayName ?? 'Artisan Studio',
-                            craftCategory: currentUser.craftCategory ?? 'Handicraft & Heritage',
-                            state: currentUser.state ?? _stateController.text.trim(),
-                            dateSubmitted: 'Today',
-                            imageUrl: currentUser.avatarUrl ?? '',
-                            email: currentUser.email,
-                            experience: _experienceController.text.trim(),
-                            phone: currentUser.phone ?? _phoneController.text.trim(),
-                            ssmNumber: currentUser.ssmNumber,
-                            bio: currentUser.bio ?? _bioController.text.trim(),
-                            isUpgradeFromTourist: false,
-                            isRelocationRequest: true,
-                            currentAddress: currentUser.address,
-                            proposedAddress: proposedAddress,
-                            proposedLatitude: proposedPin!.latitude,
-                            proposedLongitude: proposedPin!.longitude,
-                            proposedState: proposedState ?? currentUser.state,
-                            relocationReason: reason,
-                          ),
-                        );
-                      } catch (_) {}
+                           if (!formValid || !hasCert) {
+                             if (!hasCert) {
+                               ScaffoldMessenger.of(dialogContentCtx).hideCurrentSnackBar();
+                               ScaffoldMessenger.of(dialogContentCtx).showSnackBar(
+                                 const SnackBar(
+                                   content: Text('Please attach supporting evidence (e.g. updated SSM registration or council permit) for premise relocation.'),
+                                   backgroundColor: Color(0xFFEF4444),
+                                   behavior: SnackBarBehavior.floating,
+                                 ),
+                               );
+                             }
+                             return;
+                           }
 
-                      setState(() {});
-                      if (_workshopMapController != null && proposedPin != null) {
-                        _workshopMapController!.animateCamera(
-                          CameraUpdate.newLatLngZoom(proposedPin!, 15),
-                        );
-                      }
+                          setDialogState(() => isUploadingCert = true);
+                          final supabaseService = context.read<SupabaseService>();
+                          if (attachedCertFile != null) {
+                            try {
+                              String? profileId = currentUser.artisanProfileId;
+                              if (profileId != null && profileId.isNotEmpty) {
+                                final uploadRes = await supabaseService.uploadArtisanDocument(
+                                  profileId,
+                                  attachedCertFile!,
+                                  'RELOCATION_CERT',
+                                );
+                                if (uploadRes != null) {
+                                  certFileUrl = uploadRes['url'];
+                                  certFileName = uploadRes['name'] ?? attachedCertFile!.name;
+                                } else {
+                                  certFileName = attachedCertFile!.name;
+                                }
+                              } else {
+                                certFileName = attachedCertFile!.name;
+                              }
+                            } catch (_) {
+                              certFileName = attachedCertFile!.name;
+                            }
+                          }
 
-                      Navigator.pop(dialogCtx);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Relocation request submitted for Administrative Review.'),
-                          backgroundColor: Color(0xFF047857),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    }
-                  },
-                  child: const Text('Submit Request'),
+                          final reason = reasonController.text.trim().isNotEmpty
+                              ? reasonController.text.trim()
+                              : 'Premise relocation to $proposedAddress';
+                          await authVM.submitRelocationRequest(
+                            address: proposedAddress!,
+                            state: proposedState ?? currentUser.state ?? 'Melaka',
+                            latitude: proposedPin!.latitude,
+                            longitude: proposedPin!.longitude,
+                            reason: reason,
+                            certUrl: certFileUrl,
+                            certName: certFileName,
+                          );
+
+                          if (mounted) {
+                            try {
+                              context.read<ModerationViewModel>().addRelocationRequest(
+                                PendingArtisanProfile(
+                                  id: 'reloc_${currentUser.id}',
+                                  name: currentUser.studioName ?? currentUser.displayName ?? 'Artisan Studio',
+                                  craftCategory: currentUser.craftCategory ?? 'Handicraft & Heritage',
+                                  state: currentUser.state ?? _stateController.text.trim(),
+                                  dateSubmitted: 'Today',
+                                  imageUrl: currentUser.avatarUrl ?? '',
+                                  email: currentUser.email,
+                                  experience: _experienceController.text.trim(),
+                                  phone: currentUser.phone ?? _phoneController.text.trim(),
+                                  ssmNumber: currentUser.ssmNumber,
+                                  bio: currentUser.bio ?? _bioController.text.trim(),
+                                  isUpgradeFromTourist: false,
+                                  isRelocationRequest: true,
+                                  currentAddress: currentUser.address,
+                                  proposedAddress: proposedAddress,
+                                  proposedLatitude: proposedPin!.latitude,
+                                  proposedLongitude: proposedPin!.longitude,
+                                  proposedState: proposedState ?? currentUser.state,
+                                  relocationReason: reason,
+                                  relocationCertFileName: certFileName,
+                                  relocationCertFileUrl: certFileUrl,
+                                  certFileName: certFileName,
+                                  certFileUrl: certFileUrl,
+                                  ssmFileName: certFileName,
+                                  ssmFileUrl: certFileUrl,
+                                ),
+                              );
+                            } catch (_) {}
+
+                            setState(() {});
+                            if (_workshopMapController != null && proposedPin != null) {
+                              _workshopMapController!.animateCamera(
+                                CameraUpdate.newLatLngZoom(proposedPin!, 15),
+                              );
+                            }
+
+                            Navigator.pop(dialogCtx);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(isUpdating
+                                    ? 'Relocation request updated for Administrative Review.'
+                                    : 'Relocation request submitted for Administrative Review.'),
+                                backgroundColor: const Color(0xFF047857),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          }
+                        },
+                  child: isUploadingCert
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : Text(isUpdating ? 'Update Request' : 'Submit Request'),
                 ),
               ],
-            );
-          },
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
         );
       },
     );
@@ -1000,18 +1294,19 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     final authVM = context.watch<AuthViewModel>();
     final currentUser = authVM.currentUser;
 
-    return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        title: Text(
-          'Artisan Profile Builder',
-          style: GoogleFonts.dmSerifDisplay(
-            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
-            fontSize: 22,
+    return HeritageBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          title: Text(
+            'Artisan Profile Builder',
+            style: GoogleFonts.dmSerifDisplay(
+              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+              fontSize: 22,
+            ),
           ),
-        ),
-        backgroundColor: isDark ? const Color(0xFF041412) : Colors.white,
-        elevation: 0,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
@@ -1550,21 +1845,35 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                       ),
                     ],
                     const SizedBox(height: 10),
-                    Row(
+                    Text(
+                      'Public directory shows current verified address until approved.',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 10.5,
+                        color: const Color(0xFF92400E),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        Expanded(
-                          child: Text(
-                            'Public directory shows current verified address until approved.',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 10.5,
-                              color: const Color(0xFF92400E),
-                            ),
+                        FilledButton.icon(
+                          onPressed: _openRelocationDialog,
+                          icon: const Icon(Icons.edit_location_alt_rounded, size: 14),
+                          label: const Text(
+                            'Change Location',
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                          ),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFFD97706),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           ),
                         ),
-                        const SizedBox(width: 8),
                         if (currentUser != null &&
                             currentUser.pendingRelocationLatitude != null &&
-                            currentUser.pendingRelocationLongitude != null) ...[
+                            currentUser.pendingRelocationLongitude != null)
                           OutlinedButton.icon(
                             onPressed: () {
                               final pLat = currentUser.pendingRelocationLatitude;
@@ -1585,8 +1894,6 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                             ),
                           ),
-                          const SizedBox(width: 6),
-                        ],
                         OutlinedButton(
                           onPressed: _handleCancelRelocation,
                           style: OutlinedButton.styleFrom(
@@ -2063,8 +2370,9 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
       ),
     ),
     ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildDocumentUploadTile({
     required bool isDark,

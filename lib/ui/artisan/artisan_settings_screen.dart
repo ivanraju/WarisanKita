@@ -6,6 +6,7 @@ import 'package:warisan_kita/ui/artisan/profile_builder_tab.dart';
 import 'package:warisan_kita/viewmodels/theme_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/directory_viewmodel.dart';
+import 'package:warisan_kita/ui/core/widgets/heritage_background.dart';
 
 class ArtisanSettingsScreen extends StatefulWidget {
   const ArtisanSettingsScreen({super.key});
@@ -329,15 +330,16 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
     final initials = user?.initials ?? 'AS';
     final craft = user?.craftCategory ?? 'Heritage Craft';
 
-    return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        title: Text(
-          'Artisan Studio Settings',
-          style: GoogleFonts.dmSerifDisplay(color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40), fontSize: 22),
-        ),
-        backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
-        elevation: 0,
+    return HeritageBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          title: Text(
+            'Artisan Studio Settings',
+            style: GoogleFonts.dmSerifDisplay(color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40), fontSize: 22),
+          ),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
         leading: Navigator.canPop(context)
             ? IconButton(
                 icon: Icon(Icons.arrow_back_rounded, color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40)),
@@ -514,8 +516,9 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
           const SizedBox(height: 32),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildSectionHeader(String title, {bool isDanger = false}) {
     return Text(
