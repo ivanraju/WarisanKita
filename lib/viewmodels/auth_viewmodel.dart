@@ -450,11 +450,14 @@ class AuthViewModel extends ChangeNotifier {
       }
 
       // Alternate Flow A5: Artisan Active Mode Selection (Master Artisan vs Cultural Tourist)
-      if (user.isArtisan ||
-          user.isApprovedArtisan ||
-          user.isPendingArtisan ||
-          user.isArtisanStudioSuspended ||
-          (user.artisanStatus?.toUpperCase() == 'APPROVED' && user.artisanStatus?.toUpperCase() != 'CLOSED')) {
+      final bool isDualRoleEligible = (user.isApprovedArtisan ||
+              (user.isArtisan &&
+                  !user.isPendingArtisan &&
+                  user.artisanStatus?.toUpperCase() != 'CLOSED' &&
+                  user.artisanStatus?.toUpperCase() != 'REJECTED')) &&
+          user.artisanStatus?.toUpperCase() != 'CLOSED';
+
+      if (isDualRoleEligible) {
         _requiresRoleSelection = true;
         _availableRoles = const ['Master Artisan', 'Cultural Tourist'];
         _statusMessage = 'SELECT YOUR ACTIVE ROLE MODE';
@@ -465,6 +468,20 @@ class AuthViewModel extends ChangeNotifier {
           user: user,
           requiresRoleSelection: true,
           availableRoles: _availableRoles,
+          message: _statusMessage,
+        );
+      }
+
+      // Route pending artisan directly to pending screen
+      if (user.isPendingArtisan) {
+        _activeRole = 'Tourist';
+        _statusMessage = 'LOGIN SUCCESSFUL';
+        _isLoading = false;
+        notifyListeners();
+        return AuthResult(
+          success: true,
+          user: user,
+          route: 'pending_artisan',
           message: _statusMessage,
         );
       }
