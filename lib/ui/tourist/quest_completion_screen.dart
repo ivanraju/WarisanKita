@@ -95,7 +95,7 @@ class _QuestCompletionScreenState extends State<QuestCompletionScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          '🎉 Quest Activated! Follow step-by-step instructions to earn your Plaque!',
+          '🎉 Quest Activated! Follow the steps to complete this quest.',
           style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold),
         ),
         backgroundColor: const Color(0xFF004D40),
@@ -326,7 +326,7 @@ class _QuestCompletionScreenState extends State<QuestCompletionScreen> {
                 const SizedBox(height: 6),
 
                 Text(
-                  'Digital Plaque Unlocked!',
+                  'Quest Completed!',
                   style: GoogleFonts.dmSerifDisplay(
                     fontSize: 24,
                     color: const Color(0xFF0F172A),
@@ -336,69 +336,11 @@ class _QuestCompletionScreenState extends State<QuestCompletionScreen> {
                 const SizedBox(height: 8),
 
                 Text(
-                  'You earned +500 EXP and a Digital Plaque of Authenticity!',
+                  'Your verified quest progress and eligible rewards have been saved.',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 13,
                     color: Colors.grey[700],
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // Digital Plaque Card with Wax Seal
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFFFFBEB), Color(0xFFFEF3C7)],
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: const Color(0xFFF59E0B),
-                      width: 1.5,
-                    ),
-                    boxShadow: const [
-                      BoxShadow(color: Colors.black12, blurRadius: 8),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFD97706),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.verified_rounded,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Plaque of Authenticity #8492',
-                              style: GoogleFonts.dmSerifDisplay(
-                                fontSize: 15,
-                                color: const Color(0xFF78350F),
-                              ),
-                            ),
-                            Text(
-                              'Certified by ${widget.workshopName}',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 11,
-                                color: const Color(0xFFB45309),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
                   ),
                 ),
 
@@ -421,7 +363,7 @@ class _QuestCompletionScreenState extends State<QuestCompletionScreen> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          'Rank Up! Promoted to Tier 4 Heritage Guardian!',
+                          'Your Heritage Passport progress has been updated.',
                           style: GoogleFonts.plusJakartaSans(
                             color: Colors.white,
                             fontSize: 11,
@@ -449,7 +391,7 @@ class _QuestCompletionScreenState extends State<QuestCompletionScreen> {
                         borderRadius: BorderRadius.circular(16),
                       ),
                     ),
-                    child: const Text('COLLECT REWARDS'),
+                    child: const Text('DONE'),
                   ),
                 ),
               ],
@@ -520,7 +462,7 @@ class _QuestCompletionScreenState extends State<QuestCompletionScreen> {
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
-                            '🔥 +500 EXP REWARD',
+                            'CULTURAL QUEST',
                             softWrap: true,
                             style: GoogleFonts.plusJakartaSans(
                               color: const Color(0xFF004D40),
@@ -607,21 +549,6 @@ class _QuestCompletionScreenState extends State<QuestCompletionScreen> {
                           SizedBox(width: 6),
                           Text(
                             'Est. 45 Mins Session',
-                            style: TextStyle(color: Colors.white, fontSize: 12),
-                          ),
-                        ],
-                      ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: const [
-                          Icon(
-                            Icons.workspace_premium_outlined,
-                            color: Color(0xFFFFD54F),
-                            size: 16,
-                          ),
-                          SizedBox(width: 6),
-                          Text(
-                            'Plaque Certified',
                             style: TextStyle(color: Colors.white, fontSize: 12),
                           ),
                         ],

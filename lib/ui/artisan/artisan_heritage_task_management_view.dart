@@ -734,10 +734,31 @@ class _ArtisanHeritageTaskManagementViewState
           ),
         ),
       ),
-      body: RefreshIndicator(
-        color: isDark ? const Color(0xFFFFD54F) : _green,
-        onRefresh: viewModel.loadArtisanQuestAndTasks,
-        child: _body(viewModel, isDark),
+      body: DecoratedBox(
+        decoration: BoxDecoration(
+          color: isDark
+              ? const Color(0xFF041412)
+              : const Color(0xFFF7F5EF),
+          image: DecorationImage(
+            image: const AssetImage(
+              'assets/images/heritage_passport_background.png',
+            ),
+            fit: BoxFit.cover,
+            repeat: ImageRepeat.repeatY,
+            opacity: isDark ? 0.28 : 0.55,
+            colorFilter: isDark
+                ? const ColorFilter.mode(
+                    Color(0xFF2A6A5C),
+                    BlendMode.modulate,
+                  )
+                : null,
+          ),
+        ),
+        child: RefreshIndicator(
+          color: isDark ? const Color(0xFFFFD54F) : _green,
+          onRefresh: viewModel.loadArtisanQuestAndTasks,
+          child: _body(viewModel, isDark),
+        ),
       ),
     );
   }

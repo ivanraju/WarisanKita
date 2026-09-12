@@ -814,9 +814,7 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
         'icon': isReloc
             ? Icons.swap_horiz_rounded
             : Icons.verified_user_rounded,
-        'color': isReloc
-            ? const Color(0xFFD97706)
-            : const Color(0xFF10B981),
+        'color': isReloc ? const Color(0xFFD97706) : const Color(0xFF10B981),
         'title': (record.title ?? 'Approved Record').toString(),
         'time': (record.formattedDate ?? 'Recently').toString(),
         'subtitle': '${record.targetName} • ${record.details}',
@@ -831,8 +829,7 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
           'color': const Color(0xFF10B981),
           'title': '${artisan.name} Studio Verified',
           'time': artisan.verifiedDate,
-          'subtitle':
-              'License ${artisan.licenseNo} • ${artisan.plaques} Digital Plaques Issued (${artisan.state})',
+          'subtitle': 'License ${artisan.licenseNo} • ${artisan.state}',
         });
       }
     }

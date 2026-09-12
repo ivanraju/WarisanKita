@@ -1115,7 +1115,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
                       : isOutOfRange
                       ? 'Return to Quest Area'
                       : canResume
-                      ? 'Start Quest'
+                      ? 'Resume Quest'
                       : canStop
                       ? 'Stop Quest'
                       : isOutsideBeforeStart

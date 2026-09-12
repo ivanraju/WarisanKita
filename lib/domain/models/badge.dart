@@ -198,13 +198,11 @@ class PassportSnapshot {
   final int completedTaskCount;
   final int completedQuestCount;
   final int visitedQuestCount;
-  final int digitalPlaqueCount;
   final int availableStampCount;
   final bool hasXpData;
   final bool hasStampData;
   final bool hasQuestStatistics;
   final bool hasVisitedStudioData;
-  final bool hasDigitalPlaqueData;
   final bool hasAvailableStampData;
   final List<String> warnings;
   final List<HeritageStamp> stamps;
@@ -216,13 +214,11 @@ class PassportSnapshot {
     required this.completedTaskCount,
     required this.completedQuestCount,
     required this.visitedQuestCount,
-    required this.digitalPlaqueCount,
     required this.availableStampCount,
     required this.hasXpData,
     required this.hasStampData,
     required this.hasQuestStatistics,
     this.hasVisitedStudioData = true,
-    required this.hasDigitalPlaqueData,
     required this.hasAvailableStampData,
     this.warnings = const [],
     required this.stamps,
@@ -234,12 +230,10 @@ class PassportSnapshot {
     required List<HeritageStamp> earnedStamps,
     Iterable<Map<String, dynamic>> availableQuests = const [],
     Iterable<CompletedPassportQuest> completedQuests = const [],
-    int digitalPlaqueCount = 0,
     bool hasXpData = true,
     bool hasStampData = true,
     bool hasQuestStatistics = true,
     bool hasVisitedStudioData = true,
-    bool hasDigitalPlaqueData = true,
     bool hasAvailableStampData = true,
     List<String> warnings = const [],
   }) {
@@ -290,13 +284,11 @@ class PassportSnapshot {
       completedTaskCount: validTasks.length,
       completedQuestCount: completedByQuest.length,
       visitedQuestCount: visitedStudios.length,
-      digitalPlaqueCount: digitalPlaqueCount < 0 ? 0 : digitalPlaqueCount,
       availableStampCount: availableByQuest.length,
       hasXpData: hasXpData,
       hasStampData: hasStampData,
       hasQuestStatistics: hasQuestStatistics,
       hasVisitedStudioData: hasVisitedStudioData,
-      hasDigitalPlaqueData: hasDigitalPlaqueData,
       hasAvailableStampData: hasAvailableStampData,
       warnings: List.unmodifiable(warnings),
       stamps: List.unmodifiable([...sortedEarnedStamps, ...lockedStamps]),

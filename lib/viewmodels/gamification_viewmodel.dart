@@ -192,9 +192,6 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
   int _completedPassportQuests = 0;
   int get completedPassportQuests => _completedPassportQuests;
 
-  int _digitalPassportPlaques = 0;
-  int get digitalPassportPlaques => _digitalPassportPlaques;
-
   int _availablePassportStamps = 0;
   int get availablePassportStamps => _availablePassportStamps;
 
@@ -206,9 +203,6 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
 
   bool _hasPassportQuestStatistics = true;
   bool get hasPassportQuestStatistics => _hasPassportQuestStatistics;
-
-  bool _hasDigitalPassportPlaqueData = true;
-  bool get hasDigitalPassportPlaqueData => _hasDigitalPassportPlaqueData;
 
   bool _hasAvailablePassportStampData = true;
   bool get hasAvailablePassportStampData => _hasAvailablePassportStampData;
@@ -315,12 +309,10 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
         _visitedPassportQuests = snapshot.visitedQuestCount;
         _hasVisitedPassportStudioData = snapshot.hasVisitedStudioData;
         _completedPassportQuests = snapshot.completedQuestCount;
-        _digitalPassportPlaques = snapshot.digitalPlaqueCount;
         _availablePassportStamps = snapshot.availableStampCount;
         _hasPassportXpData = snapshot.hasXpData;
         _hasPassportStampData = snapshot.hasStampData;
         _hasPassportQuestStatistics = snapshot.hasQuestStatistics;
-        _hasDigitalPassportPlaqueData = snapshot.hasDigitalPlaqueData;
         _hasAvailablePassportStampData = snapshot.hasAvailableStampData;
         _passportWarning = snapshot.warnings.isEmpty
             ? null
