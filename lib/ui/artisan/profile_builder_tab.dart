@@ -1293,6 +1293,10 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final authVM = context.watch<AuthViewModel>();
     final currentUser = authVM.currentUser;
+    final int ssmUploaded = _documents['SSM_BUSINESS_CERT'] != null ? 1 : 0;
+    final int certUploaded = _documents['KRAFTANGAN_MASTER_CERT'] != null ? 1 : 0;
+    final int totalUploadedDocs = ssmUploaded + certUploaded;
+    final bool hasUploadedDocs = totalUploadedDocs > 0;
 
     return HeritageBackground(
       child: Scaffold(
@@ -2263,16 +2267,22 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF0D2825) : const Color(0xFFECFDF5),
+                    color: isDark
+                        ? (hasUploadedDocs ? const Color(0xFF0D2825) : const Color(0xFF1E293B))
+                        : (hasUploadedDocs ? const Color(0xFFECFDF5) : const Color(0xFFF1F5F9)),
                     borderRadius: BorderRadius.circular(8),
-                    border: isDark ? Border.all(color: const Color(0xFF1E3A34)) : null,
+                    border: isDark
+                        ? Border.all(color: hasUploadedDocs ? const Color(0xFF1E3A34) : const Color(0xFF334155))
+                        : null,
                   ),
                   child: Text(
-                    '3 / 3 Uploaded',
+                    '$totalUploadedDocs / 2 Uploaded',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
-                      color: isDark ? const Color(0xFF34D399) : const Color(0xFF047857),
+                      color: isDark
+                          ? (hasUploadedDocs ? const Color(0xFF34D399) : const Color(0xFF94A3B8))
+                          : (hasUploadedDocs ? const Color(0xFF047857) : const Color(0xFF64748B)),
                     ),
                   ),
                 ),
