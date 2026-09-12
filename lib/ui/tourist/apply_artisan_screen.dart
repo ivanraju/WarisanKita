@@ -643,6 +643,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
   @override
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width > 800;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return HeritageBackground(
       child: Scaffold(
@@ -650,582 +651,804 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF004D40)),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: Text(
-          'Apply for Master Artisan',
-          style: GoogleFonts.dmSerifDisplay(
-            color: const Color(0xFF004D40),
-            fontSize: 22,
-          ),
-        ),
-        centerTitle: true,
-      ),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(
-            horizontal: isDesktop ? 24 : 16,
-            vertical: 20,
-          ),
-          child: Container(
-            width: isDesktop ? 600 : double.infinity,
-            padding: EdgeInsets.all(isDesktop ? 28.0 : 20.0),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
+          leading: IconButton(
+            icon: Icon(
+              Icons.arrow_back_rounded,
+              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
             ),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Info Card
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFFBEB),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFFCD34D)),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          title: Text(
+            'Apply for Master Artisan',
+            style: GoogleFonts.dmSerifDisplay(
+              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+              fontSize: 22,
+            ),
+          ),
+          centerTitle: true,
+        ),
+        body: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: Center(
+            child: SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: EdgeInsets.symmetric(
+                horizontal: isDesktop ? 24 : 16,
+                vertical: 20,
+              ),
+              child: Container(
+                width: isDesktop ? 600 : double.infinity,
+                padding: EdgeInsets.all(isDesktop ? 28.0 : 20.0),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF0D2825) : Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  border: isDark ? Border.all(color: const Color(0xFF1E3A34)) : null,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
                     ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(
-                          Icons.verified_rounded,
-                          color: Color(0xFFD97706),
-                          size: 24,
+                  ],
+                ),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Info Card
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF231F10) : const Color(0xFFFFFBEB),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isDark ? const Color(0xFF78350F) : const Color(0xFFFCD34D),
+                          ),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Kraftangan Malaysia Accreditation',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                  color: const Color(0xFF92400E),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              Icons.verified_rounded,
+                              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFD97706),
+                              size: 24,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Kraftangan Malaysia Accreditation',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF92400E),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Register your heritage workshop to host interactive quests, create unique QR keys, and gain verified status on the live directory.',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 11,
+                                      color: isDark ? const Color(0xFFFFE082) : const Color(0xFF78350F),
+                                      height: 1.3,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      Text(
+                        'Studio & Workshop Details',
+                        style: GoogleFonts.dmSerifDisplay(
+                          fontSize: 18,
+                          color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Studio Name
+                      TextFormField(
+                        controller: _studioNameController,
+                        style: GoogleFonts.plusJakartaSans(
+                          color: isDark ? Colors.white : const Color(0xFF0F172A),
+                          fontSize: 13.5,
+                        ),
+                        decoration: InputDecoration(
+                          labelText: 'Studio Name *',
+                          labelStyle: TextStyle(
+                            color: isDark ? Colors.white70 : const Color(0xFF475569),
+                          ),
+                          hintText: 'e.g. Pak Mat Pottery & Ceramics Studio',
+                          hintStyle: TextStyle(
+                            color: isDark ? Colors.white38 : Colors.grey[400],
+                          ),
+                          prefixIcon: Icon(
+                            Icons.storefront_rounded,
+                            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                          ),
+                          filled: true,
+                          fillColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(
+                              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                        validator: ProfileValidator.validateStudioName,
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Craft Category Dropdown
+                      DropdownButtonFormField<String>(
+                        isExpanded: true,
+                        initialValue: _selectedCraftCategory,
+                        dropdownColor: isDark ? const Color(0xFF0D2825) : Colors.white,
+                        style: GoogleFonts.plusJakartaSans(
+                          color: isDark ? Colors.white : const Color(0xFF0F172A),
+                          fontSize: 13,
+                        ),
+                        decoration: InputDecoration(
+                          labelText: 'Heritage Craft Category *',
+                          labelStyle: TextStyle(
+                            color: isDark ? Colors.white70 : const Color(0xFF475569),
+                          ),
+                          prefixIcon: Icon(
+                            Icons.palette_outlined,
+                            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                          ),
+                          filled: true,
+                          fillColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(
+                              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                        items: _craftCategories
+                            .map(
+                              (c) => DropdownMenuItem(
+                                value: c,
+                                child: Text(
+                                  c,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 13,
+                                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                  ),
                                 ),
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Register your heritage workshop to host interactive quests, create unique QR keys, and gain verified status on the live directory.',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 11,
-                                  color: const Color(0xFF78350F),
-                                  height: 1.3,
+                            )
+                            .toList(),
+                        onChanged: (v) =>
+                            setState(() => _selectedCraftCategory = v!),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // State / Location Dropdown
+                      DropdownButtonFormField<String>(
+                        isExpanded: true,
+                        initialValue: _selectedState,
+                        dropdownColor: isDark ? const Color(0xFF0D2825) : Colors.white,
+                        style: GoogleFonts.plusJakartaSans(
+                          color: isDark ? Colors.white : const Color(0xFF0F172A),
+                          fontSize: 13,
+                        ),
+                        decoration: InputDecoration(
+                          labelText: 'Workshop State / Region *',
+                          labelStyle: TextStyle(
+                            color: isDark ? Colors.white70 : const Color(0xFF475569),
+                          ),
+                          prefixIcon: Icon(
+                            Icons.location_on_outlined,
+                            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                          ),
+                          filled: true,
+                          fillColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(
+                              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                        items: _malaysiaStates
+                            .map(
+                              (s) => DropdownMenuItem(
+                                value: s,
+                                child: Text(
+                                  s,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 13,
+                                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                  ),
+                                ),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (v) {
+                          if (v == null) return;
+                          setState(() {
+                            _selectedState = v;
+                            _workshopLocation = null;
+                            _workshopAddress = null;
+                            _locationError = null;
+                            _locationSearchController.clear();
+                          });
+                          _moveMapToSelectedState(v);
+                        },
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      _buildWorkshopLocationPicker(),
+
+                      const SizedBox(height: 16),
+
+                      // SSM Registration Number
+                      TextFormField(
+                        controller: _ssmController,
+                        autovalidateMode: AutovalidateMode.onUserInteraction,
+                        style: GoogleFonts.plusJakartaSans(
+                          color: isDark ? Colors.white : const Color(0xFF0F172A),
+                          fontSize: 13.5,
+                        ),
+                        decoration: InputDecoration(
+                          labelText: 'SSM / Kraftangan Reg. No. *',
+                          labelStyle: TextStyle(
+                            color: isDark ? Colors.white70 : const Color(0xFF475569),
+                          ),
+                          hintText: 'e.g. 202601004821 or KT/2026/0491',
+                          hintStyle: TextStyle(
+                            color: isDark ? Colors.white38 : Colors.grey[400],
+                          ),
+                          prefixIcon: Icon(
+                            Icons.badge_outlined,
+                            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                          ),
+                          suffixIcon: _isCheckingSsm
+                              ? Padding(
+                                  padding: const EdgeInsets.all(12),
+                                  child: SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                                    ),
+                                  ),
+                                )
+                              : (_isSsmAvailable != null
+                                  ? Icon(
+                                      _isSsmAvailable!
+                                          ? Icons.check_circle_rounded
+                                          : Icons.cancel_rounded,
+                                      color: _isSsmAvailable!
+                                          ? const Color(0xFF10B981)
+                                          : const Color(0xFFEF4444),
+                                    )
+                                  : null),
+                          helperText: _isSsmAvailable == true
+                              ? _ssmStatusMessage
+                              : 'Format: 12-digit SSM (202601004821), ROB (123456-A), or Kraftangan (KT/2026/0491)',
+                          helperStyle: GoogleFonts.plusJakartaSans(
+                            fontSize: 11,
+                            fontWeight: _isSsmAvailable == true
+                                ? FontWeight.w600
+                                : FontWeight.normal,
+                            color: _isSsmAvailable == true
+                                ? const Color(0xFF10B981)
+                                : (isDark ? Colors.white54 : Colors.grey[600]),
+                          ),
+                          filled: true,
+                          fillColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
+                          errorMaxLines: 3,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(
+                              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                        validator: (v) {
+                          final formatErr = SsmValidator.validate(v);
+                          if (formatErr != null) return formatErr;
+                          if (_isSsmAvailable == false) {
+                            return _ssmStatusMessage ?? 'This SSM number is already registered';
+                          }
+                          return null;
+                        },
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Contact Phone
+                      TextFormField(
+                        controller: _phoneController,
+                        keyboardType: TextInputType.phone,
+                        style: GoogleFonts.plusJakartaSans(
+                          color: isDark ? Colors.white : const Color(0xFF0F172A),
+                          fontSize: 13.5,
+                        ),
+                        decoration: InputDecoration(
+                          labelText: 'Studio Contact Phone',
+                          labelStyle: TextStyle(
+                            color: isDark ? Colors.white70 : const Color(0xFF475569),
+                          ),
+                          hintText: 'e.g. 012-345 6789 or +60123456789',
+                          hintStyle: TextStyle(
+                            color: isDark ? Colors.white38 : Colors.grey[400],
+                          ),
+                          prefixIcon: Icon(
+                            Icons.phone_outlined,
+                            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                          ),
+                          filled: true,
+                          fillColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
+                          errorMaxLines: 2,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(
+                              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                        validator: (v) => ProfileValidator.validatePhone(v, isRequired: false),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Years of Craft Experience
+                      TextFormField(
+                        controller: _experienceController,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(2),
+                        ],
+                        autovalidateMode: AutovalidateMode.onUserInteraction,
+                        style: GoogleFonts.plusJakartaSans(
+                          color: isDark ? Colors.white : const Color(0xFF0F172A),
+                          fontSize: 13.5,
+                        ),
+                        decoration: InputDecoration(
+                          labelText: 'Years of Craft Experience *',
+                          labelStyle: TextStyle(
+                            color: isDark ? Colors.white70 : const Color(0xFF475569),
+                          ),
+                          hintText: 'e.g. 15',
+                          hintStyle: TextStyle(
+                            color: isDark ? Colors.white38 : Colors.grey[400],
+                          ),
+                          suffixText: 'Years',
+                          suffixStyle: GoogleFonts.plusJakartaSans(
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                          ),
+                          prefixIcon: Icon(
+                            Icons.workspace_premium_outlined,
+                            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                          ),
+                          filled: true,
+                          fillColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
+                          helperText: 'Enter your years of craft heritage experience in numbers (e.g. 15)',
+                          helperStyle: GoogleFonts.plusJakartaSans(
+                            fontSize: 11,
+                            color: isDark ? Colors.white54 : Colors.grey[600],
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(
+                              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                        validator: (v) => ProfileValidator.validateExperience(v, isRequired: true),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Bio / Heritage Description
+                      TextFormField(
+                        controller: _bioController,
+                        maxLines: 3,
+                        textInputAction: TextInputAction.done,
+                        onFieldSubmitted: (_) => FocusScope.of(context).unfocus(),
+                        validator: (v) => ProfileValidator.validateBio(
+                          v,
+                          isRequired: true,
+                          minLength: 15,
+                        ),
+                        style: GoogleFonts.plusJakartaSans(
+                          color: isDark ? Colors.white : const Color(0xFF0F172A),
+                          fontSize: 13.5,
+                        ),
+                        decoration: InputDecoration(
+                          labelText: 'Studio Heritage Bio *',
+                          labelStyle: TextStyle(
+                            color: isDark ? Colors.white70 : const Color(0xFF475569),
+                          ),
+                          hintText:
+                              'Describe your craft background, workshop history, and master lineage (min 15 chars)...',
+                          hintStyle: TextStyle(
+                            color: isDark ? Colors.white38 : Colors.grey[400],
+                          ),
+                          prefixIcon: Padding(
+                            padding: const EdgeInsets.only(bottom: 45),
+                            child: Icon(
+                              Icons.history_edu_rounded,
+                              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                            ),
+                          ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              Icons.keyboard_hide_rounded,
+                              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                            ),
+                            tooltip: 'Done / Exit Keyboard',
+                            onPressed: () => FocusScope.of(context).unfocus(),
+                          ),
+                          filled: true,
+                          fillColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(
+                              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      Text(
+                        'Traditional Materials & Tools Used',
+                        style: GoogleFonts.dmSerifDisplay(
+                          fontSize: 16,
+                          color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          ..._toolsAndMaterials.map((tool) => Chip(
+                                backgroundColor: isDark ? const Color(0xFF041412) : null,
+                                side: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : null,
+                                label: Text(
+                                  tool,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 11,
+                                    color: isDark ? Colors.white : null,
+                                  ),
+                                ),
+                                deleteIcon: Icon(
+                                  Icons.close,
+                                  size: 14,
+                                  color: isDark ? Colors.white70 : null,
+                                ),
+                                onDeleted: () {
+                                  setState(() => _toolsAndMaterials.remove(tool));
+                                },
+                              )),
+                          ActionChip(
+                            avatar: Icon(
+                              Icons.add,
+                              size: 14,
+                              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFD97706),
+                            ),
+                            label: Text(
+                              'Add Tool/Material',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFD97706),
+                              ),
+                            ),
+                            backgroundColor: isDark ? const Color(0xFF231F10) : const Color(0xFFFEF3C7),
+                            side: isDark ? const BorderSide(color: Color(0xFF78350F)) : BorderSide.none,
+                            onPressed: () {
+                              final textController = TextEditingController();
+                              final dialogFormKey = GlobalKey<FormState>();
+                              showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  backgroundColor: isDark ? const Color(0xFF0D2825) : null,
+                                  title: Text(
+                                    'Add Traditional Tool or Material',
+                                    style: GoogleFonts.dmSerifDisplay(
+                                      color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                                    ),
+                                  ),
+                                  content: Form(
+                                    key: dialogFormKey,
+                                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                                    child: TextFormField(
+                                      controller: textController,
+                                      style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
+                                      validator: (v) => ProfileValidator.validateTag(
+                                        v,
+                                        _toolsAndMaterials,
+                                      ),
+                                      decoration: InputDecoration(
+                                        hintText: 'e.g. Natural Indigo Dye',
+                                        hintStyle: TextStyle(
+                                          color: isDark ? Colors.white38 : Colors.grey[400],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: Text(
+                                        'Cancel',
+                                        style: TextStyle(
+                                          color: isDark ? Colors.white70 : null,
+                                        ),
+                                      ),
+                                    ),
+                                    ElevatedButton(
+                                      onPressed: () {
+                                        if (dialogFormKey.currentState?.validate() ?? false) {
+                                          setState(() => _toolsAndMaterials.add(textController.text.trim()));
+                                          Navigator.pop(context);
+                                        }
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: isDark ? const Color(0xFF1E3A34) : null,
+                                        foregroundColor: isDark ? const Color(0xFFFFD54F) : null,
+                                      ),
+                                      child: const Text('Add'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 8,
+                        runSpacing: 6,
+                        children: [
+                          Text(
+                            'Proof of Authenticity & Credentials',
+                            style: GoogleFonts.dmSerifDisplay(
+                              fontSize: 16,
+                              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF3B1212) : const Color(0xFFFEF2F2),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: isDark ? const Color(0xFF991B1B) : const Color(0xFFF87171),
+                              ),
+                            ),
+                            child: Text(
+                              'MANDATORY',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? const Color(0xFFFCA5A5) : const Color(0xFFDC2626),
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Both official SSM business registration and your Kraftangan Malaysia accreditation certificate are required for verified Master Artisan status.',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Document Pickers
+                      _buildUploadTile(
+                        icon: Icons.description_outlined,
+                        title: '1. SSM Business Registration PDF / Image *',
+                        subtitle: _ssmFile != null
+                            ? 'Attached: ${_ssmFile!.name} ($_ssmFileSizeLabel)'
+                            : 'Upload official SSM business certificate (10 KB – 10 MB)',
+                        isAttached: _ssmFile != null,
+                        onTap: _pickSsmDocument,
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      _buildUploadTile(
+                        icon: Icons.workspace_premium_outlined,
+                        title: '2. Kraftangan Master Certificate *',
+                        subtitle: _kraftanganFile != null
+                            ? 'Attached: ${_kraftanganFile!.name} ($_kraftanganFileSizeLabel)'
+                            : 'Upload accreditation certificate from Kraftangan Malaysia',
+                        isAttached: _kraftanganFile != null,
+                        onTap: _pickKraftanganCertificate,
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      _buildUploadTile(
+                        icon: Icons.photo_camera_outlined,
+                        title: 'Studio Workshop Photos (Optional)',
+                        subtitle: _uploadedPhotos.isNotEmpty
+                            ? 'Attached ${_uploadedPhotos.length} photo(s)'
+                            : 'Upload photos of your craft studio/workshop',
+                        isAttached: _uploadedPhotos.isNotEmpty,
+                        onTap: _pickStudioPhotos,
+                      ),
+
+                      if (_documentError != null) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF3B1212) : const Color(0xFFFEF2F2),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: isDark ? const Color(0xFF991B1B) : const Color(0xFFFCA5A5),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.error_outline_rounded,
+                                color: isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626),
+                                size: 18,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _documentError!,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    color: isDark ? const Color(0xFFFCA5A5) : const Color(0xFFB91C1C),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
                             ],
                           ),
                         ),
                       ],
-                    ),
-                  ),
 
-                  const SizedBox(height: 24),
+                      const SizedBox(height: 24),
 
-                  Text(
-                    'Studio & Workshop Details',
-                    style: GoogleFonts.dmSerifDisplay(
-                      fontSize: 18,
-                      color: const Color(0xFF004D40),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Studio Name
-                  TextFormField(
-                    controller: _studioNameController,
-                    decoration: InputDecoration(
-                      labelText: 'Studio Name *',
-                      hintText: 'e.g. Pak Mat Pottery & Ceramics Studio',
-                      prefixIcon: const Icon(
-                        Icons.storefront_rounded,
-                        color: Color(0xFF004D40),
-                      ),
-                      filled: true,
-                      fillColor: const Color(0xFFF8F9FA),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                    validator: ProfileValidator.validateStudioName,
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Craft Category Dropdown
-                  DropdownButtonFormField<String>(
-                    isExpanded: true,
-                    initialValue: _selectedCraftCategory,
-                    decoration: InputDecoration(
-                      labelText: 'Heritage Craft Category *',
-                      prefixIcon: const Icon(
-                        Icons.palette_outlined,
-                        color: Color(0xFF004D40),
-                      ),
-                      filled: true,
-                      fillColor: const Color(0xFFF8F9FA),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                    items: _craftCategories
-                        .map(
-                          (c) => DropdownMenuItem(
-                            value: c,
-                            child: Text(
-                              c,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.plusJakartaSans(fontSize: 13),
+                      // Submit Button
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: FilledButton(
+                          onPressed: _isSubmitting ? null : _submitApplication,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: isDark ? const Color(0xFF1E3A34) : const Color(0xFF004D40),
+                            foregroundColor: isDark ? const Color(0xFFFFD54F) : Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
                             ),
                           ),
-                        )
-                        .toList(),
-                    onChanged: (v) =>
-                        setState(() => _selectedCraftCategory = v!),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // State / Location Dropdown
-                  DropdownButtonFormField<String>(
-                    isExpanded: true,
-                    initialValue: _selectedState,
-                    decoration: InputDecoration(
-                      labelText: 'Workshop State / Region *',
-                      prefixIcon: const Icon(
-                        Icons.location_on_outlined,
-                        color: Color(0xFF004D40),
-                      ),
-                      filled: true,
-                      fillColor: const Color(0xFFF8F9FA),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                    items: _malaysiaStates
-                        .map(
-                          (s) => DropdownMenuItem(
-                            value: s,
-                            child: Text(
-                              s,
-                              style: GoogleFonts.plusJakartaSans(fontSize: 13),
-                            ),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (v) {
-                      if (v == null) return;
-                      setState(() {
-                        _selectedState = v;
-                        _workshopLocation = null;
-                        _workshopAddress = null;
-                        _locationError = null;
-                        _locationSearchController.clear();
-                      });
-                      _moveMapToSelectedState(v);
-                    },
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  _buildWorkshopLocationPicker(),
-
-                  const SizedBox(height: 16),
-
-                  // SSM Registration Number
-                  TextFormField(
-                    controller: _ssmController,
-                    autovalidateMode: AutovalidateMode.onUserInteraction,
-                    decoration: InputDecoration(
-                      labelText: 'SSM / Kraftangan Reg. No. *',
-                      hintText: 'e.g. 202601004821 or KT/2026/0491',
-                      prefixIcon: const Icon(
-                        Icons.badge_outlined,
-                        color: Color(0xFF004D40),
-                      ),
-                      suffixIcon: _isCheckingSsm
-                          ? const Padding(
-                              padding: EdgeInsets.all(12),
-                              child: SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Color(0xFF004D40),
-                                ),
-                              ),
-                            )
-                          : (_isSsmAvailable != null
-                              ? Icon(
-                                  _isSsmAvailable!
-                                      ? Icons.check_circle_rounded
-                                      : Icons.cancel_rounded,
-                                  color: _isSsmAvailable!
-                                      ? const Color(0xFF10B981)
-                                      : const Color(0xFFEF4444),
+                          child: _isSubmitting
+                              ? SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    color: isDark ? const Color(0xFFFFD54F) : Colors.white,
+                                    strokeWidth: 2.5,
+                                  ),
                                 )
-                              : null),
-                      helperText: _isSsmAvailable == true
-                          ? _ssmStatusMessage
-                          : 'Format: 12-digit SSM (202601004821), ROB (123456-A), or Kraftangan (KT/2026/0491)',
-                      helperStyle: GoogleFonts.plusJakartaSans(
-                        fontSize: 11,
-                        fontWeight: _isSsmAvailable == true
-                            ? FontWeight.w600
-                            : FontWeight.normal,
-                        color: _isSsmAvailable == true
-                            ? const Color(0xFF10B981)
-                            : Colors.grey[600],
-                      ),
-                      filled: true,
-                      fillColor: const Color(0xFFF8F9FA),
-                      errorMaxLines: 3,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                    validator: (v) {
-                      final formatErr = SsmValidator.validate(v);
-                      if (formatErr != null) return formatErr;
-                      if (_isSsmAvailable == false) {
-                        return _ssmStatusMessage ?? 'This SSM number is already registered';
-                      }
-                      return null;
-                    },
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Contact Phone
-                  TextFormField(
-                    controller: _phoneController,
-                    keyboardType: TextInputType.phone,
-                    decoration: InputDecoration(
-                      labelText: 'Studio Contact Phone',
-                      hintText: 'e.g. 012-345 6789 or +60123456789',
-                      prefixIcon: const Icon(
-                        Icons.phone_outlined,
-                        color: Color(0xFF004D40),
-                      ),
-                      filled: true,
-                      fillColor: const Color(0xFFF8F9FA),
-                      errorMaxLines: 2,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                    validator: (v) => ProfileValidator.validatePhone(v, isRequired: false),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Years of Craft Experience
-                  TextFormField(
-                    controller: _experienceController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                      LengthLimitingTextInputFormatter(2),
-                    ],
-                    autovalidateMode: AutovalidateMode.onUserInteraction,
-                    decoration: InputDecoration(
-                      labelText: 'Years of Craft Experience *',
-                      hintText: 'e.g. 15',
-                      suffixText: 'Years',
-                      suffixStyle: GoogleFonts.plusJakartaSans(
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF004D40),
-                      ),
-                      prefixIcon: const Icon(
-                        Icons.workspace_premium_outlined,
-                        color: Color(0xFF004D40),
-                      ),
-                      filled: true,
-                      fillColor: const Color(0xFFF8F9FA),
-                      helperText: 'Enter your years of craft heritage experience in numbers (e.g. 15)',
-                      helperStyle: GoogleFonts.plusJakartaSans(
-                        fontSize: 11,
-                        color: Colors.grey[600],
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                    validator: (v) => ProfileValidator.validateExperience(v, isRequired: true),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Bio / Heritage Description
-                  TextFormField(
-                    controller: _bioController,
-                    maxLines: 3,
-                    validator: (v) => ProfileValidator.validateBio(
-                      v,
-                      isRequired: true,
-                      minLength: 15,
-                    ),
-                    decoration: InputDecoration(
-                      labelText: 'Studio Heritage Bio *',
-                      hintText:
-                          'Describe your craft background, workshop history, and master lineage (min 15 chars)...',
-                      prefixIcon: const Padding(
-                        padding: EdgeInsets.only(bottom: 45),
-                        child: Icon(
-                          Icons.history_edu_rounded,
-                          color: Color(0xFF004D40),
-                        ),
-                      ),
-                      filled: true,
-                      fillColor: const Color(0xFFF8F9FA),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-                  
-                  Text(
-                    'Traditional Materials & Tools Used',
-                    style: GoogleFonts.dmSerifDisplay(
-                      fontSize: 16,
-                      color: const Color(0xFF004D40),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      ..._toolsAndMaterials.map((tool) => Chip(
-                            label: Text(tool, style: GoogleFonts.plusJakartaSans(fontSize: 11)),
-                            deleteIcon: const Icon(Icons.close, size: 14),
-                            onDeleted: () {
-                              setState(() => _toolsAndMaterials.remove(tool));
-                            },
-                          )),
-                      ActionChip(
-                        avatar: const Icon(Icons.add, size: 14, color: Color(0xFFD97706)),
-                        label: Text('Add Tool/Material', style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFFD97706))),
-                        backgroundColor: const Color(0xFFFEF3C7),
-                        side: BorderSide.none,
-                        onPressed: () {
-                          final textController = TextEditingController();
-                          final dialogFormKey = GlobalKey<FormState>();
-                          showDialog(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                              title: const Text('Add Traditional Tool or Material'),
-                              content: Form(
-                                key: dialogFormKey,
-                                autovalidateMode: AutovalidateMode.onUserInteraction,
-                                child: TextFormField(
-                                  controller: textController,
-                                  validator: (v) => ProfileValidator.validateTag(
-                                    v,
-                                    _toolsAndMaterials,
-                                  ),
-                                  decoration: const InputDecoration(
-                                    hintText: 'e.g. Natural Indigo Dye',
+                              : Text(
+                                  'Submit Artisan Application',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark ? const Color(0xFFFFD54F) : Colors.white,
                                   ),
                                 ),
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  child: const Text('Cancel'),
-                                ),
-                                ElevatedButton(
-                                  onPressed: () {
-                                    if (dialogFormKey.currentState?.validate() ?? false) {
-                                      setState(() => _toolsAndMaterials.add(textController.text.trim()));
-                                      Navigator.pop(context);
-                                    }
-                                  },
-                                  child: const Text('Add'),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  Wrap(
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 8,
-                    runSpacing: 6,
-                    children: [
-                      Text(
-                        'Proof of Authenticity & Credentials',
-                        style: GoogleFonts.dmSerifDisplay(
-                          fontSize: 16,
-                          color: const Color(0xFF004D40),
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFEF2F2),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: const Color(0xFFF87171)),
-                        ),
-                        child: Text(
-                          'MANDATORY',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFFDC2626),
-                            letterSpacing: 0.5,
-                          ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Both official SSM business registration and your Kraftangan Malaysia accreditation certificate are required for verified Master Artisan status.',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 12,
-                      color: const Color(0xFF64748B),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Document Pickers
-                  _buildUploadTile(
-                    icon: Icons.description_outlined,
-                    title: '1. SSM Business Registration PDF / Image *',
-                    subtitle: _ssmFile != null
-                        ? 'Attached: ${_ssmFile!.name} ($_ssmFileSizeLabel)'
-                        : 'Upload official SSM business certificate (10 KB – 10 MB)',
-                    isAttached: _ssmFile != null,
-                    onTap: _pickSsmDocument,
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  _buildUploadTile(
-                    icon: Icons.workspace_premium_outlined,
-                    title: '2. Kraftangan Master Certificate *',
-                    subtitle: _kraftanganFile != null
-                        ? 'Attached: ${_kraftanganFile!.name} ($_kraftanganFileSizeLabel)'
-                        : 'Upload accreditation certificate from Kraftangan Malaysia',
-                    isAttached: _kraftanganFile != null,
-                    onTap: _pickKraftanganCertificate,
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  _buildUploadTile(
-                    icon: Icons.photo_camera_outlined,
-                    title: 'Studio Workshop Photos (Optional)',
-                    subtitle: _uploadedPhotos.isNotEmpty
-                        ? 'Attached ${_uploadedPhotos.length} photo(s)'
-                        : 'Upload photos of your craft studio/workshop',
-                    isAttached: _uploadedPhotos.isNotEmpty,
-                    onTap: _pickStudioPhotos,
-                  ),
-
-                  if (_documentError != null) ...[
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFEF2F2),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFFFCA5A5)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.error_outline_rounded, color: Color(0xFFDC2626), size: 18),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              _documentError!,
-                              style: GoogleFonts.plusJakartaSans(
-                                color: const Color(0xFFB91C1C),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-
-                  const SizedBox(height: 24),
-
-                  // Submit Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: FilledButton(
-                      onPressed: _isSubmitting ? null : _submitApplication,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFF004D40),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      child: _isSubmitting
-                          ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2.5,
-                              ),
-                            )
-                          : Text(
-                              'Submit Artisan Application',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildWorkshopLocationPicker() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final pin = _workshopLocation;
 
     return Column(
@@ -1236,7 +1459,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
           style: GoogleFonts.plusJakartaSans(
             fontSize: 13,
             fontWeight: FontWeight.w700,
-            color: const Color(0xFF004D40),
+            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
           ),
         ),
         const SizedBox(height: 8),
@@ -1244,31 +1467,55 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
           controller: _locationSearchController,
           textInputAction: TextInputAction.search,
           onFieldSubmitted: (_) => _searchWorkshopLocation(),
+          style: GoogleFonts.plusJakartaSans(
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
+            fontSize: 13,
+          ),
           decoration: InputDecoration(
             hintText: 'Search workshop name or address in $_selectedState',
-            prefixIcon: const Icon(
+            hintStyle: TextStyle(
+              color: isDark ? Colors.white38 : Colors.grey[400],
+            ),
+            prefixIcon: Icon(
               Icons.search_rounded,
-              color: Color(0xFF004D40),
+              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
             ),
             suffixIcon: _isSearchingLocation
-                ? const Padding(
-                    padding: EdgeInsets.all(14),
+                ? Padding(
+                    padding: const EdgeInsets.all(14),
                     child: SizedBox.square(
                       dimension: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                      ),
                     ),
                   )
                 : IconButton(
                     tooltip: 'Search place',
                     onPressed: _searchWorkshopLocation,
-                    icon: const Icon(Icons.arrow_forward_rounded),
+                    icon: Icon(
+                      Icons.arrow_forward_rounded,
+                      color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                    ),
                   ),
             filled: true,
-            fillColor: const Color(0xFFF8F9FA),
+            fillColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
             errorText: _locationError,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide.none,
+              borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(
+                color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                width: 1.5,
+              ),
             ),
           ),
         ),
@@ -1276,11 +1523,11 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
         Container(
           height: 240,
           decoration: BoxDecoration(
-            color: const Color(0xFFE8EFEC),
+            color: isDark ? const Color(0xFF041412) : const Color(0xFFE8EFEC),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: pin == null
-                  ? const Color(0xFFD7E0DC)
+                  ? (isDark ? const Color(0xFF1E3A34) : const Color(0xFFD7E0DC))
                   : const Color(0xFF10B981),
               width: pin == null ? 1 : 2,
             ),
@@ -1329,7 +1576,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                 child: IgnorePointer(
                   child: DecoratedBox(
                     decoration: BoxDecoration(
-                      color: const Color(0xFF004D40),
+                      color: isDark ? const Color(0xFF1E3A34) : const Color(0xFF004D40),
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: const [
                         BoxShadow(color: Colors.black26, blurRadius: 8),
@@ -1343,16 +1590,16 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.open_in_full_rounded,
-                            color: Colors.white,
+                            color: isDark ? const Color(0xFFFFD54F) : Colors.white,
                             size: 15,
                           ),
                           const SizedBox(width: 6),
                           Text(
                             'Open Large Map',
                             style: GoogleFonts.plusJakartaSans(
-                              color: Colors.white,
+                              color: isDark ? const Color(0xFFFFD54F) : Colors.white,
                               fontSize: 10,
                               fontWeight: FontWeight.w700,
                             ),
@@ -1376,8 +1623,8 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                   : Icons.check_circle_rounded,
               size: 16,
               color: pin == null
-                  ? const Color(0xFF64748B)
-                  : const Color(0xFF047857),
+                  ? (isDark ? Colors.white54 : const Color(0xFF64748B))
+                  : const Color(0xFF10B981),
             ),
             const SizedBox(width: 6),
             Expanded(
@@ -1389,8 +1636,8 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                   fontSize: 10.5,
                   height: 1.35,
                   color: pin == null
-                      ? const Color(0xFF64748B)
-                      : const Color(0xFF047857),
+                      ? (isDark ? Colors.white60 : const Color(0xFF64748B))
+                      : (isDark ? const Color(0xFF34D399) : const Color(0xFF047857)),
                 ),
               ),
             ),
@@ -1407,16 +1654,21 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
     required bool isAttached,
     required VoidCallback onTap,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: isAttached ? const Color(0xFFECFDF5) : const Color(0xFFF8F9FA),
+          color: isDark
+              ? (isAttached ? const Color(0xFF063529) : const Color(0xFF041412))
+              : (isAttached ? const Color(0xFFECFDF5) : const Color(0xFFF8F9FA)),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isAttached ? const Color(0xFF10B981) : Colors.grey[300]!,
+            color: isAttached
+                ? const Color(0xFF10B981)
+                : (isDark ? const Color(0xFF1E3A34) : Colors.grey[300]!),
           ),
         ),
         child: Row(
@@ -1426,14 +1678,14 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
               decoration: BoxDecoration(
                 color: isAttached
                     ? const Color(0xFF10B981).withValues(alpha: 0.15)
-                    : Colors.grey[200],
+                    : (isDark ? const Color(0xFF1E3A34) : Colors.grey[200]),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 isAttached ? Icons.check_circle_rounded : icon,
                 color: isAttached
                     ? const Color(0xFF10B981)
-                    : const Color(0xFF004D40),
+                    : (isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40)),
                 size: 20,
               ),
             ),
@@ -1449,7 +1701,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                     style: GoogleFonts.plusJakartaSans(
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
-                      color: const Color(0xFF0F172A),
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
                     ),
                   ),
                   Text(
@@ -1458,9 +1710,9 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 10.5,
-                      color: isAttached
-                          ? const Color(0xFF047857)
-                          : Colors.grey[600],
+                      color: isDark
+                          ? (isAttached ? const Color(0xFF34D399) : Colors.white60)
+                          : (isAttached ? const Color(0xFF047857) : Colors.grey[600]),
                     ),
                   ),
                 ],
@@ -1469,7 +1721,9 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
             Icon(
               Icons.upload_file_rounded,
               size: 18,
-              color: isAttached ? const Color(0xFF10B981) : Colors.grey[500],
+              color: isAttached
+                  ? const Color(0xFF10B981)
+                  : (isDark ? Colors.white38 : Colors.grey[500]),
             ),
           ],
         ),

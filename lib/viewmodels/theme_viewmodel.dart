@@ -47,6 +47,18 @@ class ThemeViewModel extends ChangeNotifier {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         color: Colors.white,
       ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: const Color(0xFFF8F9FA),
+        labelStyle: const TextStyle(color: Color(0xFF475569)),
+        hintStyle: TextStyle(color: Colors.grey[400]),
+        prefixIconColor: const Color(0xFF004D40),
+        suffixIconColor: const Color(0xFF004D40),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+      ),
     );
   }
 
@@ -67,6 +79,26 @@ class ThemeViewModel extends ChangeNotifier {
         elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         color: const Color(0xFF0D2825),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: const Color(0xFF041412),
+        labelStyle: const TextStyle(color: Colors.white70),
+        hintStyle: const TextStyle(color: Colors.white38),
+        prefixIconColor: const Color(0xFFFFD54F),
+        suffixIconColor: const Color(0xFFFFD54F),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Color(0xFF1E3A34)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Color(0xFF1E3A34)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Color(0xFFFFD54F), width: 1.8),
+        ),
       ),
       dialogTheme: const DialogThemeData(
         backgroundColor: Color(0xFF0D2825),

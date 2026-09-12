@@ -6,6 +6,7 @@ import 'package:warisan_kita/domain/models/user.dart';
 import 'package:warisan_kita/domain/validators/profile_validator.dart';
 import 'package:warisan_kita/ui/auth/email_verification_screen.dart';
 import 'package:warisan_kita/ui/auth/widgets/password_strength_meter.dart';
+import 'package:warisan_kita/ui/core/widgets/heritage_background.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -288,450 +289,596 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final isDesktop = MediaQuery.of(context).size.width > 800;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      appBar: AppBar(
+    return HeritageBackground(
+      child: Scaffold(
         backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF004D40)),
-          onPressed: () {
-            context.read<AuthViewModel>().clearError();
-            ScaffoldMessenger.of(context).clearSnackBars();
-            if (Navigator.of(context).canPop()) {
-              Navigator.of(context).pop();
-            } else {
-              Navigator.of(context).pushReplacementNamed('/login');
-            }
-          },
-        ),
-      ),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          child: Container(
-            width: isDesktop ? 480 : double.infinity,
-            padding: const EdgeInsets.all(28),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(28),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 24,
-                  offset: const Offset(0, 8),
-                )
-              ],
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(
+              Icons.arrow_back_rounded,
+              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
             ),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Cultural Explorer Welcome Icon
-                  Center(
-                    child: Container(
-                      width: 64,
-                      height: 64,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF004D40).withOpacity(0.08),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.explore_rounded,
-                        color: Color(0xFF004D40),
-                        size: 32,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Header Title
-                  Text(
-                    'Create Account',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.dmSerifDisplay(
-                      fontSize: 26,
-                      color: const Color(0xFF004D40),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-
-                  Text(
-                    'Join the cultural preservation movement to discover traditional crafts & artisan studios across Malaysia.',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 12.5,
-                      color: Colors.grey[600],
-                      height: 1.4,
-                    ),
-                  ),
-
-                  const SizedBox(height: 28),
-
-                  // Full Name Field
-                  TextFormField(
-                    controller: _fullNameController,
-                    textCapitalization: TextCapitalization.words,
-                    decoration: InputDecoration(
-                      labelText: 'Full Name',
-                      hintText: 'e.g. Siti Nurhaliza',
-                      prefixIcon: const Icon(Icons.person_outline_rounded, color: Color(0xFF004D40)),
-                      filled: true,
-                      fillColor: const Color(0xFFF8F9FA),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide.none,
+            onPressed: () {
+              context.read<AuthViewModel>().clearError();
+              ScaffoldMessenger.of(context).clearSnackBars();
+              if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop();
+              } else {
+                Navigator.of(context).pushReplacementNamed('/login');
+              }
+            },
+          ),
+        ),
+        body: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            child: Container(
+              width: isDesktop ? 480 : double.infinity,
+              padding: const EdgeInsets.all(28),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF0D2825) : Colors.white,
+                borderRadius: BorderRadius.circular(28),
+                border: isDark ? Border.all(color: const Color(0xFF1E3A34)) : null,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
+                    blurRadius: 24,
+                    offset: const Offset(0, 8),
+                  )
+                ],
+              ),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Cultural Explorer Welcome Icon
+                    Center(
+                      child: Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? const Color(0xFFFFD54F).withValues(alpha: 0.12)
+                              : const Color(0xFF004D40).withValues(alpha: 0.08),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.explore_rounded,
+                          color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                          size: 32,
+                        ),
                       ),
                     ),
-                    validator: (v) {
-                      if (v == null || v.trim().isEmpty) {
-                        return 'Please enter your full name';
-                      }
-                      return ProfileValidator.validateFullName(v);
-                    },
-                  ),
+                    const SizedBox(height: 20),
 
-                  const SizedBox(height: 16),
+                    // Header Title
+                    Text(
+                      'Create Account',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.dmSerifDisplay(
+                        fontSize: 26,
+                        color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
 
-                  // Unique Username / Handle Field
-                  TextFormField(
-                    controller: _usernameController,
-                    decoration: InputDecoration(
-                      labelText: 'Unique Username / Handle',
-                      hintText: 'e.g. siticrafts',
-                      prefixIcon: const Icon(Icons.alternate_email_rounded, color: Color(0xFF004D40)),
-                      suffixIcon: _isCheckingUsername
-                          ? const Padding(
-                              padding: EdgeInsets.all(12),
-                              child: SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF004D40)),
+                    Text(
+                      'Join the cultural preservation movement to discover traditional crafts & artisan studios across Malaysia.',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12.5,
+                        color: isDark ? Colors.white70 : Colors.grey[600],
+                        height: 1.4,
+                      ),
+                    ),
+
+                    const SizedBox(height: 28),
+
+                    // Full Name Field
+                    TextFormField(
+                      controller: _fullNameController,
+                      textCapitalization: TextCapitalization.words,
+                      style: GoogleFonts.plusJakartaSans(
+                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                        fontSize: 13.5,
+                      ),
+                      decoration: InputDecoration(
+                        labelText: 'Full Name',
+                        labelStyle: TextStyle(
+                          color: isDark ? Colors.white70 : const Color(0xFF475569),
+                        ),
+                        hintText: 'e.g. Siti Nurhaliza',
+                        hintStyle: TextStyle(
+                          color: isDark ? Colors.white38 : Colors.grey[400],
+                        ),
+                        prefixIcon: Icon(
+                          Icons.person_outline_rounded,
+                          color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                        ),
+                        filled: true,
+                        fillColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide(
+                            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) {
+                          return 'Please enter your full name';
+                        }
+                        return ProfileValidator.validateFullName(v);
+                      },
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Unique Username / Handle Field
+                    TextFormField(
+                      controller: _usernameController,
+                      style: GoogleFonts.plusJakartaSans(
+                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                        fontSize: 13.5,
+                      ),
+                      decoration: InputDecoration(
+                        labelText: 'Unique Username / Handle',
+                        labelStyle: TextStyle(
+                          color: isDark ? Colors.white70 : const Color(0xFF475569),
+                        ),
+                        hintText: 'e.g. siticrafts',
+                        hintStyle: TextStyle(
+                          color: isDark ? Colors.white38 : Colors.grey[400],
+                        ),
+                        prefixIcon: Icon(
+                          Icons.alternate_email_rounded,
+                          color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                        ),
+                        suffixIcon: _isCheckingUsername
+                            ? Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                                  ),
+                                ),
+                              )
+                            : (_isUsernameAvailable != null
+                                ? Icon(
+                                    _isUsernameAvailable! ? Icons.check_circle_rounded : Icons.cancel_rounded,
+                                    color: _isUsernameAvailable! ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                                  )
+                                : null),
+                        helperText: _usernameMessage,
+                        helperStyle: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: _isUsernameAvailable == true
+                              ? const Color(0xFF10B981)
+                              : (_isUsernameAvailable == false
+                                  ? const Color(0xFFEF4444)
+                                  : (isDark ? Colors.white54 : Colors.grey[600])),
+                        ),
+                        filled: true,
+                        fillColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide(
+                            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                      validator: (v) {
+                        final err = ProfileValidator.validateUsername(v);
+                        if (err != null) return err;
+                        if (_isUsernameAvailable == false) {
+                          return 'This username is already taken';
+                        }
+                        return null;
+                      },
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Email Address Field
+                    TextFormField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      style: GoogleFonts.plusJakartaSans(
+                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                        fontSize: 13.5,
+                      ),
+                      decoration: InputDecoration(
+                        labelText: 'Email Address',
+                        labelStyle: TextStyle(
+                          color: isDark ? Colors.white70 : const Color(0xFF475569),
+                        ),
+                        hintText: 'e.g. siti@example.com',
+                        hintStyle: TextStyle(
+                          color: isDark ? Colors.white38 : Colors.grey[400],
+                        ),
+                        prefixIcon: Icon(
+                          Icons.email_outlined,
+                          color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                        ),
+                        suffixIcon: _isCheckingEmail
+                            ? Padding(
+                                padding: const EdgeInsets.all(14),
+                                child: SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                                  ),
+                                ),
+                              )
+                            : (_emailAccountMessage == null
+                                ? null
+                                : Icon(
+                                    _existingAccountCheck != null
+                                        ? Icons.error_outline_rounded
+                                        : Icons.check_circle_outline_rounded,
+                                    color: _existingAccountCheck != null
+                                        ? const Color(0xFFDC2626)
+                                        : const Color(0xFF10B981),
+                                  )),
+                        helperText: _emailAccountMessage,
+                        helperMaxLines: 2,
+                        helperStyle: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: _isCheckingEmail
+                              ? (isDark ? Colors.white54 : Colors.grey[600])
+                              : (_existingAccountCheck != null
+                                  ? const Color(0xFFDC2626)
+                                  : const Color(0xFF10B981)),
+                        ),
+                        filled: true,
+                        fillColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide(
+                            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) {
+                          return 'Please enter your email address';
+                        }
+                        final validation = ProfileValidator.validateEmail(v);
+                        if (validation != null) return validation;
+                        if (_existingAccountCheck?.exists == true) {
+                          return 'This email is already registered';
+                        }
+                        return null;
+                      },
+                    ),
+
+                    // Real-Time Existing Account Detection Banner
+                    if (_existingAccountCheck != null && _existingAccountCheck!.exists) ...[
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF3B1212) : const Color(0xFFFEF2F2),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: isDark ? const Color(0xFF991B1B) : const Color(0xFFFCA5A5),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.info_outline_rounded,
+                              color: isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626),
+                              size: 20,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Account Already Exists',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark ? const Color(0xFFFCA5A5) : const Color(0xFF991B1B),
+                                    ),
+                                  ),
+                                  Text(
+                                    'An account is already registered with this email. Would you like to sign in instead?',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 11,
+                                      color: isDark ? const Color(0xFFFECACA) : const Color(0xFF7F1D1D),
+                                      height: 1.3,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            )
-                          : (_isUsernameAvailable != null
-                              ? Icon(
-                                  _isUsernameAvailable! ? Icons.check_circle_rounded : Icons.cancel_rounded,
-                                  color: _isUsernameAvailable! ? const Color(0xFF10B981) : const Color(0xFFEF4444),
-                                )
-                              : null),
-                      helperText: _usernameMessage,
-                      helperStyle: GoogleFonts.plusJakartaSans(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: _isUsernameAvailable == true
-                            ? const Color(0xFF10B981)
-                            : (_isUsernameAvailable == false ? const Color(0xFFEF4444) : Colors.grey[600]),
-                      ),
-                      filled: true,
-                      fillColor: const Color(0xFFF8F9FA),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                    validator: (v) {
-                      final err = ProfileValidator.validateUsername(v);
-                      if (err != null) return err;
-                      if (_isUsernameAvailable == false) {
-                        return 'This username is already taken';
-                      }
-                      return null;
-                    },
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Email Address Field
-                  TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: InputDecoration(
-                      labelText: 'Email Address',
-                      hintText: 'e.g. siti@example.com',
-                      prefixIcon: const Icon(Icons.email_outlined, color: Color(0xFF004D40)),
-                      suffixIcon: _isCheckingEmail
-                          ? const Padding(
-                              padding: EdgeInsets.all(14),
-                              child: SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                            const SizedBox(width: 6),
+                            FilledButton(
+                              onPressed: () {
+                                context.read<AuthViewModel>().clearError();
+                                ScaffoldMessenger.of(context).clearSnackBars();
+                                Navigator.of(context).pushReplacementNamed('/login');
+                              },
+                              style: FilledButton.styleFrom(
+                                backgroundColor: const Color(0xFFDC2626),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               ),
-                            )
-                          : (_emailAccountMessage == null
-                              ? null
-                              : Icon(
-                                  _existingAccountCheck != null
-                                      ? Icons.error_outline_rounded
-                                      : Icons.check_circle_outline_rounded,
-                                  color: _existingAccountCheck != null
-                                      ? const Color(0xFFDC2626)
-                                      : const Color(0xFF10B981),
-                                )),
-                      helperText: _emailAccountMessage,
-                      helperMaxLines: 2,
-                      helperStyle: GoogleFonts.plusJakartaSans(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: _isCheckingEmail
-                            ? Colors.grey[600]
-                            : (_existingAccountCheck != null
-                                ? const Color(0xFFDC2626)
-                                : const Color(0xFF10B981)),
+                              child: const Text(
+                                'Sign In',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.white),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      filled: true,
-                      fillColor: const Color(0xFFF8F9FA),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide.none,
+                    ],
+
+                    const SizedBox(height: 16),
+
+                    // Password Field
+                    TextFormField(
+                      controller: _passwordController,
+                      obscureText: _obscurePassword,
+                      style: GoogleFonts.plusJakartaSans(
+                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                        fontSize: 13.5,
+                      ),
+                      decoration: InputDecoration(
+                        labelText: 'Password',
+                        labelStyle: TextStyle(
+                          color: isDark ? Colors.white70 : const Color(0xFF475569),
+                        ),
+                        hintText: 'At least 8 characters',
+                        hintStyle: TextStyle(
+                          color: isDark ? Colors.white38 : Colors.grey[400],
+                        ),
+                        prefixIcon: Icon(
+                          Icons.lock_outline_rounded,
+                          color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                        ),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                            color: isDark ? Colors.white60 : Colors.grey[600],
+                          ),
+                          onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                        ),
+                        filled: true,
+                        fillColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide(
+                            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) {
+                          return 'Please enter a password';
+                        }
+                        if (v.trim().length < 8) {
+                          return 'Password must be greater than 7 characters';
+                        }
+                        return null;
+                      },
+                    ),
+
+                    // Interactive Password Strength Meter & Live Checklist
+                    PasswordStrengthMeter(password: _passwordController.text),
+
+                    const SizedBox(height: 16),
+
+                    // Confirm Password Field
+                    TextFormField(
+                      controller: _confirmPasswordController,
+                      obscureText: _obscureConfirmPassword,
+                      style: GoogleFonts.plusJakartaSans(
+                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                        fontSize: 13.5,
+                      ),
+                      decoration: InputDecoration(
+                        labelText: 'Confirm Password',
+                        labelStyle: TextStyle(
+                          color: isDark ? Colors.white70 : const Color(0xFF475569),
+                        ),
+                        hintText: 'Re-enter your password',
+                        hintStyle: TextStyle(
+                          color: isDark ? Colors.white38 : Colors.grey[400],
+                        ),
+                        prefixIcon: Icon(
+                          Icons.lock_reset_rounded,
+                          color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                        ),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                            color: isDark ? Colors.white60 : Colors.grey[600],
+                          ),
+                          onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                        ),
+                        filled: true,
+                        fillColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide(
+                            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) {
+                          return 'Please confirm your password';
+                        }
+                        if (v.trim() != _passwordController.text.trim()) {
+                          return 'Passwords do not match';
+                        }
+                        return null;
+                      },
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Register Button
+                    SizedBox(
+                      height: 52,
+                      child: FilledButton(
+                        onPressed: authVM.isLoading ? null : _handleRegister,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: isDark ? const Color(0xFF1E3A34) : const Color(0xFF004D40),
+                          foregroundColor: isDark ? const Color(0xFFFFD54F) : Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: authVM.isLoading
+                            ? SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  color: isDark ? const Color(0xFFFFD54F) : Colors.white,
+                                  strokeWidth: 2.5,
+                                ),
+                              )
+                            : Text(
+                                'Create Explorer Account',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? const Color(0xFFFFD54F) : Colors.white,
+                                ),
+                              ),
                       ),
                     ),
-                    validator: (v) {
-                      if (v == null || v.trim().isEmpty) {
-                        return 'Please enter your email address';
-                      }
-                      final validation = ProfileValidator.validateEmail(v);
-                      if (validation != null) return validation;
-                      if (_existingAccountCheck?.exists == true) {
-                        return 'This email is already registered';
-                      }
-                      return null;
-                    },
-                  ),
 
-                  // Real-Time Existing Account Detection Banner
-                  if (_existingAccountCheck != null && _existingAccountCheck!.exists) ...[
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 18),
+
+                    // In-App Artisan Notice Hint
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFEF2F2),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFFFCA5A5)),
+                        color: isDark ? const Color(0xFF231F10) : const Color(0xFFFFFBEB),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isDark ? const Color(0xFF78350F) : const Color(0xFFFDE68A),
+                        ),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.info_outline_rounded, color: Color(0xFFDC2626), size: 20),
+                          Icon(
+                            Icons.palette_outlined,
+                            size: 18,
+                            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFD97706),
+                          ),
                           const SizedBox(width: 10),
                           Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Account Already Exists',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: const Color(0xFF991B1B),
-                                  ),
-                                ),
-                                Text(
-                                  'An account is already registered with this email. Would you like to sign in instead?',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 11,
-                                    color: const Color(0xFF7F1D1D),
-                                    height: 1.3,
-                                  ),
-                                ),
-                              ],
+                            child: Text(
+                              'Are you a Master Artisan? You can register your heritage workshop inside your Profile anytime after joining!',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11,
+                                color: isDark ? const Color(0xFFFFE082) : const Color(0xFF92400E),
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 6),
-                          FilledButton(
-                            onPressed: () {
-                              context.read<AuthViewModel>().clearError();
-                              ScaffoldMessenger.of(context).clearSnackBars();
-                              Navigator.of(context).pushReplacementNamed('/login');
-                            },
-                            style: FilledButton.styleFrom(
-                              backgroundColor: const Color(0xFFDC2626),
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                              minimumSize: Size.zero,
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            child: const Text('Sign In', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.white)),
                           ),
                         ],
                       ),
                     ),
-                  ],
 
-                  const SizedBox(height: 16),
+                    const SizedBox(height: 20),
 
-                  // Password Field
-                  TextFormField(
-                    controller: _passwordController,
-                    obscureText: _obscurePassword,
-                    decoration: InputDecoration(
-                      labelText: 'Password',
-                      hintText: 'At least 8 characters',
-                      prefixIcon: const Icon(Icons.lock_outline_rounded, color: Color(0xFF004D40)),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                          color: Colors.grey[600],
-                        ),
-                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                      ),
-                      filled: true,
-                      fillColor: const Color(0xFFF8F9FA),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                    validator: (v) {
-                      if (v == null || v.trim().isEmpty) {
-                        return 'Please enter a password';
-                      }
-                      if (v.trim().length < 8) {
-                        return 'Password must be greater than 7 characters';
-                      }
-                      return null;
-                    },
-                  ),
-
-                  // 📊 Interactive Password Strength Meter & Live Checklist
-                  PasswordStrengthMeter(password: _passwordController.text),
-
-                  const SizedBox(height: 16),
-
-                  // Confirm Password Field
-                  TextFormField(
-                    controller: _confirmPasswordController,
-                    obscureText: _obscureConfirmPassword,
-                    decoration: InputDecoration(
-                      labelText: 'Confirm Password',
-                      hintText: 'Re-enter your password',
-                      prefixIcon: const Icon(Icons.lock_reset_rounded, color: Color(0xFF004D40)),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                          color: Colors.grey[600],
-                        ),
-                        onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
-                      ),
-                      filled: true,
-                      fillColor: const Color(0xFFF8F9FA),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                    validator: (v) {
-                      if (v == null || v.trim().isEmpty) {
-                        return 'Please confirm your password';
-                      }
-                      if (v.trim() != _passwordController.text.trim()) {
-                        return 'Passwords do not match';
-                      }
-                      return null;
-                    },
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Register Button
-                  SizedBox(
-                    height: 52,
-                    child: FilledButton(
-                      onPressed: authVM.isLoading ? null : _handleRegister,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFF004D40),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: authVM.isLoading
-                          ? const SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2.5,
-                              ),
-                            )
-                          : Text(
-                              'Create Explorer Account',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 18),
-
-                  // In-App Artisan Notice Hint
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF231F10) : const Color(0xFFFFFBEB),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isDark ? const Color(0xFF78350F) : const Color(0xFFFDE68A),
-                      ),
-                    ),
-                    child: Row(
+                    // Sign In Link
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
-                          Icons.palette_outlined,
-                          size: 18,
-                          color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFD97706),
+                        Text(
+                          'Already have an account? ',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13,
+                            color: isDark ? Colors.white70 : Colors.grey[700],
+                          ),
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(
+                        GestureDetector(
+                          onTap: () {
+                            context.read<AuthViewModel>().clearError();
+                            ScaffoldMessenger.of(context).clearSnackBars();
+                            Navigator.of(context).pushReplacementNamed('/login');
+                          },
                           child: Text(
-                            'Are you a Master Artisan? You can register your heritage workshop inside your Profile anytime after joining!',
+                            'Sign In',
                             style: GoogleFonts.plusJakartaSans(
-                              fontSize: 11,
-                              color: isDark ? const Color(0xFFFFE082) : const Color(0xFF92400E),
-                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
                             ),
                           ),
                         ),
                       ],
                     ),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Sign In Link
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Already have an account? ',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 13,
-                          color: Colors.grey[700],
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          context.read<AuthViewModel>().clearError();
-                          ScaffoldMessenger.of(context).clearSnackBars();
-                          Navigator.of(context).pushReplacementNamed('/login');
-                        },
-                        child: Text(
-                          'Sign In',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFF004D40),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

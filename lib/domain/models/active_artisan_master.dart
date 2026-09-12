@@ -81,21 +81,21 @@ class ActiveArtisanMaster {
     final String name = (ap?['studio_name'] ?? map['studio_name'] ?? map['studioName'] ?? map['full_name'] ?? map['display_name'] ?? map['displayName'] ?? map['username'] ?? 'Artisan Studio').toString();
     final String category = (ap?['craft_category'] ?? map['craft_category'] ?? map['craftCategory'] ?? 'Handicraft & Heritage').toString();
     final String state = (ap?['state'] ?? map['state'] ?? 'Malaysia').toString();
-    final String exp = (ap?['experience'] != null && ap!['experience'].toString().trim().isNotEmpty)
+    final rawExp = (ap != null && ap['experience'] != null && ap['experience'].toString().trim().isNotEmpty)
         ? ap['experience'].toString().trim()
         : (map['experience'] != null && map['experience'].toString().trim().isNotEmpty
             ? map['experience'].toString().trim()
-            : (ap?['years_experience'] != null
-                ? '${ap!['years_experience']} Years'
+            : (ap != null && ap['years_experience'] != null && (ap['years_experience'] as num) > 1
+                ? '${ap['years_experience']} Years'
                 : 'Verified Studio'));
+    final String exp = RegExp(r'^\d+$').hasMatch(rawExp) ? '$rawExp Years' : rawExp;
     final String license = (ap?['ssm_number'] ?? map['ssm_number'] ?? map['ssmNumber'] ?? 'SSM Verified').toString();
     final String bio = (ap?['bio'] ?? map['bio'] ?? 'Master artisan dedicated to traditional Malaysian craft.').toString();
-    final String phone = (map['phone_number'] ?? map['phone'] ?? '').toString();
+    final String phone = (map['phone_number'] ?? map['phone'] ?? ap?['phone_number'] ?? ap?['phone'] ?? '').toString();
     final String verifiedDate = (ap?['verified_at'] ?? map['created_at'] ?? '2026-01-01').toString().split('T').first;
-    final String role = (map['role'] ?? '').toString();
     final String status = (map['status'] ?? '').toString().toUpperCase();
     final bool isSuspended = status == 'SUSPENDED' || map['is_suspended'] == true;
-    final bool isDual = false;
+    const bool isDual = false;
 
     return ActiveArtisanMaster(
       id: (map['id'] ?? ap?['id'] ?? '').toString(),
@@ -106,7 +106,7 @@ class ActiveArtisanMaster {
       experience: exp,
       plaques: (map['plaques'] as int?) ?? (ap?['workshop_count'] as int?) ?? 1,
       isLiveOpen: map['is_live_open'] ??
-          (ap?['tags'] is List && (ap!['tags'] as List).contains('__LIVE_DEMO_CLOSED__') ? false : true),
+          (ap != null && ap['tags'] is List && (ap['tags'] as List).contains('__LIVE_DEMO_CLOSED__') ? false : true),
       licenseNo: license,
       verifiedDate: verifiedDate,
       imageUrl: (map['avatar_url'] ?? map['imageUrl'] ?? 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600').toString(),

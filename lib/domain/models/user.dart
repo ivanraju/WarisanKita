@@ -497,14 +497,17 @@ class UserModel {
     }
 
     final artisanExp = artisanMap?['experience']?.toString().trim();
-    final artisanYears = artisanMap?['years_experience'];
-    final String? resolvedExp = (map['experience'] != null && map['experience'].toString().trim().isNotEmpty)
+    final artisanYears = artisanMap?['years_experience'] ?? map['years_experience'];
+    final String? rawExp = (map['experience'] != null && map['experience'].toString().trim().isNotEmpty)
         ? map['experience'].toString().trim()
         : ((artisanExp != null && artisanExp.isNotEmpty)
             ? artisanExp
-            : (artisanYears != null && (artisanYears as num) > 1
+            : (artisanYears is num && artisanYears > 1
                 ? '$artisanYears Years'
                 : null));
+    final String? resolvedExp = (rawExp != null && rawExp.isNotEmpty)
+        ? (RegExp(r'^\d+$').hasMatch(rawExp) ? '$rawExp Years' : rawExp)
+        : null;
 
     final rawWorkshops = map['workshop_count'] ??
         map['workshops_hosted'] ??
@@ -586,7 +589,10 @@ class UserModel {
       state: map['state'] ?? artisanMap?['state'],
       latitude: lat,
       longitude: lon,
-      phone: map['phone'] ?? map['phone_number'] ?? artisanMap?['phone'],
+      phone: map['phone'] ??
+          map['phone_number'] ??
+          artisanMap?['phone'] ??
+          artisanMap?['phone_number'],
       experience: resolvedExp,
       artisanProfileId: artisanMap?['id'] ??
           map['artisanProfileId'] ??

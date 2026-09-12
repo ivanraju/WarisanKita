@@ -8,6 +8,7 @@ import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 import 'package:warisan_kita/ui/artisan/artisan_application_pending_screen.dart';
 import 'package:warisan_kita/ui/auth/email_verification_screen.dart';
 import 'package:warisan_kita/ui/auth/forgot_password_screen.dart';
+import 'package:warisan_kita/ui/core/widgets/heritage_background.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -250,7 +251,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               );
-            }).toList(),
+            }),
           ],
         ),
       ),
@@ -462,270 +463,353 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final authVM = context.watch<AuthViewModel>();
     final isDesktop = MediaQuery.of(context).size.width > 800;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Container(
-            width: isDesktop ? 480 : double.infinity,
-            padding: const EdgeInsets.all(32.0),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(28),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF004D40).withOpacity(0.08),
-                  blurRadius: 30,
-                  offset: const Offset(0, 10),
-                )
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Header Logo Badge
-                Center(
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF004D40).withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      kIsWeb ? Icons.security_rounded : Icons.auto_awesome_mosaic_rounded,
-                      size: 36,
-                      color: const Color(0xFF004D40),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                Text(
-                  kIsWeb ? 'Warisan Kita • Admin Portal' : 'WarisanKita',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.dmSerifDisplay(
-                    fontSize: 26,
-                    color: const Color(0xFF004D40),
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 6),
-
-                Text(
-                  kIsWeb ? 'MALAYSIAN HERITAGE MODERATION CONSOLE' : 'PLEASE ENTER LOGIN CREDENTIALS',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.8,
-                    color: const Color(0xFF004D40),
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // Error Banner
-                if (authVM.errorMessage != null) ...[
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFEF2F2),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFFCA5A5)),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.error_outline_rounded, color: Color(0xFFEF4444), size: 20),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            authVM.errorMessage!,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFFEF4444),
-                            ),
-                          ),
-                        ),
-                      ],
+    return HeritageBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: Container(
+              width: isDesktop ? 480 : double.infinity,
+              padding: const EdgeInsets.all(32.0),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF0D2825) : Colors.white,
+                borderRadius: BorderRadius.circular(28),
+                border: isDark ? Border.all(color: const Color(0xFF1E3A34)) : null,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.08),
+                    blurRadius: 30,
+                    offset: const Offset(0, 10),
+                  )
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Header Logo Badge
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFFFFD54F).withValues(alpha: 0.12)
+                            : const Color(0xFF004D40).withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        kIsWeb ? Icons.security_rounded : Icons.auto_awesome_mosaic_rounded,
+                        size: 36,
+                        color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
-                ],
 
-                // Form Container with Validation
-                Form(
-                  key: _formKey,
-                  child: Column(
-                    children: [
-                      // Email / Username Input
-                      TextFormField(
-                        controller: _emailController,
-                        keyboardType: kIsWeb ? TextInputType.text : TextInputType.emailAddress,
-                        decoration: InputDecoration(
-                          labelText: kIsWeb ? 'Admin Username' : 'Username / Email Address',
-                          hintText: kIsWeb ? 'admin' : 'e.g. siticrafts or user@example.com',
-                          prefixIcon: Icon(
-                            kIsWeb ? Icons.admin_panel_settings_rounded : Icons.person_outline_rounded,
+                  Text(
+                    kIsWeb ? 'Warisan Kita • Admin Portal' : 'WarisanKita',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.dmSerifDisplay(
+                      fontSize: 26,
+                      color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+
+                  Text(
+                    kIsWeb ? 'MALAYSIAN HERITAGE MODERATION CONSOLE' : 'PLEASE ENTER LOGIN CREDENTIALS',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.8,
+                      color: isDark ? Colors.white70 : const Color(0xFF004D40),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Error Banner
+                  if (authVM.errorMessage != null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF3B1212) : const Color(0xFFFEF2F2),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isDark ? const Color(0xFF991B1B) : const Color(0xFFFCA5A5),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.error_outline_rounded,
+                            color: isDark ? const Color(0xFFF87171) : const Color(0xFFEF4444),
                             size: 20,
                           ),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-                        ),
-                        validator: (v) {
-                          if (v == null || v.trim().isEmpty) {
-                            return kIsWeb ? 'Please enter your admin username' : 'Please enter your username or email address';
-                          }
-                          return null;
-                        },
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      // Password Input
-                      TextFormField(
-                        controller: _passwordController,
-                        obscureText: !_isPasswordVisible,
-                        decoration: InputDecoration(
-                          labelText: 'Password',
-                          hintText: 'Enter your password',
-                          prefixIcon: const Icon(Icons.lock_outline, size: 20),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _isPasswordVisible ? Icons.visibility_off : Icons.visibility,
-                              size: 20,
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              authVM.errorMessage!,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? const Color(0xFFFCA5A5) : const Color(0xFFEF4444),
+                              ),
                             ),
-                            onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
                           ),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-                        ),
-                        validator: (v) {
-                          if (v == null || v.trim().isEmpty) {
-                            return 'Please enter your password';
-                          }
-                          return null;
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Forgot Password Button (Hidden on Web Admin Portal)
-                if (!kIsWeb) ...[
-                  const SizedBox(height: 8),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () {
-                        context.read<AuthViewModel>().clearError();
-                        ScaffoldMessenger.of(context).clearSnackBars();
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
-                        );
-                      },
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      child: Text(
-                        'Forgot Password?',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF004D40),
-                        ),
+                        ],
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 16),
+                  ],
 
-                const SizedBox(height: 20),
-
-                // Main Login Button
-                FilledButton(
-                  onPressed: authVM.isLoading ? null : _handleLogin,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF004D40),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  ),
-                  child: authVM.isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
-                        )
-                      : Text(
-                          kIsWeb ? 'ADMIN SIGN IN' : 'SIGN IN',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // Bottom Footer: Web Mobile App Notice vs Mobile Registration Link
-                if (kIsWeb) ...[
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFECFDF5),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xFFA7F3D0)),
-                    ),
-                    child: Row(
+                  // Form Container with Validation
+                  Form(
+                    key: _formKey,
+                    child: Column(
                       children: [
-                        const Icon(Icons.phone_android_rounded, size: 20, color: Color(0xFF047857)),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'Cultural Tourists & Artisans: Please sign in via the Warisan Kita Mobile App.',
+                        // Email / Username Input
+                        TextFormField(
+                          controller: _emailController,
+                          keyboardType: kIsWeb ? TextInputType.text : TextInputType.emailAddress,
+                          style: GoogleFonts.plusJakartaSans(
+                            color: isDark ? Colors.white : const Color(0xFF0F172A),
+                            fontSize: 13.5,
+                          ),
+                          decoration: InputDecoration(
+                            labelText: kIsWeb ? 'Admin Username' : 'Username / Email Address',
+                            labelStyle: TextStyle(
+                              color: isDark ? Colors.white70 : const Color(0xFF475569),
+                            ),
+                            hintText: kIsWeb ? 'admin' : 'e.g. siticrafts or user@example.com',
+                            hintStyle: TextStyle(
+                              color: isDark ? Colors.white38 : Colors.grey[400],
+                            ),
+                            prefixIcon: Icon(
+                              kIsWeb ? Icons.admin_panel_settings_rounded : Icons.person_outline_rounded,
+                              size: 20,
+                              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                            ),
+                            filled: true,
+                            fillColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide(
+                                color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                                width: 1.5,
+                              ),
+                            ),
+                          ),
+                          validator: (v) {
+                            if (v == null || v.trim().isEmpty) {
+                              return kIsWeb ? 'Please enter your admin username' : 'Please enter your username or email address';
+                            }
+                            return null;
+                          },
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Password Input
+                        TextFormField(
+                          controller: _passwordController,
+                          obscureText: !_isPasswordVisible,
+                          style: GoogleFonts.plusJakartaSans(
+                            color: isDark ? Colors.white : const Color(0xFF0F172A),
+                            fontSize: 13.5,
+                          ),
+                          decoration: InputDecoration(
+                            labelText: 'Password',
+                            labelStyle: TextStyle(
+                              color: isDark ? Colors.white70 : const Color(0xFF475569),
+                            ),
+                            hintText: 'Enter your password',
+                            hintStyle: TextStyle(
+                              color: isDark ? Colors.white38 : Colors.grey[400],
+                            ),
+                            prefixIcon: Icon(
+                              Icons.lock_outline,
+                              size: 20,
+                              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                            ),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _isPasswordVisible ? Icons.visibility_off : Icons.visibility,
+                                size: 20,
+                                color: isDark ? Colors.white60 : Colors.grey[600],
+                              ),
+                              onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
+                            ),
+                            filled: true,
+                            fillColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide(
+                                color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                                width: 1.5,
+                              ),
+                            ),
+                          ),
+                          validator: (v) {
+                            if (v == null || v.trim().isEmpty) {
+                              return 'Please enter your password';
+                            }
+                            return null;
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Forgot Password Button (Hidden on Web Admin Portal)
+                  if (!kIsWeb) ...[
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () {
+                          context.read<AuthViewModel>().clearError();
+                          ScaffoldMessenger.of(context).clearSnackBars();
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+                          );
+                        },
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: Text(
+                          'Forgot Password?',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 20),
+
+                  // Main Login Button
+                  FilledButton(
+                    onPressed: authVM.isLoading ? null : _handleLogin,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: isDark ? const Color(0xFF1E3A34) : const Color(0xFF004D40),
+                      foregroundColor: isDark ? const Color(0xFFFFD54F) : Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    child: authVM.isLoading
+                        ? SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: isDark ? const Color(0xFFFFD54F) : Colors.white,
+                            ),
+                          )
+                        : Text(
+                            kIsWeb ? 'ADMIN SIGN IN' : 'SIGN IN',
                             style: GoogleFonts.plusJakartaSans(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF065F46),
-                              height: 1.3,
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                              color: isDark ? const Color(0xFFFFD54F) : Colors.white,
+                            ),
+                          ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Bottom Footer: Web Mobile App Notice vs Mobile Registration Link
+                  if (kIsWeb) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF063529) : const Color(0xFFECFDF5),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: isDark ? const Color(0xFF059669) : const Color(0xFFA7F3D0),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.phone_android_rounded,
+                            size: 20,
+                            color: isDark ? const Color(0xFF34D399) : const Color(0xFF047857),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Cultural Tourists & Artisans: Please sign in via the Warisan Kita Mobile App.',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
+                                color: isDark ? const Color(0xFF6EE7B7) : const Color(0xFF065F46),
+                                height: 1.3,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ] else ...[
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
+                          "Don't have an account? ",
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13,
+                            color: isDark ? Colors.white70 : Colors.black54,
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            context.read<AuthViewModel>().clearError();
+                            ScaffoldMessenger.of(context).clearSnackBars();
+                            Navigator.of(context).pushNamed('/register');
+                          },
+                          child: Text(
+                            'Register / Join Us',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
                             ),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                ] else ...[
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      Text(
-                        "Don't have an account? ",
-                        style: GoogleFonts.plusJakartaSans(fontSize: 13, color: Colors.black54),
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          context.read<AuthViewModel>().clearError();
-                          ScaffoldMessenger.of(context).clearSnackBars();
-                          Navigator.of(context).pushNamed('/register');
-                        },
-                        child: Text(
-                          'Register / Join Us',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFF004D40),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),

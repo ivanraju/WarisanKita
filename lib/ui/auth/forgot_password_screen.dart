@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:warisan_kita/ui/auth/login_screen.dart';
 import 'package:warisan_kita/ui/auth/widgets/password_strength_meter.dart';
+import 'package:warisan_kita/ui/core/widgets/heritage_background.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
@@ -154,57 +155,69 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   Widget build(BuildContext context) {
     final authVM = context.watch<AuthViewModel>();
     final isDesktop = MediaQuery.of(context).size.width > 800;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      appBar: AppBar(
+    return HeritageBackground(
+      child: Scaffold(
         backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF004D40)),
-          onPressed: () {
-            context.read<AuthViewModel>().clearError();
-            ScaffoldMessenger.of(context).clearSnackBars();
-            Navigator.of(context).pop();
-          },
-        ),
-      ),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Container(
-            width: isDesktop ? 480 : double.infinity,
-            padding: const EdgeInsets.all(32.0),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(28),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF004D40).withOpacity(0.08),
-                  blurRadius: 30,
-                  offset: const Offset(0, 10),
-                )
-              ],
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(
+              Icons.arrow_back_rounded,
+              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
             ),
-            child: _buildCurrentStepContent(authVM),
+            onPressed: () {
+              context.read<AuthViewModel>().clearError();
+              ScaffoldMessenger.of(context).clearSnackBars();
+              Navigator.of(context).pop();
+            },
+          ),
+        ),
+        body: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: Container(
+              width: isDesktop ? 480 : double.infinity,
+              padding: const EdgeInsets.all(32.0),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF0D2825) : Colors.white,
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(
+                  color: isDark ? const Color(0xFF1E3A34) : Colors.transparent,
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: isDark
+                        ? Colors.black.withValues(alpha: 0.4)
+                        : const Color(0xFF004D40).withValues(alpha: 0.08),
+                    blurRadius: 30,
+                    offset: const Offset(0, 10),
+                  )
+                ],
+              ),
+              child: _buildCurrentStepContent(authVM, isDark),
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildCurrentStepContent(AuthViewModel authVM) {
+  Widget _buildCurrentStepContent(AuthViewModel authVM, bool isDark) {
     if (_currentStep == 1) {
-      return _buildEmailFormView(authVM);
+      return _buildEmailFormView(authVM, isDark);
     } else if (_currentStep == 2) {
-      return _buildTokenInboxView();
+      return _buildTokenInboxView(isDark);
     } else {
-      return _buildNewPasswordFormView(authVM);
+      return _buildNewPasswordFormView(authVM, isDark);
     }
   }
 
   // Step 1: Email Input Screen (UC003 Step 1-4)
-  Widget _buildEmailFormView(AuthViewModel authVM) {
+  Widget _buildEmailFormView(AuthViewModel authVM, bool isDark) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -213,10 +226,16 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFF004D40).withOpacity(0.1),
+              color: isDark
+                  ? const Color(0xFF1E3A34)
+                  : const Color(0xFF004D40).withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.lock_reset_rounded, size: 36, color: Color(0xFF004D40)),
+            child: Icon(
+              Icons.lock_reset_rounded,
+              size: 36,
+              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+            ),
           ),
         ),
         const SizedBox(height: 20),
@@ -224,14 +243,21 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         Text(
           'Reset Password',
           textAlign: TextAlign.center,
-          style: GoogleFonts.dmSerifDisplay(fontSize: 26, color: const Color(0xFF004D40)),
+          style: GoogleFonts.dmSerifDisplay(
+            fontSize: 26,
+            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+          ),
         ),
         const SizedBox(height: 8),
 
         Text(
           'Enter your registered email address to receive a password reset link.',
           textAlign: TextAlign.center,
-          style: GoogleFonts.plusJakartaSans(fontSize: 13, color: Colors.black54, height: 1.4),
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 13,
+            color: isDark ? Colors.white70 : Colors.black54,
+            height: 1.4,
+          ),
         ),
 
         const SizedBox(height: 20),
@@ -240,16 +266,20 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFFFEF2F2),
+              color: isDark
+                  ? const Color(0xFF3B1515)
+                  : const Color(0xFFFEF2F2),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFFCA5A5)),
+              border: Border.all(
+                color: isDark ? const Color(0xFF7F1D1D) : const Color(0xFFFCA5A5),
+              ),
             ),
             child: Text(
               authVM.errorMessage!,
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
-                color: const Color(0xFFEF4444),
+                color: isDark ? const Color(0xFFFCA5A5) : const Color(0xFFEF4444),
               ),
               textAlign: TextAlign.center,
             ),
@@ -260,11 +290,39 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         TextField(
           controller: _emailController,
           keyboardType: TextInputType.emailAddress,
+          style: GoogleFonts.plusJakartaSans(
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
+            fontSize: 14,
+          ),
           decoration: InputDecoration(
             labelText: 'Registered Email Address',
+            labelStyle: GoogleFonts.plusJakartaSans(
+              color: isDark ? Colors.white70 : null,
+            ),
             hintText: 'e.g. user@example.com',
-            prefixIcon: const Icon(Icons.email_outlined, size: 20),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+            hintStyle: GoogleFonts.plusJakartaSans(
+              color: isDark ? Colors.white38 : null,
+            ),
+            prefixIcon: Icon(
+              Icons.email_outlined,
+              size: 20,
+              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+            ),
+            filled: true,
+            fillColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(
+                color: isDark ? const Color(0xFF1E3A34) : Colors.grey.shade300,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(
+                color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                width: 2,
+              ),
+            ),
           ),
         ),
 
@@ -273,7 +331,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         FilledButton(
           onPressed: authVM.isLoading ? null : _handleSendResetEmail,
           style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xFF004D40),
+            backgroundColor: isDark ? const Color(0xFF10B981) : const Color(0xFF004D40),
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 16),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -298,7 +356,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   // Step 2: Token Inbox Notice
-  Widget _buildTokenInboxView() {
+  Widget _buildTokenInboxView(bool isDark) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -306,11 +364,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         Center(
           child: Container(
             padding: const EdgeInsets.all(22),
-            decoration: const BoxDecoration(
-              color: Color(0xFFE0F2FE),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF063529) : const Color(0xFFE0F2FE),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.mark_email_read_rounded, size: 48, color: Color(0xFF0284C7)),
+            child: Icon(
+              Icons.mark_email_read_rounded,
+              size: 48,
+              color: isDark ? const Color(0xFF34D399) : const Color(0xFF0284C7),
+            ),
           ),
         ),
         const SizedBox(height: 20),
@@ -318,14 +380,32 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         Text(
           'Check Your Inbox!',
           textAlign: TextAlign.center,
-          style: GoogleFonts.dmSerifDisplay(fontSize: 26, color: const Color(0xFF0F172A)),
+          style: GoogleFonts.dmSerifDisplay(
+            fontSize: 26,
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
+          ),
         ),
         const SizedBox(height: 10),
 
-        Text(
-          'A secure recovery link has been dispatched to:\n${_emailController.text}',
-          textAlign: TextAlign.center,
-          style: GoogleFonts.plusJakartaSans(fontSize: 13, color: const Color(0xFF475569), height: 1.4),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF041412) : const Color(0xFFF1F5F9),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFE2E8F0),
+            ),
+          ),
+          child: Text(
+            'A secure recovery link has been dispatched to:\n${_emailController.text}',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 13,
+              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF475569),
+              fontWeight: FontWeight.w600,
+              height: 1.4,
+            ),
+          ),
         ),
 
         const SizedBox(height: 16),
@@ -333,13 +413,19 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: const Color(0xFFFEF3C7),
+            color: isDark ? const Color(0xFF2D1F08) : const Color(0xFFFEF3C7),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFFFDE68A)),
+            border: Border.all(
+              color: isDark ? const Color(0xFF78350F) : const Color(0xFFFDE68A),
+            ),
           ),
           child: Row(
             children: [
-              const Icon(Icons.timer_outlined, color: Color(0xFFD97706), size: 20),
+              Icon(
+                Icons.timer_outlined,
+                color: isDark ? const Color(0xFFF59E0B) : const Color(0xFFD97706),
+                size: 20,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -347,7 +433,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
-                    color: const Color(0xFF92400E),
+                    color: isDark ? const Color(0xFFFDE68A) : const Color(0xFF92400E),
                   ),
                 ),
               ),
@@ -367,7 +453,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           icon: const Icon(Icons.arrow_back_rounded, size: 18),
           label: const Text('BACK TO SIGN IN'),
           style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xFF004D40),
+            backgroundColor: isDark ? const Color(0xFF10B981) : const Color(0xFF004D40),
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 16),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -378,6 +464,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
         TextButton(
           onPressed: () => setState(() => _currentStep = 1),
+          style: TextButton.styleFrom(
+            foregroundColor: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+          ),
           child: const Text('Resend / Change Email Address'),
         ),
       ],
@@ -385,7 +474,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   // Step 3: Set New Password Form
-  Widget _buildNewPasswordFormView(AuthViewModel authVM) {
+  Widget _buildNewPasswordFormView(AuthViewModel authVM, bool isDark) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -394,10 +483,16 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFF004D40).withOpacity(0.1),
+              color: isDark
+                  ? const Color(0xFF1E3A34)
+                  : const Color(0xFF004D40).withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.key_rounded, size: 36, color: Color(0xFF004D40)),
+            child: Icon(
+              Icons.key_rounded,
+              size: 36,
+              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+            ),
           ),
         ),
         const SizedBox(height: 18),
@@ -405,7 +500,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         Text(
           'Set New Password',
           textAlign: TextAlign.center,
-          style: GoogleFonts.dmSerifDisplay(fontSize: 26, color: const Color(0xFF004D40)),
+          style: GoogleFonts.dmSerifDisplay(
+            fontSize: 26,
+            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+          ),
         ),
         const SizedBox(height: 6),
 
@@ -414,7 +512,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           textAlign: TextAlign.center,
           style: GoogleFonts.plusJakartaSans(
             fontSize: 12,
-            color: Colors.black54,
+            color: isDark ? Colors.white70 : Colors.black54,
           ),
         ),
 
@@ -424,16 +522,20 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFFFEF2F2),
+              color: isDark
+                  ? const Color(0xFF3B1515)
+                  : const Color(0xFFFEF2F2),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFFCA5A5)),
+              border: Border.all(
+                color: isDark ? const Color(0xFF7F1D1D) : const Color(0xFFFCA5A5),
+              ),
             ),
             child: Text(
               authVM.errorMessage!,
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
-                color: const Color(0xFFEF4444),
+                color: isDark ? const Color(0xFFFCA5A5) : const Color(0xFFEF4444),
               ),
               textAlign: TextAlign.center,
             ),
@@ -445,15 +547,47 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         TextField(
           controller: _newPasswordController,
           obscureText: !_isPasswordVisible,
+          style: GoogleFonts.plusJakartaSans(
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
+            fontSize: 14,
+          ),
           decoration: InputDecoration(
             labelText: 'New Password',
+            labelStyle: GoogleFonts.plusJakartaSans(
+              color: isDark ? Colors.white70 : null,
+            ),
             hintText: 'Must be at least 8 characters',
-            prefixIcon: const Icon(Icons.lock_outline, size: 20),
+            hintStyle: GoogleFonts.plusJakartaSans(
+              color: isDark ? Colors.white38 : null,
+            ),
+            prefixIcon: Icon(
+              Icons.lock_outline,
+              size: 20,
+              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+            ),
             suffixIcon: IconButton(
-              icon: Icon(_isPasswordVisible ? Icons.visibility_off : Icons.visibility, size: 20),
+              icon: Icon(
+                _isPasswordVisible ? Icons.visibility_off : Icons.visibility,
+                size: 20,
+                color: isDark ? Colors.white70 : Colors.black54,
+              ),
               onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
             ),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+            filled: true,
+            fillColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(
+                color: isDark ? const Color(0xFF1E3A34) : Colors.grey.shade300,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(
+                color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                width: 2,
+              ),
+            ),
           ),
         ),
 
@@ -466,10 +600,35 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         TextField(
           controller: _confirmPasswordController,
           obscureText: !_isPasswordVisible,
+          style: GoogleFonts.plusJakartaSans(
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
+            fontSize: 14,
+          ),
           decoration: InputDecoration(
             labelText: 'Confirm New Password',
-            prefixIcon: const Icon(Icons.lock_reset_outlined, size: 20),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+            labelStyle: GoogleFonts.plusJakartaSans(
+              color: isDark ? Colors.white70 : null,
+            ),
+            prefixIcon: Icon(
+              Icons.lock_reset_outlined,
+              size: 20,
+              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+            ),
+            filled: true,
+            fillColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(
+                color: isDark ? const Color(0xFF1E3A34) : Colors.grey.shade300,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(
+                color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                width: 2,
+              ),
+            ),
           ),
         ),
 
@@ -478,7 +637,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         FilledButton(
           onPressed: authVM.isLoading ? null : _handleConfirmReset,
           style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xFF004D40),
+            backgroundColor: isDark ? const Color(0xFF10B981) : const Color(0xFF004D40),
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 16),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),

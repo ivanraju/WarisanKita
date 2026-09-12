@@ -50,7 +50,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     'Metalwork & Kris',
   ];
 
-  late final List<String> _malaysianStates = List<String>.from(ProfileValidator.supportedStates);
+  late final List<String> _malaysianStates = List<String>.from(
+    ProfileValidator.supportedStates,
+  );
 
   @override
   void initState() {
@@ -58,13 +60,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final authVM = context.read<AuthViewModel>();
     final user = authVM.currentUser;
     final initialFullName = user?.displayName ?? user?.effectiveUsername ?? '';
-    final initialUsername = (user?.username ?? user?.effectiveUsername ?? user?.handle ?? '').replaceAll('@', '');
+    final initialUsername =
+        (user?.username ?? user?.effectiveUsername ?? user?.handle ?? '')
+            .replaceAll('@', '');
     _initialUsername = initialUsername;
     _fullNameController = TextEditingController(text: initialFullName);
     _usernameController = TextEditingController(text: initialUsername);
     _usernameController.addListener(_onUsernameChanged);
     _bioController = TextEditingController(text: user?.bio ?? '');
-    _studioNameController = TextEditingController(text: user?.studioName ?? user?.displayName ?? '');
+    _studioNameController = TextEditingController(
+      text: user?.studioName ?? user?.displayName ?? '',
+    );
 
     if (user?.craftCategory != null && user!.craftCategory!.trim().isNotEmpty) {
       final craft = user.craftCategory!.trim();
@@ -127,7 +133,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       setState(() {
         _isCheckingUsername = false;
         _isUsernameAvailable = isAvailable;
-        _usernameStatusMessage = isAvailable ? '@$raw is available' : '@$raw is already taken';
+        _usernameStatusMessage = isAvailable
+            ? '@$raw is available'
+            : '@$raw is already taken';
       });
     });
   }
@@ -145,9 +153,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Future<void> _pickAndUploadAvatar() async {
     try {
-      final files = await FilePicker.pickFiles(
-        type: FileType.image,
-      );
+      final files = await FilePicker.pickFiles(type: FileType.image);
+      if (!mounted) return;
       if (files.isNotEmpty) {
         final file = files.first;
         setState(() => _isUploadingAvatar = true);
@@ -191,7 +198,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (!(_formKey.currentState?.validate() ?? false)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please correct the highlighted form errors before saving.'),
+          content: Text(
+            'Please correct the highlighted form errors before saving.',
+          ),
           backgroundColor: Color(0xFFEF4444),
           behavior: SnackBarBehavior.floating,
         ),
@@ -202,7 +211,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (_isUsernameAvailable == false) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(_usernameStatusMessage ?? 'Username handle is already taken'),
+          content: Text(
+            _usernameStatusMessage ?? 'Username handle is already taken',
+          ),
           backgroundColor: const Color(0xFFEF4444),
           behavior: SnackBarBehavior.floating,
         ),
@@ -217,7 +228,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     final authVM = context.read<AuthViewModel>();
 
-    if (username.isNotEmpty && username.toLowerCase() != _initialUsername?.toLowerCase()) {
+    if (username.isNotEmpty &&
+        username.toLowerCase() != _initialUsername?.toLowerCase()) {
       final isAvailable = await authVM.isUsernameAvailable(
         username,
         excludeEmail: authVM.currentUser?.email,
@@ -226,7 +238,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('@$username is already taken. Please choose another username handle.'),
+            content: Text(
+              '@$username is already taken. Please choose another username handle.',
+            ),
             backgroundColor: const Color(0xFFEF4444),
             behavior: SnackBarBehavior.floating,
           ),
@@ -236,10 +250,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
     final user = authVM.currentUser;
     final phone = user?.phone;
-    final isArtisan = user?.isArtisan == true || (user?.role.toLowerCase().contains('artisan') ?? false);
+    final isArtisan =
+        user?.isArtisan == true ||
+        (user?.role.toLowerCase().contains('artisan') ?? false);
 
     final finalStudioName = isArtisan
-        ? (studioName.isNotEmpty ? studioName : (fullName.isNotEmpty ? fullName : username))
+        ? (studioName.isNotEmpty
+              ? studioName
+              : (fullName.isNotEmpty ? fullName : username))
         : null;
 
     try {
@@ -264,6 +282,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       return;
     }
 
+    if (!mounted) return;
     try {
       final moderationVM = context.read<ModerationViewModel>();
       if (user?.email != null) {
@@ -316,7 +335,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             title: Text(
               tr('Edit Profile'),
               style: GoogleFonts.dmSerifDisplay(
-                color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                color: isDark
+                    ? const Color(0xFFFFD54F)
+                    : const Color(0xFF004D40),
                 fontSize: 22,
               ),
             ),
@@ -329,7 +350,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
 
     final initials = user.initials;
-    final isArtisan = user.isArtisan || user.role == 'Artisan' || user.role.toLowerCase().contains('artisan');
+    final isArtisan =
+        user.isArtisan ||
+        user.role == 'Artisan' ||
+        user.role.toLowerCase().contains('artisan');
 
     return HeritageBackground(
       child: Scaffold(
@@ -344,346 +368,470 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           ),
           backgroundColor: Colors.transparent,
           elevation: 0,
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back_rounded,
-            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
-          ),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-      ),
-      bottomNavigationBar: SafeArea(
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF0D2825) : Colors.white,
-            border: isDark ? const Border(top: BorderSide(color: Color(0xFF1E3A34))) : null,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 10,
-                offset: const Offset(0, -4),
-              )
-            ],
-          ),
-          child: ElevatedButton(
-            onPressed: _handleSave,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isDark ? const Color(0xFF1E3A34) : const Color(0xFF004D40),
-              foregroundColor: isDark ? const Color(0xFFFFD54F) : Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              elevation: 0,
+          leading: IconButton(
+            icon: Icon(
+              Icons.arrow_back_rounded,
+              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
             ),
-            child: Text(
-              tr('SAVE & SYNC PROFILE'),
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 0.5,
-              ),
-            ),
+            onPressed: () => Navigator.of(context).pop(),
           ),
         ),
-      ),
-      body: Form(
-        key: _formKey,
-        autovalidateMode: AutovalidateMode.onUserInteraction,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-            const SizedBox(height: 12),
-
-            // Avatar Image Picker
-            Center(
-              child: Stack(
+        bottomNavigationBar: SafeArea(
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 24.0,
+              vertical: 16.0,
+            ),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF0D2825) : Colors.white,
+              border: isDark
+                  ? const Border(top: BorderSide(color: Color(0xFF1E3A34)))
+                  : null,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, -4),
+                ),
+              ],
+            ),
+            child: ElevatedButton(
+              onPressed: _handleSave,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isDark
+                    ? const Color(0xFF1E3A34)
+                    : const Color(0xFF004D40),
+                foregroundColor: isDark
+                    ? const Color(0xFFFFD54F)
+                    : Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                elevation: 0,
+              ),
+              child: Text(
+                tr('SAVE & SYNC PROFILE'),
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+          ),
+        ),
+        body: Form(
+          key: _formKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => FocusScope.of(context).unfocus(),
+            child: SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  GestureDetector(
-                    onTap: _isUploadingAvatar ? null : _pickAndUploadAvatar,
-                    child: CircleAvatar(
-                      radius: 54,
-                      backgroundColor: isDark
-                          ? const Color(0xFF1E3A34)
-                          : const Color(0xFF004D40).withValues(alpha: 0.1),
-                      backgroundImage: user.avatarImageProvider,
-                      child: _isUploadingAvatar
-                          ? CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
-                              ),
-                            )
-                          : (user.avatarImageProvider != null
-                              ? null
-                              : Text(
-                                  initials,
-                                  style: GoogleFonts.dmSerifDisplay(
-                                    fontSize: 32,
-                                    color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                )),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: GestureDetector(
-                      onTap: _isUploadingAvatar ? null : _pickAndUploadAvatar,
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF1E3A34) : const Color(0xFF004D40),
-                          shape: BoxShape.circle,
-                          boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
-                        ),
-                        child: _isUploadingAvatar
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                ),
-                              )
-                            : Icon(
-                                Icons.camera_alt_rounded,
-                                color: isDark ? const Color(0xFFFFD54F) : Colors.white,
-                                size: 18,
-                              ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+                  const SizedBox(height: 12),
 
-            const SizedBox(height: 28),
-
-            Text(
-              tr('PERSONAL EXPLORER INFORMATION'),
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
-                color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF64748B),
-                letterSpacing: 1.0,
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Full Name Input Field
-            TextFormField(
-              controller: _fullNameController,
-              autovalidateMode: AutovalidateMode.onUserInteraction,
-              validator: ProfileValidator.validateFullName,
-              textCapitalization: TextCapitalization.words,
-              style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
-              decoration: InputDecoration(
-                labelText: tr('Full Name'),
-                hintText: 'e.g. Siti Nurhaliza',
-                prefixIcon: Icon(
-                  Icons.badge_outlined,
-                  color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
-                ),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Unique Username Handle Input Field
-            TextFormField(
-              controller: _usernameController,
-              autovalidateMode: AutovalidateMode.onUserInteraction,
-              validator: ProfileValidator.validateUsername,
-              style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
-              decoration: InputDecoration(
-                labelText: tr('Unique Username Handle'),
-                hintText: 'e.g. siticrafts',
-                prefixText: '@',
-                helperText: _usernameStatusMessage,
-                helperStyle: TextStyle(
-                  color: _isUsernameAvailable == true
-                      ? const Color(0xFF10B981)
-                      : (_isUsernameAvailable == false ? const Color(0xFFEF4444) : null),
-                  fontSize: 11,
-                ),
-                suffixIcon: _isCheckingUsername
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: Padding(
-                          padding: EdgeInsets.all(12),
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      )
-                    : (_isUsernameAvailable != null
-                        ? Icon(
-                            _isUsernameAvailable! ? Icons.check_circle_rounded : Icons.cancel_rounded,
-                            color: _isUsernameAvailable! ? const Color(0xFF10B981) : const Color(0xFFEF4444),
-                          )
-                        : null),
-                prefixIcon: Icon(
-                  Icons.alternate_email_rounded,
-                  color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
-                ),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-              ),
-            ),
-
-
-
-            const SizedBox(height: 16),
-
-            // Bio / Explorer Note Field
-            TextFormField(
-              controller: _bioController,
-              maxLines: 3,
-              autovalidateMode: AutovalidateMode.onUserInteraction,
-              validator: (v) => ProfileValidator.validateBio(
-                v,
-                isRequired: false,
-                minLength: 10,
-                maxLength: 500,
-              ),
-              style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
-              decoration: InputDecoration(
-                labelText: tr('Heritage Bio / Explorer Note'),
-                prefixIcon: Icon(
-                  Icons.description_outlined,
-                  color: isDark ? const Color(0xFFFFD54F) : null,
-                ),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-              ),
-            ),
-
-            if (isArtisan) ...[
-              const SizedBox(height: 32),
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF78350F).withValues(alpha: 0.35) : const Color(0xFFFEF3C7),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: const Color(0xFFF59E0B).withValues(alpha: isDark ? 0.6 : 1.0),
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+                  // Avatar Image Picker
+                  Center(
+                    child: Stack(
                       children: [
-                        Icon(
-                          Icons.swap_horiz_rounded,
-                          color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFB45309),
-                          size: 22,
+                        GestureDetector(
+                          onTap: _isUploadingAvatar
+                              ? null
+                              : _pickAndUploadAvatar,
+                          child: CircleAvatar(
+                            radius: 54,
+                            backgroundColor: isDark
+                                ? const Color(0xFF1E3A34)
+                                : const Color(
+                                    0xFF004D40,
+                                  ).withValues(alpha: 0.1),
+                            backgroundImage: user.avatarImageProvider,
+                            child: _isUploadingAvatar
+                                ? CircularProgressIndicator(
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      isDark
+                                          ? const Color(0xFFFFD54F)
+                                          : const Color(0xFF004D40),
+                                    ),
+                                  )
+                                : (user.avatarImageProvider != null
+                                      ? null
+                                      : Text(
+                                          initials,
+                                          style: GoogleFonts.dmSerifDisplay(
+                                            fontSize: 32,
+                                            color: isDark
+                                                ? const Color(0xFFFFD54F)
+                                                : const Color(0xFF004D40),
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        )),
+                          ),
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          tr('DUAL ROLE SYNC: ARTISAN STUDIO'),
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFB45309),
-                            letterSpacing: 0.8,
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: GestureDetector(
+                            onTap: _isUploadingAvatar
+                                ? null
+                                : _pickAndUploadAvatar,
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? const Color(0xFF1E3A34)
+                                    : const Color(0xFF004D40),
+                                shape: BoxShape.circle,
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Colors.black26,
+                                    blurRadius: 4,
+                                  ),
+                                ],
+                              ),
+                              child: _isUploadingAvatar
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                              Colors.white,
+                                            ),
+                                      ),
+                                    )
+                                  : Icon(
+                                      Icons.camera_alt_rounded,
+                                      color: isDark
+                                          ? const Color(0xFFFFD54F)
+                                          : Colors.white,
+                                      size: 18,
+                                    ),
+                            ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      tr('Changes here update your public Artisan Studio profile across the platform.'),
-                      style: GoogleFonts.plusJakartaSans(
+                  ),
+
+                  const SizedBox(height: 28),
+
+                  Text(
+                    tr('PERSONAL EXPLORER INFORMATION'),
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: isDark
+                          ? const Color(0xFFFFD54F)
+                          : const Color(0xFF64748B),
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Full Name Input Field
+                  TextFormField(
+                    controller: _fullNameController,
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    validator: ProfileValidator.validateFullName,
+                    textCapitalization: TextCapitalization.words,
+                    style: TextStyle(
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    ),
+                    decoration: InputDecoration(
+                      labelText: tr('Full Name'),
+                      hintText: 'e.g. Siti Nurhaliza',
+                      prefixIcon: Icon(
+                        Icons.badge_outlined,
+                        color: isDark
+                            ? const Color(0xFFFFD54F)
+                            : const Color(0xFF004D40),
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Unique Username Handle Input Field
+                  TextFormField(
+                    controller: _usernameController,
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    validator: ProfileValidator.validateUsername,
+                    style: TextStyle(
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    ),
+                    decoration: InputDecoration(
+                      labelText: tr('Unique Username Handle'),
+                      hintText: 'e.g. siticrafts',
+                      prefixText: '@',
+                      helperText: _usernameStatusMessage,
+                      helperStyle: TextStyle(
+                        color: _isUsernameAvailable == true
+                            ? const Color(0xFF10B981)
+                            : (_isUsernameAvailable == false
+                                  ? const Color(0xFFEF4444)
+                                  : null),
                         fontSize: 11,
-                        color: isDark ? Colors.white70 : const Color(0xFF92400E),
+                      ),
+                      suffixIcon: _isCheckingUsername
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: Padding(
+                                padding: EdgeInsets.all(12),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            )
+                          : (_isUsernameAvailable != null
+                                ? Icon(
+                                    _isUsernameAvailable!
+                                        ? Icons.check_circle_rounded
+                                        : Icons.cancel_rounded,
+                                    color: _isUsernameAvailable!
+                                        ? const Color(0xFF10B981)
+                                        : const Color(0xFFEF4444),
+                                  )
+                                : null),
+                      prefixIcon: Icon(
+                        Icons.alternate_email_rounded,
+                        color: isDark
+                            ? const Color(0xFFFFD54F)
+                            : const Color(0xFF004D40),
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                  ),
 
-                    // Studio Name Input
-                    TextFormField(
-                      controller: _studioNameController,
-                      autovalidateMode: AutovalidateMode.onUserInteraction,
-                      validator: ProfileValidator.validateStudioName,
-                      style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
-                      decoration: InputDecoration(
-                        labelText: tr('Artisan Studio Name'),
-                        prefixIcon: Icon(
-                          Icons.storefront_outlined,
-                          color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFB45309),
+                  const SizedBox(height: 16),
+
+                  // Bio / Explorer Note Field
+                  TextFormField(
+                    controller: _bioController,
+                    maxLines: 3,
+                    textInputAction: TextInputAction.done,
+                    onFieldSubmitted: (_) => FocusScope.of(context).unfocus(),
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    validator: (v) => ProfileValidator.validateBio(
+                      v,
+                      isRequired: false,
+                      minLength: 10,
+                      maxLength: 500,
+                    ),
+                    style: TextStyle(
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    ),
+                    decoration: InputDecoration(
+                      labelText: tr('Heritage Bio / Explorer Note'),
+                      prefixIcon: Icon(
+                        Icons.description_outlined,
+                        color: isDark ? const Color(0xFFFFD54F) : null,
+                      ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          Icons.keyboard_hide_rounded,
+                          color: isDark
+                              ? const Color(0xFFFFD54F)
+                              : const Color(0xFF004D40),
                         ),
-                        filled: true,
-                        fillColor: isDark ? const Color(0xFF0D2825) : Colors.white,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                        tooltip: tr('Done / Exit Keyboard'),
+                        onPressed: () => FocusScope.of(context).unfocus(),
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
                       ),
                     ),
+                  ),
 
-                    const SizedBox(height: 14),
-
-                    // Craft Category Dropdown
-                    DropdownButtonFormField<String>(
-                      value: _selectedCraftCategory,
-                      dropdownColor: isDark ? const Color(0xFF0D2825) : Colors.white,
-                      decoration: InputDecoration(
-                        labelText: tr('Craft Specialization'),
-                        prefixIcon: Icon(
-                          Icons.category_outlined,
-                          color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFB45309),
+                  if (isArtisan) ...[
+                    const SizedBox(height: 32),
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFF78350F).withValues(alpha: 0.35)
+                            : const Color(0xFFFEF3C7),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: const Color(
+                            0xFFF59E0B,
+                          ).withValues(alpha: isDark ? 0.6 : 1.0),
                         ),
-                        filled: true,
-                        fillColor: isDark ? const Color(0xFF0D2825) : Colors.white,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                       ),
-                      items: _craftCategories.map((craft) {
-                        return DropdownMenuItem<String>(
-                          value: craft,
-                          child: Text(tr(craft), style: GoogleFonts.plusJakartaSans(fontSize: 13)),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) setState(() => _selectedCraftCategory = val);
-                      },
-                    ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.swap_horiz_rounded,
+                                color: isDark
+                                    ? const Color(0xFFFFD54F)
+                                    : const Color(0xFFB45309),
+                                size: 22,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                tr('DUAL ROLE SYNC: ARTISAN STUDIO'),
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  color: isDark
+                                      ? const Color(0xFFFFD54F)
+                                      : const Color(0xFFB45309),
+                                  letterSpacing: 0.8,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            tr(
+                              'Changes here update your public Artisan Studio profile across the platform.',
+                            ),
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11,
+                              color: isDark
+                                  ? Colors.white70
+                                  : const Color(0xFF92400E),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
 
-                    const SizedBox(height: 14),
+                          // Studio Name Input
+                          TextFormField(
+                            controller: _studioNameController,
+                            autovalidateMode:
+                                AutovalidateMode.onUserInteraction,
+                            validator: ProfileValidator.validateStudioName,
+                            style: TextStyle(
+                              color: isDark
+                                  ? Colors.white
+                                  : const Color(0xFF0F172A),
+                            ),
+                            decoration: InputDecoration(
+                              labelText: tr('Artisan Studio Name'),
+                              prefixIcon: Icon(
+                                Icons.storefront_outlined,
+                                color: isDark
+                                    ? const Color(0xFFFFD54F)
+                                    : const Color(0xFFB45309),
+                              ),
+                              filled: true,
+                              fillColor: isDark
+                                  ? const Color(0xFF0D2825)
+                                  : Colors.white,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                          ),
 
-                    // State / Region Dropdown
-                    DropdownButtonFormField<String>(
-                      value: _selectedState,
-                      dropdownColor: isDark ? const Color(0xFF0D2825) : Colors.white,
-                      decoration: InputDecoration(
-                        labelText: tr('Studio State / Location'),
-                        prefixIcon: Icon(
-                          Icons.location_on_outlined,
-                          color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFB45309),
-                        ),
-                        filled: true,
-                        fillColor: isDark ? const Color(0xFF0D2825) : Colors.white,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                          const SizedBox(height: 14),
+
+                          // Craft Category Dropdown
+                          DropdownButtonFormField<String>(
+                            initialValue: _selectedCraftCategory,
+                            dropdownColor: isDark
+                                ? const Color(0xFF0D2825)
+                                : Colors.white,
+                            decoration: InputDecoration(
+                              labelText: tr('Craft Specialization'),
+                              prefixIcon: Icon(
+                                Icons.category_outlined,
+                                color: isDark
+                                    ? const Color(0xFFFFD54F)
+                                    : const Color(0xFFB45309),
+                              ),
+                              filled: true,
+                              fillColor: isDark
+                                  ? const Color(0xFF0D2825)
+                                  : Colors.white,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                            items: _craftCategories.map((craft) {
+                              return DropdownMenuItem<String>(
+                                value: craft,
+                                child: Text(
+                                  tr(craft),
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setState(() => _selectedCraftCategory = val);
+                              }
+                            },
+                          ),
+
+                          const SizedBox(height: 14),
+
+                          // State / Region Dropdown
+                          DropdownButtonFormField<String>(
+                            initialValue: _selectedState,
+                            dropdownColor: isDark
+                                ? const Color(0xFF0D2825)
+                                : Colors.white,
+                            decoration: InputDecoration(
+                              labelText: tr('Studio State / Location'),
+                              prefixIcon: Icon(
+                                Icons.location_on_outlined,
+                                color: isDark
+                                    ? const Color(0xFFFFD54F)
+                                    : const Color(0xFFB45309),
+                              ),
+                              filled: true,
+                              fillColor: isDark
+                                  ? const Color(0xFF0D2825)
+                                  : Colors.white,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                            items: _malaysianStates.map((st) {
+                              return DropdownMenuItem<String>(
+                                value: st,
+                                child: Text(
+                                  tr(st),
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setState(() => _selectedState = val);
+                              }
+                            },
+                          ),
+                        ],
                       ),
-                      items: _malaysianStates.map((st) {
-                        return DropdownMenuItem<String>(
-                          value: st,
-                          child: Text(tr(st), style: GoogleFonts.plusJakartaSans(fontSize: 13)),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) setState(() => _selectedState = val);
-                      },
                     ),
                   ],
-                ),
+                ],
               ),
-            ],
-          ],
+            ),
+          ),
         ),
       ),
-    ),
-    ),
-  );
+    );
+  }
 }
-}
-
