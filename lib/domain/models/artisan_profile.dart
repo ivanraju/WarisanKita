@@ -17,6 +17,7 @@ class ArtisanModel {
   final String? ssmNumber;
   final List<Map<String, dynamic>> documents;
   final String? phone;
+  final int? questPotentialXp;
 
   ArtisanModel({
     required this.id,
@@ -37,6 +38,7 @@ class ArtisanModel {
     this.ssmNumber,
     this.documents = const [],
     this.phone,
+    this.questPotentialXp,
   });
 
   ArtisanModel copyWith({
@@ -58,6 +60,7 @@ class ArtisanModel {
     String? ssmNumber,
     List<Map<String, dynamic>>? documents,
     String? phone,
+    int? questPotentialXp,
   }) {
     return ArtisanModel(
       id: id ?? this.id,
@@ -78,6 +81,7 @@ class ArtisanModel {
       ssmNumber: ssmNumber ?? this.ssmNumber,
       documents: documents ?? this.documents,
       phone: phone ?? this.phone,
+      questPotentialXp: questPotentialXp ?? this.questPotentialXp,
     );
   }
 
@@ -202,6 +206,7 @@ class ArtisanModel {
       ssmNumber: ssm,
       documents: docsList,
       phone: phone,
+      questPotentialXp: (map['quest_potential_xp'] as num?)?.toInt(),
     );
   }
 }

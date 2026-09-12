@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:warisan_kita/domain/models/artisan_profile.dart';
 import 'package:warisan_kita/domain/models/workshop_location.dart';
 import 'package:warisan_kita/ui/gamification/workshop_quest_navigation.dart';
 import 'package:warisan_kita/ui/tourist/artisan_detail_screen.dart';
@@ -203,7 +204,10 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
     } finally {
       _isOpeningQuest = false;
       if (context.mounted) {
-        await context.read<GamificationViewModel>().loadActiveQuestState();
+        await Future.wait([
+          context.read<GamificationViewModel>().loadActiveQuestState(),
+          context.read<DirectoryViewModel>().fetchArtisans(),
+        ]);
       }
     }
   }
@@ -495,7 +499,6 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
             'image': a.imageUrl,
             'images': a.images,
             'bio': a.description,
-            'exp': '+150 EXP',
             'experienceYears': a.experience,
             'workshopCount': a.workshopCount,
             'tags': a.tags,
@@ -523,7 +526,6 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
             'image': a.imageUrl,
             'images': a.images,
             'bio': a.description,
-            'exp': '+150 EXP',
             'experienceYears': a.experience,
             'workshopCount': a.workshopCount,
             'tags': a.tags,
@@ -1978,6 +1980,8 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
     LanguageViewModel langVM,
   ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final artisanModel = artisan['artisanModel'] as ArtisanModel?;
+    final questPotentialXp = artisanModel?.questPotentialXp;
     final rawImagesList = artisan['images'] is List
         ? List<String>.from(artisan['images'])
         : <String>[];
@@ -2077,7 +2081,8 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                 ],
               ),
             ),
-            topTrailing: Container(
+            topTrailing: questPotentialXp != null && questPotentialXp > 0
+                ? Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
@@ -2102,7 +2107,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    artisan['exp'] ?? '+150 EXP',
+                    '+$questPotentialXp XP',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 10,
                       fontWeight: FontWeight.w900,
@@ -2111,7 +2116,8 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                   ),
                 ],
               ),
-            ),
+            )
+                : null,
             bottomContent: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [

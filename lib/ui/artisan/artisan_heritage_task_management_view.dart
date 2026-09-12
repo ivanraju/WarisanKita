@@ -42,25 +42,31 @@ String? _taskXpError(String? value) {
       : null;
 }
 
-Widget _buildProgressProtectionNotice() {
+Widget _buildProgressProtectionNotice({required bool isDark}) {
   return Container(
     width: double.infinity,
     padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(
-      color: const Color(0xFFFFF8E1),
+      color: isDark ? const Color(0xFF332A12) : const Color(0xFFFFF8E1),
       borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: const Color(0xFFE9B949)),
+      border: Border.all(
+        color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFE9B949),
+      ),
     ),
-    child: const Row(
+    child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(Icons.shield_outlined, color: Color(0xFF9A6700), size: 18),
-        SizedBox(width: 9),
+        Icon(
+          Icons.shield_outlined,
+          color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF9A6700),
+          size: 18,
+        ),
+        const SizedBox(width: 9),
         Expanded(
           child: Text(
             _progressProtectionNotice,
             style: TextStyle(
-              color: Color(0xFF6B4F00),
+              color: isDark ? const Color(0xFFFFE8A3) : const Color(0xFF6B4F00),
               fontSize: 11,
               fontWeight: FontWeight.w600,
               height: 1.4,
@@ -1457,6 +1463,7 @@ class _AddHeritageTaskSheetState extends State<_AddHeritageTaskSheet> {
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<GamificationViewModel>();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: EdgeInsets.fromLTRB(
         20,
@@ -1464,9 +1471,9 @@ class _AddHeritageTaskSheetState extends State<_AddHeritageTaskSheet> {
         20,
         MediaQuery.viewInsetsOf(context).bottom + 24,
       ),
-      decoration: const BoxDecoration(
-        color: Color(0xFFF7F5EF),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF0B211D) : const Color(0xFFF7F5EF),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
       ),
       child: SafeArea(
         top: false,
@@ -1480,21 +1487,30 @@ class _AddHeritageTaskSheetState extends State<_AddHeritageTaskSheet> {
                 Text(
                   'Submit Heritage Task',
                   style: GoogleFonts.dmSerifDisplay(
-                    color: _green,
+                    color: isDark ? const Color(0xFFFFF8E1) : _green,
                     fontSize: 25,
                   ),
                 ),
                 const SizedBox(height: 6),
-                const Text(
+                Text(
                   'The task will be saved as pending and sent for admin approval.',
-                  style: TextStyle(color: Color(0xFF64748B), fontSize: 12),
+                  style: TextStyle(
+                    color: isDark
+                        ? const Color(0xFFB8CCC6)
+                        : const Color(0xFF64748B),
+                    fontSize: 12,
+                  ),
                 ),
                 const SizedBox(height: 12),
-                _buildProgressProtectionNotice(),
+                _buildProgressProtectionNotice(isDark: isDark),
                 const SizedBox(height: 18),
                 TextFormField(
                   controller: _title,
-                  decoration: _decoration('Task title'),
+                  style: TextStyle(
+                    color: isDark ? Colors.white : const Color(0xFF12201D),
+                  ),
+                  cursorColor: isDark ? const Color(0xFFFFD54F) : _green,
+                  decoration: _decoration('Task title', isDark),
                   textCapitalization: TextCapitalization.sentences,
                   inputFormatters: [
                     FilteringTextInputFormatter.deny(
@@ -1511,9 +1527,14 @@ class _AddHeritageTaskSheetState extends State<_AddHeritageTaskSheet> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'Task type',
-                  style: TextStyle(fontWeight: FontWeight.w700),
+                  style: TextStyle(
+                    color: isDark
+                        ? const Color(0xFFE6F1ED)
+                        : const Color(0xFF12201D),
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 SegmentedButton<bool>(
@@ -1531,7 +1552,11 @@ class _AddHeritageTaskSheetState extends State<_AddHeritageTaskSheet> {
                 TextFormField(
                   controller: _xp,
                   keyboardType: TextInputType.number,
-                  decoration: _decoration('XP reward'),
+                  style: TextStyle(
+                    color: isDark ? Colors.white : const Color(0xFF12201D),
+                  ),
+                  cursorColor: isDark ? const Color(0xFFFFD54F) : _green,
+                  decoration: _decoration('XP reward', isDark),
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   validator: _taskXpError,
                 ),
@@ -1550,6 +1575,14 @@ class _AddHeritageTaskSheetState extends State<_AddHeritageTaskSheet> {
                         onPressed: viewModel.isAddingTask
                             ? null
                             : () => Navigator.of(context).pop(),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: isDark
+                              ? const Color(0xFFFFD54F)
+                              : _green,
+                          side: BorderSide(
+                            color: isDark ? const Color(0xFFFFD54F) : _green,
+                          ),
+                        ),
                         child: const Text('Cancel'),
                       ),
                     ),
@@ -1557,7 +1590,18 @@ class _AddHeritageTaskSheetState extends State<_AddHeritageTaskSheet> {
                     Expanded(
                       child: FilledButton(
                         onPressed: viewModel.isAddingTask ? null : _add,
-                        style: FilledButton.styleFrom(backgroundColor: _green),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: isDark
+                              ? const Color(0xFF008F78)
+                              : _green,
+                          foregroundColor: Colors.white,
+                          disabledBackgroundColor: isDark
+                              ? const Color(0xFF31524B)
+                              : null,
+                          disabledForegroundColor: isDark
+                              ? Colors.white60
+                              : null,
+                        ),
                         child: viewModel.isAddingTask
                             ? const SizedBox.square(
                                 dimension: 18,
@@ -1579,10 +1623,26 @@ class _AddHeritageTaskSheetState extends State<_AddHeritageTaskSheet> {
     );
   }
 
-  InputDecoration _decoration(String label) => InputDecoration(
+  InputDecoration _decoration(String label, bool isDark) => InputDecoration(
     labelText: label,
+    labelStyle: TextStyle(
+      color: isDark ? const Color(0xFFB8CCC6) : const Color(0xFF64748B),
+    ),
     filled: true,
-    fillColor: Colors.white,
+    fillColor: isDark ? const Color(0xFF12332D) : Colors.white,
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(
+        color: isDark ? const Color(0xFF52756D) : const Color(0xFFB7C5C1),
+      ),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(
+        color: isDark ? const Color(0xFFFFD54F) : _green,
+        width: 1.5,
+      ),
+    ),
     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
   );
 }
@@ -1682,6 +1742,7 @@ class _EditHeritageTaskSheetState extends State<_EditHeritageTaskSheet> {
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<GamificationViewModel>();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isBusy = _isNewTaskSubmission
         ? viewModel.isUpdatingNewTask
         : viewModel.isSubmittingTaskChange;
@@ -1692,9 +1753,9 @@ class _EditHeritageTaskSheetState extends State<_EditHeritageTaskSheet> {
         20,
         MediaQuery.viewInsetsOf(context).bottom + 24,
       ),
-      decoration: const BoxDecoration(
-        color: Color(0xFFF7F5EF),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF0B211D) : const Color(0xFFF7F5EF),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
       ),
       child: SafeArea(
         top: false,
@@ -1714,7 +1775,7 @@ class _EditHeritageTaskSheetState extends State<_EditHeritageTaskSheet> {
                       ? 'Edit & Resubmit Task'
                       : 'Request Task Edit',
                   style: GoogleFonts.dmSerifDisplay(
-                    color: _green,
+                    color: isDark ? const Color(0xFFFFF8E1) : _green,
                     fontSize: 25,
                   ),
                 ),
@@ -1729,17 +1790,23 @@ class _EditHeritageTaskSheetState extends State<_EditHeritageTaskSheet> {
                             ? 'Update the rejected new task and submit it for admin review again.'
                             : 'Revise the rejected update and submit it for admin review again. The approved task stays unchanged.'
                       : 'The existing task remains unchanged until an admin approves this request.',
-                  style: const TextStyle(
-                    color: Color(0xFF64748B),
+                  style: TextStyle(
+                    color: isDark
+                        ? const Color(0xFFB8CCC6)
+                        : const Color(0xFF64748B),
                     fontSize: 12,
                   ),
                 ),
                 const SizedBox(height: 12),
-                _buildProgressProtectionNotice(),
+                _buildProgressProtectionNotice(isDark: isDark),
                 const SizedBox(height: 18),
                 TextFormField(
                   controller: _title,
-                  decoration: _decoration('Task title'),
+                  style: TextStyle(
+                    color: isDark ? Colors.white : const Color(0xFF12201D),
+                  ),
+                  cursorColor: isDark ? const Color(0xFFFFD54F) : _green,
+                  decoration: _decoration('Task title', isDark),
                   textCapitalization: TextCapitalization.sentences,
                   inputFormatters: [
                     FilteringTextInputFormatter.deny(
@@ -1756,9 +1823,14 @@ class _EditHeritageTaskSheetState extends State<_EditHeritageTaskSheet> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'Task type',
-                  style: TextStyle(fontWeight: FontWeight.w700),
+                  style: TextStyle(
+                    color: isDark
+                        ? const Color(0xFFE6F1ED)
+                        : const Color(0xFF12201D),
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 SegmentedButton<bool>(
@@ -1776,7 +1848,11 @@ class _EditHeritageTaskSheetState extends State<_EditHeritageTaskSheet> {
                 TextFormField(
                   controller: _xp,
                   keyboardType: TextInputType.number,
-                  decoration: _decoration('XP reward'),
+                  style: TextStyle(
+                    color: isDark ? Colors.white : const Color(0xFF12201D),
+                  ),
+                  cursorColor: isDark ? const Color(0xFFFFD54F) : _green,
+                  decoration: _decoration('XP reward', isDark),
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   validator: _taskXpError,
                 ),
@@ -1795,6 +1871,14 @@ class _EditHeritageTaskSheetState extends State<_EditHeritageTaskSheet> {
                         onPressed: isBusy
                             ? null
                             : () => Navigator.of(context).pop(),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: isDark
+                              ? const Color(0xFFFFD54F)
+                              : _green,
+                          side: BorderSide(
+                            color: isDark ? const Color(0xFFFFD54F) : _green,
+                          ),
+                        ),
                         child: const Text('Cancel'),
                       ),
                     ),
@@ -1802,7 +1886,18 @@ class _EditHeritageTaskSheetState extends State<_EditHeritageTaskSheet> {
                     Expanded(
                       child: FilledButton(
                         onPressed: isBusy ? null : _submit,
-                        style: FilledButton.styleFrom(backgroundColor: _green),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: isDark
+                              ? const Color(0xFF008F78)
+                              : _green,
+                          foregroundColor: Colors.white,
+                          disabledBackgroundColor: isDark
+                              ? const Color(0xFF31524B)
+                              : null,
+                          disabledForegroundColor: isDark
+                              ? Colors.white60
+                              : null,
+                        ),
                         child: isBusy
                             ? const SizedBox.square(
                                 dimension: 18,
@@ -1832,10 +1927,26 @@ class _EditHeritageTaskSheetState extends State<_EditHeritageTaskSheet> {
     );
   }
 
-  InputDecoration _decoration(String label) => InputDecoration(
+  InputDecoration _decoration(String label, bool isDark) => InputDecoration(
     labelText: label,
+    labelStyle: TextStyle(
+      color: isDark ? const Color(0xFFB8CCC6) : const Color(0xFF64748B),
+    ),
     filled: true,
-    fillColor: Colors.white,
+    fillColor: isDark ? const Color(0xFF12332D) : Colors.white,
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(
+        color: isDark ? const Color(0xFF52756D) : const Color(0xFFB7C5C1),
+      ),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(
+        color: isDark ? const Color(0xFFFFD54F) : _green,
+        width: 1.5,
+      ),
+    ),
     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
   );
 }
