@@ -719,7 +719,7 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
       child: TextField(
         onChanged: (val) => viewModel.setSearchQuery(val),
         decoration: InputDecoration(
-          hintText: 'Search by artisan name, state, or email...',
+          hintText: 'Search by studio or artisan name, state, or email...',
           hintStyle: GoogleFonts.plusJakartaSans(
             fontSize: 13,
             color: const Color(0xFF94A3B8),
