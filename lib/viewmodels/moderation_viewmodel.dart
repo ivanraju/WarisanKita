@@ -1313,11 +1313,11 @@ class ModerationViewModel extends ChangeNotifier {
         isLiveOpen: false,
       );
 
-      // Suspend only the Artisan Studio Profile in DB; user account remains ACTIVE as Tourist
+      // Suspend only the Artisan Studio Profile in DB; user account remains ACTIVE
       await _repository.updateArtisanStatus(
         email: artisan.email,
         newStatus: 'SUSPENDED',
-        newRole: 'Tourist',
+        newRole: 'Artisan',
         updateArtisanProfileOnly: true,
       );
 
@@ -1326,8 +1326,6 @@ class ModerationViewModel extends ChangeNotifier {
       );
       if (uIdx != -1) {
         _registeredUsers[uIdx] = _registeredUsers[uIdx].copyWith(
-          role: 'Tourist',
-          roles: const ['Tourist'],
           artisanStatus: 'SUSPENDED',
         );
       }

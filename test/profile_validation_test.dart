@@ -1076,6 +1076,52 @@ void main() {
       expect(reactivatedMaster.isLiveOpen, isTrue);
     });
 
+    test('ModerationViewModel.suspendActiveArtisan suspends studio while preserving artisan listing with suspended badge', () async {
+      final backend = AuthBackend();
+      addTearDown(backend.client.dispose);
+      final record = backend.add('artisan.studio@warisankita.my', role: 'Artisan', username: 'studiomaster');
+      final artisanId = record['id'] as String;
+      final service = SupabaseService(client: backend.client);
+      final repo = UserRepository(service: service);
+      final modVM = ModerationViewModel(repository: repo);
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      modVM.activeArtisanMasters.add(
+        ActiveArtisanMaster(
+          id: artisanId,
+          name: 'Studio Master',
+          email: 'artisan.studio@warisankita.my',
+          category: 'Batik',
+          state: 'Kelantan',
+          experience: '10 Years',
+          plaques: 3,
+          isLiveOpen: true,
+          licenseNo: 'SSM-99887',
+          verifiedDate: '2024-01-01',
+          imageUrl: '',
+          bio: 'Batik artisan',
+          phone: '+60123456789',
+          isSuspended: false,
+        ),
+      );
+
+      // Suspend active artisan license
+      await modVM.suspendActiveArtisan(artisanId);
+
+      final masterInList = modVM.activeArtisanMasters.firstWhere((a) => a.id == artisanId);
+      expect(masterInList.isSuspended, isTrue);
+      expect(masterInList.isLiveOpen, isFalse);
+      expect(masterInList.statusText, '⛔ SUSPENDED (HIDDEN)');
+
+      // Reactivate studio license
+      await modVM.reactivateActiveArtisan(artisanId);
+
+      final reactivatedMaster = modVM.activeArtisanMasters.firstWhere((a) => a.id == artisanId);
+      expect(reactivatedMaster.isSuspended, isFalse);
+      expect(reactivatedMaster.isLiveOpen, isTrue);
+      expect(reactivatedMaster.statusText, '🟢 OPEN FOR DEMOS');
+    });
+
     test('Artisan application rejection excludes profile from pending approvals across refresh', () async {
       final backend = AuthBackend();
       addTearDown(backend.client.dispose);
