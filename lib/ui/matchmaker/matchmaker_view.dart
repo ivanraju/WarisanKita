@@ -18,82 +18,176 @@ class _QuizWizardScreenState extends State<QuizWizardScreen> {
 
   final List<Map<String, dynamic>> _questions = [
     {
-      'question': 'What type of craft experience do you prefer?',
+      'question': 'What kind of activity sounds most satisfying?',
       'options': [
         {
-          'label': 'Hands-on Workshop',
-          'subtitle': 'Craft your own pottery or dye batik fabric',
-          'image': 'https://images.unsplash.com/photo-1502622645667-f7ed8fa4d99c?w=600',
-          'color': Color(0xFF004D40),
-        },
-        {
-          'label': 'Observing Master Artisans',
-          'subtitle': 'Watch skilled masters demonstrate traditional techniques',
-          'image': 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?w=600',
-          'color': Color(0xFFFF7043),
-        },
-      ],
-    },
-    {
-      'question': 'Which studio setting do you enjoy most?',
-      'options': [
-        {
-          'label': 'Indoor Studio',
-          'subtitle': 'Air-conditioned gallery & structured workshop',
-          'image': 'https://images.unsplash.com/photo-1528459801416-a9e53bbf4e17?w=600',
-          'color': const Color(0xFF0284C7),
-        },
-        {
-          'label': 'Outdoor Village',
-          'subtitle': 'Open-air traditional wooden kampong workshop setup',
-          'image': 'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?w=600',
-          'color': const Color(0xFF16A34A),
-        },
-      ],
-    },
-    {
-      'question': 'What is your favorite craft material?',
-      'options': [
-        {
-          'label': 'Batik & Songket Textiles',
-          'subtitle': 'Silk, cotton, wax canting & golden thread',
+          'label': 'Painting flowing patterns',
+          'subtitle': 'Batik canting, dynamic pigments & fabric flow',
           'image': 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=600',
-          'color': const Color(0xFFFF7043),
+          'color': const Color(0xFF004D40),
         },
         {
-          'label': 'Pottery & Clay',
-          'subtitle': 'Terrakotta clay, Labu Sayong & kiln ceramics',
+          'label': 'Shaping by hand',
+          'subtitle': 'Moulding earthenware clay & tactile curves',
           'image': 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600',
           'color': const Color(0xFFD97706),
         },
         {
-          'label': 'Carved Timber & Wood',
-          'subtitle': 'Hardwood timbers, Ukiran motifs & woodwork',
+          'label': 'Carving precise details',
+          'subtitle': 'Hardwood chisel relief, fine lines & patience',
           'image': 'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?w=600',
           'color': const Color(0xFF5D4037),
         },
         {
-          'label': 'Royal Pewter & Metal',
-          'subtitle': 'Metallic sheen, pewter casting & keris forging',
+          'label': 'Forming and polishing metal',
+          'subtitle': 'Pewter casting, clean edges & metallic sheen',
           'image': 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600',
           'color': const Color(0xFF475569),
         },
       ],
     },
     {
-      'question': 'Which Malaysian heritage region interests you?',
+      'question': 'How do you prefer to learn?',
       'options': [
         {
-          'label': 'East Coast Heritage',
-          'subtitle': 'Kelantan & Terengganu: Songket, Wau kites & Batik',
+          'label': 'Experiment immediately',
+          'subtitle': 'Dive straight in and learn hands-on by feeling',
+          'image': 'https://images.unsplash.com/photo-1502622645667-f7ed8fa4d99c?w=600',
+          'color': const Color(0xFF0D9488),
+        },
+        {
+          'label': 'Watch a master first',
+          'subtitle': 'Observe traditional techniques & artisan posture',
+          'image': 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?w=600',
+          'color': const Color(0xFFB45309),
+        },
+        {
+          'label': 'Follow clear steps',
+          'subtitle': 'Step-by-step guidance & structured methods',
+          'image': 'https://images.unsplash.com/photo-1528459801416-a9e53bbf4e17?w=600',
+          'color': const Color(0xFF2563EB),
+        },
+        {
+          'label': 'Explore the history first',
+          'subtitle': 'Understand cultural depth, heritage & origins',
           'image': 'https://images.unsplash.com/photo-1596401057633-54a8fe8ef647?w=600',
+          'color': const Color(0xFF7C3AED),
+        },
+      ],
+    },
+    {
+      'question': 'Which working environment appeals to you?',
+      'options': [
+        {
+          'label': 'Colourful textile studio',
+          'subtitle': 'Vibrant fabrics, hanging silks & wax aroma',
+          'image': 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=600',
           'color': const Color(0xFF004D40),
         },
         {
-          'label': 'West Coast Historic',
-          'subtitle': 'Melaka & Perak: Labu Sayong pottery & carvings',
+          'label': 'Quiet pottery workshop',
+          'subtitle': 'Spinning wheels, soothing earth & calm clay',
           'image': 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600',
+          'color': const Color(0xFFD97706),
+        },
+        {
+          'label': 'Open-air village workshop',
+          'subtitle': 'Verandas, timber scents & tropical breeze',
+          'image': 'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?w=600',
+          'color': const Color(0xFF16A34A),
+        },
+        {
+          'label': 'Precise metalworking studio',
+          'subtitle': 'Organized tool benches & polished metalcraft',
+          'image': 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600',
+          'color': const Color(0xFF475569),
+        },
+      ],
+    },
+    {
+      'question': 'What matters most in something you create?',
+      'options': [
+        {
+          'label': 'Expressive colour and symbolism',
+          'subtitle': 'Emotional motifs, dynamic color & storytelling',
+          'image': 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=600',
+          'color': const Color(0xFFE11D48),
+        },
+        {
+          'label': 'Useful object with personal touch',
+          'subtitle': 'Functional everyday earthenware with soulful warmth',
+          'image': 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600',
+          'color': const Color(0xFFD97706),
+        },
+        {
+          'label': 'Intricate detail and natural beauty',
+          'subtitle': 'Fine grain patterns & heirloom craftsmanship',
+          'image': 'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?w=600',
+          'color': const Color(0xFF5D4037),
+        },
+        {
+          'label': 'Strength, accuracy, and lasting quality',
+          'subtitle': 'Durable alloys, clean lines & permanent beauty',
+          'image': 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600',
+          'color': const Color(0xFF334155),
+        },
+      ],
+    },
+    {
+      'question': 'What pace feels most comfortable?',
+      'options': [
+        {
+          'label': 'Free-flowing and expressive',
+          'subtitle': 'Spontaneous rhythm with room for surprises',
+          'image': 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=600',
+          'color': const Color(0xFF0284C7),
+        },
+        {
+          'label': 'Calm and repetitive',
+          'subtitle': 'Therapeutic, meditative rhythm with clay',
+          'image': 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600',
+          'color': const Color(0xFF059669),
+        },
+        {
+          'label': 'Slow and highly focused',
+          'subtitle': 'Quiet patience & millimeter-level focus',
+          'image': 'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?w=600',
           'color': const Color(0xFFB45309),
+        },
+        {
+          'label': 'Methodical and exact',
+          'subtitle': 'Systematic, measured steps & exact precision',
+          'image': 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600',
+          'color': const Color(0xFF475569),
+        },
+      ],
+    },
+    {
+      'question': 'Which heritage story interests you most?',
+      'options': [
+        {
+          'label': 'Batik and songket traditions',
+          'subtitle': 'Royal courts, golden threads & canting legends',
+          'image': 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=600',
+          'color': const Color(0xFF004D40),
+        },
+        {
+          'label': 'Labu Sayong and traditional ceramics',
+          'subtitle': 'Perak earthenware & river clay smoke firing',
+          'image': 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600',
+          'color': const Color(0xFFD97706),
+        },
+        {
+          'label': 'Ukiran Melayu and architectural carving',
+          'subtitle': 'Malay timber carvings & Istana architecture',
+          'image': 'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?w=600',
+          'color': const Color(0xFF5D4037),
+        },
+        {
+          'label': 'Pewter craft and keris making',
+          'subtitle': 'Sacred bladesmithing & royal pewter artistry',
+          'image': 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600',
+          'color': const Color(0xFF334155),
         },
       ],
     },
@@ -109,10 +203,7 @@ class _QuizWizardScreenState extends State<QuizWizardScreen> {
       setState(() => _currentStep++);
     } else {
       await matchmakerVM.saveQuizResults(
-        experienceType: matchmakerVM.answers[0] ?? 'Hands-on Workshop',
-        environment: matchmakerVM.answers[1] ?? 'Indoor Studio',
-        material: matchmakerVM.answers[2] ?? 'Batik & Songket Textiles',
-        region: matchmakerVM.answers[3] ?? 'East Coast Heritage',
+        answers: matchmakerVM.answers,
         userEmail: authVM.currentUser?.email,
       );
 
@@ -152,32 +243,26 @@ class _QuizWizardScreenState extends State<QuizWizardScreen> {
           ),
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(32.0),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24.0),
         child: Column(
           children: [
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
             Text(
               question['question'],
               textAlign: TextAlign.center,
               style: GoogleFonts.dmSerifDisplay(
-                fontSize: 32,
+                fontSize: 26,
                 color: const Color(0xFF004D40),
-                height: 1.1,
+                height: 1.15,
               ),
             ),
-            const SizedBox(height: 48),
-            Expanded(
-              child: Column(
-                children: (question['options'] as List).asMap().entries.map((entry) {
-                  int idx = entry.key;
-                  var opt = entry.value;
-                  return Expanded(
-                    child: _buildInteractiveCard(opt, idx),
-                  );
-                }).toList(),
-              ),
-            ),
+            const SizedBox(height: 28),
+            ...((question['options'] as List).asMap().entries.map((entry) {
+              int idx = entry.key;
+              var opt = entry.value;
+              return _buildInteractiveCard(opt, idx);
+            }).toList()),
           ],
         ),
       ),
@@ -197,34 +282,50 @@ class _QuizWizardScreenState extends State<QuizWizardScreen> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeOutBack,
-        margin: EdgeInsets.only(bottom: 24, top: isHovered ? 4 : 0),
+        height: 105,
+        margin: EdgeInsets.only(bottom: 16, top: isHovered ? 2 : 0),
         width: double.infinity,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(32),
+          borderRadius: BorderRadius.circular(20),
           image: DecorationImage(
             image: NetworkImage(opt['image']),
             fit: BoxFit.cover,
             colorFilter: ColorFilter.mode(
-              Colors.black.withOpacity(isHovered ? 0.2 : 0.4),
+              Colors.black.withOpacity(isHovered ? 0.3 : 0.5),
               BlendMode.darken,
             ),
           ),
           boxShadow: [
             BoxShadow(
               color: (opt['color'] as Color).withOpacity(0.3),
-              blurRadius: isHovered ? 30 : 20,
-              offset: Offset(0, isHovered ? 15 : 10),
+              blurRadius: isHovered ? 20 : 12,
+              offset: Offset(0, isHovered ? 8 : 4),
             )
           ],
         ),
-        child: Center(
-          child: Text(
-            opt['label'],
-            style: GoogleFonts.dmSerifDisplay(
-              color: Colors.white,
-              fontSize: 32,
-              shadows: [const Shadow(blurRadius: 20)],
-            ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                opt['label'],
+                style: GoogleFonts.dmSerifDisplay(
+                  color: Colors.white,
+                  fontSize: 20,
+                  shadows: [const Shadow(blurRadius: 10)],
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                opt['subtitle'],
+                style: GoogleFonts.plusJakartaSans(
+                  color: Colors.white.withOpacity(0.92),
+                  fontSize: 12,
+                ),
+              ),
+            ],
           ),
         ),
       ),

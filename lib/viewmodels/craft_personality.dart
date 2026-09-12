@@ -4,6 +4,7 @@ class CraftPersonality {
   final String tagline;
   final List<String> matchingCrafts;
   final String primaryCategory;
+  final String? secondaryCategory;
   final List<String> preferenceTags;
   final String? experienceType;
   final String? environment;
@@ -11,6 +12,11 @@ class CraftPersonality {
   final String? region;
   final String? badgeIconName;
   final DateTime? completedAt;
+  final Map<String, int> craftScores;
+  final Map<String, int> traitScores;
+  final String? topTrait;
+  final bool isBlended;
+  final List<String> blendedCategories;
 
   CraftPersonality({
     required this.title,
@@ -18,6 +24,7 @@ class CraftPersonality {
     this.tagline = '',
     required this.matchingCrafts,
     this.primaryCategory = 'All Crafts',
+    this.secondaryCategory,
     this.preferenceTags = const [],
     this.experienceType,
     this.environment,
@@ -25,6 +32,11 @@ class CraftPersonality {
     this.region,
     this.badgeIconName,
     this.completedAt,
+    this.craftScores = const {},
+    this.traitScores = const {},
+    this.topTrait,
+    this.isBlended = false,
+    this.blendedCategories = const [],
   });
 
   CraftPersonality copyWith({
@@ -33,6 +45,7 @@ class CraftPersonality {
     String? tagline,
     List<String>? matchingCrafts,
     String? primaryCategory,
+    String? secondaryCategory,
     List<String>? preferenceTags,
     String? experienceType,
     String? environment,
@@ -40,6 +53,11 @@ class CraftPersonality {
     String? region,
     String? badgeIconName,
     DateTime? completedAt,
+    Map<String, int>? craftScores,
+    Map<String, int>? traitScores,
+    String? topTrait,
+    bool? isBlended,
+    List<String>? blendedCategories,
   }) {
     return CraftPersonality(
       title: title ?? this.title,
@@ -47,6 +65,7 @@ class CraftPersonality {
       tagline: tagline ?? this.tagline,
       matchingCrafts: matchingCrafts ?? this.matchingCrafts,
       primaryCategory: primaryCategory ?? this.primaryCategory,
+      secondaryCategory: secondaryCategory ?? this.secondaryCategory,
       preferenceTags: preferenceTags ?? this.preferenceTags,
       experienceType: experienceType ?? this.experienceType,
       environment: environment ?? this.environment,
@@ -54,6 +73,11 @@ class CraftPersonality {
       region: region ?? this.region,
       badgeIconName: badgeIconName ?? this.badgeIconName,
       completedAt: completedAt ?? this.completedAt,
+      craftScores: craftScores ?? this.craftScores,
+      traitScores: traitScores ?? this.traitScores,
+      topTrait: topTrait ?? this.topTrait,
+      isBlended: isBlended ?? this.isBlended,
+      blendedCategories: blendedCategories ?? this.blendedCategories,
     );
   }
 
@@ -64,6 +88,7 @@ class CraftPersonality {
       'tagline': tagline,
       'matchingCrafts': matchingCrafts,
       'primaryCategory': primaryCategory,
+      'secondaryCategory': secondaryCategory,
       'preferenceTags': preferenceTags,
       'experienceType': experienceType,
       'environment': environment,
@@ -71,10 +96,22 @@ class CraftPersonality {
       'region': region,
       'badgeIconName': badgeIconName,
       'completedAt': completedAt?.toIso8601String(),
+      'craftScores': craftScores,
+      'traitScores': traitScores,
+      'topTrait': topTrait,
+      'isBlended': isBlended,
+      'blendedCategories': blendedCategories,
     };
   }
 
   factory CraftPersonality.fromMap(Map<String, dynamic> map) {
+    Map<String, int> parseScoreMap(dynamic raw) {
+      if (raw is Map) {
+        return raw.map((k, v) => MapEntry(k.toString(), (v is num) ? v.toInt() : (int.tryParse(v.toString()) ?? 0)));
+      }
+      return const {};
+    }
+
     return CraftPersonality(
       title: map['title'] as String? ?? 'The Heritage Explorer',
       description: map['description'] as String? ??
@@ -85,6 +122,7 @@ class CraftPersonality {
               .toList() ??
           const ['Batik', 'Pottery'],
       primaryCategory: map['primaryCategory'] as String? ?? 'All Crafts',
+      secondaryCategory: map['secondaryCategory'] as String?,
       preferenceTags: (map['preferenceTags'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??
@@ -97,6 +135,14 @@ class CraftPersonality {
       completedAt: map['completedAt'] != null
           ? DateTime.tryParse(map['completedAt'] as String)
           : null,
+      craftScores: parseScoreMap(map['craftScores']),
+      traitScores: parseScoreMap(map['traitScores']),
+      topTrait: map['topTrait'] as String?,
+      isBlended: map['isBlended'] as bool? ?? false,
+      blendedCategories: (map['blendedCategories'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
     );
   }
 }
