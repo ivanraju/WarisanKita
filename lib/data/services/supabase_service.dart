@@ -3753,7 +3753,11 @@ class SupabaseService {
     }
   }
 
-  Future<String?> ensureArtisanProfileId(String userId, {String? email}) async {
+  Future<String?> ensureArtisanProfileId(
+    String userId, {
+    String? email,
+    String? initialStatus,
+  }) async {
     try {
       final cleanEmail = email?.trim().toLowerCase();
       // 1. Check in-memory store
@@ -3802,18 +3806,38 @@ class SupabaseService {
         try {
           final userRow = await client
               .from('users')
-              .select('full_name, username')
+              .select('full_name, username, role, status, artisan_status')
               .eq('id', userId)
               .maybeSingle();
           final name =
               userRow?['full_name'] ?? userRow?['username'] ?? 'Artisan Studio';
+
+          String? storeRole;
+          String? storeStatus;
+          String? storeArtisanStatus;
+          if (cleanEmail != null && _userStore.containsKey(cleanEmail)) {
+            final storeData = _userStore[cleanEmail]!;
+            storeRole = storeData['role']?.toString();
+            storeStatus = storeData['status']?.toString();
+            storeArtisanStatus = storeData['artisan_status']?.toString();
+          }
+
+          final userRole = (userRow?['role'] ?? storeRole)?.toString().toLowerCase() ?? '';
+          final userStatus = (userRow?['status'] ?? storeStatus)?.toString().toUpperCase() ?? '';
+          final artisanStatus =
+              (userRow?['artisan_status'] ?? storeArtisanStatus)?.toString().toUpperCase() ?? '';
+
+          final isAlreadyApproved = (artisanStatus == 'APPROVED') ||
+              (userRole == 'artisan' && userStatus == 'ACTIVE');
+          final resolvedStatus = initialStatus?.trim().toUpperCase() ??
+              (isAlreadyApproved ? 'APPROVED' : 'PENDING_APPROVAL');
 
           final newProfile = {
             'user_id': userId,
             'studio_name': name,
             'craft_category': 'Traditional Crafts',
             'bio': 'Master artisan dedicated to traditional Malaysian craft.',
-            'status': 'APPROVED',
+            'status': resolvedStatus,
             'created_at': DateTime.now().toIso8601String(),
             'updated_at': DateTime.now().toIso8601String(),
           };
