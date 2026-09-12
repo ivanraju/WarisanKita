@@ -12,6 +12,7 @@ import 'package:warisan_kita/ui/admin_web/widgets/admin_sidebar.dart';
 import 'package:warisan_kita/ui/admin_web/widgets/admin_overview_tab.dart';
 import 'package:warisan_kita/ui/admin_web/widgets/admin_active_artisans_tab.dart';
 import 'package:warisan_kita/ui/admin_web/widgets/pending_artisans_table.dart';
+import 'package:warisan_kita/ui/admin_web/widgets/pending_relocations_table.dart';
 import 'package:warisan_kita/ui/admin_web/widgets/user_management_table.dart';
 import 'package:warisan_kita/ui/auth/login_screen.dart';
 
@@ -61,7 +62,9 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'PROFILE APPROVED SUCCESSFULLY (${artisan.name})',
+                  artisan.isRelocationRequest
+                      ? 'WORKSHOP RELOCATION APPROVED (${artisan.name})'
+                      : 'PROFILE APPROVED SUCCESSFULLY (${artisan.name})',
                   style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold),
                 ),
               ),
@@ -111,8 +114,12 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
             Expanded(
               child: Text(
                 reason != null && reason.trim().isNotEmpty
-                    ? 'PROFILE REJECTED (${artisan.name}): "$reason"'
-                    : 'PROFILE REJECTED (${artisan.name})',
+                    ? (artisan.isRelocationRequest
+                        ? 'RELOCATION REJECTED (${artisan.name}): "$reason"'
+                        : 'PROFILE REJECTED (${artisan.name}): "$reason"')
+                    : (artisan.isRelocationRequest
+                        ? 'RELOCATION REJECTED (${artisan.name})'
+                        : 'PROFILE REJECTED (${artisan.name})'),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -303,6 +310,7 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
       child: Consumer<ModerationViewModel>(
         builder: (context, viewModel, child) {
           final isUserManagementTab = viewModel.activeTab == 'User Management';
+          final isRelocationTab = viewModel.activeTab == 'Workshop Relocations';
 
           return Scaffold(
             backgroundColor: const Color(0xFFF8FAFC),
@@ -352,7 +360,11 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
                                     children: [
                                       // Title & Subtitle Header
                                       Text(
-                                        isUserManagementTab ? 'Registered User Management' : 'Pending Artisan Profiles & Relocations',
+                                        isUserManagementTab
+                                            ? 'Registered User Management'
+                                            : isRelocationTab
+                                                ? 'Workshop Premise Relocations'
+                                                : 'Pending Artisan Profiles',
                                         style: GoogleFonts.dmSerifDisplay(
                                           fontSize: isMobile ? 24 : 32,
                                           fontWeight: FontWeight.bold,
@@ -363,7 +375,9 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
                                       Text(
                                         isUserManagementTab
                                             ? 'Manage, monitor, and suspend active tourist and artisan accounts.'
-                                            : 'Review, verify, and approve traditional Malaysian artisan profile submissions and workshop premise relocations.',
+                                            : isRelocationTab
+                                                ? 'Review, verify, and approve workshop premise relocation requests submitted by accredited master artisans.'
+                                                : 'Review, verify, and approve traditional Malaysian artisan profile submissions.',
                                         style: GoogleFonts.plusJakartaSans(
                                           fontSize: isMobile ? 12 : 14,
                                           color: const Color(0xFF64748B),
@@ -373,7 +387,7 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
                                       const SizedBox(height: 24),
 
                                       // Summary Metric Cards Row
-                                      _buildMetricsRow(context, viewModel, isUserManagementTab),
+                                      _buildMetricsRow(context, viewModel, isUserManagementTab, isRelocationTab),
 
                                       const SizedBox(height: 28),
 
@@ -381,22 +395,29 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
                                       if (isUserManagementTab)
                                         _buildUserFilterControlsRow(context, viewModel)
                                       else
-                                        _buildFilterControlsRow(context, viewModel),
+                                        _buildFilterControlsRow(context, viewModel, isRelocation: isRelocationTab),
                                       const SizedBox(height: 20),
 
                                       // Main Data Table Component
-                                      isUserManagementTab
-                                          ? UserManagementTable(
-                                              users: viewModel.filteredUsers,
-                                              onSuspend: (user) => _handleSuspendUser(context, user),
-                                              onReactivate: (user) => _handleReactivateUser(context, user),
-                                              onResetPassword: (user) => _handleResetPassword(context, user),
-                                            )
-                                          : PendingArtisansTable(
-                                              artisans: viewModel.filteredArtisans,
-                                              onApprove: (artisan) => _handleApprove(context, artisan),
-                                              onReject: (artisan, reason) => _handleReject(context, artisan, reason),
-                                            ),
+                                      if (isUserManagementTab)
+                                        UserManagementTable(
+                                          users: viewModel.filteredUsers,
+                                          onSuspend: (user) => _handleSuspendUser(context, user),
+                                          onReactivate: (user) => _handleReactivateUser(context, user),
+                                          onResetPassword: (user) => _handleResetPassword(context, user),
+                                        )
+                                      else if (isRelocationTab)
+                                        PendingRelocationsTable(
+                                          relocations: viewModel.filteredRelocations,
+                                          onApprove: (artisan) => _handleApprove(context, artisan),
+                                          onReject: (artisan, reason) => _handleReject(context, artisan, reason),
+                                        )
+                                      else
+                                        PendingArtisansTable(
+                                          artisans: viewModel.filteredPendingProfiles,
+                                          onApprove: (artisan) => _handleApprove(context, artisan),
+                                          onReject: (artisan, reason) => _handleReject(context, artisan, reason),
+                                        ),
                                     ],
                                   ),
                                 ),
@@ -538,7 +559,7 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
     );
   }
 
-  Widget _buildMetricsRow(BuildContext context, ModerationViewModel viewModel, bool isUserManagement) {
+  Widget _buildMetricsRow(BuildContext context, ModerationViewModel viewModel, bool isUserManagement, [bool isRelocation = false]) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isCompact = screenWidth < 800;
 
@@ -566,31 +587,57 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
               accentColor: const Color(0xFFD97706),
             ),
           ]
-        : [
-            _buildMetricCard(
-              title: 'Pending Applications',
-              value: viewModel.totalPendingCount.toString(),
-              subtitle: viewModel.pendingRelocationCount > 0
-                  ? '${viewModel.pendingNewProfilesCount} new • ${viewModel.pendingRelocationCount} relocations'
-                  : 'Requires admin review',
-              icon: Icons.pending_actions_rounded,
-              accentColor: const Color(0xFFF59E0B),
-            ),
-            _buildMetricCard(
-              title: 'Approved Today',
-              value: viewModel.approvedTodayCount.toString(),
-              subtitle: viewModel.approvedTodaySubtitle,
-              icon: Icons.check_circle_rounded,
-              accentColor: const Color(0xFF10B981),
-            ),
-            _buildMetricCard(
-              title: 'Avg. Review Time',
-              value: viewModel.averageReviewTime,
-              subtitle: viewModel.averageReviewTimeSubtitle,
-              icon: Icons.timer_outlined,
-              accentColor: const Color(0xFF3B82F6),
-            ),
-          ];
+        : isRelocation
+            ? [
+                _buildMetricCard(
+                  title: 'Pending Relocations',
+                  value: viewModel.pendingRelocationCount.toString(),
+                  subtitle: viewModel.pendingRelocationCount > 0
+                      ? 'Requires admin review'
+                      : 'All relocations clear',
+                  icon: Icons.edit_location_alt_rounded,
+                  accentColor: const Color(0xFFF59E0B),
+                ),
+                _buildMetricCard(
+                  title: 'Approved Today',
+                  value: viewModel.approvedTodayCount.toString(),
+                  subtitle: viewModel.approvedTodaySubtitle,
+                  icon: Icons.check_circle_rounded,
+                  accentColor: const Color(0xFF10B981),
+                ),
+                _buildMetricCard(
+                  title: 'Avg. Review Time',
+                  value: viewModel.averageReviewTime,
+                  subtitle: viewModel.averageReviewTimeSubtitle,
+                  icon: Icons.timer_outlined,
+                  accentColor: const Color(0xFF3B82F6),
+                ),
+              ]
+            : [
+                _buildMetricCard(
+                  title: 'Pending Profiles',
+                  value: viewModel.pendingNewProfilesCount.toString(),
+                  subtitle: viewModel.pendingNewProfilesCount > 0
+                      ? 'Requires verification'
+                      : 'All applications clear',
+                  icon: Icons.verified_user_rounded,
+                  accentColor: const Color(0xFF10B981),
+                ),
+                _buildMetricCard(
+                  title: 'Approved Today',
+                  value: viewModel.approvedTodayCount.toString(),
+                  subtitle: viewModel.approvedTodaySubtitle,
+                  icon: Icons.check_circle_rounded,
+                  accentColor: const Color(0xFF10B981),
+                ),
+                _buildMetricCard(
+                  title: 'Avg. Review Time',
+                  value: viewModel.averageReviewTime,
+                  subtitle: viewModel.averageReviewTimeSubtitle,
+                  icon: Icons.timer_outlined,
+                  accentColor: const Color(0xFF3B82F6),
+                ),
+              ];
 
     if (isCompact) {
       return Column(
@@ -684,42 +731,17 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
     );
   }
 
-  Widget _buildFilterControlsRow(BuildContext context, ModerationViewModel viewModel) {
+  Widget _buildFilterControlsRow(BuildContext context, ModerationViewModel viewModel, {bool isRelocation = false}) {
     final isMobile = MediaQuery.of(context).size.width < 768;
-
-    final typeFilterPills = Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        _buildTypeFilterChip(
-          label: 'All Requests',
-          count: viewModel.pendingArtisans.length,
-          isSelected: viewModel.applicationTypeFilter == 'All',
-          onTap: () => viewModel.setApplicationTypeFilter('All'),
-        ),
-        _buildTypeFilterChip(
-          label: 'New Profiles',
-          count: viewModel.pendingNewProfilesCount,
-          isSelected: viewModel.applicationTypeFilter == 'New Profiles',
-          onTap: () => viewModel.setApplicationTypeFilter('New Profiles'),
-        ),
-        _buildTypeFilterChip(
-          label: 'Premise Relocations',
-          count: viewModel.pendingRelocationCount,
-          isSelected: viewModel.applicationTypeFilter == 'Relocations',
-          highlightColor: const Color(0xFFF59E0B),
-          icon: Icons.swap_horiz_rounded,
-          onTap: () => viewModel.setApplicationTypeFilter('Relocations'),
-        ),
-      ],
-    );
 
     final searchInput = SizedBox(
       height: 44,
       child: TextField(
         onChanged: (val) => viewModel.setSearchQuery(val),
         decoration: InputDecoration(
-          hintText: 'Search by studio or artisan name, state, or email...',
+          hintText: isRelocation
+              ? 'Search by studio, master artisan, state, address, or email...'
+              : 'Search by studio or artisan name, state, or email...',
           hintStyle: GoogleFonts.plusJakartaSans(
             fontSize: 13,
             color: const Color(0xFF94A3B8),
@@ -788,13 +810,8 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          typeFilterPills,
-          const SizedBox(height: 14),
-          if (isMobile)
-            Column(
+      child: isMobile
+          ? Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 searchInput,
@@ -802,85 +819,16 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
                 categoryDropdown,
               ],
             )
-          else
-            Row(
+          : Row(
               children: [
                 Expanded(child: searchInput),
                 const SizedBox(width: 16),
                 categoryDropdown,
               ],
             ),
-        ],
-      ),
     );
   }
 
-  Widget _buildTypeFilterChip({
-    required String label,
-    required int count,
-    required bool isSelected,
-    required VoidCallback onTap,
-    Color highlightColor = const Color(0xFF10B981),
-    IconData? icon,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? highlightColor.withValues(alpha: 0.12) : const Color(0xFFF8FAFC),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected ? highlightColor : const Color(0xFFE2E8F0),
-            width: isSelected ? 1.5 : 1,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (icon != null) ...[
-              Icon(
-                icon,
-                size: 16,
-                color: isSelected ? highlightColor : const Color(0xFF64748B),
-              ),
-              const SizedBox(width: 6),
-            ],
-            Text(
-              label,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                color: isSelected
-                    ? (highlightColor == const Color(0xFFF59E0B)
-                        ? const Color(0xFFB45309)
-                        : highlightColor)
-                    : const Color(0xFF475569),
-              ),
-            ),
-            const SizedBox(width: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: isSelected ? highlightColor : const Color(0xFFE2E8F0),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                count.toString(),
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: isSelected ? Colors.white : const Color(0xFF64748B),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildUserFilterControlsRow(BuildContext context, ModerationViewModel viewModel) {
     final isMobile = MediaQuery.of(context).size.width < 768;
