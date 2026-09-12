@@ -445,20 +445,6 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
               );
             },
           ),
-          _buildSettingsTile(
-            context,
-            icon: Icons.badge_rounded,
-            title: 'Verification & SSM Documents',
-            subtitle: 'Inspect SSM license and Kraftangan master certificates',
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('SSM Registration #002941-X • Kraftangan License #KFG-2024-889 VERIFIED.'),
-                  backgroundColor: Color(0xFF004D40),
-                ),
-              );
-            },
-          ),
 
           const SizedBox(height: 28),
 
