@@ -94,7 +94,11 @@ class ActiveArtisanMaster {
     final String phone = (map['phone_number'] ?? map['phone'] ?? ap?['phone_number'] ?? ap?['phone'] ?? '').toString();
     final String verifiedDate = (ap?['verified_at'] ?? map['created_at'] ?? '2026-01-01').toString().split('T').first;
     final String status = (map['status'] ?? '').toString().toUpperCase();
-    final bool isSuspended = status == 'SUSPENDED' || map['is_suspended'] == true;
+    final String artisanStatus = (map['artisan_status'] ?? map['artisanStatus'] ?? ap?['status'] ?? '').toString().toUpperCase();
+    final bool isSuspended = status == 'SUSPENDED' ||
+        artisanStatus == 'SUSPENDED' ||
+        map['is_suspended'] == true ||
+        map['isSuspended'] == true;
     const bool isDual = false;
 
     return ActiveArtisanMaster(

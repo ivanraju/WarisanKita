@@ -167,6 +167,7 @@ class SupabaseService {
   // Pending relocation requests store: cleanEmail -> {pending_relocation_address, ...}
   static final Map<String, Map<String, dynamic>> _pendingRelocationsStore = {};
   static const String _keyPendingRelocPrefix = 'pending_reloc_';
+  static const String _keyPendingRelocEmails = 'wk_pending_reloc_emails';
 
   static Future<void> _savePendingRelocation(
     String email,
@@ -180,6 +181,11 @@ class SupabaseService {
         '$_keyPendingRelocPrefix$cleanEmail',
         jsonEncode(data),
       );
+      final list = prefs.getStringList(_keyPendingRelocEmails) ?? [];
+      if (!list.contains(cleanEmail)) {
+        list.add(cleanEmail);
+        await prefs.setStringList(_keyPendingRelocEmails, list);
+      }
     } catch (e) {
       debugPrint('savePendingRelocation note: $e');
     }
@@ -191,9 +197,41 @@ class SupabaseService {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('$_keyPendingRelocPrefix$cleanEmail');
+      final list = prefs.getStringList(_keyPendingRelocEmails) ?? [];
+      if (list.contains(cleanEmail)) {
+        list.remove(cleanEmail);
+        await prefs.setStringList(_keyPendingRelocEmails, list);
+      }
     } catch (e) {
       debugPrint('clearPendingRelocation note: $e');
     }
+  }
+
+  static Future<List<String>> getPendingRelocationEmails() async {
+    final Set<String> emails = {..._pendingRelocationsStore.keys};
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final list = prefs.getStringList(_keyPendingRelocEmails) ?? [];
+      emails.addAll(list.map((e) => e.trim().toLowerCase()));
+      for (final key in prefs.getKeys()) {
+        if (key.startsWith(_keyPendingRelocPrefix)) {
+          final e = key.substring(_keyPendingRelocPrefix.length).trim().toLowerCase();
+          if (e.isNotEmpty) emails.add(e);
+        }
+      }
+    } catch (_) {}
+    return emails.toList();
+  }
+
+  static Future<Map<String, dynamic>?> getPendingRelocationData(String email) async {
+    return _getPendingRelocation(email);
+  }
+
+  static Future<void> savePendingRelocationData(
+    String email,
+    Map<String, dynamic> data,
+  ) async {
+    return _savePendingRelocation(email, data);
   }
 
   static Future<Map<String, dynamic>?> _getPendingRelocation(
@@ -2577,8 +2615,13 @@ class SupabaseService {
           (user['artisan_status'] ?? user['artisanStatus'] ?? '')
               .toString()
               .toUpperCase();
-      if (status.contains('PENDING') || artisanStatus.contains('PENDING')) {
-        final userEmail = (user['email'] ?? entry.key).toString().toLowerCase();
+      final userEmail = (user['email'] ?? entry.key).toString().toLowerCase();
+      final hasReloc = user['pending_relocation_address'] != null ||
+          user['pendingRelocationAddress'] != null ||
+          _pendingRelocationsStore.containsKey(userEmail);
+      if (status.contains('PENDING') ||
+          artisanStatus.contains('PENDING') ||
+          hasReloc) {
         if (!results.any(
           (r) => (r['email'] ?? '').toString().toLowerCase() == userEmail,
         )) {
@@ -2683,7 +2726,7 @@ class SupabaseService {
           (user['artisan_status'] ?? user['artisanStatus'] ?? '')
               .toString()
               .toUpperCase();
-      final isSuspended = user['isSuspended'] == true;
+      final isSuspended = user['isSuspended'] == true || artisanStatus == 'SUSPENDED';
       final reason = (user['suspensionReason'] ?? '').toString();
       if (status == 'DELETED' ||
           status == 'REJECTED' ||
@@ -2699,7 +2742,7 @@ class SupabaseService {
       final existingIdx = results.indexWhere(
         (a) => a.email.toLowerCase() == email,
       );
-      if (role.contains('Artisan') && !status.contains('PENDING')) {
+      if ((role.contains('Artisan') || artisanStatus == 'SUSPENDED' || artisanStatus == 'APPROVED') && !status.contains('PENDING')) {
         if (existingIdx == -1) {
           results.add(
             ActiveArtisanMaster.fromMap(Map<String, dynamic>.from(user)),
@@ -2799,11 +2842,32 @@ class SupabaseService {
         results.add(UserModel.fromMap(Map<String, dynamic>.from(user)));
       } else {
         final existing = results[existingIdx];
-        if (existing.experience == null && user['experience'] != null) {
-          results[existingIdx] = existing.copyWith(
-            experience: user['experience'].toString().trim(),
-          );
-        }
+        final pendingAddr = (user['pending_relocation_address'] ?? user['pendingRelocationAddress'])?.toString();
+        final pendingState = (user['pending_relocation_state'] ?? user['pendingRelocationState'])?.toString();
+        final dynamic pLat = user['pending_relocation_lat'] ?? user['pendingRelocationLatitude'];
+        final dynamic pLng = user['pending_relocation_lng'] ?? user['pendingRelocationLongitude'];
+        final pendingReason = (user['pending_relocation_reason'] ?? user['pendingRelocationReason'])?.toString();
+        final pendingDate = (user['pending_relocation_date'] ?? user['pendingRelocationDate'])?.toString();
+        final pendingCertUrl = (user['pending_relocation_cert_url'] ?? user['pendingRelocationCertUrl'])?.toString();
+        final pendingCertName = (user['pending_relocation_cert_name'] ?? user['pendingRelocationCertName'])?.toString();
+
+        results[existingIdx] = existing.copyWith(
+          experience: (existing.experience == null && user['experience'] != null)
+              ? user['experience'].toString().trim()
+              : existing.experience,
+          pendingRelocationAddress: pendingAddr ?? existing.pendingRelocationAddress,
+          pendingRelocationState: pendingState ?? existing.pendingRelocationState,
+          pendingRelocationLatitude: pLat is num
+              ? pLat.toDouble()
+              : (pLat != null ? double.tryParse(pLat.toString()) : existing.pendingRelocationLatitude),
+          pendingRelocationLongitude: pLng is num
+              ? pLng.toDouble()
+              : (pLng != null ? double.tryParse(pLng.toString()) : existing.pendingRelocationLongitude),
+          pendingRelocationReason: pendingReason ?? existing.pendingRelocationReason,
+          pendingRelocationDate: pendingDate ?? existing.pendingRelocationDate,
+          pendingRelocationCertUrl: pendingCertUrl ?? existing.pendingRelocationCertUrl,
+          pendingRelocationCertName: pendingCertName ?? existing.pendingRelocationCertName,
+        );
       }
     }
 
@@ -2811,6 +2875,44 @@ class SupabaseService {
     for (int i = 0; i < results.length; i++) {
       results[i] = await _enrichUserWithPendingRelocation(results[i]);
     }
+
+    // Ensure any user with a pending relocation in storage is present in results
+    try {
+      final pendingRelocEmails = await getPendingRelocationEmails();
+      for (final relocEmail in pendingRelocEmails) {
+        final clean = relocEmail.trim().toLowerCase();
+        if (clean.isEmpty) continue;
+        final existingIdx = results.indexWhere((u) => u.email.toLowerCase() == clean);
+        if (existingIdx == -1) {
+          final relocData = await _getPendingRelocation(clean);
+          if (relocData != null) {
+            final dynLat = relocData['pending_relocation_lat'] ?? relocData['latitude'];
+            final dynLng = relocData['pending_relocation_lng'] ?? relocData['longitude'];
+            results.add(
+              UserModel(
+                id: 'user_reloc_$clean',
+                email: clean,
+                displayName: relocData['name']?.toString() ?? 'Artisan Studio',
+                studioName: relocData['studio_name']?.toString() ?? relocData['name']?.toString() ?? 'Artisan Studio',
+                role: 'Artisan',
+                status: 'ACTIVE',
+                artisanStatus: 'APPROVED',
+                state: relocData['state']?.toString() ?? 'Melaka',
+                address: relocData['current_address']?.toString() ?? relocData['address']?.toString(),
+                pendingRelocationAddress: (relocData['pending_relocation_address'] ?? relocData['address'])?.toString(),
+                pendingRelocationState: (relocData['pending_relocation_state'] ?? relocData['state'])?.toString(),
+                pendingRelocationLatitude: dynLat is num ? dynLat.toDouble() : (dynLat != null ? double.tryParse(dynLat.toString()) : null),
+                pendingRelocationLongitude: dynLng is num ? dynLng.toDouble() : (dynLng != null ? double.tryParse(dynLng.toString()) : null),
+                pendingRelocationReason: (relocData['pending_relocation_reason'] ?? relocData['reason'])?.toString(),
+                pendingRelocationDate: (relocData['pending_relocation_date'] ?? relocData['date'])?.toString(),
+                pendingRelocationCertUrl: (relocData['pending_relocation_cert_url'] ?? relocData['certUrl'])?.toString(),
+                pendingRelocationCertName: (relocData['pending_relocation_cert_name'] ?? relocData['certName'])?.toString(),
+              ),
+            );
+          }
+        }
+      }
+    } catch (_) {}
 
     return results;
   }
@@ -3090,9 +3192,12 @@ class SupabaseService {
         _userStore[cleanEmail]!['artisanStatus'] = resolvedArtisanStatus;
         _userStore[cleanEmail]!['artisan_status'] = resolvedArtisanStatus;
         _userStore[cleanEmail]!['status'] = 'ACTIVE';
-        _userStore[cleanEmail]!['isSuspended'] = false;
+        _userStore[cleanEmail]!['isSuspended'] = (resolvedArtisanStatus == 'SUSPENDED');
         _userStore[cleanEmail]!['suspensionReason'] = null;
         _userStore[cleanEmail]!['suspension_reason'] = null;
+        if (_userStore[cleanEmail]!['artisan_profiles'] is Map) {
+          _userStore[cleanEmail]!['artisan_profiles']['status'] = resolvedArtisanStatus;
+        }
         if (newRole.isNotEmpty) {
           _userStore[cleanEmail]!['role'] = newRole;
           _userStore[cleanEmail]!['roles'] = [newRole];
@@ -3394,7 +3499,7 @@ class SupabaseService {
         );
       }
 
-      // Retire active quests owned by this artisan so they immediately disappear from directory
+      // Retire active quests and remove artisan documents for this studio
       try {
         final apRows = await client
             .from('artisan_profiles')
@@ -3404,6 +3509,12 @@ class SupabaseService {
           if (ap['id'] != null) {
             try {
               await client
+                  .from('artisan_documents')
+                  .delete()
+                  .eq('artisan_id', ap['id']);
+            } catch (_) {}
+            try {
+              await client
                   .from('quests')
                   .update({'status': 'RETIRED'})
                   .eq('artisan_id', ap['id']);
@@ -3411,29 +3522,34 @@ class SupabaseService {
           }
         }
       } catch (e) {
-        debugPrint('deactivateArtisanStudio retire quests note: $e');
+        debugPrint('deactivateArtisanStudio retire quests/docs note: $e');
       }
 
-      // Mark artisan_profiles as CLOSED
+      // Remove artisan_profiles row upon studio deactivation
+      bool profileRemoved = false;
       try {
         await client
             .from('artisan_profiles')
-            .update({
-              'status': 'CLOSED',
-              'updated_at': DateTime.now().toIso8601String(),
-            })
+            .delete()
             .or('user_id.eq.$effectiveUid,user_id.eq.$userId');
+        profileRemoved = true;
       } catch (e) {
-        debugPrint('deactivateArtisanStudio profile status note: $e');
+        debugPrint('deactivateArtisanStudio delete artisan_profiles note: $e');
+      }
+
+      // Fallback: If delete was blocked by a foreign key constraint, mark as CLOSED (never SUSPENDED)
+      if (!profileRemoved) {
         try {
           await client
               .from('artisan_profiles')
               .update({
-                'status': 'SUSPENDED',
+                'status': 'CLOSED',
                 'updated_at': DateTime.now().toIso8601String(),
               })
               .or('user_id.eq.$effectiveUid,user_id.eq.$userId');
-        } catch (_) {}
+        } catch (e) {
+          debugPrint('deactivateArtisanStudio profile status note: $e');
+        }
       }
 
       // Resilient 3-tier user table update
