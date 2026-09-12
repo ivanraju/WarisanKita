@@ -28,6 +28,7 @@ class ArtisanDetailScreen extends StatefulWidget {
   final String? ssmNumber;
   final List<Map<String, dynamic>> documents;
   final String? phoneNumber;
+  final String? premiseType;
 
   const ArtisanDetailScreen({
     super.key,
@@ -50,7 +51,13 @@ class ArtisanDetailScreen extends StatefulWidget {
     this.ssmNumber,
     this.documents = const [],
     this.phoneNumber,
+    this.premiseType,
   });
+
+  bool get isVillageWorkshop =>
+      premiseType?.toLowerCase().contains('village') == true ||
+      premiseType?.toLowerCase().contains('desa') == true ||
+      premiseType?.toLowerCase().contains('kediaman') == true;
 
   @override
   State<ArtisanDetailScreen> createState() => _ArtisanDetailScreenState();
@@ -388,25 +395,71 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFD54F),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            tr(widget.craftCategory),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 11,
-                              color: const Color(0xFF004D40),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 4,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFD54F),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                tr(widget.craftCategory),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 11,
+                                  color: const Color(0xFF004D40),
+                                ),
+                              ),
                             ),
-                          ),
+                            if (widget.premiseType != null && widget.premiseType!.isNotEmpty)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: widget.isVillageWorkshop
+                                      ? const Color(0xFFECFDF5)
+                                      : Colors.white.withValues(alpha: 0.9),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      widget.isVillageWorkshop
+                                          ? Icons.cottage_outlined
+                                          : Icons.store_outlined,
+                                      size: 13,
+                                      color: widget.isVillageWorkshop
+                                          ? const Color(0xFF047857)
+                                          : const Color(0xFF004D40),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      widget.isVillageWorkshop
+                                          ? tr('Village Workshop')
+                                          : tr('Commercial Studio'),
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 11,
+                                        color: widget.isVillageWorkshop
+                                            ? const Color(0xFF047857)
+                                            : const Color(0xFF004D40),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
                         ),
                         const SizedBox(height: 6),
                         Text(

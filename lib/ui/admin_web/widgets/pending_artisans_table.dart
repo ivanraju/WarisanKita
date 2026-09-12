@@ -222,6 +222,37 @@ class PendingArtisansTable extends StatelessWidget {
                             color: const Color(0xFF1E293B),
                           ),
                         ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: artisan.isVillageWorkshop ? const Color(0xFFECFDF5) : const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: artisan.isVillageWorkshop ? const Color(0xFFA7F3D0) : const Color(0xFFE2E8F0),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                artisan.isVillageWorkshop ? Icons.cottage_outlined : Icons.store_outlined,
+                                size: 12,
+                                color: artisan.isVillageWorkshop ? const Color(0xFF047857) : const Color(0xFF64748B),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                artisan.isVillageWorkshop ? 'VILLAGE WORKSHOP' : 'COMMERCIAL',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w800,
+                                  color: artisan.isVillageWorkshop ? const Color(0xFF047857) : const Color(0xFF64748B),
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                         if (artisan.isRelocationRequest) ...[
                           const SizedBox(width: 8),
                           Container(

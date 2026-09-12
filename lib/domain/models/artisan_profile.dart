@@ -17,6 +17,7 @@ class ArtisanModel {
   final String? ssmNumber;
   final List<Map<String, dynamic>> documents;
   final String? phone;
+  final String? premiseType;
   final int? questPotentialXp;
 
   ArtisanModel({
@@ -38,8 +39,20 @@ class ArtisanModel {
     this.ssmNumber,
     this.documents = const [],
     this.phone,
+    this.premiseType,
     this.questPotentialXp,
   });
+
+  bool get isVillageWorkshop =>
+      premiseType?.toLowerCase().contains('village') == true ||
+      premiseType?.toLowerCase().contains('desa') == true ||
+      premiseType?.toLowerCase().contains('kediaman') == true;
+
+  String get premiseTypeDisplay =>
+      isVillageWorkshop ? 'Home / Village Workshop' : 'Commercial Studio';
+
+  String get artisanTitle =>
+      isVillageWorkshop ? 'Heritage Village Crafter' : 'Master Artisan';
 
   ArtisanModel copyWith({
     String? id,
@@ -60,6 +73,7 @@ class ArtisanModel {
     String? ssmNumber,
     List<Map<String, dynamic>>? documents,
     String? phone,
+    String? premiseType,
     int? questPotentialXp,
   }) {
     return ArtisanModel(
@@ -81,6 +95,7 @@ class ArtisanModel {
       ssmNumber: ssmNumber ?? this.ssmNumber,
       documents: documents ?? this.documents,
       phone: phone ?? this.phone,
+      premiseType: premiseType ?? this.premiseType,
       questPotentialXp: questPotentialXp ?? this.questPotentialXp,
     );
   }
@@ -167,6 +182,12 @@ class ArtisanModel {
                     : null))
             ?.toString();
 
+    final String? premiseType =
+        (map['premise_type'] ??
+                map['premiseType'] ??
+                (map['users'] != null ? map['users']['premise_type'] : null))
+            ?.toString();
+
     List<Map<String, dynamic>> docsList = [];
     if (map['artisan_documents'] != null) {
       docsList = List<Map<String, dynamic>>.from(map['artisan_documents']);
@@ -206,6 +227,7 @@ class ArtisanModel {
       ssmNumber: ssm,
       documents: docsList,
       phone: phone,
+      premiseType: premiseType,
       questPotentialXp: (map['quest_potential_xp'] as num?)?.toInt(),
     );
   }

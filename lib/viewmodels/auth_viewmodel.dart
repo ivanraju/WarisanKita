@@ -864,6 +864,7 @@ class AuthViewModel extends ChangeNotifier {
     PlatformFile? ssmFile,
     PlatformFile? certFile,
     List<PlatformFile>? photos,
+    String? premiseType,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -891,23 +892,36 @@ class AuthViewModel extends ChangeNotifier {
         return AuthResult(success: false, message: _errorMessage);
       }
 
-      final cleanSsm = ssmNumber.trim();
-      final ssmError = SsmValidator.validate(cleanSsm);
-      if (ssmError != null) {
-        _errorMessage = 'INVALID SSM REGISTRATION NUMBER: $ssmError';
-        _isLoading = false;
-        notifyListeners();
-        return AuthResult(success: false, message: _errorMessage);
-      }
+      final bool isVillage = premiseType != null &&
+          (premiseType.contains('Village') ||
+              premiseType.contains('Desa') ||
+              premiseType.contains('Home') ||
+              premiseType.contains('Kediaman'));
 
-      final isSsmDuplicate = await _repository.isSsmRegistered(
-        cleanSsm,
-        excludeEmail: targetEmail,
-        excludeUserId: _currentUser?.id,
-      );
-      if (isSsmDuplicate) {
-        _errorMessage =
-            'DUPLICATE SSM: An artisan studio is already registered with SSM number "$cleanSsm"';
+      final cleanSsm = ssmNumber.trim();
+      if (cleanSsm.isNotEmpty) {
+        final ssmError = SsmValidator.validate(cleanSsm);
+        if (ssmError != null) {
+          _errorMessage = 'INVALID SSM REGISTRATION NUMBER: $ssmError';
+          _isLoading = false;
+          notifyListeners();
+          return AuthResult(success: false, message: _errorMessage);
+        }
+
+        final isSsmDuplicate = await _repository.isSsmRegistered(
+          cleanSsm,
+          excludeEmail: targetEmail,
+          excludeUserId: _currentUser?.id,
+        );
+        if (isSsmDuplicate) {
+          _errorMessage =
+              'DUPLICATE SSM: An artisan studio is already registered with SSM number "$cleanSsm"';
+          _isLoading = false;
+          notifyListeners();
+          return AuthResult(success: false, message: _errorMessage);
+        }
+      } else if (!isVillage) {
+        _errorMessage = 'SSM registration number is mandatory for Commercial Studios.';
         _isLoading = false;
         notifyListeners();
         return AuthResult(success: false, message: _errorMessage);
@@ -929,6 +943,7 @@ class AuthViewModel extends ChangeNotifier {
         ssmFile: ssmFile,
         certFile: certFile,
         photos: photos,
+        premiseType: premiseType,
       );
 
       _currentUser = user;

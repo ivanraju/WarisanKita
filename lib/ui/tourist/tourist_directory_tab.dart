@@ -509,6 +509,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
             'ssmNumber': a.ssmNumber,
             'documents': a.documents,
             'phone': a.phone,
+            'premiseType': a.premiseType,
             'artisanModel': a, // pass the model for the detail screen
           },
         )
@@ -536,6 +537,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
             'ssmNumber': a.ssmNumber,
             'documents': a.documents,
             'phone': a.phone,
+            'premiseType': a.premiseType,
             'artisanModel': a,
           },
         )
@@ -2047,6 +2049,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                         const [],
                     onViewQuest: () => _openArtisanQuest(context, artisan),
                     phoneNumber: artisan['phone'] as String?,
+                    premiseType: artisan['premiseType'] as String?,
                   ),
                 ),
               );
@@ -2063,14 +2066,22 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
-                    Icons.verified_rounded,
-                    color: Color(0xFFFFD54F),
+                  Icon(
+                    (artisan['premiseType'] as String?)?.toLowerCase().contains('village') == true ||
+                            (artisan['premiseType'] as String?)?.toLowerCase().contains('desa') == true ||
+                            (artisan['premiseType'] as String?)?.toLowerCase().contains('kediaman') == true
+                        ? Icons.cottage_outlined
+                        : Icons.verified_rounded,
+                    color: const Color(0xFFFFD54F),
                     size: 14,
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    'VERIFIED MASTER',
+                    (artisan['premiseType'] as String?)?.toLowerCase().contains('village') == true ||
+                            (artisan['premiseType'] as String?)?.toLowerCase().contains('desa') == true ||
+                            (artisan['premiseType'] as String?)?.toLowerCase().contains('kediaman') == true
+                        ? 'VILLAGE CRAFTER'
+                        : 'VERIFIED MASTER',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 9,
                       fontWeight: FontWeight.w900,
@@ -2360,6 +2371,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                                 onViewQuest: () =>
                                     _openArtisanQuest(context, artisan),
                                 phoneNumber: artisan['phone'] as String?,
+                                premiseType: artisan['premiseType'] as String?,
                               ),
                             ),
                           );
@@ -2515,6 +2527,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                       const [],
                   onViewQuest: () => _openArtisanQuest(context, artisan),
                   phoneNumber: artisan['phone'] as String?,
+                  premiseType: artisan['premiseType'] as String?,
                 ),
               ),
             );

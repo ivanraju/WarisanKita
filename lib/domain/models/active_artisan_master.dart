@@ -14,6 +14,7 @@ class ActiveArtisanMaster {
   final String phone;
   final bool isDualRole;
   final bool isSuspended;
+  final String? premiseType;
 
   const ActiveArtisanMaster({
     required this.id,
@@ -31,7 +32,18 @@ class ActiveArtisanMaster {
     required this.phone,
     this.isDualRole = false,
     this.isSuspended = false,
+    this.premiseType,
   });
+
+  bool get isVillageWorkshop =>
+      premiseType != null &&
+      (premiseType!.contains('Village') ||
+          premiseType!.contains('Desa') ||
+          premiseType!.contains('Home') ||
+          premiseType!.contains('Kediaman'));
+
+  String get premiseTypeDisplay =>
+      isVillageWorkshop ? 'Home / Village Workshop' : 'Commercial Studio';
 
   String get statusText => isSuspended
       ? '⛔ SUSPENDED (HIDDEN)'
@@ -51,6 +63,7 @@ class ActiveArtisanMaster {
     String? phone,
     bool? isDualRole,
     bool? isSuspended,
+    String? premiseType,
   }) {
     return ActiveArtisanMaster(
       id: id,
@@ -68,6 +81,7 @@ class ActiveArtisanMaster {
       phone: phone ?? this.phone,
       isDualRole: isDualRole ?? this.isDualRole,
       isSuspended: isSuspended ?? this.isSuspended,
+      premiseType: premiseType ?? this.premiseType,
     );
   }
 
@@ -100,6 +114,7 @@ class ActiveArtisanMaster {
         map['is_suspended'] == true ||
         map['isSuspended'] == true;
     const bool isDual = false;
+    final String? premiseType = (ap?['premise_type'] ?? ap?['premiseType'] ?? map['premise_type'] ?? map['premiseType'])?.toString();
 
     return ActiveArtisanMaster(
       id: (map['id'] ?? ap?['id'] ?? '').toString(),
@@ -118,6 +133,7 @@ class ActiveArtisanMaster {
       phone: phone,
       isDualRole: isDual,
       isSuspended: isSuspended,
+      premiseType: premiseType,
     );
   }
 }

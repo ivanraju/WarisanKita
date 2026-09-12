@@ -83,7 +83,9 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
                                   ),
                                 ),
                                 Text(
-                                  'SSM & Kraftangan Verified Master Artisan',
+                                  artisan.isVillageWorkshop
+                                      ? 'Heritage Village Crafter • Home Workshop'
+                                      : 'Master Artisan • Commercial Studio',
                                   style: GoogleFonts.plusJakartaSans(
                                     fontSize: 12,
                                     color: const Color(0xFF64748B),
@@ -147,10 +149,12 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
                   child: Column(
                     children: [
                       _buildModalInfoRow(
-                        'Craft Specialization',
-                        artisan.category,
-                        Icons.category_outlined,
+                        'Premise Type',
+                        artisan.premiseTypeDisplay,
+                        artisan.isVillageWorkshop ? Icons.cottage_outlined : Icons.store_outlined,
                       ),
+                      const Divider(height: 20),
+                      _buildModalInfoRow('Craft Specialization', artisan.category, Icons.category_outlined),
                       const Divider(height: 20),
                       _buildModalInfoRow(
                         'Location & State',
@@ -159,8 +163,10 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
                       ),
                       const Divider(height: 20),
                       _buildModalInfoRow(
-                        'SSM License No.',
-                        artisan.licenseNo,
+                        artisan.isVillageWorkshop ? 'SSM / Reg No. (Optional)' : 'SSM License No.',
+                        artisan.licenseNo.isNotEmpty && artisan.licenseNo != 'Pending' && artisan.licenseNo != 'N/A'
+                            ? artisan.licenseNo
+                            : (artisan.isVillageWorkshop ? 'Exempted (Village Crafter)' : 'SSM Verified'),
                         Icons.verified_user_outlined,
                       ),
                       const Divider(height: 20),
@@ -739,6 +745,25 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
                                                     ),
                                                   ),
                                             ),
+                                            const SizedBox(width: 6),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: artisan.isVillageWorkshop ? const Color(0xFFECFDF5) : const Color(0xFFF8FAFC),
+                                                borderRadius: BorderRadius.circular(6),
+                                                border: Border.all(
+                                                  color: artisan.isVillageWorkshop ? const Color(0xFFA7F3D0) : const Color(0xFFE2E8F0),
+                                                ),
+                                              ),
+                                              child: Text(
+                                                artisan.isVillageWorkshop ? 'Village' : 'Commercial',
+                                                style: GoogleFonts.plusJakartaSans(
+                                                  fontSize: 9,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: artisan.isVillageWorkshop ? const Color(0xFF047857) : const Color(0xFF64748B),
+                                                ),
+                                              ),
+                                            ),
                                             if (artisan.isDualRole) ...[
                                               const SizedBox(width: 6),
                                               Container(
@@ -815,13 +840,12 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Text(
-                                      'License: ${artisan.licenseNo}',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 11,
-                                        color: const Color(0xFF004D40),
-                                      ),
+                                      artisan.isVillageWorkshop && (artisan.licenseNo.isEmpty || artisan.licenseNo == 'Pending' || artisan.licenseNo == 'N/A')
+                                          ? 'Endorsement Verified'
+                                          : 'License: ${artisan.licenseNo}',
+                                      style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 11, color: const Color(0xFF004D40)),
                                     ),
+                                    Text('🏅 ${artisan.plaques} Digital Plaques Issued', style: GoogleFonts.plusJakartaSans(fontSize: 10, color: const Color(0xFFD97706), fontWeight: FontWeight.bold)),
                                   ],
                                 ),
                               ),

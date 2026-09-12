@@ -337,11 +337,11 @@ class _AdminApprovalHistoryTabState extends State<AdminApprovalHistoryTab> {
     final total = vm.totalApprovalHistoryCount;
     final profiles = vm.profileApprovalCount;
     final relocations = vm.relocationApprovalCount;
-    final today = vm.todayApprovalHistoryCount;
+    final rejections = vm.rejectionHistoryCount;
 
     final cards = [
       _buildMetricCard(
-        title: 'Total Approvals Logged',
+        title: 'Total Decisions Logged',
         count: total.toString(),
         subtitle: 'All-time audit records',
         icon: Icons.assignment_turned_in_rounded,
@@ -365,12 +365,12 @@ class _AdminApprovalHistoryTabState extends State<AdminApprovalHistoryTab> {
         bgColor: const Color(0xFFFEF3C7),
       ),
       _buildMetricCard(
-        title: 'Approved Today',
-        count: today.toString(),
-        subtitle: 'Processed in current session',
-        icon: Icons.today_rounded,
-        iconColor: const Color(0xFF10B981),
-        bgColor: const Color(0xFFD1FAE5),
+        title: 'Applications Rejected',
+        count: rejections.toString(),
+        subtitle: 'Declined submissions',
+        icon: Icons.cancel_outlined,
+        iconColor: const Color(0xFFDC2626),
+        bgColor: const Color(0xFFFEE2E2),
       ),
     ];
 
@@ -592,6 +592,7 @@ class _AdminApprovalHistoryTabState extends State<AdminApprovalHistoryTab> {
 
   DataRow _buildDataRow(BuildContext context, ApprovalHistoryRecord record) {
     final isRelocation = record.isRelocation;
+    final isRejected = record.status.toUpperCase() == 'REJECTED';
 
     return DataRow(
       cells: [
@@ -605,9 +606,11 @@ class _AdminApprovalHistoryTabState extends State<AdminApprovalHistoryTab> {
                 height: 40,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: isRelocation
-                        ? [const Color(0xFFD97706), const Color(0xFFB45309)]
-                        : [const Color(0xFF004D40), const Color(0xFF00796B)],
+                    colors: isRejected
+                        ? [const Color(0xFFDC2626), const Color(0xFF991B1B)]
+                        : isRelocation
+                            ? [const Color(0xFFD97706), const Color(0xFFB45309)]
+                            : [const Color(0xFF004D40), const Color(0xFF00796B)],
                   ),
                   shape: BoxShape.circle,
                 ),
@@ -686,37 +689,49 @@ class _AdminApprovalHistoryTabState extends State<AdminApprovalHistoryTab> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              color: isRelocation
-                  ? const Color(0xFFFEF3C7)
-                  : const Color(0xFFD1FAE5),
+              color: isRejected
+                  ? const Color(0xFFFEE2E2)
+                  : isRelocation
+                      ? const Color(0xFFFEF3C7)
+                      : const Color(0xFFD1FAE5),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: isRelocation
-                    ? const Color(0xFFF59E0B).withValues(alpha: 0.3)
-                    : const Color(0xFF10B981).withValues(alpha: 0.3),
+                color: isRejected
+                    ? const Color(0xFFEF4444).withValues(alpha: 0.3)
+                    : isRelocation
+                        ? const Color(0xFFF59E0B).withValues(alpha: 0.3)
+                        : const Color(0xFF10B981).withValues(alpha: 0.3),
               ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
-                  isRelocation
-                      ? Icons.swap_horiz_rounded
-                      : Icons.verified_rounded,
+                  isRejected
+                      ? Icons.cancel_rounded
+                      : isRelocation
+                          ? Icons.swap_horiz_rounded
+                          : Icons.verified_rounded,
                   size: 14,
-                  color: isRelocation
-                      ? const Color(0xFFB45309)
-                      : const Color(0xFF047857),
+                  color: isRejected
+                      ? const Color(0xFFDC2626)
+                      : isRelocation
+                          ? const Color(0xFFB45309)
+                          : const Color(0xFF047857),
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  record.approvalType,
+                  isRejected
+                      ? 'Rejected (${record.approvalType})'
+                      : record.approvalType,
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 11.5,
                     fontWeight: FontWeight.bold,
-                    color: isRelocation
-                        ? const Color(0xFFB45309)
-                        : const Color(0xFF047857),
+                    color: isRejected
+                        ? const Color(0xFFDC2626)
+                        : isRelocation
+                            ? const Color(0xFFB45309)
+                            : const Color(0xFF047857),
                   ),
                 ),
               ],
@@ -801,14 +816,18 @@ class _AdminApprovalHistoryTabState extends State<AdminApprovalHistoryTab> {
             children: [
               Container(
                 padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(
-                  color: Color(0xFFDCFCE7),
+                decoration: BoxDecoration(
+                  color: isRejected
+                      ? const Color(0xFFFEE2E2)
+                      : const Color(0xFFDCFCE7),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons.shield_rounded,
+                child: Icon(
+                  isRejected ? Icons.gavel_rounded : Icons.shield_rounded,
                   size: 12,
-                  color: Color(0xFF16A34A),
+                  color: isRejected
+                      ? const Color(0xFFDC2626)
+                      : const Color(0xFF16A34A),
                 ),
               ),
               const SizedBox(width: 6),
@@ -854,6 +873,7 @@ class _AdminApprovalHistoryTabState extends State<AdminApprovalHistoryTab> {
     ApprovalHistoryRecord record,
   ) {
     final isRelocation = record.isRelocation;
+    final isRejected = record.status.toUpperCase() == 'REJECTED';
 
     showDialog(
       context: context,
@@ -887,26 +907,34 @@ class _AdminApprovalHistoryTabState extends State<AdminApprovalHistoryTab> {
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: isRelocation
-                                      ? const Color(0xFFFEF3C7)
-                                      : const Color(0xFFD1FAE5),
+                                  color: isRejected
+                                      ? const Color(0xFFFEE2E2)
+                                      : isRelocation
+                                          ? const Color(0xFFFEF3C7)
+                                          : const Color(0xFFD1FAE5),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
-                                  record.approvalType.toUpperCase(),
+                                  isRejected
+                                      ? 'REJECTED • ${record.approvalType.toUpperCase()}'
+                                      : record.approvalType.toUpperCase(),
                                   style: GoogleFonts.plusJakartaSans(
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
-                                    color: isRelocation
-                                        ? const Color(0xFFB45309)
-                                        : const Color(0xFF047857),
+                                    color: isRejected
+                                        ? const Color(0xFFDC2626)
+                                        : isRelocation
+                                            ? const Color(0xFFB45309)
+                                            : const Color(0xFF047857),
                                     letterSpacing: 0.5,
                                   ),
                                 ),
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                'Official Approval Record',
+                                isRejected
+                                    ? 'Official Rejection Record'
+                                    : 'Official Approval Record',
                                 style: GoogleFonts.dmSerifDisplay(
                                   fontSize: 22,
                                   fontWeight: FontWeight.bold,
@@ -938,7 +966,7 @@ class _AdminApprovalHistoryTabState extends State<AdminApprovalHistoryTab> {
                     _buildAuditFieldRow(
                       'Record ID',
                       record.id,
-                      'Approved On',
+                      isRejected ? 'Decided On' : 'Approved On',
                       record.formattedDateTime,
                     ),
                     const SizedBox(height: 12),
@@ -1051,25 +1079,39 @@ class _AdminApprovalHistoryTabState extends State<AdminApprovalHistoryTab> {
                         vertical: 10,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFECFDF5),
+                        color: isRejected
+                            ? const Color(0xFFFEF2F2)
+                            : const Color(0xFFECFDF5),
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFFA7F3D0)),
+                        border: Border.all(
+                          color: isRejected
+                              ? const Color(0xFFFECACA)
+                              : const Color(0xFFA7F3D0),
+                        ),
                       ),
                       child: Row(
                         children: [
-                          const Icon(
-                            Icons.verified_user_rounded,
-                            color: Color(0xFF059669),
+                          Icon(
+                            isRejected
+                                ? Icons.gavel_rounded
+                                : Icons.verified_user_rounded,
+                            color: isRejected
+                                ? const Color(0xFFDC2626)
+                                : const Color(0xFF059669),
                             size: 20,
                           ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              'VERIFIED & SECURED • Official Warisan Kita Heritage Administration Audit Seal',
+                              isRejected
+                                  ? 'DECISION RECORDED • Official Warisan Kita Heritage Administration Audit Seal'
+                                  : 'VERIFIED & SECURED • Official Warisan Kita Heritage Administration Audit Seal',
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
-                                color: const Color(0xFF047857),
+                                color: isRejected
+                                    ? const Color(0xFFDC2626)
+                                    : const Color(0xFF047857),
                               ),
                             ),
                           ),

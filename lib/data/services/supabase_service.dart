@@ -1113,6 +1113,7 @@ class SupabaseService {
     PlatformFile? ssmFile,
     PlatformFile? certFile,
     List<PlatformFile>? photos,
+    String? premiseType,
   }) async {
     String cleanEmail = email.trim().toLowerCase();
     final client = _client;
@@ -1178,26 +1179,40 @@ class SupabaseService {
       _userStore[cleanEmail] = userRecord;
     }
 
+    final bool isVillage = premiseType != null &&
+        (premiseType.contains('Village') ||
+            premiseType.contains('Desa') ||
+            premiseType.contains('Home') ||
+            premiseType.contains('Kediaman'));
+
     final cleanSsm = ssmNumber.trim();
-    final ssmErr = SsmValidator.validate(cleanSsm);
-    if (ssmErr != null) {
-      throw Exception('INVALID_SSM: $ssmErr');
-    }
-    final isTaken = await isSsmRegistered(
-      cleanSsm,
-      excludeEmail: cleanEmail,
-      excludeUserId: userRecord['id'],
-    );
-    if (isTaken) {
-      throw Exception(
-        'DUPLICATE_SSM: An artisan studio is already registered with SSM number "$cleanSsm".',
+    if (cleanSsm.isNotEmpty) {
+      final ssmErr = SsmValidator.validate(cleanSsm);
+      if (ssmErr != null) {
+        throw Exception('INVALID_SSM: $ssmErr');
+      }
+      final isTaken = await isSsmRegistered(
+        cleanSsm,
+        excludeEmail: cleanEmail,
+        excludeUserId: userRecord['id'],
       );
+      if (isTaken) {
+        throw Exception(
+          'DUPLICATE_SSM: An artisan studio is already registered with SSM number "$cleanSsm".',
+        );
+      }
+    } else if (!isVillage) {
+      throw Exception('INVALID_SSM: SSM registration number is required for Commercial Studios.');
     }
 
     // Update user record with pending artisan credentials
     userRecord['studioName'] = studioName;
     userRecord['craftCategory'] = craftCategory;
-    userRecord['ssmNumber'] = ssmNumber;
+    userRecord['ssmNumber'] = cleanSsm.isNotEmpty ? cleanSsm : (isVillage ? 'VILLAGE_EXEMPT' : '');
+    if (premiseType != null) {
+      userRecord['premiseType'] = premiseType;
+      userRecord['premise_type'] = premiseType;
+    }
     if (experience != null) userRecord['experience'] = experience;
     if (phone != null && phone.trim().isNotEmpty) {
       userRecord['phone'] = phone.trim();
@@ -1218,13 +1233,27 @@ class SupabaseService {
     userRecord['rejectionReason'] = null;
     userRecord['rejection_reason'] = null;
 
-    final preservedDocuments = userRecord['artisan_documents'] is List
-        ? List<Map<String, dynamic>>.from(
-            (userRecord['artisan_documents'] as List).map(
-              (item) => Map<String, dynamic>.from(item as Map),
-            ),
-          )
-        : <Map<String, dynamic>>[];
+    final preservedDocuments = (userRecord['artisan_documents'] is List
+            ? List<Map<String, dynamic>>.from(
+                (userRecord['artisan_documents'] as List).map(
+                  (item) => Map<String, dynamic>.from(item as Map),
+                ),
+              )
+            : (userRecord['artisanDocuments'] is List
+                ? List<Map<String, dynamic>>.from(
+                    (userRecord['artisanDocuments'] as List).map(
+                      (item) => Map<String, dynamic>.from(item as Map),
+                    ),
+                  )
+                : (userRecord['artisan_profiles'] is Map &&
+                        userRecord['artisan_profiles']['artisan_documents'] is List
+                    ? List<Map<String, dynamic>>.from(
+                        (userRecord['artisan_profiles']['artisan_documents'] as List).map(
+                          (item) => Map<String, dynamic>.from(item as Map),
+                        ),
+                      )
+                    : <Map<String, dynamic>>[])));
+
     void replaceLocalDocument(String type, PlatformFile? file) {
       if (file == null) return;
       preservedDocuments.removeWhere((doc) => doc['doc_type'] == type);
@@ -1235,9 +1264,11 @@ class SupabaseService {
       });
     }
 
-    replaceLocalDocument('SSM_BUSINESS_CERT', ssmFile);
+    final certDocType = isVillage ? 'CRAFTING_PHOTO' : 'SSM_BUSINESS_CERT';
+    replaceLocalDocument(certDocType, ssmFile);
     replaceLocalDocument('KRAFTANGAN_MASTER_CERT', certFile);
-    if (photos != null) {
+    if (photos != null && photos.isNotEmpty) {
+      preservedDocuments.removeWhere((doc) => doc['doc_type'] == 'STUDIO_PHOTO');
       for (final photo in photos) {
         preservedDocuments.add({
           'doc_type': 'STUDIO_PHOTO',
@@ -1261,7 +1292,8 @@ class SupabaseService {
                 'rejection_reason': null,
                 'studio_name': studioName,
                 'craft_category': craftCategory,
-                'ssm_number': ssmNumber,
+                'ssm_number': cleanSsm.isNotEmpty ? cleanSsm : (isVillage ? 'VILLAGE_EXEMPT' : ''),
+                if (premiseType != null) 'premise_type': premiseType,
                 if (phone != null && phone.trim().isNotEmpty)
                   'phone_number': phone.trim(),
                 if (phone != null && phone.trim().isNotEmpty)
@@ -1334,10 +1366,16 @@ class SupabaseService {
               ? address.trim()
               : resolvedState;
 
-          final profileData = {
+          final profileTags = List<String>.from(toolsAndMaterials);
+          if (premiseType != null && premiseType.isNotEmpty) {
+            profileTags.removeWhere((t) => t.startsWith('premise:'));
+            profileTags.add('premise:$premiseType');
+          }
+
+          final profileData = <String, dynamic>{
             'studio_name': studioName,
             'craft_category': craftCategory,
-            'ssm_number': ssmNumber,
+            'ssm_number': cleanSsm.isNotEmpty ? cleanSsm : (isVillage ? 'VILLAGE_EXEMPT' : ''),
             if (experience != null &&
                 experience.trim().isNotEmpty &&
                 RegExp(r'\d+').firstMatch(experience) != null)
@@ -1351,7 +1389,7 @@ class SupabaseService {
             if (longitude != null) 'longitude': longitude,
             'status': 'PENDING_APPROVAL',
             'rejection_reason': null,
-            'tags': toolsAndMaterials,
+            'tags': profileTags,
             'updated_at': DateTime.now().toIso8601String(),
           };
 
@@ -1364,11 +1402,24 @@ class SupabaseService {
             } catch (err) {
               debugPrint('artisan_profiles update note: $err');
               final fallbackData = Map<String, dynamic>.from(profileData)
-                ..remove('rejection_reason');
-              await client
-                  .from('artisan_profiles')
-                  .update(fallbackData)
-                  .eq('user_id', userId);
+                ..remove('rejection_reason')
+                ..remove('premise_type');
+              try {
+                await client
+                    .from('artisan_profiles')
+                    .update(fallbackData)
+                    .eq('user_id', userId);
+              } catch (err2) {
+                debugPrint('artisan_profiles update fallback note: $err2');
+                try {
+                  await client.from('artisan_profiles').update({
+                    'studio_name': studioName,
+                    'craft_category': craftCategory,
+                    'status': 'PENDING_APPROVAL',
+                    'updated_at': DateTime.now().toIso8601String(),
+                  }).eq('user_id', userId);
+                } catch (_) {}
+              }
             }
           } else {
             profileData['user_id'] = userId;
@@ -1382,12 +1433,15 @@ class SupabaseService {
             } catch (err) {
               debugPrint('artisan_profiles insert note: $err');
               final fallbackData = Map<String, dynamic>.from(profileData)
-                ..remove('rejection_reason');
-              profileRes = await client
-                  .from('artisan_profiles')
-                  .insert(fallbackData)
-                  .select('id')
-                  .maybeSingle();
+                ..remove('rejection_reason')
+                ..remove('premise_type');
+              try {
+                profileRes = await client
+                    .from('artisan_profiles')
+                    .insert(fallbackData)
+                    .select('id')
+                    .maybeSingle();
+              } catch (_) {}
             }
           }
 
@@ -1401,20 +1455,39 @@ class SupabaseService {
             ) async {
               if (file == null) return null;
               try {
-                Uint8List bytes = await file.readAsBytes();
+                Uint8List bytes;
+                if (file.path != null) {
+                  bytes = await io.File(file.path!).readAsBytes();
+                } else {
+                  bytes = await file.readAsBytes();
+                }
                 if (bytes.isEmpty) return null;
 
                 final fileName =
                     '${DateTime.now().millisecondsSinceEpoch}_${file.name.replaceAll(' ', '_')}';
                 String finalFileName = fileName;
-                String mimeType = 'application/octet-stream';
+                String mimeType = 'image/jpeg';
 
                 final lcName = file.name.toLowerCase();
                 if (lcName.endsWith('.pdf')) {
                   mimeType = 'application/pdf';
-                } else if (lcName.endsWith('.png') ||
-                    lcName.endsWith('.jpg') ||
-                    lcName.endsWith('.jpeg')) {
+                } else if (lcName.endsWith('.png')) {
+                  mimeType = 'image/png';
+                } else if (lcName.endsWith('.webp')) {
+                  mimeType = 'image/webp';
+                } else if (lcName.endsWith('.jpg') || lcName.endsWith('.jpeg')) {
+                  mimeType = 'image/jpeg';
+                } else if (bytes.length > 4) {
+                  if (bytes[0] == 0x25 && bytes[1] == 0x50 && bytes[2] == 0x44 && bytes[3] == 0x46) {
+                    mimeType = 'application/pdf';
+                  } else if (bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47) {
+                    mimeType = 'image/png';
+                  } else if (bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF) {
+                    mimeType = 'image/jpeg';
+                  }
+                }
+
+                if (mimeType.startsWith('image/') && !lcName.endsWith('.pdf')) {
                   try {
                     final compressed =
                         await FlutterImageCompress.compressWithList(
@@ -1433,32 +1506,53 @@ class SupabaseService {
                       } else {
                         finalFileName += '.webp';
                       }
-                    } else {
-                      if (lcName.endsWith('.png'))
-                        mimeType = 'image/png';
-                      else
-                        mimeType = 'image/jpeg';
                     }
                   } catch (e) {
-                    debugPrint('WebP conversion failed: $e');
-                    if (lcName.endsWith('.png'))
-                      mimeType = 'image/png';
-                    else
-                      mimeType = 'image/jpeg';
+                    debugPrint('WebP conversion note: $e');
                   }
                 }
 
                 final path = '$folder/$finalFileName';
+                String? uploadedUrl;
 
-                await client.storage
-                    .from(bucket)
-                    .uploadBinary(
-                      path,
-                      bytes,
-                      fileOptions: FileOptions(contentType: mimeType),
-                    );
-                final url = client.storage.from(bucket).getPublicUrl(path);
-                return {'url': url, 'name': finalFileName};
+                // 1. Try specified bucket
+                try {
+                  await client.storage
+                      .from(bucket)
+                      .uploadBinary(
+                        path,
+                        bytes,
+                        fileOptions: FileOptions(contentType: mimeType, upsert: true),
+                      );
+                  uploadedUrl = client.storage.from(bucket).getPublicUrl(path);
+                } catch (firstErr) {
+                  debugPrint('Upload to $bucket failed ($firstErr), trying artisan_public_media fallback...');
+                  if (bucket != 'artisan_public_media') {
+                    try {
+                      await client.storage
+                          .from('artisan_public_media')
+                          .uploadBinary(
+                            path,
+                            bytes,
+                            fileOptions: FileOptions(contentType: mimeType, upsert: true),
+                          );
+                      uploadedUrl = client.storage.from('artisan_public_media').getPublicUrl(path);
+                    } catch (secondErr) {
+                      debugPrint('Fallback upload to artisan_public_media also failed: $secondErr');
+                    }
+                  }
+                }
+
+                if (uploadedUrl != null) {
+                  return {'url': uploadedUrl, 'name': finalFileName};
+                }
+
+                // 2. Resilient fallback: base64 data URL so the uploaded proof is never lost
+                if (mimeType.startsWith('image/')) {
+                  final b64 = base64Encode(bytes);
+                  return {'url': 'data:$mimeType;base64,$b64', 'name': finalFileName};
+                }
+                return null;
               } catch (e) {
                 debugPrint('Upload error: $e');
                 return null;
@@ -1466,29 +1560,47 @@ class SupabaseService {
             }
 
             try {
+              final ssmBucket = isVillage ? 'artisan_public_media' : 'artisan_private_docs';
               final ssmUpload = await uploadDoc(
                 ssmFile,
-                'artisan_private_docs',
-                'ssm',
+                ssmBucket,
+                '$artisanId/${isVillage ? "craft" : "ssm"}',
               );
               final certUpload = await uploadDoc(
                 certFile,
-                'artisan_private_docs',
-                'cert',
+                'artisan_public_media',
+                '$artisanId/cert',
               );
 
               final List<Map<String, dynamic>> docsToInsert = [];
 
               if (ssmUpload != null) {
+                profileTags.removeWhere((t) =>
+                    t.startsWith('doc_crafting_photo_') ||
+                    t.startsWith('doc_ssm_cert_'));
+                if (isVillage) {
+                  profileTags.add('doc_crafting_photo_url:${ssmUpload['url']}');
+                  profileTags.add('doc_crafting_photo_name:${ssmUpload['name']}');
+                } else {
+                  profileTags.add('doc_ssm_cert_url:${ssmUpload['url']}');
+                  profileTags.add('doc_ssm_cert_name:${ssmUpload['name']}');
+                }
+                userRecord['ssm_file_url'] = ssmUpload['url'];
+                userRecord['ssm_file_name'] = ssmUpload['name'];
                 docsToInsert.add({
                   'artisan_id': artisanId,
-                  'doc_type': 'SSM_BUSINESS_CERT',
+                  'doc_type': isVillage ? 'CRAFTING_PHOTO' : 'SSM_BUSINESS_CERT',
                   'file_url': ssmUpload['url'],
                   'file_name': ssmUpload['name'],
                 });
               }
 
               if (certUpload != null) {
+                profileTags.removeWhere((t) => t.startsWith('doc_kraftangan_cert_'));
+                profileTags.add('doc_kraftangan_cert_url:${certUpload['url']}');
+                profileTags.add('doc_kraftangan_cert_name:${certUpload['name']}');
+                userRecord['cert_file_url'] = certUpload['url'];
+                userRecord['cert_file_name'] = certUpload['name'];
                 docsToInsert.add({
                   'artisan_id': artisanId,
                   'doc_type': 'KRAFTANGAN_MASTER_CERT',
@@ -1498,13 +1610,15 @@ class SupabaseService {
               }
 
               if (photos != null && photos.isNotEmpty) {
+                profileTags.removeWhere((t) => t.startsWith('doc_studio_photo:'));
                 for (var p in photos) {
                   final pUpload = await uploadDoc(
                     p,
                     'artisan_public_media',
-                    'studio',
+                    '$artisanId/studio',
                   );
                   if (pUpload != null) {
+                    profileTags.add('doc_studio_photo:${pUpload['url']}');
                     docsToInsert.add({
                       'artisan_id': artisanId,
                       'doc_type': 'STUDIO_PHOTO',
@@ -1515,16 +1629,45 @@ class SupabaseService {
                 }
               }
 
-              await client
-                  .from('artisan_documents')
-                  .delete()
-                  .eq('artisan_id', artisanId);
-              if (docsToInsert.isNotEmpty) {
-                await client.from('artisan_documents').insert(docsToInsert);
+              // Persist document metadata directly into artisan_profiles.tags so documents
+              // are NEVER lost even if artisan_documents table has RLS policy restrictions
+              try {
+                await client
+                    .from('artisan_profiles')
+                    .update({'tags': profileTags})
+                    .eq('id', artisanId);
+                userRecord['tags'] = profileTags;
+              } catch (tagErr) {
+                debugPrint('artisan_profiles tags update note: $tagErr');
+              }
+
+              try {
+                await client
+                    .from('artisan_documents')
+                    .delete()
+                    .eq('artisan_id', artisanId);
+                if (docsToInsert.isNotEmpty) {
+                  final replacedTypes = docsToInsert.map((d) => d['doc_type']).toSet();
+                  preservedDocuments.removeWhere((doc) => replacedTypes.contains(doc['doc_type']));
+                  preservedDocuments.addAll(docsToInsert);
+                  try {
+                    await client
+                        .from('artisan_documents')
+                        .delete()
+                        .eq('artisan_id', artisanId);
+                    await client.from('artisan_documents').insert(preservedDocuments);
+                  } catch (_) {}
+                  userRecord['artisan_documents'] = preservedDocuments;
+                  userRecord['artisanDocuments'] = preservedDocuments;
+                }
+              } catch (docErr) {
+                debugPrint(
+                  'Supabase linkArtisanRoleToTourist artisan_documents table note: $docErr',
+                );
               }
             } catch (docErr) {
               debugPrint(
-                'Supabase linkArtisanRoleToTourist artisan_documents note: $docErr',
+                'Supabase linkArtisanRoleToTourist document handling note: $docErr',
               );
             }
           }
@@ -1538,6 +1681,16 @@ class SupabaseService {
       }
     }
 
+    userRecord['studioName'] = studioName;
+    userRecord['studio_name'] = studioName;
+    userRecord['craftCategory'] = craftCategory;
+    userRecord['craft_category'] = craftCategory;
+    userRecord['ssmNumber'] = cleanSsm.isNotEmpty ? cleanSsm : (isVillage ? 'VILLAGE_EXEMPT' : '');
+    userRecord['ssm_number'] = cleanSsm.isNotEmpty ? cleanSsm : (isVillage ? 'VILLAGE_EXEMPT' : '');
+    if (premiseType != null) {
+      userRecord['premiseType'] = premiseType;
+      userRecord['premise_type'] = premiseType;
+    }
     userRecord['role'] = 'Tourist';
     userRecord['roles'] = const ['Tourist'];
     userRecord['status'] = 'PENDING_APPROVAL';
@@ -1545,13 +1698,22 @@ class SupabaseService {
     userRecord['artisan_status'] = 'PENDING_APPROVAL';
     userRecord['rejectionReason'] = null;
     userRecord['rejection_reason'] = null;
-    if (userRecord['artisan_profiles'] is Map) {
-      userRecord['artisan_profiles'] = {
+
+    final currentDocs = userRecord['artisan_documents'] ?? preservedDocuments;
+    userRecord['artisan_profiles'] = {
+      if (userRecord['artisan_profiles'] is Map)
         ...(userRecord['artisan_profiles'] as Map),
-        'status': 'PENDING_APPROVAL',
-        'rejection_reason': null,
-      };
-    }
+      'studio_name': studioName,
+      'craft_category': craftCategory,
+      'ssm_number': cleanSsm.isNotEmpty ? cleanSsm : (isVillage ? 'VILLAGE_EXEMPT' : ''),
+      'bio': bio ?? userRecord['bio'],
+      'state': state ?? userRecord['state'],
+      'address': address ?? userRecord['address'],
+      'status': 'PENDING_APPROVAL',
+      'rejection_reason': null,
+      if (premiseType != null) 'premise_type': premiseType,
+      'artisan_documents': currentDocs,
+    };
 
     _userStore[cleanEmail] = userRecord;
     final returnUser = UserModel.fromMap(userRecord);
@@ -2496,7 +2658,9 @@ class SupabaseService {
 
                   if (type == 'PORTFOLIO_IMAGE' || type == 'STUDIO_PHOTO') {
                     if (url != null) photos.add(url);
-                  } else if (type == 'SSM_BUSINESS_CERT') {
+                  } else if (type == 'SSM_BUSINESS_CERT' ||
+                             type == 'CRAFTING_PHOTO' ||
+                             type == 'VILLAGE_HEAD_ENDORSEMENT') {
                     if (name != null) ssmFileName = name;
                     if (url != null) ssmFileUrl = url;
                   } else if (type == 'KRAFTANGAN_MASTER_CERT') {
@@ -2519,6 +2683,31 @@ class SupabaseService {
                         rowMap['avatar_url'].toString().isEmpty) &&
                     avatarUrl != null) {
                   rowMap['imageUrl'] = avatarUrl;
+                }
+
+                // Resolve premise_type
+                final apTags = ap['tags'] is List ? List<String>.from(ap['tags']) : <String>[];
+                String? pType = ap['premise_type']?.toString() ?? rowMap['premise_type']?.toString();
+                if (pType == null) {
+                  for (final t in apTags) {
+                    if (t.startsWith('premise:')) {
+                      pType = t.substring('premise:'.length);
+                      break;
+                    }
+                  }
+                }
+                if (pType == null) {
+                  final hasVillageDoc = docs.any((d) =>
+                      d is Map &&
+                      (d['doc_type'] == 'CRAFTING_PHOTO' ||
+                          d['doc_type'] == 'VILLAGE_HEAD_ENDORSEMENT'));
+                  if (hasVillageDoc || ap['ssm_number'] == 'VILLAGE_EXEMPT') {
+                    pType = 'Home / Village Workshop (Bengkel Kediaman / Desa)';
+                  }
+                }
+                if (pType != null) {
+                  rowMap['premise_type'] = pType;
+                  rowMap['premiseType'] = pType;
                 }
               }
             }
@@ -2591,6 +2780,18 @@ class SupabaseService {
                 'artisan_status': 'PENDING_APPROVAL',
                 'artisan_profiles': pMap,
               };
+
+              final pTags = pMap['tags'] is List ? List<String>.from(pMap['tags']) : <String>[];
+              String? pPremise = pMap['premise_type']?.toString() ?? u['premise_type']?.toString();
+              if (pPremise == null) {
+                for (final t in pTags) {
+                  if (t.startsWith('premise:')) {
+                    pPremise = t.substring('premise:'.length);
+                    break;
+                  }
+                }
+              }
+
               if (pMap['artisan_documents'] is List) {
                 final docs = pMap['artisan_documents'] as List;
                 List<String> photos = [];
@@ -2602,7 +2803,9 @@ class SupabaseService {
                   if ((type == 'PORTFOLIO_IMAGE' || type == 'STUDIO_PHOTO') &&
                       url != null) {
                     photos.add(url);
-                  } else if (type == 'SSM_BUSINESS_CERT') {
+                  } else if (type == 'SSM_BUSINESS_CERT' ||
+                             type == 'CRAFTING_PHOTO' ||
+                             type == 'VILLAGE_HEAD_ENDORSEMENT') {
                     if (name != null) combined['ssm_file_name'] = name;
                     if (url != null) combined['ssm_file_url'] = url;
                   } else if (type == 'KRAFTANGAN_MASTER_CERT') {
@@ -2611,6 +2814,19 @@ class SupabaseService {
                   }
                 }
                 if (photos.isNotEmpty) combined['photos'] = photos;
+                if (pPremise == null) {
+                  final hasVillageDoc = docs.any((d) =>
+                      d is Map &&
+                      (d['doc_type'] == 'CRAFTING_PHOTO' ||
+                          d['doc_type'] == 'VILLAGE_HEAD_ENDORSEMENT'));
+                  if (hasVillageDoc || pMap['ssm_number'] == 'VILLAGE_EXEMPT') {
+                    pPremise = 'Home / Village Workshop (Bengkel Kediaman / Desa)';
+                  }
+                }
+              }
+              if (pPremise != null) {
+                combined['premise_type'] = pPremise;
+                combined['premiseType'] = pPremise;
               }
               results.add(combined);
             }

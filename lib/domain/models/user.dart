@@ -40,6 +40,7 @@ class UserModel {
   final String? rejectionReason;
   final bool isLiveOpen;
   final int? workshopCount;
+  final String? premiseType;
 
   const UserModel({
     required this.id,
@@ -78,7 +79,23 @@ class UserModel {
     this.rejectionReason,
     this.isLiveOpen = true,
     this.workshopCount,
+    this.premiseType,
   });
+
+  bool get isVillageWorkshop =>
+      (premiseType != null &&
+          (premiseType!.contains('Village') ||
+              premiseType!.contains('Desa') ||
+              premiseType!.contains('Home') ||
+              premiseType!.contains('Kediaman'))) ||
+      ssmNumber == 'VILLAGE_EXEMPT' ||
+      (ssmNumber != null && ssmNumber!.toLowerCase().contains('village'));
+
+  String get premiseTypeDisplay =>
+      isVillageWorkshop ? 'Home / Village Workshop' : 'Commercial Studio';
+
+  String get artisanTitle =>
+      isVillageWorkshop ? 'Heritage Village Crafter' : 'Master Artisan';
 
   bool get hasPendingRelocation =>
       pendingRelocationAddress != null && pendingRelocationAddress!.trim().isNotEmpty;
@@ -139,7 +156,9 @@ class UserModel {
     if (artisanStatus?.toUpperCase() == 'CLOSED') return false;
     if (artisanStatus?.toUpperCase() == 'PENDING_APPROVAL' ||
         artisanStatus?.toUpperCase() == 'PENDING' ||
-        artisanStatus?.toUpperCase() == 'REJECTED') return false;
+        artisanStatus?.toUpperCase() == 'REJECTED') {
+      return false;
+    }
     if (role == 'Tourist') return false;
     return (role == 'Artisan' ||
         role == 'Master Artisan' ||
@@ -174,7 +193,14 @@ class UserModel {
   String? get ssmFileUrl {
     for (final d in artisanDocuments) {
       final type = d['doc_type']?.toString();
-      if (type == 'SSM_BUSINESS_CERT' || type == 'SSM_CERT' || type == 'SSM') {
+      if (type == 'SSM_BUSINESS_CERT' ||
+          type == 'SSM_CERT' ||
+          type == 'SSM' ||
+          type == 'CRAFTING_PHOTO' ||
+          type == 'VILLAGE_CRAFTING_PHOTO' ||
+          type == 'VILLAGE_HEAD_ENDORSEMENT' ||
+          type == 'ENDORSEMENT_LETTER' ||
+          type == 'TOK_BATIN_LETTER') {
         final url = d['file_url']?.toString();
         if (url != null && url.isNotEmpty) return url;
       }
@@ -185,7 +211,14 @@ class UserModel {
   String? get ssmFileName {
     for (final d in artisanDocuments) {
       final type = d['doc_type']?.toString();
-      if (type == 'SSM_BUSINESS_CERT' || type == 'SSM_CERT' || type == 'SSM') {
+      if (type == 'SSM_BUSINESS_CERT' ||
+          type == 'SSM_CERT' ||
+          type == 'SSM' ||
+          type == 'CRAFTING_PHOTO' ||
+          type == 'VILLAGE_CRAFTING_PHOTO' ||
+          type == 'VILLAGE_HEAD_ENDORSEMENT' ||
+          type == 'ENDORSEMENT_LETTER' ||
+          type == 'TOK_BATIN_LETTER') {
         final name = d['file_name']?.toString();
         if (name != null && name.isNotEmpty) return name;
         final url = d['file_url']?.toString();
@@ -321,6 +354,7 @@ class UserModel {
     bool clearRejectionReason = false,
     bool? isLiveOpen,
     int? workshopCount,
+    String? premiseType,
     bool clearStudioDetails = false,
   }) {
     return UserModel(
@@ -360,6 +394,7 @@ class UserModel {
       rejectionReason: clearRejectionReason ? null : (rejectionReason ?? this.rejectionReason),
       isLiveOpen: isLiveOpen ?? this.isLiveOpen,
       workshopCount: workshopCount ?? this.workshopCount,
+      premiseType: clearStudioDetails ? null : (premiseType ?? this.premiseType),
     );
   }
 
@@ -408,6 +443,8 @@ class UserModel {
       'isLiveOpen': isLiveOpen,
       'workshop_count': workshopCount,
       'workshopCount': workshopCount,
+      'premise_type': premiseType,
+      'premiseType': premiseType,
     };
   }
 
@@ -569,6 +606,25 @@ class UserModel {
       resolvedRoles = roleList;
     }
 
+    String? resolvedPremiseType = (map['premise_type'] ??
+        map['premiseType'] ??
+        artisanMap?['premise_type'] ??
+        artisanMap?['premiseType'])?.toString();
+    if (resolvedPremiseType == null) {
+      for (final t in allTagsList) {
+        if (t.startsWith('premise:')) {
+          resolvedPremiseType = t.substring('premise:'.length);
+          break;
+        }
+      }
+    }
+    final rawSsmVal = (map['ssmNumber'] ?? map['ssm_number'] ?? artisanMap?['ssm_number'])?.toString();
+    if (resolvedPremiseType == null) {
+      if (rawSsmVal == 'VILLAGE_EXEMPT' || (rawSsmVal != null && rawSsmVal.toLowerCase().contains('village'))) {
+        resolvedPremiseType = 'Home / Village Workshop (Bengkel Kediaman / Desa)';
+      }
+    }
+
     return UserModel(
       id: map['id'] ?? '',
       email: map['email'] ?? '',
@@ -617,6 +673,7 @@ class UserModel {
       rejectionReason: map['rejectionReason'] ?? map['rejection_reason'] ?? artisanMap?['rejection_reason'],
       isLiveOpen: map['is_live_open'] ?? map['isLiveOpen'] ?? artisanMap?['is_live_open'] ?? !isClosedTag,
       workshopCount: resolvedWorkshops,
+      premiseType: resolvedPremiseType,
     );
   }
 }
