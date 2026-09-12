@@ -1034,42 +1034,81 @@ class ModerationViewModel extends ChangeNotifier {
 
       // Check SharedPreferences & static store for pending relocations
       try {
-        final pendingRelocEmails = await SupabaseService.getPendingRelocationEmails();
+        final pendingRelocEmails =
+            await SupabaseService.getPendingRelocationEmails();
         for (final email in pendingRelocEmails) {
           final clean = email.trim().toLowerCase();
           if (clean.isEmpty) continue;
-          if (!fetched.any((p) => p.email.toLowerCase() == clean && p.isRelocationRequest)) {
+          if (!fetched.any(
+            (p) => p.email.toLowerCase() == clean && p.isRelocationRequest,
+          )) {
             final data = await SupabaseService.getPendingRelocationData(clean);
             if (data != null) {
               final dynLat = data['pending_relocation_lat'] ?? data['latitude'];
-              final dynLng = data['pending_relocation_lng'] ?? data['longitude'];
+              final dynLng =
+                  data['pending_relocation_lng'] ?? data['longitude'];
               fetched.insert(
                 0,
                 PendingArtisanProfile(
                   id: data['id']?.toString() ?? 'reloc_$clean',
-                  name: data['name']?.toString() ?? data['studio_name']?.toString() ?? 'Artisan Studio',
-                  craftCategory: data['craft_category']?.toString() ?? 'Handicraft & Heritage',
+                  name:
+                      data['name']?.toString() ??
+                      data['studio_name']?.toString() ??
+                      'Artisan Studio',
+                  craftCategory:
+                      data['craft_category']?.toString() ??
+                      'Handicraft & Heritage',
                   state: data['state']?.toString() ?? 'Melaka',
-                  dateSubmitted: data['pending_relocation_date']?.toString() ?? 'Recent',
-                  imageUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600',
+                  dateSubmitted:
+                      data['pending_relocation_date']?.toString() ?? 'Recent',
+                  imageUrl:
+                      'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600',
                   email: clean,
                   experience: 'Accredited Studio',
                   phone: '+60 12-345 6789',
                   ssmNumber: 'Verified Studio',
                   isUpgradeFromTourist: false,
                   isRelocationRequest: true,
-                  currentAddress: data['current_address']?.toString() ?? data['address']?.toString(),
-                  proposedAddress: (data['pending_relocation_address'] ?? data['address'])?.toString(),
-                  proposedLatitude: dynLat is num ? dynLat.toDouble() : (dynLat != null ? double.tryParse(dynLat.toString()) : null),
-                  proposedLongitude: dynLng is num ? dynLng.toDouble() : (dynLng != null ? double.tryParse(dynLng.toString()) : null),
-                  proposedState: (data['pending_relocation_state'] ?? data['state'])?.toString(),
-                  relocationReason: (data['pending_relocation_reason'] ?? data['reason'])?.toString(),
-                  ssmFileName: (data['pending_relocation_cert_name'] ?? data['certName'])?.toString(),
-                  ssmFileUrl: (data['pending_relocation_cert_url'] ?? data['certUrl'])?.toString(),
-                  certFileName: (data['pending_relocation_cert_name'] ?? data['certName'])?.toString(),
-                  certFileUrl: (data['pending_relocation_cert_url'] ?? data['certUrl'])?.toString(),
-                  relocationCertFileName: (data['pending_relocation_cert_name'] ?? data['certName'])?.toString(),
-                  relocationCertFileUrl: (data['pending_relocation_cert_url'] ?? data['certUrl'])?.toString(),
+                  currentAddress:
+                      data['current_address']?.toString() ??
+                      data['address']?.toString(),
+                  proposedAddress:
+                      (data['pending_relocation_address'] ?? data['address'])
+                          ?.toString(),
+                  proposedLatitude: dynLat is num
+                      ? dynLat.toDouble()
+                      : (dynLat != null
+                            ? double.tryParse(dynLat.toString())
+                            : null),
+                  proposedLongitude: dynLng is num
+                      ? dynLng.toDouble()
+                      : (dynLng != null
+                            ? double.tryParse(dynLng.toString())
+                            : null),
+                  proposedState:
+                      (data['pending_relocation_state'] ?? data['state'])
+                          ?.toString(),
+                  relocationReason:
+                      (data['pending_relocation_reason'] ?? data['reason'])
+                          ?.toString(),
+                  ssmFileName:
+                      (data['pending_relocation_cert_name'] ?? data['certName'])
+                          ?.toString(),
+                  ssmFileUrl:
+                      (data['pending_relocation_cert_url'] ?? data['certUrl'])
+                          ?.toString(),
+                  certFileName:
+                      (data['pending_relocation_cert_name'] ?? data['certName'])
+                          ?.toString(),
+                  certFileUrl:
+                      (data['pending_relocation_cert_url'] ?? data['certUrl'])
+                          ?.toString(),
+                  relocationCertFileName:
+                      (data['pending_relocation_cert_name'] ?? data['certName'])
+                          ?.toString(),
+                  relocationCertFileUrl:
+                      (data['pending_relocation_cert_url'] ?? data['certUrl'])
+                          ?.toString(),
                 ),
               );
             }
@@ -1080,12 +1119,16 @@ class ModerationViewModel extends ChangeNotifier {
       }
 
       // Preserve any pending relocation requests added in this session
-      final localRelocations = _pendingArtisans.where((p) => p.isRelocationRequest).toList();
+      final localRelocations = _pendingArtisans
+          .where((p) => p.isRelocationRequest)
+          .toList();
       _pendingArtisans.clear();
       _pendingArtisans.addAll(fetched);
       for (final loc in localRelocations) {
         final existingIdx = _pendingArtisans.indexWhere(
-          (p) => p.email.toLowerCase() == loc.email.toLowerCase() && p.isRelocationRequest,
+          (p) =>
+              p.email.toLowerCase() == loc.email.toLowerCase() &&
+              p.isRelocationRequest,
         );
         if (existingIdx != -1) {
           _pendingArtisans[existingIdx] = loc;
@@ -1169,7 +1212,8 @@ class ModerationViewModel extends ChangeNotifier {
       'pending_relocation_state': profile.proposedState ?? profile.state,
       'pending_relocation_lat': profile.proposedLatitude ?? 2.1896,
       'pending_relocation_lng': profile.proposedLongitude ?? 102.2501,
-      'pending_relocation_reason': profile.relocationReason ?? 'Premise relocation request',
+      'pending_relocation_reason':
+          profile.relocationReason ?? 'Premise relocation request',
       'pending_relocation_date': DateTime.now().toIso8601String(),
       'name': profile.name,
       'studio_name': profile.name,
@@ -1358,6 +1402,7 @@ class ModerationViewModel extends ChangeNotifier {
           category: artisan.craftCategory,
           state: artisan.state,
           experience: artisan.experience,
+          plaques: 0,
           isLiveOpen: true,
           licenseNo: artisan.ssmNumber ?? '202601004821 (SSM Verified)',
           verifiedDate: 'Just Approved',

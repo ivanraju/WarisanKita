@@ -31,10 +31,10 @@ class HeritageProgress {
 class HeritageProgression {
   static const List<HeritageTier> tiers = [
     HeritageTier(level: 1, title: 'Heritage Observer', minimumXp: 0),
-    HeritageTier(level: 2, title: 'Heritage Explorer', minimumXp: 200),
-    HeritageTier(level: 3, title: 'Heritage Apprentice', minimumXp: 500),
-    HeritageTier(level: 4, title: 'Heritage Guardian', minimumXp: 1000),
-    HeritageTier(level: 5, title: 'Heritage Champion', minimumXp: 2000),
+    HeritageTier(level: 2, title: 'Heritage Explorer', minimumXp: 300),
+    HeritageTier(level: 3, title: 'Heritage Apprentice', minimumXp: 800),
+    HeritageTier(level: 4, title: 'Heritage Guardian', minimumXp: 1500),
+    HeritageTier(level: 5, title: 'Heritage Champion', minimumXp: 3000),
   ];
 
   static HeritageProgress fromXp(int earnedXp) {
