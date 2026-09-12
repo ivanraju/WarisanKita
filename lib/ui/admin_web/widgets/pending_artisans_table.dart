@@ -127,7 +127,7 @@ class PendingArtisansTable extends StatelessWidget {
                   columns: [
                     DataColumn(
                       label: Text(
-                        'ARTISAN NAME',
+                        'STUDIO NAME',
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
