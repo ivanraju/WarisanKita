@@ -23,31 +23,42 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
 
   bool _isLoading = false;
   String? _dialogError;
+  String? _currentError;
+  String? _newError;
+  String? _confirmError;
 
   @override
   void initState() {
     super.initState();
     _newPasswordController.addListener(_onPasswordChanged);
-    _currentPasswordController.addListener(_clearError);
-    _confirmPasswordController.addListener(_clearError);
+    _currentPasswordController.addListener(_clearErrors);
+    _confirmPasswordController.addListener(_clearErrors);
   }
 
   void _onPasswordChanged() {
-    _clearError();
+    _clearErrors();
     setState(() {});
   }
 
-  void _clearError() {
-    if (_dialogError != null) {
-      setState(() => _dialogError = null);
+  void _clearErrors() {
+    if (_dialogError != null ||
+        _currentError != null ||
+        _newError != null ||
+        _confirmError != null) {
+      setState(() {
+        _dialogError = null;
+        _currentError = null;
+        _newError = null;
+        _confirmError = null;
+      });
     }
   }
 
   @override
   void dispose() {
     _newPasswordController.removeListener(_onPasswordChanged);
-    _currentPasswordController.removeListener(_clearError);
-    _confirmPasswordController.removeListener(_clearError);
+    _currentPasswordController.removeListener(_clearErrors);
+    _confirmPasswordController.removeListener(_clearErrors);
     _currentPasswordController.dispose();
     _newPasswordController.dispose();
     _confirmPasswordController.dispose();
@@ -59,24 +70,45 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
     final newPassword = _newPasswordController.text.trim();
     final confirmPassword = _confirmPasswordController.text.trim();
 
+    setState(() {
+      _dialogError = null;
+      _currentError = null;
+      _newError = null;
+      _confirmError = null;
+    });
+
+    bool hasError = false;
+
     if (currentPassword.isEmpty) {
-      setState(() => _dialogError = 'Please enter your current password');
-      return;
+      _currentError = 'Please enter your current password';
+      hasError = true;
     }
 
-    if (newPassword.length < 8) {
-      setState(() => _dialogError = 'New password must be at least 8 characters');
-      return;
+    if (newPassword.isEmpty) {
+      _newError = 'Please enter a new password';
+      hasError = true;
+    } else if (newPassword.length < 8) {
+      _newError = 'New password must be at least 8 characters';
+      hasError = true;
     }
 
-    if (newPassword != confirmPassword) {
-      setState(() => _dialogError = 'New passwords do not match');
-      return;
+    if (confirmPassword.isEmpty) {
+      _confirmError = 'Please confirm your new password';
+      hasError = true;
+    } else if (newPassword.isNotEmpty && newPassword != confirmPassword) {
+      _confirmError = 'New passwords do not match';
+      hasError = true;
     }
 
-    if (currentPassword.toLowerCase() == newPassword.toLowerCase()) {
-      setState(() => _dialogError =
-          'NEW PASSWORD IS TOO SIMILAR TO YOUR CURRENT PASSWORD: Please choose a completely new password, not just a change in uppercase or lowercase.');
+    if (!hasError && currentPassword.toLowerCase() == newPassword.toLowerCase()) {
+      _newError = 'New password must be different from current password';
+      _dialogError =
+          'NEW PASSWORD IS TOO SIMILAR TO YOUR CURRENT PASSWORD: Please choose a completely new password, not just a change in uppercase or lowercase.';
+      hasError = true;
+    }
+
+    if (hasError) {
+      setState(() {});
       return;
     }
 
@@ -97,7 +129,15 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
     setState(() => _isLoading = false);
 
     if (!result.success) {
-      setState(() => _dialogError = result.message ?? 'Failed to change password');
+      final msg = result.message ?? 'Failed to change password';
+      if (msg.toUpperCase().contains('INCORRECT CURRENT PASSWORD')) {
+        setState(() {
+          _currentError = 'Incorrect current password. Please try again.';
+          _dialogError = msg;
+        });
+      } else {
+        setState(() => _dialogError = msg);
+      }
       return;
     }
 
@@ -211,6 +251,7 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
                 obscureText: _obscureCurrent,
                 decoration: InputDecoration(
                   labelText: 'Current Password',
+                  errorText: _currentError,
                   prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
                   suffixIcon: IconButton(
                     icon: Icon(_obscureCurrent ? Icons.visibility_off : Icons.visibility, size: 20),
@@ -229,6 +270,7 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
                 decoration: InputDecoration(
                   labelText: 'New Password',
                   hintText: 'Must be at least 8 characters',
+                  errorText: _newError,
                   prefixIcon: const Icon(Icons.key_rounded, size: 20),
                   suffixIcon: IconButton(
                     icon: Icon(_obscureNew ? Icons.visibility_off : Icons.visibility, size: 20),
@@ -252,6 +294,7 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
                 obscureText: _obscureConfirm,
                 decoration: InputDecoration(
                   labelText: 'Confirm New Password',
+                  errorText: _confirmError,
                   prefixIcon: const Icon(Icons.lock_reset_outlined, size: 20),
                   suffixIcon: IconButton(
                     icon: Icon(_obscureConfirm ? Icons.visibility_off : Icons.visibility, size: 20),
