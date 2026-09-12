@@ -115,6 +115,16 @@ class AdminSidebar extends StatelessWidget {
                   const SizedBox(height: 4),
                   _buildNavItem(
                     context,
+                    icon: Icons.assignment_turned_in_rounded,
+                    tabId: 'Approval History',
+                    label: 'Approval History',
+                    badgeText: (modVM?.approvalHistory.length ?? 0) > 0
+                        ? '${modVM!.approvalHistory.length}'
+                        : null,
+                  ),
+                  const SizedBox(height: 4),
+                  _buildNavItem(
+                    context,
                     icon: Icons.storefront_rounded,
                     tabId: 'Active Artisans',
                     label: 'Active Artisans',
