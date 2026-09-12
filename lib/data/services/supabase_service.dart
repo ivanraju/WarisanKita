@@ -576,7 +576,8 @@ class SupabaseService {
             row['experience'] = artisan['experience'].toString().trim();
           } else if (artisan['years_experience'] != null &&
               (artisan['years_experience'] as num) > 1) {
-            row['experience'] = '${artisan['years_experience']} Years';
+            final y = (artisan['years_experience'] as num).toInt();
+            row['experience'] = '$y Years';
           }
           final userArtisanStat = (row['artisan_status'] ?? '')
               .toString()
@@ -682,7 +683,33 @@ class SupabaseService {
         row['isLiveOpen'] = cached['is_live_open'];
       }
     }
-    if (row['experience'] == null || row['is_live_open'] == null) {
+    if (row['phone_number'] == null ||
+        row['phone_number'].toString().trim().isEmpty) {
+      final userMeta = authUser.userMetadata;
+      if (userMeta?['phone_number'] != null &&
+          userMeta!['phone_number'].toString().trim().isNotEmpty) {
+        row['phone_number'] = userMeta['phone_number'].toString().trim();
+      } else if (userMeta?['phone'] != null &&
+          userMeta!['phone'].toString().trim().isNotEmpty) {
+        row['phone_number'] = userMeta['phone'].toString().trim();
+      } else if (authUser.phone != null &&
+          authUser.phone!.trim().isNotEmpty) {
+        row['phone_number'] = authUser.phone!.trim();
+      } else if (_userStore.containsKey(authUser.email?.toLowerCase())) {
+        final cached = _userStore[authUser.email!.toLowerCase()];
+        if (cached?['phone_number'] != null &&
+            cached!['phone_number'].toString().trim().isNotEmpty) {
+          row['phone_number'] = cached['phone_number'].toString().trim();
+        } else if (cached?['phone'] != null &&
+            cached!['phone'].toString().trim().isNotEmpty) {
+          row['phone_number'] = cached['phone'].toString().trim();
+        }
+      }
+    }
+    if (row['experience'] == null ||
+        row['is_live_open'] == null ||
+        row['phone_number'] == null ||
+        row['phone_number'].toString().trim().isEmpty) {
       try {
         final prefs = await SharedPreferences.getInstance();
         final rawUser = prefs.getString(_keyAuthUser);
@@ -697,6 +724,17 @@ class SupabaseService {
               cachedUser['is_live_open'] != null) {
             row['is_live_open'] = cachedUser['is_live_open'];
             row['isLiveOpen'] = cachedUser['is_live_open'];
+          }
+          if ((row['phone_number'] == null ||
+                  row['phone_number'].toString().trim().isEmpty) &&
+              cachedUser['phone_number'] != null &&
+              cachedUser['phone_number'].toString().trim().isNotEmpty) {
+            row['phone_number'] = cachedUser['phone_number'].toString().trim();
+          } else if ((row['phone_number'] == null ||
+                  row['phone_number'].toString().trim().isEmpty) &&
+              cachedUser['phone'] != null &&
+              cachedUser['phone'].toString().trim().isNotEmpty) {
+            row['phone_number'] = cachedUser['phone'].toString().trim();
           }
         }
       } catch (_) {}
@@ -1122,6 +1160,13 @@ class SupabaseService {
     userRecord['craftCategory'] = craftCategory;
     userRecord['ssmNumber'] = ssmNumber;
     if (experience != null) userRecord['experience'] = experience;
+    if (phone != null && phone.trim().isNotEmpty) {
+      userRecord['phone'] = phone.trim();
+      userRecord['phone_number'] = phone.trim();
+    }
+    if (bio != null && bio.trim().isNotEmpty) {
+      userRecord['bio'] = bio.trim();
+    }
     if (ssmFile != null) userRecord['ssm_file_name'] = ssmFile.name;
     if (certFile != null) userRecord['cert_file_name'] = certFile.name;
     if (address != null) userRecord['address'] = address;
@@ -1178,6 +1223,10 @@ class SupabaseService {
                 'studio_name': studioName,
                 'craft_category': craftCategory,
                 'ssm_number': ssmNumber,
+                if (phone != null && phone.trim().isNotEmpty)
+                  'phone_number': phone.trim(),
+                if (phone != null && phone.trim().isNotEmpty)
+                  'phone': phone.trim(),
               },
             ),
           );
@@ -1199,15 +1248,6 @@ class SupabaseService {
           'role': 'Tourist',
           'artisan_status': 'PENDING_APPROVAL',
           'rejection_reason': null,
-          'studio_name': studioName,
-          'craft_category': craftCategory,
-          'ssm_number': ssmNumber,
-          if (experience != null && experience.trim().isNotEmpty)
-            'experience': experience.trim(),
-          if (bio != null && bio.trim().isNotEmpty) 'bio': bio.trim(),
-          if (state != null && state.trim().isNotEmpty) 'state': state.trim(),
-          if (address != null && address.trim().isNotEmpty)
-            'address': address.trim(),
           if (phone != null && phone.trim().isNotEmpty)
             'phone_number': phone.trim(),
           'updated_at': DateTime.now().toIso8601String(),
@@ -2381,13 +2421,18 @@ class SupabaseService {
               rowMap['ssm_number'] ??= ap['ssm_number'];
               rowMap['bio'] ??= ap['bio'];
               rowMap['state'] ??= ap['state'] ?? ap['address'];
+              rowMap['phone'] ??=
+                  rowMap['phone_number'] ?? ap['phone'] ?? ap['phone_number'];
+              rowMap['phone_number'] ??= rowMap['phone'];
               rowMap['experience'] ??=
                   (ap['experience'] != null &&
                       ap['experience'].toString().trim().isNotEmpty)
-                  ? ap['experience'].toString().trim()
+                  ? (RegExp(r'^\d+$').hasMatch(ap['experience'].toString().trim())
+                      ? '${ap['experience'].toString().trim()} Years'
+                      : ap['experience'].toString().trim())
                   : (ap['years_experience'] != null &&
                             (ap['years_experience'] as num) > 1
-                        ? '${ap['years_experience']} years experience'
+                        ? '${(ap['years_experience'] as num).toInt()} Years'
                         : null);
 
               // Extract documents if they exist
@@ -2444,57 +2489,74 @@ class SupabaseService {
               .from('artisan_profiles')
               .select('*, users(*), artisan_documents(*)')
               .ilike('status', '%PENDING%');
-          if (pendingProfiles is List) {
-            for (final p in pendingProfiles) {
-              final pMap = Map<String, dynamic>.from(p);
-              final u = pMap['users'] is Map
-                  ? Map<String, dynamic>.from(pMap['users'])
-                  : <String, dynamic>{};
-              final email = (u['email'] ?? pMap['email'] ?? '')
-                  .toString()
-                  .toLowerCase();
-              if (email.isNotEmpty &&
-                  !results.any(
-                    (r) => (r['email'] ?? '').toString().toLowerCase() == email,
-                  )) {
-                final combined = <String, dynamic>{
-                  ...u,
-                  'id': u['id'] ?? pMap['user_id'] ?? pMap['id'],
-                  'email': email,
-                  'studio_name': pMap['studio_name'] ?? u['studio_name'],
-                  'craft_category':
-                      pMap['craft_category'] ?? u['craft_category'],
-                  'ssm_number': pMap['ssm_number'] ?? u['ssm_number'],
-                  'bio': pMap['bio'] ?? u['bio'],
-                  'state': pMap['state'] ?? u['state'],
-                  'address': pMap['address'] ?? u['address'],
-                  'experience': pMap['experience'] ?? u['experience'],
-                  'artisan_status': 'PENDING_APPROVAL',
-                  'artisan_profiles': pMap,
-                };
-                if (pMap['artisan_documents'] is List) {
-                  final docs = pMap['artisan_documents'] as List;
-                  List<String> photos = [];
-                  for (var d in docs) {
-                    final doc = d as Map;
-                    final type = doc['doc_type']?.toString();
-                    final url = doc['file_url']?.toString();
-                    final name = doc['file_name']?.toString();
-                    if ((type == 'PORTFOLIO_IMAGE' || type == 'STUDIO_PHOTO') &&
-                        url != null) {
-                      photos.add(url);
-                    } else if (type == 'SSM_BUSINESS_CERT') {
-                      if (name != null) combined['ssm_file_name'] = name;
-                      if (url != null) combined['ssm_file_url'] = url;
-                    } else if (type == 'KRAFTANGAN_MASTER_CERT') {
-                      if (name != null) combined['cert_file_name'] = name;
-                      if (url != null) combined['cert_file_url'] = url;
-                    }
+          for (final p in pendingProfiles) {
+            final pMap = Map<String, dynamic>.from(p);
+            final u = pMap['users'] is Map
+                ? Map<String, dynamic>.from(pMap['users'])
+                : <String, dynamic>{};
+            final email = (u['email'] ?? pMap['email'] ?? '')
+                .toString()
+                .toLowerCase();
+            if (email.isNotEmpty &&
+                !results.any(
+                  (r) => (r['email'] ?? '').toString().toLowerCase() == email,
+                )) {
+              final apExp = (pMap['experience'] != null &&
+                      pMap['experience'].toString().trim().isNotEmpty)
+                  ? (RegExp(r'^\d+$').hasMatch(pMap['experience'].toString().trim())
+                      ? '${pMap['experience'].toString().trim()} Years'
+                      : pMap['experience'].toString().trim())
+                  : (pMap['years_experience'] != null &&
+                          (pMap['years_experience'] as num) > 1
+                      ? '${(pMap['years_experience'] as num).toInt()} Years'
+                      : (u['experience'] != null &&
+                              u['experience'].toString().trim().isNotEmpty
+                          ? (RegExp(r'^\d+$').hasMatch(u['experience'].toString().trim())
+                              ? '${u['experience'].toString().trim()} Years'
+                              : u['experience'].toString().trim())
+                          : 'Verified Studio'));
+              final combined = <String, dynamic>{
+                'id': u['id'] ?? pMap['user_id'] ?? pMap['id'],
+                'full_name': u['full_name'] ??
+                    u['display_name'] ??
+                    pMap['studio_name'] ??
+                    'Artisan Applicant',
+                'email': email,
+                'studio_name': pMap['studio_name'] ?? u['studio_name'],
+                'craft_category':
+                    pMap['craft_category'] ?? u['craft_category'],
+                'ssm_number': pMap['ssm_number'] ?? u['ssm_number'],
+                'bio': pMap['bio'] ?? u['bio'],
+                'state': pMap['state'] ?? u['state'],
+                'address': pMap['address'] ?? u['address'],
+                'experience': apExp,
+                'phone': u['phone_number'] ?? u['phone'] ?? pMap['phone'] ?? pMap['phone_number'],
+                'phone_number': u['phone_number'] ?? u['phone'] ?? pMap['phone'] ?? pMap['phone_number'],
+                'artisan_status': 'PENDING_APPROVAL',
+                'artisan_profiles': pMap,
+              };
+              if (pMap['artisan_documents'] is List) {
+                final docs = pMap['artisan_documents'] as List;
+                List<String> photos = [];
+                for (var d in docs) {
+                  final doc = d as Map;
+                  final type = doc['doc_type']?.toString();
+                  final url = doc['file_url']?.toString();
+                  final name = doc['file_name']?.toString();
+                  if ((type == 'PORTFOLIO_IMAGE' || type == 'STUDIO_PHOTO') &&
+                      url != null) {
+                    photos.add(url);
+                  } else if (type == 'SSM_BUSINESS_CERT') {
+                    if (name != null) combined['ssm_file_name'] = name;
+                    if (url != null) combined['ssm_file_url'] = url;
+                  } else if (type == 'KRAFTANGAN_MASTER_CERT') {
+                    if (name != null) combined['cert_file_name'] = name;
+                    if (url != null) combined['cert_file_url'] = url;
                   }
-                  if (photos.isNotEmpty) combined['photos'] = photos;
                 }
-                results.add(combined);
+                if (photos.isNotEmpty) combined['photos'] = photos;
               }
+              results.add(combined);
             }
           }
         } catch (apErr) {

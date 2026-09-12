@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:warisan_kita/domain/models/pending_artisan_profile.dart';
 import 'package:warisan_kita/ui/admin_web/widgets/artisan_review_dialog.dart';
 
-class PendingRelocationsTable extends StatelessWidget {
+class PendingRelocationsTable extends StatefulWidget {
   final List<PendingArtisanProfile> relocations;
   final Function(PendingArtisanProfile) onApprove;
   final Function(PendingArtisanProfile, String? reason) onReject;
@@ -15,13 +15,26 @@ class PendingRelocationsTable extends StatelessWidget {
     required this.onReject,
   });
 
+  @override
+  State<PendingRelocationsTable> createState() => _PendingRelocationsTableState();
+}
+
+class _PendingRelocationsTableState extends State<PendingRelocationsTable> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
   void _openReviewDialog(BuildContext context, PendingArtisanProfile artisan) {
     showDialog(
       context: context,
       builder: (_) => ArtisanReviewDialog(
         artisan: artisan,
-        onApprove: () => onApprove(artisan),
-        onReject: (reason) => onReject(artisan, reason),
+        onApprove: () => widget.onApprove(artisan),
+        onReject: (reason) => widget.onReject(artisan, reason),
       ),
     );
   }
@@ -46,7 +59,7 @@ class PendingRelocationsTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (relocations.isEmpty) {
+    if (widget.relocations.isEmpty) {
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(48),
@@ -112,20 +125,23 @@ class PendingRelocationsTable extends StatelessWidget {
         child: LayoutBuilder(
           builder: (context, constraints) {
             return Scrollbar(
+              controller: _scrollController,
               thumbVisibility: true,
+              trackVisibility: true,
               child: SingleChildScrollView(
+                controller: _scrollController,
                 scrollDirection: Axis.horizontal,
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
-                    minWidth: constraints.maxWidth > 960 ? constraints.maxWidth : 960,
+                    minWidth: constraints.maxWidth,
                   ),
                   child: DataTable(
                     showCheckboxColumn: false,
                     headingRowHeight: 52,
                     dataRowMinHeight: 88,
                     dataRowMaxHeight: 124,
-                    horizontalMargin: 20,
-                    columnSpacing: 18,
+                    horizontalMargin: 16,
+                    columnSpacing: 14,
                     headingRowColor: WidgetStateProperty.all(const Color(0xFFF8FAFC)),
                     columns: [
                       DataColumn(
@@ -184,7 +200,7 @@ class PendingRelocationsTable extends StatelessWidget {
                         ),
                       ),
                     ],
-                    rows: relocations.map((artisan) => _buildRow(context, artisan)).toList(),
+                    rows: widget.relocations.map((artisan) => _buildRow(context, artisan)).toList(),
                   ),
                 ),
               ),
@@ -203,70 +219,81 @@ class PendingRelocationsTable extends StatelessWidget {
         DataCell(
           InkWell(
             onTap: () => _openReviewDialog(context, artisan),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: Image.network(
-                    artisan.imageUrl,
-                    width: 42,
-                    height: 42,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      width: 42,
-                      height: 42,
-                      color: const Color(0xFFE2E8F0),
-                      child: const Icon(Icons.storefront_rounded, color: Color(0xFF64748B)),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      artisan.name,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF1E293B),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 200),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Image.network(
+                      artisan.imageUrl,
+                      width: 38,
+                      height: 38,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        width: 38,
+                        height: 38,
+                        color: const Color(0xFFE2E8F0),
+                        child: const Icon(Icons.storefront_rounded, size: 20, color: Color(0xFF64748B)),
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    Row(
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFEFF6FF),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            artisan.craftCategory,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              color: const Color(0xFF1D4ED8),
-                            ),
+                        Text(
+                          artisan.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF1E293B),
                           ),
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(height: 2),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEFF6FF),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                artisan.craftCategory,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFF1D4ED8),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 1),
                         Text(
                           artisan.email,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.plusJakartaSans(
-                            fontSize: 11,
+                            fontSize: 10.5,
                             color: const Color(0xFF94A3B8),
                           ),
                         ),
                       ],
                     ),
-                  ],
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -274,14 +301,14 @@ class PendingRelocationsTable extends StatelessWidget {
         // Current Premise Cell
         DataCell(
           ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 220),
+            constraints: const BoxConstraints(maxWidth: 160),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF1F5F9),
                     borderRadius: BorderRadius.circular(4),
@@ -290,14 +317,18 @@ class PendingRelocationsTable extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.place_rounded, size: 11, color: Color(0xFF475569)),
-                      const SizedBox(width: 4),
-                      Text(
-                        artisan.state,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF334155),
+                      const Icon(Icons.place_rounded, size: 10, color: Color(0xFF475569)),
+                      const SizedBox(width: 3),
+                      Flexible(
+                        child: Text(
+                          artisan.state,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF334155),
+                          ),
                         ),
                       ),
                     ],
@@ -308,12 +339,12 @@ class PendingRelocationsTable extends StatelessWidget {
                   artisan.currentAddress?.trim().isNotEmpty == true
                       ? artisan.currentAddress!
                       : 'Accredited Studio Location',
-                  maxLines: 3,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 11,
                     color: const Color(0xFF64748B),
-                    height: 1.35,
+                    height: 1.3,
                   ),
                 ),
               ],
@@ -324,7 +355,7 @@ class PendingRelocationsTable extends StatelessWidget {
         // Proposed New Premise Cell
         DataCell(
           ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 250),
+            constraints: const BoxConstraints(maxWidth: 195),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -334,7 +365,7 @@ class PendingRelocationsTable extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
                         color: const Color(0xFFFEF3C7),
                         borderRadius: BorderRadius.circular(4),
@@ -343,12 +374,14 @@ class PendingRelocationsTable extends StatelessWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.near_me_rounded, size: 11, color: Color(0xFFB45309)),
-                          const SizedBox(width: 4),
+                          const Icon(Icons.near_me_rounded, size: 10, color: Color(0xFFB45309)),
+                          const SizedBox(width: 3),
                           Text(
                             artisan.proposedState ?? 'Pending State',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: GoogleFonts.plusJakartaSans(
-                              fontSize: 10,
+                              fontSize: 9.5,
                               fontWeight: FontWeight.w800,
                               color: const Color(0xFFB45309),
                             ),
@@ -357,19 +390,23 @@ class PendingRelocationsTable extends StatelessWidget {
                       ),
                     ),
                     if (artisan.proposedLatitude != null && artisan.proposedLongitude != null) ...[
-                      const SizedBox(width: 6),
-                      Text(
-                        '(${artisan.proposedLatitude!.toStringAsFixed(3)}, ${artisan.proposedLongitude!.toStringAsFixed(3)})',
-                        style: GoogleFonts.jetBrainsMono(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
-                          color: const Color(0xFF94A3B8),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          '(${artisan.proposedLatitude!.toStringAsFixed(3)}, ${artisan.proposedLongitude!.toStringAsFixed(3)})',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.jetBrainsMono(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w500,
+                            color: const Color(0xFF94A3B8),
+                          ),
                         ),
                       ),
                     ],
                   ],
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 3),
                 Text(
                   artisan.proposedAddress?.trim().isNotEmpty == true
                       ? artisan.proposedAddress!
@@ -377,32 +414,32 @@ class PendingRelocationsTable extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.plusJakartaSans(
-                    fontSize: 12,
+                    fontSize: 11.5,
                     fontWeight: FontWeight.w600,
                     color: const Color(0xFF0F172A),
-                    height: 1.35,
+                    height: 1.3,
                   ),
                 ),
                 if (artisan.relocationReason != null && artisan.relocationReason!.trim().isNotEmpty) ...[
-                  const SizedBox(height: 3),
+                  const SizedBox(height: 2),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Padding(
                         padding: EdgeInsets.only(top: 2.0),
-                        child: Icon(Icons.notes_rounded, size: 10, color: Color(0xFFD97706)),
+                        child: Icon(Icons.notes_rounded, size: 9, color: Color(0xFFD97706)),
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 3),
                       Expanded(
                         child: Text(
                           artisan.relocationReason!,
-                          maxLines: 2,
+                          maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.plusJakartaSans(
-                            fontSize: 10,
+                            fontSize: 9.5,
                             fontStyle: FontStyle.italic,
                             color: const Color(0xFF64748B),
-                            height: 1.25,
+                            height: 1.2,
                           ),
                         ),
                       ),
@@ -421,14 +458,14 @@ class PendingRelocationsTable extends StatelessWidget {
             children: [
               const Icon(
                 Icons.calendar_today_outlined,
-                size: 14,
+                size: 13,
                 color: Color(0xFF94A3B8),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               Text(
                 _formatDate(artisan.dateSubmitted),
                 style: GoogleFonts.plusJakartaSans(
-                  fontSize: 13,
+                  fontSize: 12,
                   fontWeight: FontWeight.w500,
                   color: const Color(0xFF334155),
                 ),
@@ -444,38 +481,38 @@ class PendingRelocationsTable extends StatelessWidget {
             children: [
               // Inspect / Review Details Modal Button
               IconButton(
-                icon: const Icon(Icons.remove_red_eye_outlined, color: Color(0xFF2563EB), size: 18),
+                icon: const Icon(Icons.remove_red_eye_outlined, color: Color(0xFF2563EB), size: 16),
                 onPressed: () => _openReviewDialog(context, artisan),
                 tooltip: 'Review Full Relocation Request',
-                padding: const EdgeInsets.all(6),
+                padding: const EdgeInsets.all(4),
                 constraints: const BoxConstraints(),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 5),
 
               // Approve Button
               ElevatedButton.icon(
-                onPressed: () => onApprove(artisan),
+                onPressed: () => widget.onApprove(artisan),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF10B981),
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  minimumSize: const Size(0, 34),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  minimumSize: const Size(0, 32),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
                   elevation: 0,
                 ),
-                icon: const Icon(Icons.check_rounded, size: 14),
+                icon: const Icon(Icons.check_rounded, size: 13),
                 label: Text(
                   'Approve',
                   style: GoogleFonts.plusJakartaSans(
-                    fontSize: 12,
+                    fontSize: 11.5,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
 
-              const SizedBox(width: 6),
+              const SizedBox(width: 5),
 
               // Reject Button
               OutlinedButton.icon(
@@ -483,17 +520,17 @@ class PendingRelocationsTable extends StatelessWidget {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: const Color(0xFFEF4444),
                   side: const BorderSide(color: Color(0xFFEF4444), width: 1.2),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                  minimumSize: const Size(0, 34),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  minimumSize: const Size(0, 32),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                icon: const Icon(Icons.close_rounded, size: 14),
+                icon: const Icon(Icons.close_rounded, size: 13),
                 label: Text(
                   'Reject',
                   style: GoogleFonts.plusJakartaSans(
-                    fontSize: 12,
+                    fontSize: 11.5,
                     fontWeight: FontWeight.bold,
                   ),
                 ),

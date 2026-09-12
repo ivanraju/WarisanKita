@@ -645,6 +645,36 @@ class ModerationViewModel extends ChangeNotifier {
           }
         }
 
+        // Resolve experience
+        final rawExp = raw['experience'] ??
+            raw['years_experience'] ??
+            artisanProfile?['experience'] ??
+            artisanProfile?['years_experience'];
+        String resolvedExperience;
+        if (rawExp != null) {
+          final expStr = rawExp.toString().trim();
+          final numMatch = RegExp(r'^\d+$').firstMatch(expStr);
+          if (numMatch != null) {
+            final val = int.tryParse(numMatch.group(0)!);
+            resolvedExperience = '$val Year${val == 1 ? '' : 's'}';
+          } else if (expStr.isNotEmpty) {
+            resolvedExperience = expStr;
+          } else {
+            resolvedExperience = 'Verified Studio';
+          }
+        } else {
+          resolvedExperience = 'Verified Studio';
+        }
+
+        // Resolve phone
+        final rawPhone = raw['phone'] ??
+            raw['phone_number'] ??
+            artisanProfile?['phone'] ??
+            artisanProfile?['phone_number'];
+        final resolvedPhone = (rawPhone != null && rawPhone.toString().trim().isNotEmpty)
+            ? rawPhone.toString().trim()
+            : '+60 12-345 6789';
+
         final newProfile = PendingArtisanProfile(
           id: id,
           name: name,
@@ -656,9 +686,8 @@ class ModerationViewModel extends ChangeNotifier {
               'Today',
           imageUrl: resolvedImageUrl,
           email: email,
-          experience: (raw['experience'] ?? 'Verified Studio').toString(),
-          phone: (raw['phone'] ?? raw['phone_number'] ?? '+60 12-345 6789')
-              .toString(),
+          experience: resolvedExperience,
+          phone: resolvedPhone,
           ssmNumber:
               (raw['ssm_number'] ??
                       raw['ssmNumber'] ??
@@ -669,7 +698,7 @@ class ModerationViewModel extends ChangeNotifier {
           certFileName: resolvedCertName,
           certFileUrl: resolvedCertUrl,
           photos: resolvedPhotos,
-          bio: raw['bio']?.toString(),
+          bio: raw['bio']?.toString() ?? artisanProfile?['bio']?.toString(),
           isUpgradeFromTourist: isUpgrade,
         );
 
@@ -708,9 +737,13 @@ class ModerationViewModel extends ChangeNotifier {
                   email: u.email,
                   experience:
                       (u.experience?.trim().isNotEmpty == true)
-                      ? u.experience!
+                      ? (RegExp(r'^\d+$').hasMatch(u.experience!.trim())
+                          ? '${u.experience!.trim()} Years'
+                          : u.experience!)
                       : 'Verified Studio',
-                  phone: u.phone ?? '+60 12-345 6789',
+                  phone: (u.phone != null && u.phone!.trim().isNotEmpty)
+                      ? u.phone!
+                      : '+60 12-345 6789',
                   ssmNumber: u.ssmNumber ?? 'Pending Document Verification',
                   ssmFileName: u.ssmFileName,
                   ssmFileUrl: u.ssmFileUrl,
@@ -828,6 +861,9 @@ class ModerationViewModel extends ChangeNotifier {
         studioName: profile.name,
         craftCategory: profile.craftCategory,
         state: profile.state,
+        phone: profile.phone,
+        bio: profile.bio,
+        experience: profile.experience,
       );
     }
     notifyListeners();

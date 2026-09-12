@@ -1344,9 +1344,13 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
         child: Form(
           key: _formKey,
           autovalidateMode: AutovalidateMode.onUserInteraction,
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(24.0),
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => FocusScope.of(context).unfocus(),
+            child: SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(24.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1957,6 +1961,8 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
             TextFormField(
               controller: _bioController,
               maxLines: 4,
+              textInputAction: TextInputAction.done,
+              onFieldSubmitted: (_) => FocusScope.of(context).unfocus(),
               autovalidateMode: AutovalidateMode.onUserInteraction,
               validator: (v) => ProfileValidator.validateBio(
                 v,
@@ -1971,6 +1977,14 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                   color: isDark ? Colors.white70 : const Color(0xFF475569),
                 ),
                 alignLabelWithHint: true,
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    Icons.keyboard_hide_rounded,
+                    color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                  ),
+                  tooltip: 'Done / Exit Keyboard',
+                  onPressed: () => FocusScope.of(context).unfocus(),
+                ),
                 filled: true,
                 fillColor: isDark ? const Color(0xFF0D2825) : Colors.white,
                 enabledBorder: OutlineInputBorder(
@@ -2368,6 +2382,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
           ],
         ),
       ),
+    ),
     ),
     ),
     ),

@@ -102,6 +102,8 @@ class PasswordStrengthMeter extends StatelessWidget {
 
     final result = PasswordStrengthHelper.evaluate(password);
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -114,7 +116,7 @@ class PasswordStrengthMeter extends StatelessWidget {
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
-                color: const Color(0xFF64748B),
+                color: isDark ? Colors.white70 : const Color(0xFF64748B),
               ),
             ),
             Row(
@@ -150,7 +152,7 @@ class PasswordStrengthMeter extends StatelessWidget {
                 height: 4,
                 margin: EdgeInsets.only(right: index < 3 ? 4 : 0),
                 decoration: BoxDecoration(
-                  color: isFilled ? result.color : const Color(0xFFE2E8F0),
+                  color: isFilled ? result.color : (isDark ? const Color(0xFF1E3A34) : const Color(0xFFE2E8F0)),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -163,10 +165,10 @@ class PasswordStrengthMeter extends StatelessWidget {
             spacing: 8,
             runSpacing: 6,
             children: [
-              _buildCriterionChip('8+ characters', result.hasMinLength),
-              _buildCriterionChip('Upper & lowercase', result.hasUppercase && result.hasLowercase),
-              _buildCriterionChip('Number (0-9)', result.hasDigits),
-              _buildCriterionChip('Symbol (!@#\$)', result.hasSpecialChar),
+              _buildCriterionChip(context, '8+ characters', result.hasMinLength),
+              _buildCriterionChip(context, 'Upper & lowercase', result.hasUppercase && result.hasLowercase),
+              _buildCriterionChip(context, 'Number (0-9)', result.hasDigits),
+              _buildCriterionChip(context, 'Symbol (!@#\$)', result.hasSpecialChar),
             ],
           ),
         ],
@@ -174,15 +176,27 @@ class PasswordStrengthMeter extends StatelessWidget {
     );
   }
 
-  Widget _buildCriterionChip(String text, bool isMet) {
+  Widget _buildCriterionChip(BuildContext context, String text, bool isMet) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isMet
+        ? (isDark ? const Color(0xFF063529) : const Color(0xFFECFDF5))
+        : (isDark ? const Color(0xFF041412) : const Color(0xFFF1F5F9));
+    final borderColor = isMet
+        ? (isDark ? const Color(0xFF059669) : const Color(0xFFA7F3D0))
+        : (isDark ? const Color(0xFF1E3A34) : const Color(0xFFE2E8F0));
+    final textColor = isMet
+        ? (isDark ? const Color(0xFF34D399) : const Color(0xFF065F46))
+        : (isDark ? Colors.white60 : const Color(0xFF64748B));
+    final iconColor = isMet
+        ? const Color(0xFF059669)
+        : (isDark ? Colors.white38 : const Color(0xFF94A3B8));
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: isMet ? const Color(0xFFECFDF5) : const Color(0xFFF1F5F9),
+        color: bgColor,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: isMet ? const Color(0xFFA7F3D0) : const Color(0xFFE2E8F0),
-        ),
+        border: Border.all(color: borderColor),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -190,7 +204,7 @@ class PasswordStrengthMeter extends StatelessWidget {
           Icon(
             isMet ? Icons.check_circle_rounded : Icons.circle_outlined,
             size: 12,
-            color: isMet ? const Color(0xFF059669) : const Color(0xFF94A3B8),
+            color: iconColor,
           ),
           const SizedBox(width: 4),
           Text(
@@ -198,7 +212,7 @@ class PasswordStrengthMeter extends StatelessWidget {
             style: GoogleFonts.plusJakartaSans(
               fontSize: 10,
               fontWeight: isMet ? FontWeight.bold : FontWeight.w500,
-              color: isMet ? const Color(0xFF065F46) : const Color(0xFF64748B),
+              color: textColor,
             ),
           ),
         ],
