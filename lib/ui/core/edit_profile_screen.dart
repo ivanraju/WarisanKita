@@ -7,6 +7,7 @@ import 'package:warisan_kita/domain/validators/profile_validator.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/moderation_viewmodel.dart';
+import 'package:warisan_kita/ui/core/widgets/heritage_background.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -308,8 +309,31 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (user == null) {
-      return Scaffold(
-        backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
+      return HeritageBackground(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: AppBar(
+            title: Text(
+              tr('Edit Profile'),
+              style: GoogleFonts.dmSerifDisplay(
+                color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                fontSize: 22,
+              ),
+            ),
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+          ),
+          body: const Center(child: CircularProgressIndicator()),
+        ),
+      );
+    }
+
+    final initials = user.initials;
+    final isArtisan = user.isArtisan || user.role == 'Artisan' || user.role.toLowerCase().contains('artisan');
+
+    return HeritageBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
         appBar: AppBar(
           title: Text(
             tr('Edit Profile'),
@@ -318,28 +342,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               fontSize: 22,
             ),
           ),
-          backgroundColor: isDark ? const Color(0xFF0D2825) : Colors.white,
+          backgroundColor: Colors.transparent,
           elevation: 0,
-        ),
-        body: const Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    final initials = user.initials;
-    final isArtisan = user.isArtisan || user.role == 'Artisan' || user.role.toLowerCase().contains('artisan');
-
-    return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        title: Text(
-          tr('Edit Profile'),
-          style: GoogleFonts.dmSerifDisplay(
-            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
-            fontSize: 22,
-          ),
-        ),
-        backgroundColor: isDark ? const Color(0xFF0D2825) : Colors.white,
-        elevation: 0,
         leading: IconButton(
           icon: Icon(
             Icons.arrow_back_rounded,
@@ -678,7 +682,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ),
       ),
     ),
-    );
-  }
+    ),
+  );
+}
 }
 

@@ -9,6 +9,7 @@ import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/directory_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/gamification_viewmodel.dart';
 import 'package:warisan_kita/domain/models/artisan_heritage_analytics.dart';
+import 'package:warisan_kita/ui/core/widgets/heritage_background.dart';
 
 class ArtisanDashboardTab extends StatefulWidget {
   const ArtisanDashboardTab({super.key});
@@ -88,15 +89,14 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
     final initials = user?.initials ?? 'AS';
     final isStudioOpen = user != null ? user.isLiveOpen : _isStudioOpen;
 
-    return CustomScrollView(
-      physics: const BouncingScrollPhysics(),
-      slivers: [
-        // Top App Bar
-        SliverAppBar(
-          backgroundColor: isDark
-              ? const Color(0xFF041412)
-              : const Color(0xFFF8F9FA),
-          elevation: 0,
+    return HeritageBackground(
+      child: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          // Top App Bar
+          SliverAppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
           title: Text(
             'Master Artisan Command Center',
             style: GoogleFonts.dmSerifDisplay(
@@ -455,8 +455,9 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
 
         const SliverToBoxAdapter(child: SizedBox(height: 40)),
       ],
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildHeaderBadge(String text, Color bg, Color textCol) {
     return Container(

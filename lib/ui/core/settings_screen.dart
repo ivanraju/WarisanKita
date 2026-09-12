@@ -10,6 +10,7 @@ import 'package:warisan_kita/viewmodels/theme_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/matchmaker_viewmodel.dart';
+import 'package:warisan_kita/ui/core/widgets/heritage_background.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -224,17 +225,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final personality = matchmakerVM.currentPersonality;
     final user = authVM.currentUser;
     if (user == null) {
-      return Scaffold(
-        backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
-        appBar: AppBar(
-          title: Text(
-            langVM.translate('Settings & Account'),
-            style: GoogleFonts.dmSerifDisplay(color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40), fontSize: 22),
+      return HeritageBackground(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: AppBar(
+            title: Text(
+              langVM.translate('Settings & Account'),
+              style: GoogleFonts.dmSerifDisplay(color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40), fontSize: 22),
+            ),
+            backgroundColor: Colors.transparent,
+            elevation: 0,
           ),
-          backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
-          elevation: 0,
+          body: const Center(child: CircularProgressIndicator()),
         ),
-        body: const Center(child: CircularProgressIndicator()),
       );
     }
     final username = user.effectiveUsername;
@@ -242,22 +245,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final email = user.email;
     final role = user.role;
 
-    return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        title: Text(
-          langVM.translate('Settings & Account'),
-          style: GoogleFonts.dmSerifDisplay(color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40), fontSize: 22),
+    return HeritageBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          title: Text(
+            langVM.translate('Settings & Account'),
+            style: GoogleFonts.dmSerifDisplay(color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40), fontSize: 22),
+          ),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: Navigator.canPop(context)
+              ? IconButton(
+                  icon: Icon(Icons.arrow_back_rounded, color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40)),
+                  onPressed: () => Navigator.of(context).pop(),
+                )
+              : null,
         ),
-        backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
-        elevation: 0,
-        leading: Navigator.canPop(context)
-            ? IconButton(
-                icon: Icon(Icons.arrow_back_rounded, color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40)),
-                onPressed: () => Navigator.of(context).pop(),
-              )
-            : null,
-      ),
       body: ListView(
         padding: const EdgeInsets.all(24.0),
         children: [
@@ -464,8 +468,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildSectionHeader(String title, {required bool isDark}) {
     return Padding(

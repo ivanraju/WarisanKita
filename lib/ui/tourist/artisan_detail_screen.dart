@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:warisan_kita/data/services/google_map_service.dart';
 import 'package:warisan_kita/ui/tourist/widgets/workshop_map_picker.dart';
 import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
+import 'package:warisan_kita/ui/core/widgets/heritage_background.dart';
 
 class ArtisanDetailScreen extends StatefulWidget {
   final String artisanName;
@@ -215,11 +216,10 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
     } catch (_) {}
     String tr(String text) => langVM?.translate(text) ?? text;
 
-    return Scaffold(
-      backgroundColor: isDark
-          ? const Color(0xFF041412)
-          : const Color(0xFFF8F9FA),
-      body: CustomScrollView(
+    return HeritageBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
           // Top Image Carousel Sliver AppBar
@@ -1198,6 +1198,7 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                 ),
               ),
             ),
+      ),
     );
   }
 

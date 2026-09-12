@@ -16,6 +16,7 @@ import 'package:warisan_kita/ui/tourist/artisan_detail_screen.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/moderation_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/directory_viewmodel.dart';
+import 'package:warisan_kita/ui/core/widgets/heritage_background.dart';
 
 class ProfileBuilderTab extends StatefulWidget {
   const ProfileBuilderTab({super.key});
@@ -1293,18 +1294,19 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     final authVM = context.watch<AuthViewModel>();
     final currentUser = authVM.currentUser;
 
-    return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        title: Text(
-          'Artisan Profile Builder',
-          style: GoogleFonts.dmSerifDisplay(
-            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
-            fontSize: 22,
+    return HeritageBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          title: Text(
+            'Artisan Profile Builder',
+            style: GoogleFonts.dmSerifDisplay(
+              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+              fontSize: 22,
+            ),
           ),
-        ),
-        backgroundColor: isDark ? const Color(0xFF041412) : Colors.white,
-        elevation: 0,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
@@ -2368,8 +2370,9 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
       ),
     ),
     ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildDocumentUploadTile({
     required bool isDark,

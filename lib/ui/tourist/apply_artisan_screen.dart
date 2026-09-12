@@ -14,6 +14,7 @@ import '../../viewmodels/auth_viewmodel.dart';
 import 'widgets/workshop_map_picker.dart';
 import 'package:warisan_kita/viewmodels/moderation_viewmodel.dart';
 import 'package:warisan_kita/ui/artisan/artisan_application_pending_screen.dart';
+import 'package:warisan_kita/ui/core/widgets/heritage_background.dart';
 
 class ApplyArtisanScreen extends StatefulWidget {
   const ApplyArtisanScreen({super.key});
@@ -643,11 +644,12 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width > 800;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
+    return HeritageBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF004D40)),
           onPressed: () => Navigator.of(context).pop(),
@@ -1219,8 +1221,9 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildWorkshopLocationPicker() {
     final pin = _workshopLocation;

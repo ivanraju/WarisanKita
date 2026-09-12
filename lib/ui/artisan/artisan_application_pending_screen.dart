@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:warisan_kita/ui/tourist/apply_artisan_screen.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
+import 'package:warisan_kita/ui/core/widgets/heritage_background.dart';
 
 class ArtisanApplicationPendingScreen extends StatefulWidget {
   final String studioName;
@@ -76,11 +77,12 @@ class _ArtisanApplicationPendingScreenState
 
     final bool isRejected = user?.isRejectedArtisan == true;
 
-    return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        backgroundColor: isDark ? const Color(0xFF041412) : Colors.white,
-        elevation: 0,
+    return HeritageBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
         leading: Navigator.of(context).canPop()
             ? IconButton(
                 icon: Icon(
@@ -565,8 +567,9 @@ class _ArtisanApplicationPendingScreenState
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildTimelineItem({
     required bool isDark,
