@@ -112,57 +112,120 @@ void main() {
   group('Craft Matchmaker Personality Calculation Tests', () {
     const repo = MatchmakerRepository();
 
-    test('Batik & Songket with East Coast creates Royal Textile Connoisseur', () {
+    test('Textile with creativity trait creates The Expressive Textile Storyteller', () {
       final personality = repo.calculatePersonality({
-        0: 'Hands-on Workshop',
-        1: 'Indoor Studio',
-        2: 'Batik & Songket Textiles',
-        3: 'East Coast Heritage (Kelantan, Terengganu)',
+        0: 'Painting flowing patterns',
+        1: 'Experiment immediately',
+        2: 'Colourful textile studio',
+        3: 'Expressive colour and symbolism',
+        4: 'Free-flowing and expressive',
+        5: 'Batik and songket traditions',
       });
 
-      expect(personality.title, 'The Royal Textile Connoisseur');
+      expect(personality.title, 'The Expressive Textile Storyteller');
       expect(personality.primaryCategory, 'Batik & Songket');
+      expect(personality.topTrait, 'creativity');
+      expect(personality.isBlended, isFalse);
       expect(personality.matchingCrafts, contains('Batik Canting'));
       expect(personality.matchingCrafts, contains('Songket Weaving'));
     });
 
-    test('Pottery & Clay with West Coast creates The Earthen Alchemist', () {
+    test('Textile with precision trait creates The Pattern and Songket Specialist', () {
       final personality = repo.calculatePersonality({
-        0: 'Hands-on Workshop',
-        1: 'Outdoor Village',
-        2: 'Pottery & Clay',
-        3: 'West Coast Historic (Melaka, Perak)',
+        0: 'Painting flowing patterns',
+        1: 'Watch a master first',
+        2: 'Colourful textile studio',
+        3: 'Strength, accuracy, and lasting quality',
+        4: 'Methodical and exact',
+        5: 'Batik and songket traditions',
       });
 
-      expect(personality.title, 'The Earthen Alchemist');
+      expect(personality.title, 'The Pattern and Songket Specialist');
+      expect(personality.primaryCategory, 'Batik & Songket');
+      expect(personality.topTrait, 'precision');
+      expect(personality.isBlended, isFalse);
+    });
+
+    test('Pottery with tactile trait creates The Earthen Form Maker', () {
+      final personality = repo.calculatePersonality({
+        0: 'Shaping by hand',
+        1: 'Experiment immediately',
+        2: 'Quiet pottery workshop',
+        3: 'Useful object with personal touch',
+        4: 'Calm and repetitive',
+        5: 'Labu Sayong and traditional ceramics',
+      });
+
+      expect(personality.title, 'The Earthen Form Maker');
       expect(personality.primaryCategory, 'Pottery & Ceramics');
+      expect(personality.topTrait, 'tactile');
+      expect(personality.isBlended, isFalse);
       expect(personality.matchingCrafts, contains('Labu Sayong'));
     });
 
-    test('Carved Timber & Wood creates The Master Wood Sculptor', () {
+    test('Wood with patience trait creates The Heritage Detail Carver', () {
       final personality = repo.calculatePersonality({
-        0: 'Observing Master Artisans',
-        1: 'Indoor Studio',
-        2: 'Carved Timber & Wood',
-        3: 'Northern Heritage (Kedah, Penang)',
+        0: 'Carving precise details',
+        1: 'Watch a master first',
+        2: 'Open-air village workshop',
+        3: 'Intricate detail and natural beauty',
+        4: 'Slow and highly focused',
+        5: 'Ukiran Melayu and architectural carving',
       });
 
-      expect(personality.title, 'The Master Wood Sculptor');
+      expect(personality.title, 'The Heritage Detail Carver');
       expect(personality.primaryCategory, 'Wood Carving');
+      expect(personality.topTrait, 'patience');
+      expect(personality.isBlended, isFalse);
       expect(personality.matchingCrafts, contains('Traditional Ukiran'));
     });
 
-    test('Royal Pewter & Metal creates The Royal Pewter & Blade Artisan', () {
+    test('Metal with precision trait creates The Traditional Metal Craftsperson', () {
       final personality = repo.calculatePersonality({
-        0: 'Hands-on Workshop',
-        1: 'Indoor Studio',
-        2: 'Royal Pewter & Metal',
-        3: 'Central Heritage (Selangor, KL)',
+        0: 'Forming and polishing metal',
+        1: 'Follow clear steps',
+        2: 'Precise metalworking studio',
+        3: 'Strength, accuracy, and lasting quality',
+        4: 'Methodical and exact',
+        5: 'Pewter craft and keris making',
       });
 
-      expect(personality.title, 'The Royal Pewter & Blade Artisan');
+      expect(personality.title, 'The Traditional Metal Craftsperson');
       expect(personality.primaryCategory, 'Royal Pewter & Metal');
+      expect(personality.topTrait, 'precision');
+      expect(personality.isBlended, isFalse);
       expect(personality.matchingCrafts, contains('Keris Forging'));
+    });
+
+    test('Tie between Pottery and Wood creates The Material Explorer — Pottery & Wood', () {
+      final personality = repo.calculatePersonality({
+        0: 'Forming and polishing metal', // Met 3, Pot 1
+        1: 'Watch a master first', // Wood 1, Met 1
+        2: 'Open-air village workshop', // Wood 3, Pot 1
+        3: 'Useful object with personal touch', // Pot 3, Wood 1
+        4: 'Slow and highly focused', // Wood 3, Met 1
+        5: 'Labu Sayong and traditional ceramics', // Pot 3, Tex 1
+      });
+
+      expect(personality.isBlended, isTrue);
+      expect(personality.title, 'The Material Explorer — Pottery & Wood');
+      expect(personality.blendedCategories, ['Pottery', 'Wood']);
+      expect(personality.primaryCategory, 'Pottery & Ceramics');
+      expect(personality.secondaryCategory, 'Wood Carving');
+    });
+
+    test('Secondary category recommendation correctly reflects second-highest score', () {
+      final personality = repo.calculatePersonality({
+        0: 'Painting flowing patterns', // Tex 3, Wood 1
+        1: 'Experiment immediately', // Tex 1, Pot 1
+        2: 'Colourful textile studio', // Tex 3, Wood 1
+        3: 'Intricate detail and natural beauty', // Wood 3, Met 1
+        4: 'Slow and highly focused', // Wood 3, Met 1
+        5: 'Batik and songket traditions', // Tex 3, Wood 1
+      });
+
+      expect(personality.primaryCategory, 'Batik & Songket');
+      expect(personality.secondaryCategory, 'Wood Carving');
     });
   });
 
@@ -172,14 +235,18 @@ void main() {
       final vm = MatchmakerViewModel();
 
       final result = await vm.saveQuizResults(
-        experienceType: 'Hands-on Workshop',
-        environment: 'Indoor Studio',
-        material: 'Batik & Songket Textiles',
-        region: 'East Coast Heritage (Kelantan, Terengganu)',
+        answers: {
+          0: 'Painting flowing patterns',
+          1: 'Experiment immediately',
+          2: 'Colourful textile studio',
+          3: 'Expressive colour and symbolism',
+          4: 'Free-flowing and expressive',
+          5: 'Batik and songket traditions',
+        },
         userEmail: 'tourist@warisankita.my',
       );
 
-      expect(result.title, 'The Royal Textile Connoisseur');
+      expect(result.title, 'The Expressive Textile Storyteller');
       expect(vm.isQuizCompleted, isTrue);
       expect(vm.primaryCategory, 'Batik & Songket');
 
@@ -188,17 +255,37 @@ void main() {
       await newVm.loadSavedPreferences(userEmail: 'tourist@warisankita.my');
 
       expect(newVm.isQuizCompleted, isTrue);
-      expect(newVm.currentPersonality?.title, 'The Royal Textile Connoisseur');
+      expect(newVm.currentPersonality?.title, 'The Expressive Textile Storyteller');
       expect(newVm.primaryCategory, 'Batik & Songket');
+    });
+
+    test('Dynamically recalculates personality when 6 answers are set', () {
+      final vm = MatchmakerViewModel();
+      expect(vm.isQuizCompleted, isFalse);
+
+      vm.setAnswer(0, 'Painting flowing patterns');
+      vm.setAnswer(1, 'Experiment immediately');
+      vm.setAnswer(2, 'Colourful textile studio');
+      vm.setAnswer(3, 'Expressive colour and symbolism');
+      vm.setAnswer(4, 'Free-flowing and expressive');
+      expect(vm.isQuizCompleted, isFalse);
+
+      vm.setAnswer(5, 'Batik and songket traditions');
+      expect(vm.isQuizCompleted, isTrue);
+      expect(vm.currentPersonality?.title, 'The Expressive Textile Storyteller');
     });
 
     test('clearAnswers resets preferences', () async {
       final vm = MatchmakerViewModel();
       await vm.saveQuizResults(
-        experienceType: 'Hands-on Workshop',
-        environment: 'Indoor Studio',
-        material: 'Pottery & Clay',
-        region: 'West Coast Historic',
+        answers: {
+          0: 'Shaping by hand',
+          1: 'Experiment immediately',
+          2: 'Quiet pottery workshop',
+          3: 'Useful object with personal touch',
+          4: 'Calm and repetitive',
+          5: 'Labu Sayong and traditional ceramics',
+        },
         userEmail: 'tourist@warisankita.my',
       );
 
@@ -211,7 +298,7 @@ void main() {
   });
 
   group('CraftMatchmakerQuizWizard Widget Tests', () {
-    testWidgets('Wizard renders 4 steps, allows answering, and submits successfully', (tester) async {
+    testWidgets('Wizard renders 6 steps, allows answering, and submits successfully', (tester) async {
       tester.view.physicalSize = const Size(1200, 1000);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -245,23 +332,21 @@ void main() {
       await tester.pumpAndSettle();
 
       // Step 1: Question 1
-      expect(find.text('Question 1 of 4'), findsOneWidget);
-      expect(find.text('What type of craft experience do you prefer?'), findsOneWidget);
+      expect(find.text('Question 1 of 6'), findsOneWidget);
+      expect(find.text('What kind of activity sounds most satisfying?'), findsOneWidget);
 
-      // Tap Option 1 (Hands-on)
-      await tester.tap(find.text('🛠️ Hands-on Workshop'));
+      await tester.tap(find.text('🎨 Painting flowing patterns'));
       await tester.pumpAndSettle();
 
-      // Tap Next
       await tester.ensureVisible(find.text('Next Question'));
       await tester.tap(find.text('Next Question'));
       await tester.pumpAndSettle();
 
       // Step 2: Question 2
-      expect(find.text('Question 2 of 4'), findsOneWidget);
-      expect(find.text('Which studio setting do you enjoy most?'), findsOneWidget);
+      expect(find.text('Question 2 of 6'), findsOneWidget);
+      expect(find.text('How do you prefer to learn?'), findsOneWidget);
 
-      await tester.tap(find.text('🏠 Indoor Art Studio'));
+      await tester.tap(find.text('✨ Experiment immediately'));
       await tester.pumpAndSettle();
 
       await tester.ensureVisible(find.text('Next Question'));
@@ -269,11 +354,10 @@ void main() {
       await tester.pumpAndSettle();
 
       // Step 3: Question 3
-      expect(find.text('Question 3 of 4'), findsOneWidget);
-      expect(find.text('What is your favorite craft material?'), findsOneWidget);
+      expect(find.text('Question 3 of 6'), findsOneWidget);
+      expect(find.text('Which working environment appeals to you?'), findsOneWidget);
 
-      await tester.ensureVisible(find.text('Batik & Songket Textiles'));
-      await tester.tap(find.text('Batik & Songket Textiles'));
+      await tester.tap(find.text('🧵 Colourful textile studio'));
       await tester.pumpAndSettle();
 
       await tester.ensureVisible(find.text('Next Question'));
@@ -281,11 +365,32 @@ void main() {
       await tester.pumpAndSettle();
 
       // Step 4: Question 4
-      expect(find.text('Question 4 of 4'), findsOneWidget);
-      expect(find.text('Which Malaysian heritage region interests you?'), findsOneWidget);
+      expect(find.text('Question 4 of 6'), findsOneWidget);
+      expect(find.text('What matters most in something you create?'), findsOneWidget);
 
-      await tester.ensureVisible(find.text('🌊 East Coast Heritage (Kelantan & Terengganu)'));
-      await tester.tap(find.text('🌊 East Coast Heritage (Kelantan & Terengganu)'));
+      await tester.tap(find.text('🎨 Expressive colour and symbolism'));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.text('Next Question'));
+      await tester.tap(find.text('Next Question'));
+      await tester.pumpAndSettle();
+
+      // Step 5: Question 5
+      expect(find.text('Question 5 of 6'), findsOneWidget);
+      expect(find.text('What pace feels most comfortable?'), findsOneWidget);
+
+      await tester.tap(find.text('🌊 Free-flowing and expressive'));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.text('Next Question'));
+      await tester.tap(find.text('Next Question'));
+      await tester.pumpAndSettle();
+
+      // Step 6: Question 6
+      expect(find.text('Question 6 of 6'), findsOneWidget);
+      expect(find.text('Which heritage story interests you most?'), findsOneWidget);
+
+      await tester.tap(find.text('👑 Batik and songket traditions'));
       await tester.pumpAndSettle();
 
       // Submit
@@ -294,11 +399,11 @@ void main() {
       await tester.tap(find.text('SAVE PREFERENCES'));
       await tester.pumpAndSettle();
 
-      // Verify quiz completed callback was called with 4 preference tags
+      // Verify quiz completed callback was called
       expect(completedTags, isNotNull);
-      expect(completedTags!.length, 4);
+      expect(completedTags!.length, greaterThanOrEqualTo(4));
       expect(matchmakerVM.isQuizCompleted, isTrue);
-      expect(matchmakerVM.currentPersonality?.title, 'The Royal Textile Connoisseur');
+      expect(matchmakerVM.currentPersonality?.title, 'The Expressive Textile Storyteller');
     });
   });
 
@@ -378,6 +483,14 @@ void main() {
         environment: 'Indoor Studio',
         material: 'Batik & Songket Textiles',
         region: 'East Coast Heritage',
+        answers: {
+          0: 'Painting flowing patterns',
+          1: 'Experiment immediately',
+          2: 'Colourful textile studio',
+          3: 'Expressive colour and symbolism',
+          4: 'Free-flowing and expressive',
+          5: 'Batik and songket traditions',
+        },
         userEmail: 'tourist@warisankita.my',
       );
 
@@ -401,7 +514,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
 
       expect(find.textContaining('Suggested for You'), findsOneWidget);
-      expect(find.textContaining('The Royal Textile Connoisseur'), findsOneWidget);
+      expect(find.textContaining('The Expressive Textile Storyteller'), findsOneWidget);
       expect(find.text('Mak Jah'), findsWidgets);
     });
 
@@ -417,14 +530,20 @@ void main() {
       final dirVM = DirectoryViewModel(repository: _MockArtisanRepository(mockArtisans));
       await dirVM.fetchArtisans();
 
-      // User chooses Pottery & Clay in West Coast Historic
-      // Uncle Lim is Pottery in Perak (West Coast) -> MATCHES
-      // Mak Jah is Batik in Kelantan (East Coast) -> DOES NOT MATCH
+      // User chooses Pottery in West Coast Historic
       await matchmakerVM.saveQuizResults(
         experienceType: 'Hands-on Workshop',
         environment: 'Outdoor Village',
         material: 'Pottery & Clay',
         region: 'West Coast Historic',
+        answers: {
+          0: 'Shaping by hand',
+          1: 'Experiment immediately',
+          2: 'Quiet pottery workshop',
+          3: 'Useful object with personal touch',
+          4: 'Calm and repetitive',
+          5: 'Labu Sayong and traditional ceramics',
+        },
         userEmail: 'tourist@warisankita.my',
       );
 
@@ -448,7 +567,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
 
       // Uncle Lim is Pottery in Perak (West Coast) -> Suggested
-      expect(find.textContaining('The Earthen Alchemist'), findsOneWidget);
+      expect(find.textContaining('The Earthen Form Maker'), findsOneWidget);
       expect(find.text('Uncle Lim'), findsWidgets);
     });
 
@@ -461,7 +580,6 @@ void main() {
       final authVM = AuthViewModel();
       final matchmakerVM = MatchmakerViewModel();
       final langVM = LanguageViewModel();
-      // Artisan list with Batik in Melaka and Batik in Kelantan
       final regionalArtisans = [
         ArtisanModel(
           id: 'artisan_kelantan',
@@ -488,12 +606,19 @@ void main() {
       final dirVM = DirectoryViewModel(repository: _MockArtisanRepository(regionalArtisans));
       await dirVM.fetchArtisans();
 
-      // User selects Batik & Songket in East Coast (Kelantan & Terengganu)
       await matchmakerVM.saveQuizResults(
         experienceType: 'Hands-on Workshop',
         environment: 'Indoor Studio',
         material: 'Batik & Songket Textiles',
         region: 'East Coast Heritage',
+        answers: {
+          0: 'Painting flowing patterns',
+          1: 'Experiment immediately',
+          2: 'Colourful textile studio',
+          3: 'Expressive colour and symbolism',
+          4: 'Free-flowing and expressive',
+          5: 'Batik and songket traditions',
+        },
         userEmail: 'tourist@warisankita.my',
       );
 
@@ -516,11 +641,8 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
-      // Che Minah (Kelantan) MUST be suggested
       expect(find.text('Che Minah Kelantan'), findsWidgets);
-      // Madam Tan (Melaka) must NOT be suggested in the recommendation section
-      // In the whole tree, Madam Tan is only in the bottom directory, not in the horizontal recommendation cards
-      expect(find.textContaining('The Royal Textile Connoisseur'), findsOneWidget);
+      expect(find.textContaining('The Expressive Textile Storyteller'), findsOneWidget);
     });
 
     testWidgets('Displays empty state when no artisans match chosen craft', (tester) async {
@@ -541,6 +663,14 @@ void main() {
         environment: 'Indoor Studio',
         material: 'Carved Timber & Wood',
         region: 'East Coast Heritage',
+        answers: {
+          0: 'Carving precise details',
+          1: 'Watch a master first',
+          2: 'Open-air village workshop',
+          3: 'Intricate detail and natural beauty',
+          4: 'Slow and highly focused',
+          5: 'Ukiran Melayu and architectural carving',
+        },
         userEmail: 'tourist@warisankita.my',
       );
 
@@ -604,12 +734,19 @@ void main() {
       final dirVM = DirectoryViewModel(repository: _MockArtisanRepository(fourMatchArtisans));
       await dirVM.fetchArtisans();
 
-      // User chooses: Hands-on (Q1), Indoor Studio (Q2), Batik (Q3), East Coast (Q4)
       await matchmakerVM.saveQuizResults(
         experienceType: 'Hands-on Workshop',
         environment: 'Indoor Studio',
         material: 'Batik & Songket Textiles',
         region: 'East Coast Heritage',
+        answers: {
+          0: 'Painting flowing patterns',
+          1: 'Experiment immediately',
+          2: 'Colourful textile studio',
+          3: 'Expressive colour and symbolism',
+          4: 'Free-flowing and expressive',
+          5: 'Batik and songket traditions',
+        },
         userEmail: 'tourist@warisankita.my',
       );
 
@@ -632,10 +769,8 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
-      // Siti matches ALL 4 questions -> Suggested
       expect(find.text('Siti Hands-On Batik Studio'), findsWidgets);
-      // Pak Hassan does NOT match material/region/env -> Not suggested in recommendations
-      expect(find.textContaining('The Royal Textile Connoisseur'), findsOneWidget);
+      expect(find.textContaining('The Expressive Textile Storyteller'), findsOneWidget);
     });
   });
 

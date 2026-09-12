@@ -20,18 +20,161 @@ class CraftMatchmakerQuizWizard extends StatefulWidget {
 class _CraftMatchmakerQuizWizardState extends State<CraftMatchmakerQuizWizard> {
   int _currentStep = 0;
   bool _isInitialized = false;
+  bool _wasInitiallyCompleted = false;
 
-  // 4 Preference Questions (C3: Quiz Completion = all 4 questions answered)
-  String? _q1ExperienceType; // Hands-on workshop vs Observing master
-  String? _q2Environment; // Indoor studio vs Outdoor heritage village
-  String? _q3MaterialPreference; // Clay/Ceramics, Textiles/Batik, Wood, Metal/Pewter
-  String? _q4CraftOrigin; // East Coast (Kelantan/Terengganu) vs West Coast (Melaka/Perak)
+  final Map<int, String> _answers = {};
 
-  final List<String> _materialsList = const [
-    'Pottery & Clay',
-    'Batik & Songket Textiles',
-    'Carved Timber & Wood',
-    'Royal Pewter & Metal',
+  final List<Map<String, dynamic>> _quizQuestions = const [
+    {
+      'title': 'What kind of activity sounds most satisfying?',
+      'options': [
+        {
+          'title': '🎨 Painting flowing patterns',
+          'subtitle': 'Expressive batik canting, vibrant dyes, free-flowing textiles',
+          'value': 'Painting flowing patterns',
+        },
+        {
+          'title': '🏺 Shaping by hand',
+          'subtitle': 'Moulding clay, earthenware pottery, tactile curves',
+          'value': 'Shaping by hand',
+        },
+        {
+          'title': '🪵 Carving precise details',
+          'subtitle': 'Fine wood chiseling, intricate floral relief, patience',
+          'value': 'Carving precise details',
+        },
+        {
+          'title': '⚒️ Forming and polishing metal',
+          'subtitle': 'Precision pewter smithing, metal casting, clean edges',
+          'value': 'Forming and polishing metal',
+        },
+      ],
+    },
+    {
+      'title': 'How do you prefer to learn?',
+      'options': [
+        {
+          'title': '✨ Experiment immediately',
+          'subtitle': 'Hands-on discovery, learn by touching and doing',
+          'value': 'Experiment immediately',
+        },
+        {
+          'title': '👁️ Watch a master first',
+          'subtitle': 'Careful observation of traditional artisan techniques',
+          'value': 'Watch a master first',
+        },
+        {
+          'title': '📋 Follow clear steps',
+          'subtitle': 'Structured methodical instructions and proven rules',
+          'value': 'Follow clear steps',
+        },
+        {
+          'title': '📜 Explore the history first',
+          'subtitle': 'Deep cultural context, folklore, and heritage roots',
+          'value': 'Explore the history first',
+        },
+      ],
+    },
+    {
+      'title': 'Which working environment appeals to you?',
+      'options': [
+        {
+          'title': '🧵 Colourful textile studio',
+          'subtitle': 'Vibrant fabrics, hanging silks, and warm wax aromas',
+          'value': 'Colourful textile studio',
+        },
+        {
+          'title': '🏺 Quiet pottery workshop',
+          'subtitle': 'Peaceful clay studio, spinning wheels, soothing earth',
+          'value': 'Quiet pottery workshop',
+        },
+        {
+          'title': '🌿 Open-air village workshop',
+          'subtitle': 'Traditional wooden veranda, timber scents, kampung breeze',
+          'value': 'Open-air village workshop',
+        },
+        {
+          'title': '⚙️ Precise metalworking studio',
+          'subtitle': 'Organized tool benches, polishers, exact metalcraft',
+          'value': 'Precise metalworking studio',
+        },
+      ],
+    },
+    {
+      'title': 'What matters most in something you create?',
+      'options': [
+        {
+          'title': '🎨 Expressive colour and symbolism',
+          'subtitle': 'Emotional motifs, dynamic color, storytelling',
+          'value': 'Expressive colour and symbolism',
+        },
+        {
+          'title': '🍵 Useful object with personal touch',
+          'subtitle': 'Functional everyday earthenware with soulful warmth',
+          'value': 'Useful object with personal touch',
+        },
+        {
+          'title': '🌿 Intricate detail and natural beauty',
+          'subtitle': 'Fine grain patterns, heirloom timber craftsmanship',
+          'value': 'Intricate detail and natural beauty',
+        },
+        {
+          'title': '🛡️ Strength, accuracy, and lasting quality',
+          'subtitle': 'Durable polished alloys, crisp lines, permanent beauty',
+          'value': 'Strength, accuracy, and lasting quality',
+        },
+      ],
+    },
+    {
+      'title': 'What pace feels most comfortable?',
+      'options': [
+        {
+          'title': '🌊 Free-flowing and expressive',
+          'subtitle': 'Spontaneous rhythm with room for artistic surprises',
+          'value': 'Free-flowing and expressive',
+        },
+        {
+          'title': '🧘 Calm and repetitive',
+          'subtitle': 'Therapeutic, meditative rhythm shaping smooth clay',
+          'value': 'Calm and repetitive',
+        },
+        {
+          'title': '🔍 Slow and highly focused',
+          'subtitle': 'Quiet patience, millimeter-level focus carving grain',
+          'value': 'Slow and highly focused',
+        },
+        {
+          'title': '📐 Methodical and exact',
+          'subtitle': 'Systematic, measured steps with exact precision',
+          'value': 'Methodical and exact',
+        },
+      ],
+    },
+    {
+      'title': 'Which heritage story interests you most?',
+      'options': [
+        {
+          'title': '👑 Batik and songket traditions',
+          'subtitle': 'Royal Malay courts, golden threads, and canting wax legends',
+          'value': 'Batik and songket traditions',
+        },
+        {
+          'title': '🏺 Labu Sayong and traditional ceramics',
+          'subtitle': 'Perak earthenware, river clays, and natural smoke firing',
+          'value': 'Labu Sayong and traditional ceramics',
+        },
+        {
+          'title': '🏛️ Ukiran Melayu and architectural carving',
+          'subtitle': 'Traditional woodcarving, Bunga Ukir, and Istana architecture',
+          'value': 'Ukiran Melayu and architectural carving',
+        },
+        {
+          'title': '🗡️ Pewter craft and keris making',
+          'subtitle': 'Sacred damascus bladesmithing and royal pewter artistry',
+          'value': 'Pewter craft and keris making',
+        },
+      ],
+    },
   ];
 
   @override
@@ -39,30 +182,29 @@ class _CraftMatchmakerQuizWizardState extends State<CraftMatchmakerQuizWizard> {
     super.didChangeDependencies();
     if (!_isInitialized) {
       final matchmakerVM = context.read<MatchmakerViewModel>();
-      final answers = matchmakerVM.answers;
-      final personality = matchmakerVM.currentPersonality;
-
-      _q1ExperienceType = answers[0] ?? personality?.experienceType;
-      _q2Environment = answers[1] ?? personality?.environment;
-      _q3MaterialPreference = answers[2] ?? personality?.material;
-      _q4CraftOrigin = answers[3] ?? personality?.region;
-
+      _wasInitiallyCompleted = matchmakerVM.isQuizCompleted;
+      _answers.addAll(matchmakerVM.answers);
       _isInitialized = true;
     }
   }
 
   bool get _isAllQuestionsAnswered =>
-      _q1ExperienceType != null &&
-      _q2Environment != null &&
-      _q3MaterialPreference != null &&
-      _q4CraftOrigin != null;
+      _answers.length >= 6 &&
+      [0, 1, 2, 3, 4, 5].every((i) => _answers[i] != null && _answers[i]!.isNotEmpty);
+
+  void _selectAnswer(int questionIndex, String value) {
+    setState(() {
+      _answers[questionIndex] = value;
+    });
+    context.read<MatchmakerViewModel>().setAnswer(questionIndex, value);
+  }
 
   Future<void> _submitQuiz() async {
     final langVM = context.read<LanguageViewModel>();
     if (!_isAllQuestionsAnswered) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(langVM.translate('Please answer all 4 questions to save your preferences.')),
+          content: Text(langVM.translate('Please answer all 6 questions to save your preferences.')),
           backgroundColor: const Color(0xFFEF4444),
           behavior: SnackBarBehavior.floating,
         ),
@@ -70,26 +212,15 @@ class _CraftMatchmakerQuizWizardState extends State<CraftMatchmakerQuizWizard> {
       return;
     }
 
-    final tags = [
-      _q1ExperienceType!,
-      _q2Environment!,
-      _q3MaterialPreference!,
-      _q4CraftOrigin!,
-    ];
-
     final authVM = context.read<AuthViewModel>();
     final matchmakerVM = context.read<MatchmakerViewModel>();
 
     final personality = await matchmakerVM.saveQuizResults(
-      experienceType: _q1ExperienceType!,
-      environment: _q2Environment!,
-      material: _q3MaterialPreference!,
-      region: _q4CraftOrigin!,
+      answers: _answers,
       userEmail: authVM.currentUser?.email,
     );
 
     if (mounted) {
-      // M3: Profile Updated Successfully / Preferences Saved
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -102,7 +233,7 @@ class _CraftMatchmakerQuizWizardState extends State<CraftMatchmakerQuizWizard> {
         ),
       );
 
-      widget.onCompleted?.call(tags);
+      widget.onCompleted?.call(personality.preferenceTags);
       Navigator.of(context).pop();
     }
   }
@@ -110,8 +241,7 @@ class _CraftMatchmakerQuizWizardState extends State<CraftMatchmakerQuizWizard> {
   @override
   Widget build(BuildContext context) {
     final langVM = context.watch<LanguageViewModel>();
-    final matchmakerVM = context.watch<MatchmakerViewModel>();
-    final isUpdating = matchmakerVM.isQuizCompleted;
+    final isUpdating = _wasInitiallyCompleted;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Dialog(
@@ -176,7 +306,7 @@ class _CraftMatchmakerQuizWizardState extends State<CraftMatchmakerQuizWizard> {
 
               const SizedBox(height: 10),
               LinearProgressIndicator(
-                value: (_currentStep + 1) / 4,
+                value: (_currentStep + 1) / 6,
                 backgroundColor: isDark ? const Color(0xFF1E3A34) : const Color(0xFFE2E8F0),
                 color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
                 minHeight: 6,
@@ -186,10 +316,7 @@ class _CraftMatchmakerQuizWizardState extends State<CraftMatchmakerQuizWizard> {
               const SizedBox(height: 20),
 
               // Wizard Questions Step View
-              if (_currentStep == 0) _buildQuestion1(isDark),
-              if (_currentStep == 1) _buildQuestion2(isDark),
-              if (_currentStep == 2) _buildQuestion3(isDark),
-              if (_currentStep == 3) _buildQuestion4(isDark),
+              _buildCurrentStep(isDark),
 
               const SizedBox(height: 24),
 
@@ -211,7 +338,7 @@ class _CraftMatchmakerQuizWizardState extends State<CraftMatchmakerQuizWizard> {
                   else
                     const SizedBox.shrink(),
 
-                  if (_currentStep < 3)
+                  if (_currentStep < 5)
                     FilledButton(
                       onPressed: () => setState(() => _currentStep++),
                       style: FilledButton.styleFrom(
@@ -246,53 +373,17 @@ class _CraftMatchmakerQuizWizardState extends State<CraftMatchmakerQuizWizard> {
     );
   }
 
-  Widget _buildQuestion1(bool isDark) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Question 1 of 4',
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 11,
-            fontWeight: FontWeight.bold,
-            color: isDark ? Colors.white54 : Colors.grey[500],
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'What type of craft experience do you prefer?',
-          style: GoogleFonts.dmSerifDisplay(
-            fontSize: 18,
-            color: isDark ? Colors.white : const Color(0xFF0F172A),
-          ),
-        ),
-        const SizedBox(height: 14),
-        _buildChoiceTile(
-          isDark: isDark,
-          title: '🛠️ Hands-on Workshop',
-          subtitle: 'I want to craft my own pottery or dye batik fabric',
-          value: 'Hands-on Workshop',
-          groupValue: _q1ExperienceType,
-          onSelect: (val) => setState(() => _q1ExperienceType = val),
-        ),
-        _buildChoiceTile(
-          isDark: isDark,
-          title: '👁️ Observing Master Artisans',
-          subtitle: 'I prefer watching skilled masters demonstrate traditional heritage techniques',
-          value: 'Observing Master Artisans',
-          groupValue: _q1ExperienceType,
-          onSelect: (val) => setState(() => _q1ExperienceType = val),
-        ),
-      ],
-    );
-  }
+  Widget _buildCurrentStep(bool isDark) {
+    final currentQ = _quizQuestions[_currentStep];
+    final title = currentQ['title'] as String;
+    final options = currentQ['options'] as List<Map<String, String>>;
+    final selectedValue = _answers[_currentStep];
 
-  Widget _buildQuestion2(bool isDark) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Question 2 of 4',
+          'Question ${_currentStep + 1} of 6',
           style: GoogleFonts.plusJakartaSans(
             fontSize: 11,
             fontWeight: FontWeight.bold,
@@ -301,104 +392,22 @@ class _CraftMatchmakerQuizWizardState extends State<CraftMatchmakerQuizWizard> {
         ),
         const SizedBox(height: 4),
         Text(
-          'Which studio setting do you enjoy most?',
+          title,
           style: GoogleFonts.dmSerifDisplay(
             fontSize: 18,
             color: isDark ? Colors.white : const Color(0xFF0F172A),
           ),
         ),
         const SizedBox(height: 14),
-        _buildChoiceTile(
-          isDark: isDark,
-          title: '🏠 Indoor Art Studio',
-          subtitle: 'Air-conditioned gallery and structured indoor workshop setting',
-          value: 'Indoor Studio',
-          groupValue: _q2Environment,
-          onSelect: (val) => setState(() => _q2Environment = val),
-        ),
-        _buildChoiceTile(
-          isDark: isDark,
-          title: '🌿 Outdoor Heritage Village',
-          subtitle: 'Open-air traditional wooden kampong workshop setup',
-          value: 'Outdoor Village',
-          groupValue: _q2Environment,
-          onSelect: (val) => setState(() => _q2Environment = val),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildQuestion3(bool isDark) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Question 3 of 4',
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 11,
-            fontWeight: FontWeight.bold,
-            color: isDark ? Colors.white54 : Colors.grey[500],
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'What is your favorite craft material?',
-          style: GoogleFonts.dmSerifDisplay(
-            fontSize: 18,
-            color: isDark ? Colors.white : const Color(0xFF0F172A),
-          ),
-        ),
-        const SizedBox(height: 14),
-        ..._materialsList.map(
-          (mat) => _buildChoiceTile(
+        ...options.map(
+          (opt) => _buildChoiceTile(
             isDark: isDark,
-            title: mat,
-            subtitle: 'Crafts made with authentic $mat',
-            value: mat,
-            groupValue: _q3MaterialPreference,
-            onSelect: (val) => setState(() => _q3MaterialPreference = val),
+            title: opt['title']!,
+            subtitle: opt['subtitle']!,
+            value: opt['value']!,
+            groupValue: selectedValue,
+            onSelect: (val) => _selectAnswer(_currentStep, val),
           ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildQuestion4(bool isDark) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Question 4 of 4',
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 11,
-            fontWeight: FontWeight.bold,
-            color: isDark ? Colors.white54 : Colors.grey[500],
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Which Malaysian heritage region interests you?',
-          style: GoogleFonts.dmSerifDisplay(
-            fontSize: 18,
-            color: isDark ? Colors.white : const Color(0xFF0F172A),
-          ),
-        ),
-        const SizedBox(height: 14),
-        _buildChoiceTile(
-          isDark: isDark,
-          title: '🌊 East Coast Heritage (Kelantan & Terengganu)',
-          subtitle: 'Famous for Songket weaving, Wau kites, and Batik canting',
-          value: 'East Coast Heritage',
-          groupValue: _q4CraftOrigin,
-          onSelect: (val) => setState(() => _q4CraftOrigin = val),
-        ),
-        _buildChoiceTile(
-          isDark: isDark,
-          title: '🏛️ West Coast Historic Cities (Melaka & Perak)',
-          subtitle: 'Famous for Clay Labu Sayong pottery and wood carvings',
-          value: 'West Coast Historic',
-          groupValue: _q4CraftOrigin,
-          onSelect: (val) => setState(() => _q4CraftOrigin = val),
         ),
       ],
     );
