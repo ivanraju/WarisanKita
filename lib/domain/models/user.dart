@@ -79,27 +79,38 @@ class UserModel {
   bool get hasPendingRelocation =>
       pendingRelocationAddress != null && pendingRelocationAddress!.trim().isNotEmpty;
 
-  bool get isDualRole =>
-      role == 'Artisan & Tourist' ||
-      role == 'Artisan/Tourist' ||
-      role == 'Tourist & Artisan' ||
-      role == 'Tourist/Artisan' ||
-      role == 'Artisan and Tourist' ||
-      (roles.contains('Artisan') && roles.contains('Tourist')) ||
-      (roles.contains('Master Artisan') && roles.contains('Tourist')) ||
-      ((role == 'Tourist' || role == 'Cultural Tourist' || roles.contains('Tourist')) &&
-          (roles.contains('Artisan') ||
-              roles.contains('Master Artisan') ||
-              artisanStatus?.toUpperCase() == 'APPROVED' ||
-              (studioName != null && studioName!.isNotEmpty)));
+  bool get isDualRole {
+    final status = artisanStatus?.toUpperCase();
+    if (status == 'CLOSED' ||
+        status == 'REJECTED' ||
+        status == 'PENDING_APPROVAL' ||
+        status == 'PENDING') {
+      return false;
+    }
+    return role == 'Artisan & Tourist' ||
+        role == 'Artisan/Tourist' ||
+        role == 'Tourist & Artisan' ||
+        role == 'Tourist/Artisan' ||
+        role == 'Artisan and Tourist' ||
+        (roles.contains('Artisan') && roles.contains('Tourist')) ||
+        (roles.contains('Master Artisan') && roles.contains('Tourist')) ||
+        ((role == 'Tourist' || role == 'Cultural Tourist' || roles.contains('Tourist')) &&
+            (roles.contains('Artisan') ||
+                roles.contains('Master Artisan') ||
+                status == 'APPROVED'));
+  }
 
-  bool get isArtisan =>
-      role == 'Artisan' ||
-      role == 'Master Artisan' ||
-      isDualRole ||
-      roles.contains('Artisan') ||
-      roles.contains('Master Artisan') ||
-      artisanStatus?.toUpperCase() == 'APPROVED';
+  bool get isArtisan {
+    final status = artisanStatus?.toUpperCase();
+    if (status == 'CLOSED' || status == 'REJECTED') return false;
+    if ((role == 'Tourist' || role == 'Cultural Tourist') && status != 'APPROVED' && !isDualRole) return false;
+    return role == 'Artisan' ||
+        role == 'Master Artisan' ||
+        isDualRole ||
+        roles.contains('Artisan') ||
+        roles.contains('Master Artisan') ||
+        status == 'APPROVED';
+  }
 
   bool get isTourist =>
       role == 'Tourist' ||

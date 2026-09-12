@@ -368,7 +368,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     // Handle Pending Artisan [A4]
-    if (result.route == 'pending_artisan') {
+    if (result.route == 'pending_artisan' || result.route == '/pending-artisan') {
       final isRejected = result.user?.status.toUpperCase() == 'REJECTED' ||
           result.user?.artisanStatus?.toUpperCase() == 'REJECTED';
       ScaffoldMessenger.of(context).showSnackBar(

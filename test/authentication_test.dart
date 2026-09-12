@@ -659,4 +659,35 @@ void main() {
     vm.selectActiveRole('Master Artisan');
     expect(vm.activeRole, 'Master Artisan');
   });
+
+  test('login for pending artisan routes directly to pending_artisan and does not prompt role selection', () async {
+    final record = backend.add(
+      'pending.artisan@test.com',
+      username: 'pending_artisan',
+      role: 'Artisan',
+      password: 'Password123!',
+    );
+    record['status'] = 'PENDING_APPROVAL';
+    record['artisan_status'] = 'PENDING_APPROVAL';
+
+    final vm = AuthViewModel(repository: UserRepository(service: service));
+    final result = await vm.login('pending.artisan@test.com', 'Password123!');
+    expect(result.success, isTrue);
+    expect(result.requiresRoleSelection, isFalse);
+    expect(result.route, 'pending_artisan');
+  });
+
+  test('UserModel with Cultural Tourist role resolves isDualRole and isArtisan cleanly without recursion', () {
+    final tourist = UserModel(
+      id: 'tourist-1',
+      email: 'cultural.tourist@test.com',
+      role: 'Cultural Tourist',
+      roles: const ['Tourist'],
+      status: 'ACTIVE',
+      studioName: 'Pending Hobby Studio',
+    );
+    expect(tourist.isDualRole, isFalse);
+    expect(tourist.isArtisan, isFalse);
+    expect(tourist.isTourist, isTrue);
+  });
 }

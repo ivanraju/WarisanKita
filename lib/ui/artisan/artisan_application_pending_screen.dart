@@ -34,11 +34,19 @@ class _ArtisanApplicationPendingScreenState
         context.read<AuthViewModel>().refreshCurrentUser();
       }
     });
-    _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+    _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
       if (mounted) {
         final auth = context.read<AuthViewModel>();
         if (auth.currentUser != null && !auth.currentUser!.isSuspended) {
-          auth.refreshCurrentUser();
+          await auth.refreshCurrentUser();
+          if (mounted) {
+            if (auth.currentUser?.isApprovedArtisan == true) {
+              _pollTimer?.cancel();
+              Navigator.pushReplacementNamed(context, '/artisan');
+            } else if (auth.currentUser?.isRejectedArtisan == true) {
+              _pollTimer?.cancel();
+            }
+          }
         }
       }
     });
