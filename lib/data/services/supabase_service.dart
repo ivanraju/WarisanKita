@@ -1233,33 +1233,52 @@ class SupabaseService {
     userRecord['rejectionReason'] = null;
     userRecord['rejection_reason'] = null;
 
+    final preservedDocuments = (userRecord['artisan_documents'] is List
+            ? List<Map<String, dynamic>>.from(
+                (userRecord['artisan_documents'] as List).map(
+                  (item) => Map<String, dynamic>.from(item as Map),
+                ),
+              )
+            : (userRecord['artisanDocuments'] is List
+                ? List<Map<String, dynamic>>.from(
+                    (userRecord['artisanDocuments'] as List).map(
+                      (item) => Map<String, dynamic>.from(item as Map),
+                    ),
+                  )
+                : (userRecord['artisan_profiles'] is Map &&
+                        userRecord['artisan_profiles']['artisan_documents'] is List
+                    ? List<Map<String, dynamic>>.from(
+                        (userRecord['artisan_profiles']['artisan_documents'] as List).map(
+                          (item) => Map<String, dynamic>.from(item as Map),
+                        ),
+                      )
+                    : <Map<String, dynamic>>[])));
+
+    void replaceLocalDocument(String type, PlatformFile? file) {
+      if (file == null) return;
+      preservedDocuments.removeWhere((doc) => doc['doc_type'] == type);
+      preservedDocuments.add({
+        'doc_type': type,
+        'file_name': file.name,
+        'file_url': '',
+      });
+    }
+
     final certDocType = isVillage ? 'CRAFTING_PHOTO' : 'SSM_BUSINESS_CERT';
-    final List<Map<String, dynamic>> freshDocuments = [];
-    if (ssmFile != null) {
-      freshDocuments.add({
-        'doc_type': certDocType,
-        'file_name': ssmFile.name,
-        'file_url': '',
-      });
-    }
-    if (certFile != null) {
-      freshDocuments.add({
-        'doc_type': 'KRAFTANGAN_MASTER_CERT',
-        'file_name': certFile.name,
-        'file_url': '',
-      });
-    }
+    replaceLocalDocument(certDocType, ssmFile);
+    replaceLocalDocument('KRAFTANGAN_MASTER_CERT', certFile);
     if (photos != null && photos.isNotEmpty) {
+      preservedDocuments.removeWhere((doc) => doc['doc_type'] == 'STUDIO_PHOTO');
       for (final photo in photos) {
-        freshDocuments.add({
+        preservedDocuments.add({
           'doc_type': 'STUDIO_PHOTO',
           'file_name': photo.name,
           'file_url': '',
         });
       }
     }
-    userRecord['artisan_documents'] = freshDocuments;
-    userRecord['artisanDocuments'] = freshDocuments;
+    userRecord['artisan_documents'] = preservedDocuments;
+    userRecord['artisanDocuments'] = preservedDocuments;
 
     if (client != null) {
       try {
@@ -1628,9 +1647,18 @@ class SupabaseService {
                     .delete()
                     .eq('artisan_id', artisanId);
                 if (docsToInsert.isNotEmpty) {
-                  await client.from('artisan_documents').insert(docsToInsert);
-                  userRecord['artisan_documents'] = docsToInsert;
-                  userRecord['artisanDocuments'] = docsToInsert;
+                  final replacedTypes = docsToInsert.map((d) => d['doc_type']).toSet();
+                  preservedDocuments.removeWhere((doc) => replacedTypes.contains(doc['doc_type']));
+                  preservedDocuments.addAll(docsToInsert);
+                  try {
+                    await client
+                        .from('artisan_documents')
+                        .delete()
+                        .eq('artisan_id', artisanId);
+                    await client.from('artisan_documents').insert(preservedDocuments);
+                  } catch (_) {}
+                  userRecord['artisan_documents'] = preservedDocuments;
+                  userRecord['artisanDocuments'] = preservedDocuments;
                 }
               } catch (docErr) {
                 debugPrint(
@@ -1671,7 +1699,7 @@ class SupabaseService {
     userRecord['rejectionReason'] = null;
     userRecord['rejection_reason'] = null;
 
-    final currentDocs = userRecord['artisan_documents'] ?? freshDocuments;
+    final currentDocs = userRecord['artisan_documents'] ?? preservedDocuments;
     userRecord['artisan_profiles'] = {
       if (userRecord['artisan_profiles'] is Map)
         ...(userRecord['artisan_profiles'] as Map),
