@@ -1,9 +1,239 @@
+import 'package:warisan_kita/domain/models/forum_post.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/forum_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
+import 'package:warisan_kita/ui/forum/forum_user_profile_page.dart';
+import 'package:warisan_kita/domain/models/badge.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+class _ForumProfilePreviewDialog extends StatelessWidget {
+  final String userId;
+  final String displayName;
+  final String? username;
+  final String? avatarUrl;
+  final String? historicalRole;
+
+  const _ForumProfilePreviewDialog({
+    required this.userId,
+    required this.displayName,
+    this.username,
+    this.avatarUrl,
+    this.historicalRole,
+  });
+
+  Future<Map<String, dynamic>> _load() async {
+    final client = Supabase.instance.client;
+    final row = await client
+        .from('users')
+        .select('username, display_name, full_name, avatar_url, role')
+        .eq('id', userId)
+        .maybeSingle()
+        .catchError((Object error) {
+          debugPrint('Forum profile users lookup failed: $error');
+          throw error;
+        });
+    if (row == null) return {};
+    try {
+      final artisan = await client
+          .from('artisan_profiles')
+          .select('bio')
+          .eq('user_id', userId)
+          .maybeSingle();
+      if (artisan != null) row['bio'] = artisan['bio'];
+    } catch (error) {
+      debugPrint('Forum profile bio lookup failed (${error.runtimeType})');
+    }
+    try {
+      final studio = await client
+          .from('artisan_profiles')
+          .select('studio_name, craft_category')
+          .eq('user_id', userId)
+          .maybeSingle();
+      if (studio != null) row.addAll(studio);
+    } catch (error) {
+      debugPrint('Forum studio details unavailable (${error.runtimeType})');
+    }
+    if (historicalRole == 'artisan') return {'profile': row};
+    HeritageProgress? progress;
+    HeritageStamp? badge;
+    try {
+      final xp = await client
+          .from('user_experience')
+          .select('total_xp')
+          .eq('user_id', userId)
+          .maybeSingle();
+      progress = HeritageProgression.fromXp(
+        (xp?['total_xp'] as num?)?.toInt() ?? 0,
+      );
+    } catch (error) {
+      debugPrint('Forum profile XP lookup failed (${error.runtimeType})');
+    }
+    try {
+      final stamps = await client
+          .from('passport_stamps')
+          .select('*, quests(*)')
+          .eq('user_id', userId)
+          .limit(1);
+      if (stamps.isNotEmpty) {
+        badge = HeritageStamp.fromMap(Map<String, dynamic>.from(stamps.first));
+      }
+    } catch (error) {
+      debugPrint('Forum profile badge lookup failed (${error.runtimeType})');
+    }
+    return {'profile': row, 'progress': progress, 'badge': badge};
+  }
+
+  @override
+  Widget build(BuildContext context) => Dialog(
+    backgroundColor: Theme.of(context).colorScheme.surface,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+    child: FutureBuilder<Map<String, dynamic>>(
+      future: _load(),
+      builder: (context, snapshot) {
+        final data = snapshot.data ?? const <String, dynamic>{};
+        final profile = Map<String, dynamic>.from(data['profile'] ?? const {});
+        final name =
+            (profile['display_name'] ?? profile['full_name'] ?? displayName)
+                .toString();
+        final handle = (profile['username'] ?? username ?? '').toString();
+        final photo = (profile['avatar_url'] ?? avatarUrl ?? '')
+            .toString()
+            .trim();
+        final progress = data['progress'] as HeritageProgress?;
+        final badge = data['badge'] as HeritageStamp?;
+        return Padding(
+          padding: const EdgeInsets.all(22),
+          child: snapshot.connectionState != ConnectionState.done
+              ? const SizedBox(
+                  height: 120,
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              : snapshot.hasError
+              ? const SizedBox(
+                  height: 100,
+                  child: Center(
+                    child: Text('Unable to load profile. Please try again.'),
+                  ),
+                )
+              : profile.isEmpty
+              ? const SizedBox(
+                  height: 100,
+                  child: Center(child: Text('User profile unavailable')),
+                )
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.forum_outlined,
+                          size: 16,
+                          color: Color(0xFFB8860B),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Community profile',
+                            style: GoogleFonts.dmSerifDisplay(fontSize: 18),
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Close',
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon: const Icon(Icons.close, size: 20),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 28,
+                          backgroundImage: photo.isNotEmpty
+                              ? NetworkImage(photo)
+                              : null,
+                          child: photo.isEmpty
+                              ? const Icon(Icons.person)
+                              : null,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                name,
+                                style: GoogleFonts.dmSerifDisplay(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 17,
+                                ),
+                              ),
+                              if (handle.isNotEmpty)
+                                Text(
+                                  '@$handle',
+                                  style: TextStyle(color: Colors.grey[600]),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    const Divider(height: 1),
+                    const SizedBox(height: 14),
+                    Text(
+                      historicalRole == 'artisan' ? 'Artisan' : 'Tourist',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    if (historicalRole == 'artisan') ...[
+                      if ((profile['studio_name'] ?? '')
+                          .toString()
+                          .trim()
+                          .isNotEmpty)
+                        Text(profile['studio_name'].toString()),
+                      if ((profile['craft_category'] ?? '')
+                          .toString()
+                          .trim()
+                          .isNotEmpty)
+                        Text(profile['craft_category'].toString()),
+                    ],
+                    if (progress != null)
+                      Text(
+                        'Tier ${progress.currentTier.level}  •  ${badge?.title ?? progress.currentTier.title}',
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    const SizedBox(height: 8),
+                    Text(
+                      (profile['bio'] ?? 'Forum member').toString(),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: FilledButton.icon(
+                        icon: const Icon(Icons.arrow_forward_rounded, size: 16),
+                        onPressed: () => Navigator.of(
+                          context,
+                        ).pop({'open': true, 'profile': profile}),
+                        label: const Text('View Profile'),
+                      ),
+                    ),
+                  ],
+                ),
+        );
+      },
+    ),
+  );
+}
 
 class LiveForumTab extends StatefulWidget {
   const LiveForumTab({super.key});
@@ -23,6 +253,39 @@ class _LiveForumTabState extends State<LiveForumTab> {
 
   final Map<String, GlobalKey> _replyKeys = {};
   final ScrollController _answersScrollController = ScrollController();
+
+  Future<void> _showForumProfilePreview({
+    required String userId,
+    required String displayName,
+    String? username,
+    String? avatarUrl,
+    String? historicalRole,
+  }) async {
+    if (userId.trim().isEmpty) return;
+    final profile = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (dialogContext) => _ForumProfilePreviewDialog(
+        userId: userId,
+        displayName: displayName,
+        username: username,
+        avatarUrl: avatarUrl,
+        historicalRole: historicalRole,
+      ),
+    );
+    if (profile != null && mounted) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => ForumUserProfilePage(
+            userId: userId,
+            initialProfile: (profile['profile'] as Map?)
+                ?.cast<String, dynamic>(),
+            historicalRole: historicalRole,
+          ),
+        ),
+      );
+    }
+  }
+
   Future<void> _scrollToReply(String replyId) async {
     if (_activeThread == null) return;
 
@@ -143,10 +406,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
 
     final raw = value.toString();
 
-    if (raw.isEmpty ||
-        raw == 'null' ||
-        raw == 'Just now' ||
-        raw == 'Recent') {
+    if (raw.isEmpty || raw == 'null' || raw == 'Just now' || raw == 'Recent') {
       return raw;
     }
 
@@ -169,12 +429,13 @@ class _LiveForumTabState extends State<LiveForumTab> {
   Future<void> _sendMessage(BuildContext context) async {
     final text = _messageController.text.trim();
     if (text.isEmpty || _activeThread == null) return;
+    final sendingThreadId = _activeThread!['id'].toString();
 
     final authVM = context.read<AuthViewModel>();
     final forumVM = context.read<ForumViewModel>();
     final user = authVM.currentUser;
     final bool isUserArtisan =
-        user?.isArtisan == true || user?.role == 'Artisan';
+        normalizeForumCreationRole(authVM.activeRole) == 'artisan';
     final String effectiveAuthor =
         (user?.effectiveUsername != null && user!.effectiveUsername.isNotEmpty)
         ? user.effectiveUsername
@@ -185,11 +446,13 @@ class _LiveForumTabState extends State<LiveForumTab> {
                     : 'Community Member'));
 
     final result = await forumVM.postReply(
-      threadId: _activeThread!['id'].toString(),
+      threadId: sendingThreadId,
       text: text,
       authorName: effectiveAuthor,
       authorEmail: user?.email ?? '',
       isArtisan: isUserArtisan,
+      authorRoleAtCreation: isUserArtisan ? 'artisan' : 'tourist',
+      authorUserId: user!.id,
       parentReplyId: _replyingToReplyId,
     );
 
@@ -235,12 +498,27 @@ class _LiveForumTabState extends State<LiveForumTab> {
       return;
     }
 
+    if (!mounted || _activeThread?['id']?.toString() != sendingThreadId) return;
     _messageController.clear();
 
     setState(() {
       _replyingToReplyId = null;
       _replyingToName = null;
       _replyingToText = null;
+    });
+
+    // Wait for the refreshed replies to finish layout before measuring the end.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted ||
+          _activeThread?['id']?.toString() != sendingThreadId ||
+          !_answersScrollController.hasClients) {
+        return;
+      }
+      _answersScrollController.animateTo(
+        _answersScrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeOutCubic,
+      );
     });
 
     if (!context.mounted) return;
@@ -451,6 +729,21 @@ class _LiveForumTabState extends State<LiveForumTab> {
                   return;
                 }
 
+                if (result['success'] != true) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        result['message']?.toString() ??
+                            'Unable to submit your report. Please try again.',
+                      ),
+                      backgroundColor: const Color(0xFFD97706),
+                      behavior: SnackBarBehavior.floating,
+                      duration: const Duration(seconds: 5),
+                    ),
+                  );
+                  return;
+                }
+
                 // New report successfully submitted
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -626,6 +919,21 @@ class _LiveForumTabState extends State<LiveForumTab> {
                   return;
                 }
 
+                if (result['success'] != true) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        result['message']?.toString() ??
+                            'Unable to submit your report. Please try again.',
+                      ),
+                      backgroundColor: const Color(0xFFD97706),
+                      behavior: SnackBarBehavior.floating,
+                      duration: const Duration(seconds: 5),
+                    ),
+                  );
+                  return;
+                }
+
                 // New report success
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -685,18 +993,24 @@ class _LiveForumTabState extends State<LiveForumTab> {
             onPressed: () async {
               Navigator.pop(dialogContext);
               setState(() {
-                if (_activeThread != null && _activeThread!['messages'] is List) {
+                if (_activeThread != null &&
+                    _activeThread!['messages'] is List) {
                   final List msgs = List.from(_activeThread!['messages']);
-                  msgs.removeWhere((m) =>
-                      m is Map &&
-                      (m['id']?.toString() == replyId ||
-                          m['parentReplyId']?.toString() == replyId));
+                  msgs.removeWhere(
+                    (m) =>
+                        m is Map &&
+                        (m['id']?.toString() == replyId ||
+                            m['parentReplyId']?.toString() == replyId),
+                  );
                   _activeThread!['messages'] = msgs;
                   _activeThread!['replies'] = msgs.length;
                   _activeThread!['replyCount'] = msgs.length;
                 }
               });
-              await context.read<ForumViewModel>().deleteReply(threadId, replyId);
+              await context.read<ForumViewModel>().deleteReply(
+                threadId,
+                replyId,
+              );
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -1018,12 +1332,17 @@ class _LiveForumTabState extends State<LiveForumTab> {
                             'Ask Question / Create Post',
                             style: GoogleFonts.dmSerifDisplay(
                               fontSize: 22,
-                              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                              color: isDark
+                                  ? const Color(0xFFFFD54F)
+                                  : const Color(0xFF004D40),
                             ),
                           ),
                         ),
                         IconButton(
-                          icon: Icon(Icons.close_rounded, color: isDark ? Colors.white70 : Colors.black87),
+                          icon: Icon(
+                            Icons.close_rounded,
+                            color: isDark ? Colors.white70 : Colors.black87,
+                          ),
                           onPressed: () => Navigator.pop(modalContext),
                         ),
                       ],
@@ -1041,7 +1360,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                     const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
                       initialValue: selectedCommunity,
-                      dropdownColor: isDark ? const Color(0xFF0D2825) : Colors.white,
+                      dropdownColor: isDark
+                          ? const Color(0xFF0D2825)
+                          : Colors.white,
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
@@ -1050,18 +1371,24 @@ class _LiveForumTabState extends State<LiveForumTab> {
                       decoration: InputDecoration(
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+                          borderSide: isDark
+                              ? const BorderSide(color: Color(0xFF1E3A34))
+                              : BorderSide.none,
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+                          borderSide: isDark
+                              ? const BorderSide(color: Color(0xFF1E3A34))
+                              : BorderSide.none,
                         ),
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 14,
                           vertical: 10,
                         ),
                         filled: true,
-                        fillColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
+                        fillColor: isDark
+                            ? const Color(0xFF041412)
+                            : const Color(0xFFF8F9FA),
                       ),
                       items: _communities.where((c) => c != 'All').map((c) {
                         return DropdownMenuItem(
@@ -1106,14 +1433,20 @@ class _LiveForumTabState extends State<LiveForumTab> {
                           color: isDark ? Colors.white38 : Colors.grey[400],
                         ),
                         filled: true,
-                        fillColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
+                        fillColor: isDark
+                            ? const Color(0xFF041412)
+                            : const Color(0xFFF8F9FA),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
-                          borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+                          borderSide: isDark
+                              ? const BorderSide(color: Color(0xFF1E3A34))
+                              : BorderSide.none,
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
-                          borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+                          borderSide: isDark
+                              ? const BorderSide(color: Color(0xFF1E3A34))
+                              : BorderSide.none,
                         ),
                       ),
                     ),
@@ -1143,14 +1476,20 @@ class _LiveForumTabState extends State<LiveForumTab> {
                           color: isDark ? Colors.white38 : Colors.grey[400],
                         ),
                         filled: true,
-                        fillColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
+                        fillColor: isDark
+                            ? const Color(0xFF041412)
+                            : const Color(0xFFF8F9FA),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
-                          borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+                          borderSide: isDark
+                              ? const BorderSide(color: Color(0xFF1E3A34))
+                              : BorderSide.none,
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
-                          borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+                          borderSide: isDark
+                              ? const BorderSide(color: Color(0xFF1E3A34))
+                              : BorderSide.none,
                         ),
                       ),
                     ),
@@ -1169,8 +1508,8 @@ class _LiveForumTabState extends State<LiveForumTab> {
                           final authVM = context.read<AuthViewModel>();
                           final user = authVM.currentUser;
                           final bool isUserArtisan =
-                              user?.isArtisan == true ||
-                              user?.role == 'Artisan';
+                              normalizeForumCreationRole(authVM.activeRole) ==
+                              'artisan';
                           final String effectiveAuthor =
                               (user?.effectiveUsername != null &&
                                   user!.effectiveUsername.isNotEmpty)
@@ -1190,6 +1529,10 @@ class _LiveForumTabState extends State<LiveForumTab> {
                                 authorName: effectiveAuthor,
                                 authorEmail: user?.email ?? '',
                                 isArtisan: isUserArtisan,
+                                authorRoleAtCreation: isUserArtisan
+                                    ? 'artisan'
+                                    : 'tourist',
+                                authorUserId: user!.id,
                                 initialMessage: body.isNotEmpty ? body : null,
                               );
 
@@ -1360,7 +1703,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
     }
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF1F5F9),
+      backgroundColor: isDark
+          ? const Color(0xFF041412)
+          : const Color(0xFFF1F5F9),
       appBar: AppBar(
         title: FittedBox(
           fit: BoxFit.scaleDown,
@@ -1369,7 +1714,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
             children: [
               Icon(
                 Icons.forum_rounded,
-                color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                color: isDark
+                    ? const Color(0xFFFFD54F)
+                    : const Color(0xFF004D40),
                 size: 22,
               ),
               const SizedBox(width: 8),
@@ -1378,7 +1725,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                     ? 'Warisan Community Hub'
                     : 'Question & Answers',
                 style: GoogleFonts.dmSerifDisplay(
-                  color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                  color: isDark
+                      ? const Color(0xFFFFD54F)
+                      : const Color(0xFF004D40),
                   fontSize: 20,
                 ),
               ),
@@ -1392,7 +1741,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
             ? IconButton(
                 icon: Icon(
                   Icons.arrow_back_rounded,
-                  color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                  color: isDark
+                      ? const Color(0xFFFFD54F)
+                      : const Color(0xFF004D40),
                 ),
                 onPressed: () => setState(() => _activeThread = null),
               )
@@ -1429,7 +1780,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                 ),
               ),
             ),
-          if (_activeThread != null)
+          if (_activeThread != null && _activeThread!['isMe'] != true)
             IconButton(
               icon: const Icon(Icons.flag_outlined, color: Color(0xFFEF4444)),
               tooltip: 'Report / Flag Post',
@@ -1445,20 +1796,24 @@ class _LiveForumTabState extends State<LiveForumTab> {
           ? _buildRedditQuoraFeed(langVM, threadsMap, isDark)
           : _buildQuoraThreadDetailView(langVM, isDark),
       floatingActionButton: _activeThread == null
-          ? FloatingActionButton.extended(
-              onPressed: () => _showCreateThreadModal(langVM),
-              backgroundColor: isDark ? const Color(0xFF1E3A34) : const Color(0xFF004D40),
-              foregroundColor: Colors.white,
-              icon: const Icon(
-                Icons.edit_note_rounded,
-                color: Color(0xFFFFD54F),
-                size: 26,
-              ),
-              label: Text(
-                'Ask / Post',
-                style: GoogleFonts.plusJakartaSans(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+          ? Padding(
+              padding: const EdgeInsets.only(bottom: 85),
+              child: FloatingActionButton.extended(
+                onPressed: () => _showCreateThreadModal(langVM),
+                backgroundColor:
+                    isDark ? const Color(0xFF1E3A34) : const Color(0xFF004D40),
+                foregroundColor: Colors.white,
+                icon: const Icon(
+                  Icons.edit_note_rounded,
+                  color: Color(0xFFFFD54F),
+                  size: 26,
+                ),
+                label: Text(
+                  'Ask / Post',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             )
@@ -1478,11 +1833,14 @@ class _LiveForumTabState extends State<LiveForumTab> {
     final Set<String> deletedPostIds = Set.from(_dismissedNoticeIds);
 
     for (final n in forumVMWatch.moderationHistory) {
-      final String actionType = (n['action_type'] ?? '').toString().toLowerCase();
+      final String actionType = (n['action_type'] ?? '')
+          .toString()
+          .toLowerCase();
       final String status = (n['status'] ?? '').toString().toLowerCase();
 
       // Only treat posts as deleted if status is actioned/deleted (NEVER if dismissed!)
-      if (status != 'dismissed' && (actionType == 'deleted' || status == 'actioned')) {
+      if (status != 'dismissed' &&
+          (actionType == 'deleted' || status == 'actioned')) {
         final String id = (n['post_id'] ?? n['id'])?.toString() ?? '';
         if (id.isNotEmpty) deletedPostIds.add(id);
       }
@@ -1524,8 +1882,8 @@ class _LiveForumTabState extends State<LiveForumTab> {
             final int upvotes = (thread['upvotes'] as int?) ?? 0;
             final int replies =
                 (thread['replyCount'] as int?) ??
-                    (thread['repliesCount'] as int?) ??
-                    ((thread['messages'] as List?)?.length ?? 0);
+                (thread['repliesCount'] as int?) ??
+                ((thread['messages'] as List?)?.length ?? 0);
 
             final DateTime createdAt =
                 DateTime.tryParse(thread['timestamp']?.toString() ?? '') ??
@@ -1570,11 +1928,11 @@ class _LiveForumTabState extends State<LiveForumTab> {
           // 2. Same vote score -> newest post first
           final DateTime aTime =
               DateTime.tryParse(a['timestamp']?.toString() ?? '') ??
-                  DateTime.fromMillisecondsSinceEpoch(0);
+              DateTime.fromMillisecondsSinceEpoch(0);
 
           final DateTime bTime =
               DateTime.tryParse(b['timestamp']?.toString() ?? '') ??
-                  DateTime.fromMillisecondsSinceEpoch(0);
+              DateTime.fromMillisecondsSinceEpoch(0);
 
           return bTime.compareTo(aTime);
         });
@@ -1665,7 +2023,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                     notice['resolved_at']?.toString() ??
                     '';
                 final String notes = (notice['notes'] ?? '').toString();
-                final String delReason = (notice['deletion_reason'] ?? '').toString().trim();
+                final String delReason = (notice['deletion_reason'] ?? '')
+                    .toString()
+                    .trim();
                 final String resolutionNotes =
                     (notice['resolution_notes'] ?? '').toString().trim();
                 final String rawReason = (notice['reason'] ?? '')
@@ -1716,9 +2076,15 @@ class _LiveForumTabState extends State<LiveForumTab> {
                   margin: const EdgeInsets.fromLTRB(14, 8, 14, 4),
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF3B1212) : const Color(0xFFFEF2F2),
+                    color: isDark
+                        ? const Color(0xFF3B1212)
+                        : const Color(0xFFFEF2F2),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: isDark ? const Color(0xFF7F1D1D) : const Color(0xFFFECACA)),
+                    border: Border.all(
+                      color: isDark
+                          ? const Color(0xFF7F1D1D)
+                          : const Color(0xFFFECACA),
+                    ),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1741,7 +2107,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                                     style: GoogleFonts.plusJakartaSans(
                                       fontSize: 13,
                                       fontWeight: FontWeight.bold,
-                                      color: isDark ? const Color(0xFFFCA5A5) : const Color(0xFF991B1B),
+                                      color: isDark
+                                          ? const Color(0xFFFCA5A5)
+                                          : const Color(0xFF991B1B),
                                     ),
                                   ),
                                 ),
@@ -1763,7 +2131,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                                     child: Icon(
                                       Icons.close_rounded,
                                       size: 18,
-                                      color: isDark ? const Color(0xFFFCA5A5) : const Color(0xFF991B1B),
+                                      color: isDark
+                                          ? const Color(0xFFFCA5A5)
+                                          : const Color(0xFF991B1B),
                                     ),
                                   ),
                                 ),
@@ -1774,7 +2144,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                               descriptionText,
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 12,
-                                color: isDark ? Colors.white70 : const Color(0xFF7F1D1D),
+                                color: isDark
+                                    ? Colors.white70
+                                    : const Color(0xFF7F1D1D),
                               ),
                             ),
                             const SizedBox(height: 6),
@@ -1784,7 +2156,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                                 vertical: 5,
                               ),
                               decoration: BoxDecoration(
-                                color: isDark ? const Color(0xFF041412) : Colors.white,
+                                color: isDark
+                                    ? const Color(0xFF041412)
+                                    : Colors.white,
                                 borderRadius: BorderRadius.circular(6),
                                 border: Border.all(
                                   color: const Color(0xFFFCA5A5),
@@ -1826,7 +2200,11 @@ class _LiveForumTabState extends State<LiveForumTab> {
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFFEF3C7),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: isDark ? const Color(0xFF34D399).withValues(alpha: 0.3) : const Color(0xFFFDE68A)),
+              border: Border.all(
+                color: isDark
+                    ? const Color(0xFF34D399).withValues(alpha: 0.3)
+                    : const Color(0xFFFDE68A),
+              ),
             ),
             child: Row(
               children: [
@@ -1842,7 +2220,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF78350F),
+                      color: isDark
+                          ? const Color(0xFFFFD54F)
+                          : const Color(0xFF78350F),
                     ),
                   ),
                 ),
@@ -1873,15 +2253,31 @@ class _LiveForumTabState extends State<LiveForumTab> {
                               ? FontWeight.bold
                               : FontWeight.w600,
                           color: isSelected
-                              ? (isDark ? const Color(0xFFFFD54F) : Colors.white)
-                              : (isDark ? Colors.white70 : const Color(0xFF334155)),
+                              ? (isDark
+                                    ? const Color(0xFFFFD54F)
+                                    : Colors.white)
+                              : (isDark
+                                    ? Colors.white70
+                                    : const Color(0xFF334155)),
                         ),
-                        selectedColor: isDark ? const Color(0xFF1E3A34) : const Color(0xFF004D40),
-                        backgroundColor: isDark ? const Color(0xFF0D2825) : const Color(0xFFF1F5F9),
-                        checkmarkColor: isDark ? const Color(0xFFFFD54F) : Colors.white,
+                        selectedColor: isDark
+                            ? const Color(0xFF1E3A34)
+                            : const Color(0xFF004D40),
+                        backgroundColor: isDark
+                            ? const Color(0xFF0D2825)
+                            : const Color(0xFFF1F5F9),
+                        checkmarkColor: isDark
+                            ? const Color(0xFFFFD54F)
+                            : Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),
-                          side: isDark ? BorderSide(color: isSelected ? const Color(0xFFFFD54F) : const Color(0xFF1E3A34)) : BorderSide.none,
+                          side: isDark
+                              ? BorderSide(
+                                  color: isSelected
+                                      ? const Color(0xFFFFD54F)
+                                      : const Color(0xFF1E3A34),
+                                )
+                              : BorderSide.none,
                         ),
                         onSelected: (val) {
                           setState(() => _selectedCommunity = c);
@@ -1919,10 +2315,18 @@ class _LiveForumTabState extends State<LiveForumTab> {
                           ),
                           decoration: BoxDecoration(
                             color: isSelected
-                                ? (isDark ? const Color(0xFF1E3A34) : const Color(0xFFFEF3C7))
+                                ? (isDark
+                                      ? const Color(0xFF1E3A34)
+                                      : const Color(0xFFFEF3C7))
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(10),
-                            border: isDark && isSelected ? Border.all(color: const Color(0xFF34D399).withValues(alpha: 0.4)) : null,
+                            border: isDark && isSelected
+                                ? Border.all(
+                                    color: const Color(
+                                      0xFF34D399,
+                                    ).withValues(alpha: 0.4),
+                                  )
+                                : null,
                           ),
                           child: Text(
                             sort,
@@ -1932,8 +2336,12 @@ class _LiveForumTabState extends State<LiveForumTab> {
                                   ? FontWeight.bold
                                   : FontWeight.w500,
                               color: isSelected
-                                  ? (isDark ? const Color(0xFFFFD54F) : const Color(0xFF78350F))
-                                  : (isDark ? Colors.white70 : Colors.grey[700]),
+                                  ? (isDark
+                                        ? const Color(0xFFFFD54F)
+                                        : const Color(0xFF78350F))
+                                  : (isDark
+                                        ? Colors.white70
+                                        : Colors.grey[700]),
                             ),
                           ),
                         ),
@@ -1966,13 +2374,17 @@ class _LiveForumTabState extends State<LiveForumTab> {
                               decoration: BoxDecoration(
                                 color: isDark
                                     ? const Color(0xFF0D2825)
-                                    : const Color(0xFF004D40).withValues(alpha: 0.08),
+                                    : const Color(
+                                        0xFF004D40,
+                                      ).withValues(alpha: 0.08),
                                 shape: BoxShape.circle,
                               ),
                               child: Icon(
                                 Icons.forum_outlined,
                                 size: 40,
-                                color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                                color: isDark
+                                    ? const Color(0xFFFFD54F)
+                                    : const Color(0xFF004D40),
                               ),
                             ),
                             const SizedBox(height: 16),
@@ -1980,7 +2392,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                               'No community questions yet',
                               style: GoogleFonts.dmSerifDisplay(
                                 fontSize: 20,
-                                color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                                color: isDark
+                                    ? const Color(0xFFFFD54F)
+                                    : const Color(0xFF004D40),
                               ),
                             ),
                             const SizedBox(height: 6),
@@ -1989,7 +2403,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                               textAlign: TextAlign.center,
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 13,
-                                color: isDark ? Colors.white60 : Colors.grey[600],
+                                color: isDark
+                                    ? Colors.white60
+                                    : Colors.grey[600],
                               ),
                             ),
                             const SizedBox(height: 18),
@@ -2052,7 +2468,11 @@ class _LiveForumTabState extends State<LiveForumTab> {
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF0D2825) : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? const Color(0xFF1E3A34) : Colors.black.withValues(alpha: 0.06)),
+        border: Border.all(
+          color: isDark
+              ? const Color(0xFF1E3A34)
+              : Colors.black.withValues(alpha: 0.06),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
@@ -2065,7 +2485,19 @@ class _LiveForumTabState extends State<LiveForumTab> {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: () => setState(() => _activeThread = thread),
+          onTap: () {
+            setState(() => _activeThread = thread);
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted ||
+                  _activeThread?['id'] != thread['id'] ||
+                  !_answersScrollController.hasClients) {
+                return;
+              }
+              _answersScrollController.jumpTo(
+                _answersScrollController.position.maxScrollExtent,
+              );
+            });
+          },
           child: Padding(
             padding: const EdgeInsets.all(14),
             child: Row(
@@ -2078,7 +2510,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                     horizontal: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
+                    color: isDark
+                        ? const Color(0xFF041412)
+                        : const Color(0xFFF8F9FA),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(
@@ -2105,7 +2539,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                               ? const Color(0xFFF97316)
                               : (userVote == -1
                                     ? const Color(0xFF6366F1)
-                                    : (isDark ? Colors.white70 : const Color(0xFF1E293B))),
+                                    : (isDark
+                                          ? Colors.white70
+                                          : const Color(0xFF1E293B))),
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -2176,7 +2612,11 @@ class _LiveForumTabState extends State<LiveForumTab> {
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
-                              color: isDark ? const Color(0xFF1E3A34) : const Color(0xFF004D40).withValues(alpha: 0.08),
+                              color: isDark
+                                  ? const Color(0xFF1E3A34)
+                                  : const Color(
+                                      0xFF004D40,
+                                    ).withValues(alpha: 0.08),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
@@ -2184,7 +2624,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
-                                color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                                color: isDark
+                                    ? const Color(0xFFFFD54F)
+                                    : const Color(0xFF004D40),
                               ),
                             ),
                           ),
@@ -2195,7 +2637,8 @@ class _LiveForumTabState extends State<LiveForumTab> {
                               color: isDark ? Colors.white60 : Colors.grey[600],
                             ),
                           ),
-                          if (isArtisan)
+                          if (isArtisan ||
+                              thread['author_role_at_creation'] == 'tourist')
                             Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 6,
@@ -2206,7 +2649,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
-                                'MASTER ARTISAN',
+                                isArtisan ? 'Artisan' : 'Tourist',
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 8,
                                   fontWeight: FontWeight.w900,
@@ -2221,7 +2664,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                                 _formatDateTime(thread['timestamp']),
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 10,
-                                  color: isDark ? Colors.white38 : Colors.grey[400],
+                                  color: isDark
+                                      ? Colors.white38
+                                      : Colors.grey[400],
                                 ),
                               ),
                               if (thread['isEdited'] == true) ...[
@@ -2248,7 +2693,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                         thread['title'].toString(),
                         style: GoogleFonts.dmSerifDisplay(
                           fontSize: 16,
-                          color: isDark ? Colors.white : const Color(0xFF0F172A),
+                          color: isDark
+                              ? Colors.white
+                              : const Color(0xFF0F172A),
                           height: 1.3,
                         ),
                       ),
@@ -2272,10 +2719,14 @@ class _LiveForumTabState extends State<LiveForumTab> {
                                     vertical: 5,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: isDark ? const Color(0xFF041412) : const Color(0xFFF8FAFC),
+                                    color: isDark
+                                        ? const Color(0xFF041412)
+                                        : const Color(0xFFF8FAFC),
                                     borderRadius: BorderRadius.circular(8),
                                     border: Border.all(
-                                      color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFE2E8F0),
+                                      color: isDark
+                                          ? const Color(0xFF1E3A34)
+                                          : const Color(0xFFE2E8F0),
                                     ),
                                   ),
                                   child: Row(
@@ -2284,34 +2735,40 @@ class _LiveForumTabState extends State<LiveForumTab> {
                                       Icon(
                                         Icons.mode_comment_outlined,
                                         size: 14,
-                                        color: isDark ? Colors.white60 : Colors.grey[600],
+                                        color: isDark
+                                            ? Colors.white60
+                                            : Colors.grey[600],
                                       ),
                                       const SizedBox(width: 5),
                                       Builder(
                                         builder: (context) {
                                           final List<dynamic> allReplies =
-                                              (thread['messages'] as List?) ?? [];
+                                              (thread['messages'] as List?) ??
+                                              [];
 
-                                          final int visibleReplyCount = allReplies.where((msg) {
-                                            if (msg is! Map) return false;
+                                          final int visibleReplyCount =
+                                              allReplies.where((msg) {
+                                                if (msg is! Map) return false;
 
-                                            if (msg['isReported'] == true) {
-                                              return msg['isMe'] == true;
-                                            }
+                                                if (msg['isReported'] == true) {
+                                                  return msg['isMe'] == true;
+                                                }
 
-                                            return true;
-                                          }).length;
+                                                return true;
+                                              }).length;
 
                                           return Text(
                                             '$visibleReplyCount '
-                                                '${visibleReplyCount == 1 ? 'Answer' : 'Answers'}',
+                                            '${visibleReplyCount == 1 ? 'Answer' : 'Answers'}',
                                             maxLines: 1,
                                             softWrap: false,
                                             overflow: TextOverflow.visible,
                                             style: GoogleFonts.plusJakartaSans(
                                               fontSize: 10,
                                               fontWeight: FontWeight.bold,
-                                              color: isDark ? Colors.white70 : Colors.grey[700],
+                                              color: isDark
+                                                  ? Colors.white70
+                                                  : Colors.grey[700],
                                             ),
                                           );
                                         },
@@ -2326,7 +2783,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                                       vertical: 5,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: isDark ? const Color(0xFF064E3B) : const Color(0xFFDCFCE7),
+                                      color: isDark
+                                          ? const Color(0xFF064E3B)
+                                          : const Color(0xFFDCFCE7),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Row(
@@ -2335,7 +2794,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                                         Icon(
                                           Icons.check_circle_rounded,
                                           size: 12,
-                                          color: isDark ? const Color(0xFF34D399) : const Color(0xFF166534),
+                                          color: isDark
+                                              ? const Color(0xFF34D399)
+                                              : const Color(0xFF166534),
                                         ),
                                         const SizedBox(width: 4),
                                         Text(
@@ -2345,7 +2806,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                                           style: GoogleFonts.plusJakartaSans(
                                             fontSize: 9,
                                             fontWeight: FontWeight.bold,
-                                            color: isDark ? const Color(0xFF34D399) : const Color(0xFF166534),
+                                            color: isDark
+                                                ? const Color(0xFF34D399)
+                                                : const Color(0xFF166534),
                                           ),
                                         ),
                                       ],
@@ -2378,7 +2841,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                                           child: Icon(
                                             Icons.edit_outlined,
                                             size: 16,
-                                            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                                            color: isDark
+                                                ? const Color(0xFFFFD54F)
+                                                : const Color(0xFF004D40),
                                           ),
                                         ),
                                       ),
@@ -2444,9 +2909,8 @@ class _LiveForumTabState extends State<LiveForumTab> {
 
   // QUORA STYLE Q&A THREAD DETAIL VIEW
   Widget _buildQuoraThreadDetailView(LanguageViewModel langVM, bool isDark) {
-    final List<Map<String, dynamic>> allMessages = List<Map<String, dynamic>>.from(
-      _activeThread!['messages'] ?? [],
-    );
+    final List<Map<String, dynamic>> allMessages =
+        List<Map<String, dynamic>>.from(_activeThread!['messages'] ?? []);
 
     // Only show approved, non-flagged replies in public thread, EXCEPT for the author
     final List<Map<String, dynamic>> messages = allMessages.where((msg) {
@@ -2475,7 +2939,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                         vertical: 3,
                       ),
                       decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF1E3A34) : const Color(0xFF004D40).withValues(alpha: 0.08),
+                        color: isDark
+                            ? const Color(0xFF1E3A34)
+                            : const Color(0xFF004D40).withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
@@ -2484,7 +2950,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
-                          color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                          color: isDark
+                              ? const Color(0xFFFFD54F)
+                              : const Color(0xFF004D40),
                         ),
                       ),
                     ),
@@ -2507,7 +2975,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                 _activeThread!['title'].toString(),
                 style: GoogleFonts.dmSerifDisplay(
                   fontSize: 20,
-                  color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                  color: isDark
+                      ? const Color(0xFFFFD54F)
+                      : const Color(0xFF004D40),
                   height: 1.2,
                 ),
               ),
@@ -2520,9 +2990,15 @@ class _LiveForumTabState extends State<LiveForumTab> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF041412) : const Color(0xFFF8FAFC),
+                    color: isDark
+                        ? const Color(0xFF041412)
+                        : const Color(0xFFF8FAFC),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFE2E8F0)),
+                    border: Border.all(
+                      color: isDark
+                          ? const Color(0xFF1E3A34)
+                          : const Color(0xFFE2E8F0),
+                    ),
                   ),
                   child: Text(
                     _activeThread!['content'].toString(),
@@ -2543,7 +3019,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF041412) : const Color(0xFFF1F5F9),
+                      color: isDark
+                          ? const Color(0xFF041412)
+                          : const Color(0xFFF1F5F9),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
@@ -2582,7 +3060,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                                               ?.toInt()) ==
                                           -1)
                                       ? const Color(0xFF6366F1)
-                                      : (isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40))),
+                                      : (isDark
+                                            ? const Color(0xFFFFD54F)
+                                            : const Color(0xFF004D40))),
                           ),
                         ),
                         const SizedBox(width: 4),
@@ -2632,7 +3112,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
               Icon(
                 Icons.chat_bubble_outline_rounded,
                 size: 16,
-                color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                color: isDark
+                    ? const Color(0xFFFFD54F)
+                    : const Color(0xFF004D40),
               ),
               const SizedBox(width: 8),
               Text(
@@ -2640,13 +3122,18 @@ class _LiveForumTabState extends State<LiveForumTab> {
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
-                  color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                  color: isDark
+                      ? const Color(0xFFFFD54F)
+                      : const Color(0xFF004D40),
                 ),
               ),
             ],
           ),
         ),
-        Divider(height: 1, color: isDark ? const Color(0xFF1E3A34) : Colors.grey[300]),
+        Divider(
+          height: 1,
+          color: isDark ? const Color(0xFF1E3A34) : Colors.grey[300],
+        ),
 
         // Answers List (Quora Style)
         Expanded(
@@ -2660,14 +3147,18 @@ class _LiveForumTabState extends State<LiveForumTab> {
                         Icon(
                           Icons.mark_chat_unread_outlined,
                           size: 40,
-                          color: isDark ? const Color(0xFF1E3A34) : Colors.grey[400],
+                          color: isDark
+                              ? const Color(0xFF1E3A34)
+                              : Colors.grey[400],
                         ),
                         const SizedBox(height: 10),
                         Text(
                           'No answers yet',
                           style: GoogleFonts.dmSerifDisplay(
                             fontSize: 18,
-                            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                            color: isDark
+                                ? const Color(0xFFFFD54F)
+                                : const Color(0xFF004D40),
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -2725,7 +3216,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                 // ============================
                 // Replying To Banner
                 // ============================
-                if (_replyingToReplyId != null) ...[
+                if (_replyingToReplyId != null &&
+                    messages.any((message) =>
+                        message['id']?.toString() == _replyingToReplyId)) ...[
                   Container(
                     width: double.infinity,
                     margin: const EdgeInsets.only(bottom: 8),
@@ -2734,16 +3227,24 @@ class _LiveForumTabState extends State<LiveForumTab> {
                       vertical: 8,
                     ),
                     decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFEFF6FF),
+                      color: isDark
+                          ? const Color(0xFF1E3A34)
+                          : const Color(0xFFEFF6FF),
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: isDark ? const Color(0xFF34D399) : const Color(0xFFBFDBFE)),
+                      border: Border.all(
+                        color: isDark
+                            ? const Color(0xFF34D399)
+                            : const Color(0xFFBFDBFE),
+                      ),
                     ),
                     child: Row(
                       children: [
                         Icon(
                           Icons.reply_rounded,
                           size: 16,
-                          color: isDark ? const Color(0xFF34D399) : const Color(0xFF1D4ED8),
+                          color: isDark
+                              ? const Color(0xFF34D399)
+                              : const Color(0xFF1D4ED8),
                         ),
 
                         const SizedBox(width: 8),
@@ -2757,7 +3258,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold,
-                                  color: isDark ? const Color(0xFF34D399) : const Color(0xFF1D4ED8),
+                                  color: isDark
+                                      ? const Color(0xFF34D399)
+                                      : const Color(0xFF1D4ED8),
                                 ),
                               ),
 
@@ -2769,7 +3272,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                                   overflow: TextOverflow.ellipsis,
                                   style: GoogleFonts.plusJakartaSans(
                                     fontSize: 10,
-                                    color: isDark ? Colors.white70 : Colors.grey[600],
+                                    color: isDark
+                                        ? Colors.white70
+                                        : Colors.grey[600],
                                   ),
                                 ),
                             ],
@@ -2778,7 +3283,11 @@ class _LiveForumTabState extends State<LiveForumTab> {
 
                         IconButton(
                           tooltip: 'Cancel reply',
-                          icon: Icon(Icons.close_rounded, size: 16, color: isDark ? Colors.white70 : Colors.black87),
+                          icon: Icon(
+                            Icons.close_rounded,
+                            size: 16,
+                            color: isDark ? Colors.white70 : Colors.black87,
+                          ),
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
                           onPressed: () {
@@ -2820,19 +3329,31 @@ class _LiveForumTabState extends State<LiveForumTab> {
                             color: isDark ? Colors.white38 : Colors.grey[400],
                           ),
                           filled: true,
-                          fillColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
+                          fillColor: isDark
+                              ? const Color(0xFF041412)
+                              : const Color(0xFFF8F9FA),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(20),
-                            borderSide: BorderSide(color: isDark ? const Color(0xFF1E3A34) : Colors.grey[200]!),
+                            borderSide: BorderSide(
+                              color: isDark
+                                  ? const Color(0xFF1E3A34)
+                                  : Colors.grey[200]!,
+                            ),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(20),
-                            borderSide: BorderSide(color: isDark ? const Color(0xFF1E3A34) : Colors.grey[200]!),
+                            borderSide: BorderSide(
+                              color: isDark
+                                  ? const Color(0xFF1E3A34)
+                                  : Colors.grey[200]!,
+                            ),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(20),
                             borderSide: BorderSide(
-                              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                              color: isDark
+                                  ? const Color(0xFFFFD54F)
+                                  : const Color(0xFF004D40),
                               width: 1.5,
                             ),
                           ),
@@ -2886,7 +3407,11 @@ class _LiveForumTabState extends State<LiveForumTab> {
   }
 
   // QUORA ANSWER CARD WITH MASTER VERIFICATION BADGE & UPVOTES
-  Widget _buildQuoraAnswerCard(Map<String, dynamic> msg, int index, bool isDark) {
+  Widget _buildQuoraAnswerCard(
+    Map<String, dynamic> msg,
+    int index,
+    bool isDark,
+  ) {
     final bool isMe = msg['isMe'] as bool? ?? false;
     final bool isArtisan = msg['isArtisan'] as bool? ?? false;
     final bool isVerifiedAnswer = msg['isVerifiedAnswer'] as bool? ?? false;
@@ -2910,7 +3435,10 @@ class _LiveForumTabState extends State<LiveForumTab> {
           final map = Map<String, dynamic>.from(item);
 
           if (map['id']?.toString() == parentReplyId) {
-            parentReply = map;
+            // Quotes must follow the same visibility rule as reply cards.
+            if (map['isReported'] != true || map['isMe'] == true) {
+              parentReply = map;
+            }
             break;
           }
         }
@@ -2935,8 +3463,12 @@ class _LiveForumTabState extends State<LiveForumTab> {
           color: isVerifiedAnswer
               ? (isDark ? const Color(0xFF34D399) : const Color(0xFFFDE68A))
               : (isMe
-                    ? (isDark ? const Color(0xFF34D399).withValues(alpha: 0.4) : const Color(0xFF004D40).withValues(alpha: 0.3))
-                    : (isDark ? const Color(0xFF1E3A34) : Colors.black.withValues(alpha: 0.05))),
+                    ? (isDark
+                          ? const Color(0xFF34D399).withValues(alpha: 0.4)
+                          : const Color(0xFF004D40).withValues(alpha: 0.3))
+                    : (isDark
+                          ? const Color(0xFF1E3A34)
+                          : Colors.black.withValues(alpha: 0.05))),
           width: isVerifiedAnswer ? 1.5 : 1,
         ),
       ),
@@ -2949,7 +3481,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               margin: const EdgeInsets.only(bottom: 12),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF064E3B) : const Color(0xFFFEF3C7),
+                color: isDark
+                    ? const Color(0xFF064E3B)
+                    : const Color(0xFFFEF3C7),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -2958,7 +3492,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                   Icon(
                     Icons.verified_rounded,
                     size: 14,
-                    color: isDark ? const Color(0xFF34D399) : const Color(0xFFB45309),
+                    color: isDark
+                        ? const Color(0xFF34D399)
+                        : const Color(0xFFB45309),
                   ),
                   const SizedBox(width: 6),
                   Flexible(
@@ -2968,7 +3504,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 10,
                         fontWeight: FontWeight.w900,
-                        color: isDark ? const Color(0xFF34D399) : const Color(0xFF78350F),
+                        color: isDark
+                            ? const Color(0xFF34D399)
+                            : const Color(0xFF78350F),
                       ),
                     ),
                   ),
@@ -2981,9 +3519,15 @@ class _LiveForumTabState extends State<LiveForumTab> {
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFFEF3C7),
+                color: isDark
+                    ? const Color(0xFF1E3A34)
+                    : const Color(0xFFFEF3C7),
                 borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: isDark ? const Color(0xFF34D399).withValues(alpha: 0.3) : const Color(0xFFFDE68A)),
+                border: Border.all(
+                  color: isDark
+                      ? const Color(0xFF34D399).withValues(alpha: 0.3)
+                      : const Color(0xFFFDE68A),
+                ),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -2999,7 +3543,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
-                      color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF78350F),
+                      color: isDark
+                          ? const Color(0xFFFFD54F)
+                          : const Color(0xFF78350F),
                     ),
                   ),
                 ],
@@ -3010,15 +3556,52 @@ class _LiveForumTabState extends State<LiveForumTab> {
           // Author Row
           Row(
             children: [
-              CircleAvatar(
-                radius: 14,
-                backgroundColor: isArtisan
-                    ? const Color(0xFFD97706)
-                    : const Color(0xFF004D40),
-                child: Icon(
-                  isArtisan ? Icons.palette_rounded : Icons.person_rounded,
-                  size: 14,
-                  color: Colors.white,
+              InkWell(
+                onTap: () => _showForumProfilePreview(
+                  userId:
+                      (msg['userId'] ??
+                              msg['user_id'] ??
+                              msg['author_id'] ??
+                              '')
+                          .toString(),
+                  displayName: (msg['displayName'] ?? msg['sender'] ?? '')
+                      .toString(),
+                  username: msg['username']?.toString(),
+                  avatarUrl: msg['avatarUrl']?.toString(),
+                  historicalRole: (msg['author_role_at_creation'] ??
+                          (isArtisan ? 'artisan' : 'tourist'))
+                      .toString(),
+                ),
+                borderRadius: BorderRadius.circular(16),
+                child: CircleAvatar(
+                  radius: 14,
+                  backgroundColor: isArtisan
+                      ? const Color(0xFFD97706)
+                      : const Color(0xFF004D40),
+                  child:
+                      (msg['avatarUrl']?.toString().trim().isNotEmpty == true)
+                      ? ClipOval(
+                          child: Image.network(
+                            msg['avatarUrl'].toString().trim(),
+                            width: 28,
+                            height: 28,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, error, stackTrace) => Icon(
+                              isArtisan
+                                  ? Icons.palette_rounded
+                                  : Icons.person_rounded,
+                              size: 14,
+                              color: Colors.white,
+                            ),
+                          ),
+                        )
+                      : Icon(
+                          isArtisan
+                              ? Icons.palette_rounded
+                              : Icons.person_rounded,
+                          size: 14,
+                          color: Colors.white,
+                        ),
                 ),
               ),
               const SizedBox(width: 10),
@@ -3029,17 +3612,38 @@ class _LiveForumTabState extends State<LiveForumTab> {
                     Row(
                       children: [
                         Flexible(
-                          child: Text(
-                            (msg['displayName'] ?? msg['sender']).toString(),
-                            softWrap: true,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? Colors.white : const Color(0xFF0F172A),
+                          child: InkWell(
+                            onTap: () => _showForumProfilePreview(
+                              userId:
+                                  (msg['userId'] ??
+                                          msg['user_id'] ??
+                                          msg['author_id'] ??
+                                          '')
+                                      .toString(),
+                              displayName:
+                                  (msg['displayName'] ?? msg['sender'] ?? '')
+                                      .toString(),
+                              username: msg['username']?.toString(),
+                              avatarUrl: msg['avatarUrl']?.toString(),
+                              historicalRole: (msg['author_role_at_creation'] ??
+                                      (isArtisan ? 'artisan' : 'tourist'))
+                                  .toString(),
+                            ),
+                            child: Text(
+                              (msg['displayName'] ?? msg['sender']).toString(),
+                              softWrap: true,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: isDark
+                                    ? Colors.white
+                                    : const Color(0xFF0F172A),
+                              ),
                             ),
                           ),
                         ),
-                        if (isArtisan) ...[
+                        if (isArtisan ||
+                            msg['author_role_at_creation'] == 'tourist') ...[
                           const SizedBox(width: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(
@@ -3051,7 +3655,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
-                              'MASTER',
+                              isArtisan ? 'Artisan' : 'Tourist',
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 8,
                                 fontWeight: FontWeight.bold,
@@ -3110,13 +3714,17 @@ class _LiveForumTabState extends State<LiveForumTab> {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF041412) : const Color(0xFFF8FAFC),
+                  color: isDark
+                      ? const Color(0xFF041412)
+                      : const Color(0xFFF8FAFC),
                   borderRadius: BorderRadius.circular(10),
                   border: Border(
                     left: BorderSide(
                       color: isArtisan
                           ? const Color(0xFFD97706)
-                          : (isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40)),
+                          : (isDark
+                                ? const Color(0xFFFFD54F)
+                                : const Color(0xFF004D40)),
                       width: 3,
                     ),
                   ),
@@ -3131,7 +3739,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                           size: 14,
                           color: isArtisan
                               ? const Color(0xFFD97706)
-                              : (isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40)),
+                              : (isDark
+                                    ? const Color(0xFFFFD54F)
+                                    : const Color(0xFF004D40)),
                         ),
                         const SizedBox(width: 5),
                         Expanded(
@@ -3142,7 +3752,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                               fontWeight: FontWeight.bold,
                               color: isArtisan
                                   ? const Color(0xFFB45309)
-                                  : (isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40)),
+                                  : (isDark
+                                        ? const Color(0xFFFFD54F)
+                                        : const Color(0xFF004D40)),
                             ),
                           ),
                         ),
@@ -3198,7 +3810,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF041412) : const Color(0xFFF1F5F9),
+                  color: isDark
+                      ? const Color(0xFF041412)
+                      : const Color(0xFFF1F5F9),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Row(
@@ -3260,7 +3874,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                 icon: Icon(
                   Icons.reply_rounded,
                   size: 17,
-                  color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                  color: isDark
+                      ? const Color(0xFFFFD54F)
+                      : const Color(0xFF004D40),
                 ),
                 tooltip: 'Reply to ${msg['displayName'] ?? msg['sender']}',
                 padding: EdgeInsets.zero,
@@ -3282,7 +3898,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                   icon: Icon(
                     Icons.edit_outlined,
                     size: 16,
-                    color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                    color: isDark
+                        ? const Color(0xFFFFD54F)
+                        : const Color(0xFF004D40),
                   ),
                   tooltip: 'Edit Answer',
                   padding: EdgeInsets.zero,

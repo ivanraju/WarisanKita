@@ -1,3 +1,16 @@
+String normalizeForumCreationRole(String? role) {
+  switch (role?.trim().toLowerCase()) {
+    case 'artisan':
+    case 'master artisan':
+      return 'artisan';
+    case 'tourist':
+    case 'cultural tourist':
+      return 'tourist';
+    default:
+      throw StateError('No valid active profile for Forum creation');
+  }
+}
+
 class ForumThread {
   final String id;
   final String? userId;
@@ -5,7 +18,13 @@ class ForumThread {
   final String title;
   final String authorName;
   final String authorEmail;
-  final bool isArtisan;
+  final String? avatarUrl;
+  final String? username;
+  final String? authorRoleAtCreation;
+  final bool _legacyIsArtisan;
+  bool get isArtisan => authorRoleAtCreation == null
+      ? _legacyIsArtisan
+      : authorRoleAtCreation == 'artisan';
   final int upvotes;
   final int userVote; // -1, 0, 1
   final int replyCount;
@@ -24,7 +43,10 @@ class ForumThread {
     required this.title,
     required this.authorName,
     required this.authorEmail,
-    this.isArtisan = false,
+    this.avatarUrl,
+    this.username,
+    this.authorRoleAtCreation,
+    bool isArtisan = false,
     this.upvotes = 0,
     this.userVote = 0,
     this.replyCount = 0,
@@ -35,9 +57,11 @@ class ForumThread {
     this.reportReason,
     this.reportNotes,
     this.replies = const [],
-  });
+  }) : _legacyIsArtisan = isArtisan;
 
-  String get authorAvatar => 'https://api.dicebear.com/7.x/bottts/png?seed=${Uri.encodeComponent(authorName.isNotEmpty ? authorName : "User")}';
+  String get authorAvatar => (avatarUrl?.trim().isNotEmpty == true)
+      ? avatarUrl!.trim()
+      : 'https://api.dicebear.com/7.x/bottts/png?seed=${Uri.encodeComponent(authorName.isNotEmpty ? authorName : "User")}';
   List<String> get tags => [community.replaceAll('c/', '')];
   DateTime get createdAt {
     try {
@@ -54,6 +78,8 @@ class ForumThread {
     String? title,
     String? authorName,
     String? authorEmail,
+    String? avatarUrl,
+    String? username,
     bool? isArtisan,
     int? upvotes,
     int? userVote,
@@ -73,6 +99,9 @@ class ForumThread {
       title: title ?? this.title,
       authorName: authorName ?? this.authorName,
       authorEmail: authorEmail ?? this.authorEmail,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      username: username ?? this.username,
+      authorRoleAtCreation: authorRoleAtCreation,
       isArtisan: isArtisan ?? this.isArtisan,
       upvotes: upvotes ?? this.upvotes,
       userVote: userVote ?? this.userVote,
@@ -95,6 +124,9 @@ class ForumThread {
       'title': title,
       'authorName': authorName,
       'authorEmail': authorEmail,
+      'avatarUrl': avatarUrl,
+      'username': username,
+      'author_role_at_creation': authorRoleAtCreation,
       'isArtisan': isArtisan,
       'upvotes': upvotes,
       'userVote': userVote,
@@ -115,6 +147,7 @@ class ForumThread {
     final String? effectiveUid = userId ?? authorUserId;
     final Map<String, dynamic> map = {
       'id': id,
+      'author_role_at_creation': authorRoleAtCreation,
       'community': community,
       'tag': tagValue,
       'title': title,
@@ -134,31 +167,49 @@ class ForumThread {
 
   factory ForumThread.fromMap(Map<String, dynamic> map) {
     final List<dynamic> msgList = map['messages'] ?? map['replies'] ?? [];
-    final String comm = map['community'] ?? (map['tag'] != null ? 'c/${map['tag']}' : 'c/TravelQnA');
+    final String comm =
+        map['community'] ??
+        (map['tag'] != null ? 'c/${map['tag']}' : 'c/TravelQnA');
     final String? contentText = (map['content'] ?? map['text']) as String?;
-    
+
     // Extract dynamic user profile if joined via users(id, full_name, username, avatar_url, role)
-    final userMap = map['users'] is Map<String, dynamic> ? map['users'] as Map<String, dynamic> : null;
-    final String resolvedAuthor = userMap?['display_name'] ??
+    final userMap = map['users'] is Map<String, dynamic>
+        ? map['users'] as Map<String, dynamic>
+        : null;
+    final String resolvedAuthor =
+        userMap?['display_name'] ??
         userMap?['full_name'] ??
         userMap?['username'] ??
         map['authorName'] ??
         map['author_name'] ??
         'Anonymous';
-    final String resolvedEmail = userMap?['email'] ?? map['authorEmail'] ?? map['author_email'] ?? '';
-    final bool resolvedIsArtisan = (userMap?['role']?.toString().toLowerCase().contains('artisan') == true) ||
+    final String resolvedEmail =
+        userMap?['email'] ?? map['authorEmail'] ?? map['author_email'] ?? '';
+    final bool resolvedIsArtisan =
+        (userMap?['role']?.toString().toLowerCase().contains('artisan') ==
+            true) ||
         (map['isArtisan'] ?? map['is_artisan'] ?? false);
 
-    final List<ThreadReply> parsedReplies = msgList.map((r) => ThreadReply.fromMap(Map<String, dynamic>.from(r))).toList();
-    if (parsedReplies.isEmpty && contentText != null && contentText.isNotEmpty && contentText != map['title']) {
+    final List<ThreadReply> parsedReplies = msgList
+        .map((r) => ThreadReply.fromMap(Map<String, dynamic>.from(r)))
+        .toList();
+    if (parsedReplies.isEmpty &&
+        contentText != null &&
+        contentText.isNotEmpty &&
+        contentText != map['title']) {
       parsedReplies.add(
         ThreadReply(
           id: '${map['id']}_content',
           sender: resolvedAuthor,
           authorEmail: resolvedEmail,
+          avatarUrl: userMap?['avatar_url'] ?? map['avatarUrl'],
           isMe: false,
+          authorRoleAtCreation:
+              (map['author_role_at_creation'] ?? map['authorRoleAtCreation'])
+                  as String?,
           isArtisan: resolvedIsArtisan,
-          timestamp: map['created_at']?.toString() ?? map['timestamp'] ?? 'Just now',
+          timestamp:
+              map['created_at']?.toString() ?? map['timestamp'] ?? 'Just now',
           text: contentText,
         ),
       );
@@ -171,11 +222,23 @@ class ForumThread {
       title: map['title'] ?? '',
       authorName: resolvedAuthor,
       authorEmail: resolvedEmail,
+      username: userMap?['username'] ?? map['username'],
+      avatarUrl: userMap?['avatar_url'] ?? map['avatarUrl'],
+      authorRoleAtCreation:
+          (map['author_role_at_creation'] ?? map['authorRoleAtCreation'])
+              as String?,
       isArtisan: resolvedIsArtisan,
       upvotes: (map['upvotes'] as num?)?.toInt() ?? 0,
-      userVote: (map['userVote'] as num?)?.toInt() ?? (map['user_vote'] as num?)?.toInt() ?? 0,
-      replyCount: (map['repliesCount'] as num?)?.toInt() ?? (map['replies_count'] as num?)?.toInt() ?? parsedReplies.length,
-      timestamp: map['created_at']?.toString() ?? map['timestamp'] ?? 'Just now',
+      userVote:
+          (map['userVote'] as num?)?.toInt() ??
+          (map['user_vote'] as num?)?.toInt() ??
+          0,
+      replyCount:
+          (map['repliesCount'] as num?)?.toInt() ??
+          (map['replies_count'] as num?)?.toInt() ??
+          parsedReplies.length,
+      timestamp:
+          map['created_at']?.toString() ?? map['timestamp'] ?? 'Just now',
       isSolved: map['isSolved'] ?? map['is_solved'] ?? false,
       isEdited: map['isEdited'] ?? map['is_edited'] ?? false,
       isReported: map['isReported'] ?? map['is_reported'] ?? false,
@@ -188,10 +251,17 @@ class ForumThread {
 
 class ThreadReply {
   final String id;
+  final String? userId;
   final String sender;
   final String authorEmail;
+  final String? avatarUrl;
+  final String? username;
   final bool isMe;
-  final bool isArtisan;
+  final String? authorRoleAtCreation;
+  final bool _legacyIsArtisan;
+  bool get isArtisan => authorRoleAtCreation == null
+      ? _legacyIsArtisan
+      : authorRoleAtCreation == 'artisan';
   final int upvotes;
   final int userVote;
   final bool isVerifiedAnswer;
@@ -205,10 +275,14 @@ class ThreadReply {
 
   ThreadReply({
     required this.id,
+    this.userId,
     required this.sender,
     required this.authorEmail,
+    this.avatarUrl,
+    this.username,
     this.isMe = false,
-    this.isArtisan = false,
+    this.authorRoleAtCreation,
+    bool isArtisan = false,
     this.upvotes = 0,
     this.userVote = 0,
     this.isVerifiedAnswer = false,
@@ -219,11 +293,13 @@ class ThreadReply {
     this.reportReason,
     this.reportNotes,
     this.parentReplyId,
-  });
+  }) : _legacyIsArtisan = isArtisan;
 
   String get authorName => sender;
   String get content => text;
-  String get authorAvatar => 'https://api.dicebear.com/7.x/bottts/png?seed=${Uri.encodeComponent(sender.isNotEmpty ? sender : "User")}';
+  String get authorAvatar => (avatarUrl?.trim().isNotEmpty == true)
+      ? avatarUrl!.trim()
+      : 'https://api.dicebear.com/7.x/bottts/png?seed=${Uri.encodeComponent(sender.isNotEmpty ? sender : "User")}';
   DateTime get createdAt {
     try {
       return DateTime.parse(timestamp);
@@ -234,8 +310,11 @@ class ThreadReply {
 
   ThreadReply copyWith({
     String? id,
+    String? userId,
     String? sender,
     String? authorEmail,
+    String? avatarUrl,
+    String? username,
     bool? isMe,
     bool? isArtisan,
     int? upvotes,
@@ -251,9 +330,13 @@ class ThreadReply {
   }) {
     return ThreadReply(
       id: id ?? this.id,
+      userId: userId ?? this.userId,
       sender: sender ?? this.sender,
       authorEmail: authorEmail ?? this.authorEmail,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      username: username ?? this.username,
       isMe: isMe ?? this.isMe,
+      authorRoleAtCreation: authorRoleAtCreation,
       isArtisan: isArtisan ?? this.isArtisan,
       upvotes: upvotes ?? this.upvotes,
       userVote: userVote ?? this.userVote,
@@ -271,9 +354,13 @@ class ThreadReply {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'userId': userId,
       'sender': sender,
       'authorEmail': authorEmail,
+      'avatarUrl': avatarUrl,
+      'username': username,
       'isMe': isMe,
+      'author_role_at_creation': authorRoleAtCreation,
       'isArtisan': isArtisan,
       'upvotes': upvotes,
       'userVote': userVote,
@@ -291,6 +378,7 @@ class ThreadReply {
   Map<String, dynamic> toDbMap(String threadId, {String? userId}) {
     return {
       'id': id,
+      'author_role_at_creation': authorRoleAtCreation,
       'post_id': threadId,
       if (userId != null && userId.isNotEmpty) 'user_id': userId,
       'content': text,
@@ -306,29 +394,52 @@ class ThreadReply {
 
   factory ThreadReply.fromMap(Map<String, dynamic> map) {
     // Extract dynamic user profile if joined via users(id, full_name, username, avatar_url, role)
-    final userMap = map['users'] is Map<String, dynamic> ? map['users'] as Map<String, dynamic> : null;
-    final String senderName = userMap?['display_name'] ??
+    final userMap = map['users'] is Map<String, dynamic>
+        ? map['users'] as Map<String, dynamic>
+        : null;
+    final String senderName =
+        userMap?['display_name'] ??
         userMap?['full_name'] ??
         userMap?['username'] ??
         map['sender'] ??
         map['authorName'] ??
         map['author_name'] ??
         'Anonymous';
-    final String userEmail = userMap?['email'] ?? map['authorEmail'] ?? map['author_email'] ?? '';
-    final bool isArtisanUser = (userMap?['role']?.toString().toLowerCase().contains('artisan') == true) ||
+    final String userEmail =
+        userMap?['email'] ?? map['authorEmail'] ?? map['author_email'] ?? '';
+    final bool isArtisanUser =
+        (userMap?['role']?.toString().toLowerCase().contains('artisan') ==
+            true) ||
         (map['isArtisan'] ?? map['is_artisan'] ?? false);
 
     return ThreadReply(
       id: map['id']?.toString() ?? '',
+      userId:
+          map['userId']?.toString() ??
+          map['user_id']?.toString() ??
+          map['author_id']?.toString(),
       sender: senderName,
       authorEmail: userEmail,
+      username: userMap?['username'] ?? map['username'],
+      avatarUrl: userMap?['avatar_url'] ?? map['avatarUrl'],
       isMe: map['isMe'] ?? map['is_me'] ?? false,
+      authorRoleAtCreation:
+          (map['author_role_at_creation'] ?? map['authorRoleAtCreation'])
+              as String?,
       isArtisan: isArtisanUser,
       upvotes: (map['upvotes'] as num?)?.toInt() ?? 0,
-      userVote: (map['userVote'] as num?)?.toInt() ?? (map['user_vote'] as num?)?.toInt() ?? 0,
-      isVerifiedAnswer: map['isVerifiedAnswer'] ?? map['is_verified_answer'] ?? false,
+      userVote:
+          (map['userVote'] as num?)?.toInt() ??
+          (map['user_vote'] as num?)?.toInt() ??
+          0,
+      isVerifiedAnswer:
+          map['isVerifiedAnswer'] ?? map['is_verified_answer'] ?? false,
       isEdited: map['isEdited'] ?? map['is_edited'] ?? false,
-      timestamp: map['created_at']?.toString() ?? map['time'] ?? map['timestamp'] ?? 'Just now',
+      timestamp:
+          map['created_at']?.toString() ??
+          map['time'] ??
+          map['timestamp'] ??
+          'Just now',
       text: map['content'] ?? map['text'] ?? '',
       isReported: map['isReported'] ?? map['is_reported'] ?? false,
       reportReason: map['reportReason'] ?? map['report_reason'],
