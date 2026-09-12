@@ -6,5 +6,6 @@ linux/
 macos/
 windows/
 test/
+flutter/
 build/
 !build/web

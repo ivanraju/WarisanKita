@@ -5,13 +5,14 @@ echo "================================================="
 echo "🚀 Starting Flutter Web Build on Vercel"
 echo "================================================="
 
-# Clone Flutter stable SDK if not cached
-if [ ! -d "flutter" ]; then
-  echo "📥 Cloning Flutter SDK (stable branch)..."
-  git clone https://github.com/flutter/flutter.git -b stable --depth 1 flutter
+# Clone Flutter stable SDK into /tmp outside project workspace
+FLUTTER_HOME="/tmp/flutter"
+if [ ! -d "$FLUTTER_HOME" ]; then
+  echo "📥 Cloning Flutter SDK (stable branch) to /tmp..."
+  git clone https://github.com/flutter/flutter.git -b stable --depth 1 "$FLUTTER_HOME"
 fi
 
-export PATH="$PATH:$PWD/flutter/bin"
+export PATH="$PATH:$FLUTTER_HOME/bin"
 
 echo "🔧 Checking Flutter Installation:"
 flutter --version
