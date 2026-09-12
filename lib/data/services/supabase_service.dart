@@ -1249,7 +1249,7 @@ class SupabaseService {
       });
     }
 
-    final certDocType = isVillage ? 'VILLAGE_HEAD_ENDORSEMENT' : 'SSM_BUSINESS_CERT';
+    final certDocType = isVillage ? 'CRAFTING_PHOTO' : 'SSM_BUSINESS_CERT';
     replaceLocalDocument(certDocType, ssmFile);
     replaceLocalDocument('KRAFTANGAN_MASTER_CERT', certFile);
     if (photos != null) {
@@ -1498,7 +1498,7 @@ class SupabaseService {
               if (ssmUpload != null) {
                 docsToInsert.add({
                   'artisan_id': artisanId,
-                  'doc_type': isVillage ? 'VILLAGE_HEAD_ENDORSEMENT' : 'SSM_BUSINESS_CERT',
+                  'doc_type': isVillage ? 'CRAFTING_PHOTO' : 'SSM_BUSINESS_CERT',
                   'file_url': ssmUpload['url'],
                   'file_name': ssmUpload['name'],
                 });

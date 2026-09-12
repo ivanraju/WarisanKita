@@ -287,7 +287,7 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
                       widget.artisan.ssmNumber?.isNotEmpty == true
                           ? widget.artisan.ssmNumber!
                           : (widget.artisan.isVillageWorkshop
-                              ? 'Exempted (Village Crafter)'
+                              ? 'Exempted (Village Crafter - Crafting Photo Only)'
                               : 'Pending SSM Verification'),
                     ),
                     _buildDetailRow(Icons.location_on_outlined, 'State & Location', widget.artisan.state),
@@ -314,19 +314,20 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
                       style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF334155)),
                     ),
                     _buildAdminDocChip(
-                      widget.artisan.isVillageWorkshop ? Icons.verified_user_rounded : Icons.article_rounded,
+                      widget.artisan.isVillageWorkshop ? Icons.photo_camera_rounded : Icons.article_rounded,
                       widget.artisan.ssmFileName,
                       url: widget.artisan.ssmFileUrl,
                       missingLabel: widget.artisan.isVillageWorkshop
-                          ? '⚠️ Village Head / Tok Batin Endorsement Not Attached'
+                          ? '⚠️ Crafting Photo Evidence Not Attached'
                           : '⚠️ SSM Registration Certificate Not Attached',
                     ),
-                    _buildAdminDocChip(
-                      Icons.workspace_premium_rounded,
-                      widget.artisan.certFileName,
-                      url: widget.artisan.certFileUrl,
-                      missingLabel: '⚠️ Kraftangan Master Accreditation Cert Not Attached',
-                    ),
+                    if (!widget.artisan.isVillageWorkshop || widget.artisan.certFileName != null)
+                      _buildAdminDocChip(
+                        Icons.workspace_premium_rounded,
+                        widget.artisan.certFileName,
+                        url: widget.artisan.certFileUrl,
+                        missingLabel: '⚠️ Kraftangan Master Accreditation Cert Not Attached',
+                      ),
                     _buildAdminDocChip(
                       Icons.photo_library_rounded,
                       widget.artisan.photos.isNotEmpty

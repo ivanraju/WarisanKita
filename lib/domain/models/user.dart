@@ -154,7 +154,9 @@ class UserModel {
     if (artisanStatus?.toUpperCase() == 'CLOSED') return false;
     if (artisanStatus?.toUpperCase() == 'PENDING_APPROVAL' ||
         artisanStatus?.toUpperCase() == 'PENDING' ||
-        artisanStatus?.toUpperCase() == 'REJECTED') return false;
+        artisanStatus?.toUpperCase() == 'REJECTED') {
+      return false;
+    }
     if (role == 'Tourist') return false;
     return (role == 'Artisan' ||
         role == 'Master Artisan' ||
@@ -192,6 +194,8 @@ class UserModel {
       if (type == 'SSM_BUSINESS_CERT' ||
           type == 'SSM_CERT' ||
           type == 'SSM' ||
+          type == 'CRAFTING_PHOTO' ||
+          type == 'VILLAGE_CRAFTING_PHOTO' ||
           type == 'VILLAGE_HEAD_ENDORSEMENT' ||
           type == 'ENDORSEMENT_LETTER' ||
           type == 'TOK_BATIN_LETTER') {
@@ -208,6 +212,8 @@ class UserModel {
       if (type == 'SSM_BUSINESS_CERT' ||
           type == 'SSM_CERT' ||
           type == 'SSM' ||
+          type == 'CRAFTING_PHOTO' ||
+          type == 'VILLAGE_CRAFTING_PHOTO' ||
           type == 'VILLAGE_HEAD_ENDORSEMENT' ||
           type == 'ENDORSEMENT_LETTER' ||
           type == 'TOK_BATIN_LETTER') {

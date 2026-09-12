@@ -8,7 +8,7 @@ import 'package:warisan_kita/domain/validators/ssm_validator.dart';
 void main() {
   group('UserModel Premise Type Tests', () {
     test('Defaults to Commercial Studio when premiseType is null or not provided', () {
-      final user = UserModel(
+      final user = const UserModel(
         id: 'u-1',
         email: 'artisan@test.com',
         username: 'artisan_test',
@@ -22,7 +22,7 @@ void main() {
     });
 
     test('Identifies Home / Village Workshop correctly', () {
-      final user = UserModel(
+      final user = const UserModel(
         id: 'u-2',
         email: 'crafter@village.com',
         username: 'village_crafter',
@@ -36,7 +36,7 @@ void main() {
     });
 
     test('Serializes and deserializes premise_type in toMap and fromMap', () {
-      final user = UserModel(
+      final user = const UserModel(
         id: 'u-3',
         email: 'tokbatin@craft.com',
         username: 'tokbatin_artisan',
@@ -55,7 +55,7 @@ void main() {
     });
 
     test('Recognizes VILLAGE_HEAD_ENDORSEMENT as endorsement document in ssmFileName and ssmFileUrl', () {
-      final user = UserModel(
+      final user = const UserModel(
         id: 'u-4',
         email: 'crafter@village.com',
         username: 'crafter_4',
@@ -77,6 +77,26 @@ void main() {
 
       expect(user.ssmFileName, equals('tok_batin_letter.pdf'));
       expect(user.ssmFileUrl, equals('https://supabase.co/storage/tok_batin_letter.pdf'));
+    });
+
+    test('Recognizes CRAFTING_PHOTO as primary proof document in ssmFileName and ssmFileUrl', () {
+      final user = const UserModel(
+        id: 'u-5',
+        email: 'photo@village.com',
+        username: 'crafter_5',
+        role: 'Artisan',
+        premiseType: 'Home / Village Workshop (Bengkel Kediaman / Desa)',
+        artisanDocuments: [
+          {
+            'doc_type': 'CRAFTING_PHOTO',
+            'file_name': 'weaving_process.jpg',
+            'file_url': 'https://supabase.co/storage/weaving_process.jpg',
+          },
+        ],
+      );
+
+      expect(user.ssmFileName, equals('weaving_process.jpg'));
+      expect(user.ssmFileUrl, equals('https://supabase.co/storage/weaving_process.jpg'));
     });
   });
 

@@ -340,7 +340,9 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
       if (file != null) {
         final error = await DocumentValidator.validateDocument(
           file,
-          documentTitle: 'SSM Business Registration Document',
+          documentTitle: _isVillageWorkshop
+              ? 'Crafting Photo Evidence'
+              : 'SSM Business Registration Document',
         );
         if (error != null) {
           if (!mounted) return;
@@ -365,11 +367,15 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
         });
         if (mounted) {
           final docLabel = _isVillageWorkshop
-              ? 'Village Endorsement / Tok Batin Letter attached'
+              ? 'Crafting photo attached'
               : 'SSM Document validated & attached';
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('📄 $docLabel: ${_ssmFile!.name}'),
+              content: Text(
+                _isVillageWorkshop
+                    ? '📸 $docLabel: ${_ssmFile!.name}'
+                    : '📄 $docLabel: ${_ssmFile!.name}',
+              ),
               backgroundColor: const Color(0xFF004D40),
               behavior: SnackBarBehavior.floating,
             ),
@@ -509,7 +515,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
 
     // Enforce mandatory authentic document validation
     final ssmDocTitle = _isVillageWorkshop
-        ? 'Village Head Endorsement / Tok Batin Letter or Crafting Photo'
+        ? 'Crafting Photo Evidence'
         : 'SSM Business Registration Document';
     final ssmError = await DocumentValidator.validateDocument(
       _ssmFile,
@@ -529,10 +535,11 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
       return;
     }
 
+    // Kraftangan Certificate: Mandatory for commercial studio, optional for village workshop
     final certError = await DocumentValidator.validateDocument(
       _kraftanganFile,
       documentTitle: 'Kraftangan Master Accreditation Certificate',
-      isMandatory: true,
+      isMandatory: !_isVillageWorkshop,
     );
     if (!mounted) return;
     if (certError != null) {
@@ -802,7 +809,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                             color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
                           ),
                           helperText: _isVillageWorkshop
-                              ? 'Village crafters: SSM is optional. Endorsement letter from Tok Batin/Ketua Kampung accepted.'
+                              ? 'Village crafters: SSM & certificates are exempted. You only need to show a crafting photo!'
                               : 'Commercial studios: SSM business registration is mandatory.',
                           helperMaxLines: 2,
                           helperStyle: GoogleFonts.plusJakartaSans(
@@ -1078,7 +1085,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                                     )
                                   : null),
                           helperText: _ssmController.text.trim().isEmpty && _isVillageWorkshop
-                              ? 'Optional: Village crafters can proceed without an SSM using a Tok Batin or Village Head letter.'
+                              ? 'Optional: Village crafters do not need SSM — only a crafting photo is required.'
                               : (_isSsmAvailable == true
                                   ? _ssmStatusMessage
                                   : 'Format: 12-digit SSM (202601004821), ROB (123456-A), or Kraftangan (KT/2026/0491)'),
@@ -1442,7 +1449,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                       const SizedBox(height: 4),
                       Text(
                         _isVillageWorkshop
-                            ? 'Upload an endorsement letter from your Village Head (Ketua Kampung / Tok Batin) or photo evidence of your craftwork, along with your Kraftangan accreditation.'
+                            ? 'Village and home craft workshops only need to upload a photo of your handmade craftwork or crafting process to qualify for verified artisan status.'
                             : 'Both official SSM business registration and your Kraftangan Malaysia accreditation certificate are required for verified Master Artisan status.',
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 12,
@@ -1453,14 +1460,14 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
 
                       // Document Pickers
                       _buildUploadTile(
-                        icon: _isVillageWorkshop ? Icons.verified_user_outlined : Icons.description_outlined,
+                        icon: _isVillageWorkshop ? Icons.photo_camera_outlined : Icons.description_outlined,
                         title: _isVillageWorkshop
-                            ? '1. Village Head Endorsement / Tok Batin Letter or Crafting Photo *'
+                            ? '1. Crafting Photo Evidence *'
                             : '1. SSM Business Registration PDF / Image *',
                         subtitle: _ssmFile != null
                             ? 'Attached: ${_ssmFile!.name} ($_ssmFileSizeLabel)'
                             : _isVillageWorkshop
-                                ? 'Upload endorsement letter or photo evidence (10 KB – 10 MB)'
+                                ? 'Upload a clear photo of your craftwork or crafting process (JPG/PNG, up to 10 MB)'
                                 : 'Upload official SSM business certificate (10 KB – 10 MB)',
                         isAttached: _ssmFile != null,
                         onTap: _pickSsmDocument,
@@ -1470,10 +1477,14 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
 
                       _buildUploadTile(
                         icon: Icons.workspace_premium_outlined,
-                        title: '2. Kraftangan Master Certificate *',
+                        title: _isVillageWorkshop
+                            ? '2. Kraftangan Certificate (Optional for Village Crafters)'
+                            : '2. Kraftangan Master Certificate *',
                         subtitle: _kraftanganFile != null
                             ? 'Attached: ${_kraftanganFile!.name} ($_kraftanganFileSizeLabel)'
-                            : 'Upload accreditation certificate from Kraftangan Malaysia',
+                            : _isVillageWorkshop
+                                ? 'Optional for village workshops — upload if available'
+                                : 'Upload accreditation certificate from Kraftangan Malaysia',
                         isAttached: _kraftanganFile != null,
                         onTap: _pickKraftanganCertificate,
                       ),
