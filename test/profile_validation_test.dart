@@ -17,6 +17,7 @@ import 'package:warisan_kita/domain/models/user.dart';
 import 'package:warisan_kita/domain/validators/profile_validator.dart';
 import 'package:warisan_kita/ui/admin_web/widgets/artisan_review_dialog.dart';
 import 'package:warisan_kita/ui/artisan/profile_builder_tab.dart';
+import 'package:warisan_kita/ui/tourist/apply_artisan_screen.dart';
 import 'package:cross_file/cross_file.dart';
 import 'package:warisan_kita/ui/core/edit_profile_screen.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
@@ -2006,6 +2007,69 @@ void main() {
         expect(reappliedUser.isApprovedArtisan, isFalse);
         expect(reappliedUser.isPendingArtisan, isTrue);
         expect(reappliedUser.isRejectedArtisan, isFalse);
+      });
+
+      testWidgets('ApplyArtisanScreen renders without overflow on 360px and 320px mobile viewports', (tester) async {
+        await HttpOverrides.runZoned(() async {
+          for (final width in [360.0, 320.0]) {
+            tester.view.physicalSize = Size(width, 800);
+            tester.view.devicePixelRatio = 1.0;
+
+            final service = SupabaseService();
+            final userRepo = UserRepository(service: service);
+            final authVM = AuthViewModel(repository: userRepo);
+            final modVM = ModerationViewModel(repository: userRepo);
+
+            authVM.setCurrentUserForTesting(
+              const UserModel(
+                id: 'tourist_applicant_1',
+                email: 'tourist@warisankita.my',
+                displayName: 'Ali Tourist',
+                role: 'Tourist',
+              ),
+            );
+
+            await tester.pumpWidget(
+              MultiProvider(
+                providers: [
+                  ChangeNotifierProvider.value(value: authVM),
+                  ChangeNotifierProvider.value(value: modVM),
+                ],
+                child: const MaterialApp(
+                  home: ApplyArtisanScreen(),
+                ),
+              ),
+            );
+
+            await tester.pump();
+            await tester.pump(const Duration(milliseconds: 300));
+
+            // Verify top elements rendered
+            expect(find.text('Apply for Master Artisan'), findsOneWidget);
+
+            // Scroll down to the Proof of Authenticity & Credentials section
+            await tester.scrollUntilVisible(
+              find.text('Proof of Authenticity & Credentials'),
+              300.0,
+              scrollable: find.byType(Scrollable).first,
+            );
+            await tester.pump();
+
+            expect(find.text('Proof of Authenticity & Credentials'), findsOneWidget);
+            expect(find.text('MANDATORY'), findsOneWidget);
+
+            // Scroll down to the submit button
+            await tester.scrollUntilVisible(
+              find.text('Submit Artisan Application'),
+              300.0,
+              scrollable: find.byType(Scrollable).first,
+            );
+            await tester.pump();
+
+            expect(find.text('Submit Artisan Application'), findsOneWidget);
+          }
+          tester.view.resetPhysicalSize();
+        }, createHttpClient: (context) => _MockHttpClient());
       });
     });
 }

@@ -663,10 +663,13 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
       ),
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          padding: EdgeInsets.symmetric(
+            horizontal: isDesktop ? 24 : 16,
+            vertical: 20,
+          ),
           child: Container(
             width: isDesktop ? 600 : double.infinity,
-            padding: const EdgeInsets.all(28.0),
+            padding: EdgeInsets.all(isDesktop ? 28.0 : 20.0),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(24),
@@ -763,6 +766,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
 
                   // Craft Category Dropdown
                   DropdownButtonFormField<String>(
+                    isExpanded: true,
                     initialValue: _selectedCraftCategory,
                     decoration: InputDecoration(
                       labelText: 'Heritage Craft Category *',
@@ -783,6 +787,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                             value: c,
                             child: Text(
                               c,
+                              overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.plusJakartaSans(fontSize: 13),
                             ),
                           ),
@@ -796,6 +801,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
 
                   // State / Location Dropdown
                   DropdownButtonFormField<String>(
+                    isExpanded: true,
                     initialValue: _selectedState,
                     decoration: InputDecoration(
                       labelText: 'Workshop State / Region *',
@@ -1067,7 +1073,10 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
 
                   const SizedBox(height: 24),
 
-                  Row(
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 6,
                     children: [
                       Text(
                         'Proof of Authenticity & Credentials',
@@ -1076,7 +1085,6 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                           color: const Color(0xFF004D40),
                         ),
                       ),
-                      const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 8,
@@ -1433,7 +1441,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                 children: [
                   Text(
                     title,
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.plusJakartaSans(
                       fontWeight: FontWeight.bold,
