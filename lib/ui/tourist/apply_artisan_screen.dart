@@ -89,7 +89,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
 
     setState(() {
       _isCheckingSsm = true;
-      _ssmStatusMessage = 'Verifying SSM availability...';
+      _ssmStatusMessage = 'Validating SSM availability...';
     });
 
     _ssmDebounce = Timer(const Duration(milliseconds: 350), () async {
@@ -100,7 +100,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
         _isCheckingSsm = false;
         _isSsmAvailable = isAvailable;
         _ssmStatusMessage = isAvailable
-            ? '✓ Verified & Available SSM Registration ID'
+            ? '✓ Validated & Available SSM Registration ID'
             : '⚠️ This SSM is already registered by another artisan studio';
       });
     });
@@ -354,7 +354,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('📄 SSM Document verified & attached: ${_ssmFile!.name}'),
+              content: Text('📄 SSM Document validated & attached: ${_ssmFile!.name}'),
               backgroundColor: const Color(0xFF004D40),
               behavior: SnackBarBehavior.floating,
             ),
@@ -401,7 +401,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                '🏆 Kraftangan Certificate verified & attached: ${_kraftanganFile!.name}',
+                '🏆 Kraftangan Certificate validated & attached: ${_kraftanganFile!.name}',
               ),
               backgroundColor: const Color(0xFF004D40),
               behavior: SnackBarBehavior.floating,

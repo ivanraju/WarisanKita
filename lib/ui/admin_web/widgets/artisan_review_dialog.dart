@@ -28,6 +28,28 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
     super.dispose();
   }
 
+  String _formatSubmissionDate(String raw) {
+    if (raw.trim().isEmpty) return 'Recent';
+    try {
+      final parsed = DateTime.tryParse(raw);
+      if (parsed != null) {
+        final local = parsed.toLocal();
+        const months = [
+          'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+        ];
+        final hour = local.hour > 12 ? local.hour - 12 : (local.hour == 0 ? 12 : local.hour);
+        final ampm = local.hour >= 12 ? 'PM' : 'AM';
+        final min = local.minute.toString().padLeft(2, '0');
+        return '${local.day} ${months[local.month - 1]} ${local.year}, $hour:$min $ampm';
+      }
+    } catch (_) {}
+    if (raw.length > 10 && raw.contains('T')) {
+      return raw.split('T').first;
+    }
+    return raw;
+  }
+
   @override
   Widget build(BuildContext context) {
     final isRelocation = widget.artisan.isRelocationRequest;
@@ -75,8 +97,8 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
                               ),
                               Text(
                                 isRelocation
-                                    ? 'Requested on ${widget.artisan.dateSubmitted} • ${widget.artisan.name}'
-                                    : 'Submitted on ${widget.artisan.dateSubmitted}',
+                                    ? 'Requested on ${_formatSubmissionDate(widget.artisan.dateSubmitted)} • ${widget.artisan.name}'
+                                    : 'Submitted on ${_formatSubmissionDate(widget.artisan.dateSubmitted)}',
                                 softWrap: true,
                                 style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.grey[500]),
                               ),
@@ -212,7 +234,7 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
                       const SizedBox(height: 12),
                     ],
 
-                    _buildDetailRow(Icons.verified_user_outlined, 'SSM License / Reg No', widget.artisan.ssmNumber ?? '202601004821 (SSM Verified)'),
+                    _buildDetailRow(Icons.verified_user_outlined, 'SSM License / Reg No', widget.artisan.ssmNumber ?? '202601004821 (SSM Validated)'),
                     _buildDetailRow(Icons.location_on_outlined, 'State & Location', widget.artisan.state),
                     _buildDetailRow(Icons.email_outlined, 'Email Address', widget.artisan.email),
                     _buildDetailRow(Icons.phone_outlined, 'Contact Phone', widget.artisan.phone),
@@ -404,94 +426,170 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
             ],
           ),
         ),
-        const SizedBox(height: 20),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
+        const SizedBox(height: 16),
+        // Artisan Profile & Contact Strip
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Image.network(
+                  widget.artisan.imageUrl,
+                  width: 44,
+                  height: 44,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    width: 44,
+                    height: 44,
+                    color: const Color(0xFFE2E8F0),
+                    child: const Icon(Icons.person, color: Color(0xFF64748B)),
+                  ),
                 ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.verified_rounded, color: Color(0xFF10B981), size: 18),
-                        const SizedBox(width: 6),
-                        Expanded(
+                        Text(
+                          widget.artisan.name,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF0F172A),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEFF6FF),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
                           child: Text(
-                            'Current Accredited Premise',
+                            widget.artisan.craftCategory,
                             style: GoogleFonts.plusJakartaSans(
-                              fontSize: 13,
+                              fontSize: 10,
                               fontWeight: FontWeight.bold,
-                              color: const Color(0xFF334155),
+                              color: const Color(0xFF1D4ED8),
                             ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
-                    _buildDetailRow(Icons.place_outlined, 'State', widget.artisan.state),
-                    _buildDetailRow(
-                      Icons.home_work_outlined,
-                      'Address',
-                      widget.artisan.currentAddress ?? 'Accredited Studio Location',
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFFBEB),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFF59E0B)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+                    const SizedBox(height: 4),
+                    Wrap(
+                      spacing: 14,
+                      runSpacing: 4,
                       children: [
-                        const Icon(Icons.new_releases_rounded, color: Color(0xFFD97706), size: 18),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            'Proposed New Premise',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF92400E),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.email_outlined, size: 13, color: Color(0xFF94A3B8)),
+                            const SizedBox(width: 4),
+                            Text(
+                              widget.artisan.email,
+                              style: GoogleFonts.plusJakartaSans(fontSize: 11, color: const Color(0xFF64748B)),
                             ),
-                          ),
+                          ],
                         ),
+                        if (widget.artisan.phone.isNotEmpty)
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.phone_outlined, size: 13, color: Color(0xFF94A3B8)),
+                              const SizedBox(width: 4),
+                              Text(
+                                widget.artisan.phone,
+                                style: GoogleFonts.plusJakartaSans(fontSize: 11, color: const Color(0xFF64748B)),
+                              ),
+                            ],
+                          ),
+                        if (widget.artisan.experience.isNotEmpty)
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.workspace_premium_outlined, size: 13, color: Color(0xFF94A3B8)),
+                              const SizedBox(width: 4),
+                              Text(
+                                widget.artisan.experience,
+                                style: GoogleFonts.plusJakartaSans(fontSize: 11, color: const Color(0xFF64748B)),
+                              ),
+                            ],
+                          ),
                       ],
                     ),
-                    const SizedBox(height: 12),
-                    _buildDetailRow(Icons.place_outlined, 'State', widget.artisan.proposedState ?? widget.artisan.state),
-                    _buildDetailRow(
-                      Icons.location_on_outlined,
-                      'New Address',
-                      widget.artisan.proposedAddress ?? 'Not Specified',
-                    ),
-                    if (widget.artisan.proposedLatitude != null && widget.artisan.proposedLongitude != null)
-                      _buildDetailRow(
-                        Icons.gps_fixed_rounded,
-                        'Coordinates',
-                        '${widget.artisan.proposedLatitude!.toStringAsFixed(5)}, ${widget.artisan.proposedLongitude!.toStringAsFixed(5)}',
-                      ),
                   ],
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: _buildPremiseCard(
+                  cardTitle: 'Current Accredited Premise',
+                  badgeText: 'Active Premise',
+                  badgeBgColor: const Color(0xFFECFDF5),
+                  badgeTextColor: const Color(0xFF047857),
+                  cardBorderColor: const Color(0xFFCBD5E1),
+                  cardBgColor: const Color(0xFFF8FAFC),
+                  statusIcon: Icons.verified_rounded,
+                  statusColor: const Color(0xFF10B981),
+                  state: widget.artisan.state,
+                  address: widget.artisan.currentAddress ?? 'Accredited Studio Location',
+                  isProposed: false,
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFFCBD5E1)),
+                    ),
+                    child: const Icon(
+                      Icons.arrow_forward_rounded,
+                      size: 16,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: _buildPremiseCard(
+                  cardTitle: 'Proposed New Premise',
+                  badgeText: 'Pending Approval',
+                  badgeBgColor: const Color(0xFFFEF3C7),
+                  badgeTextColor: const Color(0xFFB45309),
+                  cardBorderColor: const Color(0xFFF59E0B),
+                  cardBgColor: const Color(0xFFFFFBEB),
+                  statusIcon: Icons.new_releases_rounded,
+                  statusColor: const Color(0xFFD97706),
+                  state: widget.artisan.proposedState ?? widget.artisan.state,
+                  address: widget.artisan.proposedAddress ?? 'Not Specified',
+                  latitude: widget.artisan.proposedLatitude,
+                  longitude: widget.artisan.proposedLongitude,
+                  isProposed: true,
+                ),
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 20),
         Container(
@@ -505,22 +603,30 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Relocation Justification & Reason',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF334155),
-                ),
+              Row(
+                children: [
+                  const Icon(Icons.assignment_outlined, size: 16, color: Color(0xFF64748B)),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Relocation Justification & Reason',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF334155),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 8),
               Text(
-                widget.artisan.relocationReason ?? 'No reason provided by artisan.',
+                widget.artisan.relocationReason?.trim().isNotEmpty == true
+                    ? widget.artisan.relocationReason!
+                    : 'No relocation justification provided by artisan.',
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 12,
                   fontStyle: FontStyle.italic,
                   color: const Color(0xFF475569),
-                  height: 1.4,
+                  height: 1.5,
                 ),
               ),
             ],
@@ -530,12 +636,228 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
     );
   }
 
+  Widget _buildPremiseCard({
+    required String cardTitle,
+    required String badgeText,
+    required Color badgeBgColor,
+    required Color badgeTextColor,
+    required Color cardBorderColor,
+    required Color cardBgColor,
+    required IconData statusIcon,
+    required Color statusColor,
+    required String state,
+    required String address,
+    double? latitude,
+    double? longitude,
+    required bool isProposed,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cardBgColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: cardBorderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(statusIcon, color: statusColor, size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  cardTitle,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF1E293B),
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: badgeBgColor,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  badgeText,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: badgeTextColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Text(
+                'STATE / REGION',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                  color: const Color(0xFF64748B),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: isProposed ? const Color(0xFFFDE68A) : const Color(0xFFCBD5E1)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.map_outlined,
+                      size: 12,
+                      color: isProposed ? const Color(0xFFB45309) : const Color(0xFF475569),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      state,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: isProposed ? const Color(0xFF92400E) : const Color(0xFF1E293B),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'PREMISE ADDRESS',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.5,
+              color: const Color(0xFF64748B),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Container(
+            width: double.infinity,
+            constraints: const BoxConstraints(minHeight: 68),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: isProposed ? const Color(0xFFFDE68A) : const Color(0xFFE2E8F0)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  isProposed ? Icons.location_on_outlined : Icons.home_work_outlined,
+                  size: 18,
+                  color: isProposed ? const Color(0xFFD97706) : const Color(0xFF10B981),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    address.trim().isNotEmpty ? address : 'Accredited Studio Location',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF1E293B),
+                      height: 1.45,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          if (latitude != null && longitude != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF3C7),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFFDE68A)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.gps_fixed_rounded, size: 14, color: Color(0xFFB45309)),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text.rich(
+                      TextSpan(
+                        children: [
+                          TextSpan(
+                            text: 'GPS: ',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF92400E),
+                            ),
+                          ),
+                          TextSpan(
+                            text: '${latitude.toStringAsFixed(5)}, ${longitude.toStringAsFixed(5)}',
+                            style: GoogleFonts.jetBrainsMono(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF78350F),
+                            ),
+                          ),
+                        ],
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFCBD5E1)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.pin_drop_outlined, size: 14, color: Color(0xFF64748B)),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Linked to accredited map pin',
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        color: const Color(0xFF64748B),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildDetailRow(IconData icon, String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 16, color: const Color(0xFF64748B)),
+          Padding(
+            padding: const EdgeInsets.only(top: 1.0),
+            child: Icon(icon, size: 16, color: const Color(0xFF64748B)),
+          ),
           const SizedBox(width: 8),
           Text(
             '$label: ',
