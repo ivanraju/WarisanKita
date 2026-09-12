@@ -32,6 +32,17 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
   final _phoneController = TextEditingController();
   final _locationSearchController = TextEditingController();
 
+  static const String premiseCommercial = 'Commercial Studio (Premis Perniagaan)';
+  static const String premiseVillage = 'Home / Village Workshop (Bengkel Kediaman / Desa)';
+
+  String _selectedPremiseType = premiseCommercial;
+  bool get _isVillageWorkshop => _selectedPremiseType == premiseVillage;
+
+  final List<String> _premiseTypes = const [
+    premiseCommercial,
+    premiseVillage,
+  ];
+
   String _selectedCraftCategory = 'Woodwork';
   String _selectedState = 'Melaka';
   bool _isSubmitting = false;
@@ -353,9 +364,12 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
           _documentError = null;
         });
         if (mounted) {
+          final docLabel = _isVillageWorkshop
+              ? 'Village Endorsement / Tok Batin Letter attached'
+              : 'SSM Document validated & attached';
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('📄 SSM Document validated & attached: ${_ssmFile!.name}'),
+              content: Text('📄 $docLabel: ${_ssmFile!.name}'),
               backgroundColor: const Color(0xFF004D40),
               behavior: SnackBarBehavior.floating,
             ),
@@ -454,9 +468,18 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
         );
         return;
       }
+    } else if (!_isVillageWorkshop) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please provide your SSM or Kraftangan registration number.'),
+          backgroundColor: Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
     }
 
-    if (_isSsmAvailable == false) {
+    if (ssm.isNotEmpty && _isSsmAvailable == false) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -485,9 +508,12 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
     }
 
     // Enforce mandatory authentic document validation
+    final ssmDocTitle = _isVillageWorkshop
+        ? 'Village Head Endorsement / Tok Batin Letter or Crafting Photo'
+        : 'SSM Business Registration Document';
     final ssmError = await DocumentValidator.validateDocument(
       _ssmFile,
-      documentTitle: 'SSM Business Registration Document',
+      documentTitle: ssmDocTitle,
       isMandatory: true,
     );
     if (!mounted) return;
@@ -568,6 +594,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
       ssmFile: _ssmFile,
       certFile: _kraftanganFile,
       photos: _uploadedPhotos,
+      premiseType: _selectedPremiseType,
     );
 
     if (!mounted) return;
@@ -597,7 +624,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
           email: updatedUser?.email ?? '',
           experience: (experience != null && experience.isNotEmpty) ? experience : 'Craft Artisan',
           phone: phone ?? '',
-          ssmNumber: ssm,
+          ssmNumber: ssm.isNotEmpty ? ssm : (_isVillageWorkshop ? 'Village Crafter (Endorsement Letter)' : null),
           ssmFileName: _ssmFile?.name ?? updatedUser?.ssmFileName,
           ssmFileUrl: updatedUser?.ssmFileUrl,
           certFileName: _kraftanganFile?.name ?? updatedUser?.certFileName,
@@ -605,8 +632,9 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
           photos: _uploadedPhotos.map((p) => p.name).toList(),
           bio: bio.isNotEmpty
               ? bio
-              : 'Master studio application for $_selectedCraftCategory in $_selectedState.',
+              : '${_isVillageWorkshop ? 'Village craft workshop' : 'Master studio'} application for $_selectedCraftCategory in $_selectedState.',
           isUpgradeFromTourist: true,
+          premiseType: _selectedPremiseType,
         ),
       );
     } catch (_) {}
@@ -753,6 +781,84 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                           color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
                         ),
                       ),
+                      const SizedBox(height: 16),
+
+                      // Premise Type Dropdown
+                      DropdownButtonFormField<String>(
+                        isExpanded: true,
+                        initialValue: _selectedPremiseType,
+                        dropdownColor: isDark ? const Color(0xFF0D2825) : Colors.white,
+                        style: GoogleFonts.plusJakartaSans(
+                          color: isDark ? Colors.white : const Color(0xFF0F172A),
+                          fontSize: 13,
+                        ),
+                        decoration: InputDecoration(
+                          labelText: 'Premise Type *',
+                          labelStyle: TextStyle(
+                            color: isDark ? Colors.white70 : const Color(0xFF475569),
+                          ),
+                          prefixIcon: Icon(
+                            _isVillageWorkshop ? Icons.holiday_village_outlined : Icons.storefront_outlined,
+                            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                          ),
+                          helperText: _isVillageWorkshop
+                              ? 'Village crafters: SSM is optional. Endorsement letter from Tok Batin/Ketua Kampung accepted.'
+                              : 'Commercial studios: SSM business registration is mandatory.',
+                          helperMaxLines: 2,
+                          helperStyle: GoogleFonts.plusJakartaSans(
+                            fontSize: 11,
+                            color: _isVillageWorkshop
+                                ? (isDark ? const Color(0xFFFFD54F) : const Color(0xFF047857))
+                                : (isDark ? Colors.white54 : Colors.grey[600]),
+                            fontWeight: _isVillageWorkshop ? FontWeight.w600 : FontWeight.normal,
+                          ),
+                          filled: true,
+                          fillColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(
+                              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                        items: _premiseTypes
+                            .map(
+                              (t) => DropdownMenuItem(
+                                value: t,
+                                child: Text(
+                                  t,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                  ),
+                                ),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (v) {
+                          if (v == null) return;
+                          setState(() {
+                            _selectedPremiseType = v;
+                            if (_isVillageWorkshop && _ssmController.text.trim().isEmpty) {
+                              _isCheckingSsm = false;
+                              _isSsmAvailable = null;
+                              _ssmStatusMessage = null;
+                            }
+                          });
+                        },
+                      ),
+
                       const SizedBox(height: 16),
 
                       // Studio Name
@@ -933,11 +1039,15 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                           fontSize: 13.5,
                         ),
                         decoration: InputDecoration(
-                          labelText: 'SSM / Kraftangan Reg. No. *',
+                          labelText: _isVillageWorkshop
+                              ? 'SSM / Kraftangan Reg. No. (Optional for Village Crafters)'
+                              : 'SSM / Kraftangan Reg. No. *',
                           labelStyle: TextStyle(
                             color: isDark ? Colors.white70 : const Color(0xFF475569),
                           ),
-                          hintText: 'e.g. 202601004821 or KT/2026/0491',
+                          hintText: _isVillageWorkshop
+                              ? 'Optional for village workshops (e.g. 202601004821 or leave empty)'
+                              : 'e.g. 202601004821 or KT/2026/0491',
                           hintStyle: TextStyle(
                             color: isDark ? Colors.white38 : Colors.grey[400],
                           ),
@@ -967,9 +1077,11 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                                           : const Color(0xFFEF4444),
                                     )
                                   : null),
-                          helperText: _isSsmAvailable == true
-                              ? _ssmStatusMessage
-                              : 'Format: 12-digit SSM (202601004821), ROB (123456-A), or Kraftangan (KT/2026/0491)',
+                          helperText: _ssmController.text.trim().isEmpty && _isVillageWorkshop
+                              ? 'Optional: Village crafters can proceed without an SSM using a Tok Batin or Village Head letter.'
+                              : (_isSsmAvailable == true
+                                  ? _ssmStatusMessage
+                                  : 'Format: 12-digit SSM (202601004821), ROB (123456-A), or Kraftangan (KT/2026/0491)'),
                           helperStyle: GoogleFonts.plusJakartaSans(
                             fontSize: 11,
                             fontWeight: _isSsmAvailable == true
@@ -999,6 +1111,10 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                           ),
                         ),
                         validator: (v) {
+                          final trimmed = (v ?? '').trim();
+                          if (_isVillageWorkshop && trimmed.isEmpty) {
+                            return null;
+                          }
                           final formatErr = SsmValidator.validate(v);
                           if (formatErr != null) return formatErr;
                           if (_isSsmAvailable == false) {
@@ -1325,7 +1441,9 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Both official SSM business registration and your Kraftangan Malaysia accreditation certificate are required for verified Master Artisan status.',
+                        _isVillageWorkshop
+                            ? 'Upload an endorsement letter from your Village Head (Ketua Kampung / Tok Batin) or photo evidence of your craftwork, along with your Kraftangan accreditation.'
+                            : 'Both official SSM business registration and your Kraftangan Malaysia accreditation certificate are required for verified Master Artisan status.',
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 12,
                           color: isDark ? Colors.white70 : const Color(0xFF64748B),
@@ -1335,11 +1453,15 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
 
                       // Document Pickers
                       _buildUploadTile(
-                        icon: Icons.description_outlined,
-                        title: '1. SSM Business Registration PDF / Image *',
+                        icon: _isVillageWorkshop ? Icons.verified_user_outlined : Icons.description_outlined,
+                        title: _isVillageWorkshop
+                            ? '1. Village Head Endorsement / Tok Batin Letter or Crafting Photo *'
+                            : '1. SSM Business Registration PDF / Image *',
                         subtitle: _ssmFile != null
                             ? 'Attached: ${_ssmFile!.name} ($_ssmFileSizeLabel)'
-                            : 'Upload official SSM business certificate (10 KB – 10 MB)',
+                            : _isVillageWorkshop
+                                ? 'Upload endorsement letter or photo evidence (10 KB – 10 MB)'
+                                : 'Upload official SSM business certificate (10 KB – 10 MB)',
                         isAttached: _ssmFile != null,
                         onTap: _pickSsmDocument,
                       ),

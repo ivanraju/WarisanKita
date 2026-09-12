@@ -1112,6 +1112,7 @@ class SupabaseService {
     PlatformFile? ssmFile,
     PlatformFile? certFile,
     List<PlatformFile>? photos,
+    String? premiseType,
   }) async {
     String cleanEmail = email.trim().toLowerCase();
     final client = _client;
@@ -1177,26 +1178,40 @@ class SupabaseService {
       _userStore[cleanEmail] = userRecord;
     }
 
+    final bool isVillage = premiseType != null &&
+        (premiseType.contains('Village') ||
+            premiseType.contains('Desa') ||
+            premiseType.contains('Home') ||
+            premiseType.contains('Kediaman'));
+
     final cleanSsm = ssmNumber.trim();
-    final ssmErr = SsmValidator.validate(cleanSsm);
-    if (ssmErr != null) {
-      throw Exception('INVALID_SSM: $ssmErr');
-    }
-    final isTaken = await isSsmRegistered(
-      cleanSsm,
-      excludeEmail: cleanEmail,
-      excludeUserId: userRecord['id'],
-    );
-    if (isTaken) {
-      throw Exception(
-        'DUPLICATE_SSM: An artisan studio is already registered with SSM number "$cleanSsm".',
+    if (cleanSsm.isNotEmpty) {
+      final ssmErr = SsmValidator.validate(cleanSsm);
+      if (ssmErr != null) {
+        throw Exception('INVALID_SSM: $ssmErr');
+      }
+      final isTaken = await isSsmRegistered(
+        cleanSsm,
+        excludeEmail: cleanEmail,
+        excludeUserId: userRecord['id'],
       );
+      if (isTaken) {
+        throw Exception(
+          'DUPLICATE_SSM: An artisan studio is already registered with SSM number "$cleanSsm".',
+        );
+      }
+    } else if (!isVillage) {
+      throw Exception('INVALID_SSM: SSM registration number is required for Commercial Studios.');
     }
 
     // Update user record with pending artisan credentials
     userRecord['studioName'] = studioName;
     userRecord['craftCategory'] = craftCategory;
-    userRecord['ssmNumber'] = ssmNumber;
+    userRecord['ssmNumber'] = cleanSsm.isNotEmpty ? cleanSsm : (isVillage ? 'VILLAGE_EXEMPT' : '');
+    if (premiseType != null) {
+      userRecord['premiseType'] = premiseType;
+      userRecord['premise_type'] = premiseType;
+    }
     if (experience != null) userRecord['experience'] = experience;
     if (phone != null && phone.trim().isNotEmpty) {
       userRecord['phone'] = phone.trim();
@@ -1234,7 +1249,8 @@ class SupabaseService {
       });
     }
 
-    replaceLocalDocument('SSM_BUSINESS_CERT', ssmFile);
+    final certDocType = isVillage ? 'VILLAGE_HEAD_ENDORSEMENT' : 'SSM_BUSINESS_CERT';
+    replaceLocalDocument(certDocType, ssmFile);
     replaceLocalDocument('KRAFTANGAN_MASTER_CERT', certFile);
     if (photos != null) {
       for (final photo in photos) {
@@ -1336,7 +1352,8 @@ class SupabaseService {
           final profileData = {
             'studio_name': studioName,
             'craft_category': craftCategory,
-            'ssm_number': ssmNumber,
+            'ssm_number': cleanSsm.isNotEmpty ? cleanSsm : (isVillage ? 'VILLAGE_EXEMPT' : ''),
+            if (premiseType != null) 'premise_type': premiseType,
             if (experience != null &&
                 experience.trim().isNotEmpty &&
                 RegExp(r'\d+').firstMatch(experience) != null)
@@ -1481,7 +1498,7 @@ class SupabaseService {
               if (ssmUpload != null) {
                 docsToInsert.add({
                   'artisan_id': artisanId,
-                  'doc_type': 'SSM_BUSINESS_CERT',
+                  'doc_type': isVillage ? 'VILLAGE_HEAD_ENDORSEMENT' : 'SSM_BUSINESS_CERT',
                   'file_url': ssmUpload['url'],
                   'file_name': ssmUpload['name'],
                 });

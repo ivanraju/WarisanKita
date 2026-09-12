@@ -118,6 +118,7 @@ class UserRepository {
     PlatformFile? ssmFile,
     PlatformFile? certFile,
     List<PlatformFile>? photos,
+    String? premiseType,
   }) {
     return _service.linkArtisanRoleToTourist(
       email: email,
@@ -135,6 +136,7 @@ class UserRepository {
       ssmFile: ssmFile,
       certFile: certFile,
       photos: photos,
+      premiseType: premiseType,
     );
   }
 

@@ -183,20 +183,62 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
                                 widget.artisan.name,
                                 style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF0F172A)),
                               ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFEFF6FF),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  widget.artisan.craftCategory,
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: const Color(0xFF1D4ED8),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 6,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEFF6FF),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      widget.artisan.craftCategory,
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: const Color(0xFF1D4ED8),
+                                      ),
+                                    ),
                                   ),
-                                ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: widget.artisan.isVillageWorkshop
+                                          ? const Color(0xFFECFDF5)
+                                          : const Color(0xFFF1F5F9),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          widget.artisan.isVillageWorkshop
+                                              ? Icons.cottage_outlined
+                                              : Icons.store_outlined,
+                                          size: 12,
+                                          color: widget.artisan.isVillageWorkshop
+                                              ? const Color(0xFF047857)
+                                              : const Color(0xFF475569),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          widget.artisan.isVillageWorkshop
+                                              ? 'Village Workshop'
+                                              : 'Commercial Studio',
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: widget.artisan.isVillageWorkshop
+                                                ? const Color(0xFF047857)
+                                                : const Color(0xFF475569),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -234,7 +276,20 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
                       const SizedBox(height: 12),
                     ],
 
-                    _buildDetailRow(Icons.verified_user_outlined, 'SSM License / Reg No', widget.artisan.ssmNumber ?? '202601004821 (SSM Validated)'),
+                    _buildDetailRow(
+                      widget.artisan.isVillageWorkshop ? Icons.cottage_outlined : Icons.store_outlined,
+                      'Premise Type',
+                      widget.artisan.premiseType ?? (widget.artisan.isVillageWorkshop ? 'Home / Village Workshop' : 'Commercial Studio'),
+                    ),
+                    _buildDetailRow(
+                      Icons.verified_user_outlined,
+                      widget.artisan.isVillageWorkshop ? 'SSM / Reg No (Optional)' : 'SSM License / Reg No',
+                      widget.artisan.ssmNumber?.isNotEmpty == true
+                          ? widget.artisan.ssmNumber!
+                          : (widget.artisan.isVillageWorkshop
+                              ? 'Exempted (Village Crafter)'
+                              : 'Pending SSM Verification'),
+                    ),
                     _buildDetailRow(Icons.location_on_outlined, 'State & Location', widget.artisan.state),
                     _buildDetailRow(Icons.email_outlined, 'Email Address', widget.artisan.email),
                     _buildDetailRow(Icons.phone_outlined, 'Contact Phone', widget.artisan.phone),
@@ -259,10 +314,12 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
                       style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF334155)),
                     ),
                     _buildAdminDocChip(
-                      Icons.article_rounded,
+                      widget.artisan.isVillageWorkshop ? Icons.verified_user_rounded : Icons.article_rounded,
                       widget.artisan.ssmFileName,
                       url: widget.artisan.ssmFileUrl,
-                      missingLabel: '⚠️ SSM Registration Certificate Not Attached',
+                      missingLabel: widget.artisan.isVillageWorkshop
+                          ? '⚠️ Village Head / Tok Batin Endorsement Not Attached'
+                          : '⚠️ SSM Registration Certificate Not Attached',
                     ),
                     _buildAdminDocChip(
                       Icons.workspace_premium_rounded,

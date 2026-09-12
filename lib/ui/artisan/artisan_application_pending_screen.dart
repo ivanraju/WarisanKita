@@ -201,8 +201,12 @@ class _ArtisanApplicationPendingScreenState
 
                 Text(
                   isRejected
-                      ? 'Your artisan application was reviewed, but unfortunately could not be approved at this time. Please ensure all uploaded documents (SSM, Kraftangan Cert) are clear, valid, and registered under your name.'
-                      : 'Your studio license documents (SSM License & Kraftangan Master Certificate) have been received. Kraftangan Malaysia Moderation Officers are reviewing your application.',
+                      ? (user?.isVillageWorkshop == true
+                          ? 'Your artisan application was reviewed, but unfortunately could not be approved at this time. Please ensure all uploaded documents (Endorsement Letter / Crafting Photo, Kraftangan Cert) are clear and valid.'
+                          : 'Your artisan application was reviewed, but unfortunately could not be approved at this time. Please ensure all uploaded documents (SSM, Kraftangan Cert) are clear, valid, and registered under your name.')
+                      : (user?.isVillageWorkshop == true
+                          ? 'Your village workshop verification documents (Village Head Endorsement & Kraftangan Certificate) have been received. Kraftangan Malaysia Moderation Officers are reviewing your application.'
+                          : 'Your studio license documents (SSM License & Kraftangan Master Certificate) have been received. Kraftangan Malaysia Moderation Officers are reviewing your application.'),
                   textAlign: TextAlign.center,
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 13,
@@ -230,7 +234,9 @@ class _ArtisanApplicationPendingScreenState
                           isDark: isDark,
                           step: '1',
                           title: 'Application & Credentials Submitted',
-                          subtitle: 'SSM & Kraftangan documents attached',
+                          subtitle: user?.isVillageWorkshop == true
+                              ? 'Endorsement & Kraftangan documents attached'
+                              : 'SSM & Kraftangan documents attached',
                           isCompleted: true,
                           isCurrent: false,
                         ),
@@ -270,13 +276,27 @@ class _ArtisanApplicationPendingScreenState
                   ),
                   child: Column(
                     children: [
+                      _buildSummaryRow(isDark, 'Premise Type:', user?.premiseTypeDisplay ?? 'Commercial Studio'),
+                      const SizedBox(height: 8),
                       _buildSummaryRow(isDark, 'Studio Name:', effectiveStudio),
                       const SizedBox(height: 8),
                       _buildSummaryRow(isDark, 'Craft Category:', effectiveCraft),
                       const SizedBox(height: 8),
-                      _buildSummaryRow(isDark, 'SSM Reg. Number:', effectiveSsm),
+                      _buildSummaryRow(
+                        isDark,
+                        user?.isVillageWorkshop == true ? 'SSM Reg. (Optional):' : 'SSM Reg. Number:',
+                        (user?.isVillageWorkshop == true && effectiveSsm == 'Under Verification')
+                            ? 'Exempted (Village Crafter)'
+                            : effectiveSsm,
+                      ),
                       const SizedBox(height: 8),
-                      _buildSummaryRow(isDark, 'Uploaded Proof:', 'SSM_Cert.pdf, Kraftangan_Cert.pdf'),
+                      _buildSummaryRow(
+                        isDark,
+                        'Uploaded Proof:',
+                        user?.isVillageWorkshop == true
+                            ? 'Village_Endorsement.pdf, Kraftangan_Cert.pdf'
+                            : 'SSM_Cert.pdf, Kraftangan_Cert.pdf',
+                      ),
                     ],
                   ),
                 ),

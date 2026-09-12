@@ -40,6 +40,7 @@ class UserModel {
   final String? rejectionReason;
   final bool isLiveOpen;
   final int? workshopCount;
+  final String? premiseType;
 
   const UserModel({
     required this.id,
@@ -78,7 +79,21 @@ class UserModel {
     this.rejectionReason,
     this.isLiveOpen = true,
     this.workshopCount,
+    this.premiseType,
   });
+
+  bool get isVillageWorkshop =>
+      premiseType != null &&
+      (premiseType!.contains('Village') ||
+          premiseType!.contains('Desa') ||
+          premiseType!.contains('Home') ||
+          premiseType!.contains('Kediaman'));
+
+  String get premiseTypeDisplay =>
+      isVillageWorkshop ? 'Home / Village Workshop' : 'Commercial Studio';
+
+  String get artisanTitle =>
+      isVillageWorkshop ? 'Heritage Village Crafter' : 'Master Artisan';
 
   bool get hasPendingRelocation =>
       pendingRelocationAddress != null && pendingRelocationAddress!.trim().isNotEmpty;
@@ -174,7 +189,12 @@ class UserModel {
   String? get ssmFileUrl {
     for (final d in artisanDocuments) {
       final type = d['doc_type']?.toString();
-      if (type == 'SSM_BUSINESS_CERT' || type == 'SSM_CERT' || type == 'SSM') {
+      if (type == 'SSM_BUSINESS_CERT' ||
+          type == 'SSM_CERT' ||
+          type == 'SSM' ||
+          type == 'VILLAGE_HEAD_ENDORSEMENT' ||
+          type == 'ENDORSEMENT_LETTER' ||
+          type == 'TOK_BATIN_LETTER') {
         final url = d['file_url']?.toString();
         if (url != null && url.isNotEmpty) return url;
       }
@@ -185,7 +205,12 @@ class UserModel {
   String? get ssmFileName {
     for (final d in artisanDocuments) {
       final type = d['doc_type']?.toString();
-      if (type == 'SSM_BUSINESS_CERT' || type == 'SSM_CERT' || type == 'SSM') {
+      if (type == 'SSM_BUSINESS_CERT' ||
+          type == 'SSM_CERT' ||
+          type == 'SSM' ||
+          type == 'VILLAGE_HEAD_ENDORSEMENT' ||
+          type == 'ENDORSEMENT_LETTER' ||
+          type == 'TOK_BATIN_LETTER') {
         final name = d['file_name']?.toString();
         if (name != null && name.isNotEmpty) return name;
         final url = d['file_url']?.toString();
@@ -321,6 +346,7 @@ class UserModel {
     bool clearRejectionReason = false,
     bool? isLiveOpen,
     int? workshopCount,
+    String? premiseType,
     bool clearStudioDetails = false,
   }) {
     return UserModel(
@@ -360,6 +386,7 @@ class UserModel {
       rejectionReason: clearRejectionReason ? null : (rejectionReason ?? this.rejectionReason),
       isLiveOpen: isLiveOpen ?? this.isLiveOpen,
       workshopCount: workshopCount ?? this.workshopCount,
+      premiseType: clearStudioDetails ? null : (premiseType ?? this.premiseType),
     );
   }
 
@@ -408,6 +435,8 @@ class UserModel {
       'isLiveOpen': isLiveOpen,
       'workshop_count': workshopCount,
       'workshopCount': workshopCount,
+      'premise_type': premiseType,
+      'premiseType': premiseType,
     };
   }
 
@@ -617,6 +646,7 @@ class UserModel {
       rejectionReason: map['rejectionReason'] ?? map['rejection_reason'] ?? artisanMap?['rejection_reason'],
       isLiveOpen: map['is_live_open'] ?? map['isLiveOpen'] ?? artisanMap?['is_live_open'] ?? !isClosedTag,
       workshopCount: resolvedWorkshops,
+      premiseType: map['premise_type'] ?? map['premiseType'] ?? artisanMap?['premise_type'] ?? artisanMap?['premiseType'],
     );
   }
 }

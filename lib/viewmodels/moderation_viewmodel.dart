@@ -932,6 +932,7 @@ class ModerationViewModel extends ChangeNotifier {
                   bio: u.bio,
                   isUpgradeFromTourist: u.role == 'Tourist',
                   photos: photos,
+                  premiseType: u.premiseType,
                 ),
               );
             }
@@ -977,6 +978,7 @@ class ModerationViewModel extends ChangeNotifier {
                   certFileUrl: u.pendingRelocationCertUrl ?? u.certFileUrl,
                   relocationCertFileName: u.pendingRelocationCertName,
                   relocationCertFileUrl: u.pendingRelocationCertUrl,
+                  premiseType: u.premiseType,
                 ),
               );
             }
@@ -1024,6 +1026,7 @@ class ModerationViewModel extends ChangeNotifier {
                   certFileUrl: (data['pending_relocation_cert_url'] ?? data['certUrl'])?.toString(),
                   relocationCertFileName: (data['pending_relocation_cert_name'] ?? data['certName'])?.toString(),
                   relocationCertFileUrl: (data['pending_relocation_cert_url'] ?? data['certUrl'])?.toString(),
+                  premiseType: (data['premise_type'] ?? data['premiseType'])?.toString(),
                 ),
               );
             }
@@ -1104,6 +1107,7 @@ class ModerationViewModel extends ChangeNotifier {
         phone: profile.phone,
         bio: profile.bio,
         experience: profile.experience,
+        premiseType: profile.premiseType,
       );
     }
     notifyListeners();

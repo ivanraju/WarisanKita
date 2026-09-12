@@ -25,6 +25,7 @@ class PendingArtisanProfile {
   final String? relocationReason;
   final String? relocationCertFileName;
   final String? relocationCertFileUrl;
+  final String? premiseType;
 
   const PendingArtisanProfile({
     required this.id,
@@ -53,5 +54,13 @@ class PendingArtisanProfile {
     this.relocationReason,
     this.relocationCertFileName,
     this.relocationCertFileUrl,
+    this.premiseType,
   });
+
+  bool get isVillageWorkshop =>
+      premiseType != null &&
+      (premiseType!.contains('Village') ||
+          premiseType!.contains('Desa') ||
+          premiseType!.contains('Home') ||
+          premiseType!.contains('Kediaman'));
 }

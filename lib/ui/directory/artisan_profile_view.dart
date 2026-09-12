@@ -117,21 +117,51 @@ class ArtisanProfileScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFF7043).withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Text(
-            'CULTURAL GUARDIAN',
-            style: GoogleFonts.plusJakartaSans(
-              color: const Color(0xFFFF7043),
-              fontWeight: FontWeight.w900,
-              fontSize: 10,
-              letterSpacing: 2,
+        Wrap(
+          spacing: 8,
+          runSpacing: 6,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF7043).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                artisan.isVillageWorkshop ? 'HERITAGE VILLAGE CRAFTER' : 'CULTURAL GUARDIAN',
+                style: GoogleFonts.plusJakartaSans(
+                  color: const Color(0xFFFF7043),
+                  fontWeight: FontWeight.w900,
+                  fontSize: 10,
+                  letterSpacing: 2,
+                ),
+              ),
             ),
-          ),
+            if (artisan.isVillageWorkshop)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFECFDF5),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.cottage_outlined, size: 12, color: Color(0xFF047857)),
+                    const SizedBox(width: 4),
+                    Text(
+                      'HOME WORKSHOP',
+                      style: GoogleFonts.plusJakartaSans(
+                        color: const Color(0xFF047857),
+                        fontWeight: FontWeight.w800,
+                        fontSize: 10,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
         ),
         const SizedBox(height: 12),
         Text(

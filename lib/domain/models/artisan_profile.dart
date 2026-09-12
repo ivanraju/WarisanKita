@@ -17,6 +17,7 @@ class ArtisanModel {
   final String? ssmNumber;
   final List<Map<String, dynamic>> documents;
   final String? phone;
+  final String? premiseType;
 
   ArtisanModel({
     required this.id,
@@ -37,7 +38,19 @@ class ArtisanModel {
     this.ssmNumber,
     this.documents = const [],
     this.phone,
+    this.premiseType,
   });
+
+  bool get isVillageWorkshop =>
+      premiseType?.toLowerCase().contains('village') == true ||
+      premiseType?.toLowerCase().contains('desa') == true ||
+      premiseType?.toLowerCase().contains('kediaman') == true;
+
+  String get premiseTypeDisplay =>
+      isVillageWorkshop ? 'Home / Village Workshop' : 'Commercial Studio';
+
+  String get artisanTitle =>
+      isVillageWorkshop ? 'Heritage Village Crafter' : 'Master Artisan';
 
   ArtisanModel copyWith({
     String? id,
@@ -58,6 +71,7 @@ class ArtisanModel {
     String? ssmNumber,
     List<Map<String, dynamic>>? documents,
     String? phone,
+    String? premiseType,
   }) {
     return ArtisanModel(
       id: id ?? this.id,
@@ -78,6 +92,7 @@ class ArtisanModel {
       ssmNumber: ssmNumber ?? this.ssmNumber,
       documents: documents ?? this.documents,
       phone: phone ?? this.phone,
+      premiseType: premiseType ?? this.premiseType,
     );
   }
 
@@ -163,6 +178,12 @@ class ArtisanModel {
                     : null))
             ?.toString();
 
+    final String? premiseType =
+        (map['premise_type'] ??
+                map['premiseType'] ??
+                (map['users'] != null ? map['users']['premise_type'] : null))
+            ?.toString();
+
     List<Map<String, dynamic>> docsList = [];
     if (map['artisan_documents'] != null) {
       docsList = List<Map<String, dynamic>>.from(map['artisan_documents']);
@@ -202,6 +223,7 @@ class ArtisanModel {
       ssmNumber: ssm,
       documents: docsList,
       phone: phone,
+      premiseType: premiseType,
     );
   }
 }
