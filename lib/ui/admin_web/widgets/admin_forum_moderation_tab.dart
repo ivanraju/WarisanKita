@@ -87,19 +87,31 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
     final authVM = context.read<AuthViewModel>();
     final adminName = authVM.currentUser?.effectiveUsername ?? authVM.currentUser?.email ?? 'Admin';
 
-    if (type == 'reply') {
-      await context.read<ForumViewModel>().dismissReplyReport(
-        threadId,
-        id,
-        adminName,
-      );
-    } else {
-      await context.read<ForumViewModel>().dismissReport(
-        id,
-        adminName,
-      );
-    }
+    try {
+      if (type == 'reply') {
+        await context.read<ForumViewModel>().dismissReplyReport(
+          threadId,
+          id,
+          adminName,
+        );
+      } else {
+        await context.read<ForumViewModel>().dismissReport(
+          id,
+          adminName,
+        );
+      }
 
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to dismiss forum reports: $error'),
+          backgroundColor: const Color(0xFFEF4444),
+        ),
+      );
+      return;
+    }
+    if (!mounted) return;
     setState(() {
       _staticReportedPosts.removeWhere(
         (p) => p['id'] == id,
@@ -261,10 +273,21 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
     );
   }
 
-  void _showReportsDialog(Map<String, dynamic> item) {
+  Future<void> _showReportsDialog(Map<String, dynamic> item) async {
     final List<Map<String, dynamic>> reports =
-    List<Map<String, dynamic>>.from(
-      item['reports'] ?? [],
+        List<Map<String, dynamic>>.from(item['reports'] ?? [])
+          ..sort((a, b) {
+            final aDate = DateTime.tryParse(a['created_at']?.toString() ?? '');
+            final bDate = DateTime.tryParse(b['created_at']?.toString() ?? '');
+            if (aDate == null && bDate == null) return 0;
+            if (aDate == null) return 1;
+            if (bDate == null) return -1;
+            return aDate.compareTo(bDate);
+          });
+
+    // Reuse the same username resolution used by the Pending Reports card.
+    final resolvedContentAuthorUsername = await _getUsernameByEmail(
+      (item['authorEmail'] ?? '').toString(),
     );
 
     showDialog(
@@ -306,10 +329,34 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                 final createdAt =
                 _formatDateTime(report['created_at']);
 
+                final isAutomated = reporterId.isEmpty || reporterId == 'null';
+                final reporterName = isAutomated
+                    ? 'Automated Safety System'
+                    : (report['reporterUsername']?.toString() ?? 'Unknown User');
+                final fullReporterId = isAutomated
+                    ? 'System'
+                    : (report['reporterDisplayId']?.toString() ?? reporterId);
+                final author = resolvedContentAuthorUsername;
+                final authorId = item['contentAuthorId']?.toString() ?? 'Unknown';
+                final contentType = item['type']?.toString() == 'reply' ? 'Reply' : 'Post';
+                final visibility = item['contentIsReported'] == true ? 'Quarantined' : 'Visible';
+                final pendingManual = item['distinctPendingManualReporters'] ?? 0;
+                final preview = item['contentPreview']?.toString() ?? 'Unavailable';
                 return Column(
                   crossAxisAlignment:
                   CrossAxisAlignment.start,
                   children: [
+                    if (index == 0) ...[
+                      Text('Reported Content', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold)),
+                      Text('Content type: $contentType'),
+                      Text('Content preview: $preview'),
+                      Text('Content author username: $author'),
+                      Text('Content author ID: $authorId'),
+                      Text('Current visibility: $visibility'),
+                      Text('$pendingManual / 3 reporters'),
+                      const Divider(),
+                    ],
+                    Text('This Report', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold)),
                     Text(
                       'Report ${index + 1}',
                       style:
@@ -321,7 +368,7 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                     const SizedBox(height: 8),
 
                     Text(
-                      'Reporter ID: $reporterId',
+                      'Report reason: $reason',
                       style:
                       GoogleFonts.plusJakartaSans(
                         fontSize: 12,
@@ -331,7 +378,7 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                     const SizedBox(height: 4),
 
                     Text(
-                      'Reason: $reason',
+                      'Report notes: ${notes ?? 'None'}',
                       style:
                       GoogleFonts.plusJakartaSans(
                         fontSize: 12,
@@ -339,28 +386,25 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                       ),
                     ),
 
-                    if (notes != null &&
-                        notes.trim().isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        'Notes: $notes',
-                        style:
-                        GoogleFonts.plusJakartaSans(
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-
                     const SizedBox(height: 4),
 
                     Text(
-                      'Reported at: $createdAt',
+                      'Reported date/time: $createdAt',
                       style:
                       GoogleFonts.plusJakartaSans(
                         fontSize: 11,
                         color: Colors.grey[600],
                       ),
                     ),
+                    Text('Current report status: ${report['status']?.toString() ?? 'pending'}'),
+                    const Divider(),
+                    Text('Reporter Information', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold)),
+                    Text('Reporter username: $reporterName'),
+                    Text('User ID: $fullReporterId'),
+                    Text('Total forum reports: ${report['reporterTotalCount'] ?? 'Unknown'}'),
+                    Text('Pending reports: ${report['reporterPendingCount'] ?? 'Unknown'}'),
+                    Text('Dismissed reports: ${report['reporterDismissedCount'] ?? 'Unknown'}'),
+                    Text('Actioned reports: ${report['reporterActionedCount'] ?? 'Unknown'}'),
                   ],
                 );
               },
@@ -436,6 +480,11 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
               : 'Tourist',
 
           'content': foundThread.title,
+          'contentPreview': foundThread.title,
+          'contentAuthorUsername': item['contentAuthorUsername'] ?? 'Unknown User',
+          'contentAuthorId': item['contentAuthorId'] ?? foundThread.userId ?? 'Unknown',
+          'contentIsReported': foundThread.isReported,
+          'distinctPendingManualReporters': item['distinctPendingManualReporters'] ?? 0,
 
           'reason':
           latestReport?['reason'] ??
@@ -522,6 +571,11 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
               : 'Tourist',
 
           'content': replyContent,
+          'contentPreview': replyContent,
+          'contentAuthorUsername': item['contentAuthorUsername'] ?? 'Unknown User',
+          'contentAuthorId': item['contentAuthorId'] ?? foundReply?.userId ?? 'Unknown',
+          'contentIsReported': foundReply?.isReported ?? false,
+          'distinctPendingManualReporters': item['distinctPendingManualReporters'] ?? 0,
           'reason': reportReason,
           'reportsCount': reportsCount,
           'reports': reports,
@@ -659,6 +713,10 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                         final bool isActioned =
                             status == 'actioned';
 
+                        final bool isDeleted = isActioned &&
+                            record['action_type'] == 'deleted';
+                        final bool isModeration = isDeleted || status == 'dismissed';
+
                         final String notes = (record['notes'] ?? '').toString();
                         final String postId = (record['post_id'] ?? '')
                             .toString();
@@ -670,7 +728,9 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                         final bool hasReplyId = replyId.isNotEmpty &&
                             replyId != 'null';
 
-                        final bool isPost = hasPostId ||
+                        final bool isPost = record['target_type'] != null
+                            ? record['target_type'] == 'post'
+                            : hasPostId ||
                             (!hasReplyId && (notes.toLowerCase().contains(
                                 'post') ||
                                 notes.toLowerCase().contains(
@@ -775,25 +835,49 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                         final String reporterId =
                             record['reporter_id']?.toString() ??
                                 '';
+                        final auditReports = List<Map<String, dynamic>>.from(
+                          record['report_rows'] ?? const [],
+                        );
 
-                        final String rawResolvedAt =
-                            record['resolved_at']?.toString() ??
-                                '';
-                        String resolvedAt = rawResolvedAt;
-                        if (rawResolvedAt.isNotEmpty &&
-                            rawResolvedAt != 'null') {
-                          try {
-                            final dt = DateTime.parse(rawResolvedAt).toLocal();
-                            resolvedAt = '${dt.year}-${dt.month
-                                .toString()
-                                .padLeft(2, '0')}-${dt.day.toString().padLeft(
-                                2, '0')} ${dt.hour.toString().padLeft(
-                                2, '0')}:${dt.minute.toString().padLeft(
-                                2, '0')}';
-                          } catch (_) {
-                            resolvedAt = rawResolvedAt;
+                        // Only grouped canonical actions establish a complete
+                        // count. Legacy rows retain their own reporter audit.
+                        final hasCanonicalReports =
+                            record['is_moderation_action'] == true &&
+                            record['reports_involved'] is num &&
+                            record['target_id'] != null &&
+                            record['target_type'] != null;
+                        final displayedReports = isModeration && hasCanonicalReports
+                            ? auditReports.where((report) {
+                                final id = report['reporter_id']?.toString();
+                                return record['target_id'] != null &&
+                                    record['target_type'] != null &&
+                                    report['target_id'] == record['target_id'] &&
+                                    report['target_type'] == record['target_type'] &&
+                                    id != null &&
+                                    id.isNotEmpty &&
+                                    id != 'null';
+                              }).toList()
+                            : auditReports;
+                        // Number reporters by original submission time, not
+                        // the shared resolution time or database return order.
+                        displayedReports.sort((a, b) {
+                          final aTime = DateTime.tryParse('${a['created_at'] ?? ''}');
+                          final bTime = DateTime.tryParse('${b['created_at'] ?? ''}');
+                          if (aTime == null && bTime != null) return 1;
+                          if (aTime != null && bTime == null) return -1;
+                          if (aTime != null && bTime != null) {
+                            final order = aTime.compareTo(bTime);
+                            if (order != 0) return order;
                           }
-                        }
+                          return '${a['id'] ?? ''}'.compareTo('${b['id'] ?? ''}');
+                        });
+                        final int? reportsInvolved = isModeration
+                            ? hasCanonicalReports ? displayedReports
+                                .map((report) => report['reporter_id'].toString())
+                                .toSet().length : null
+                            : (record['reports_involved'] as num?)?.toInt() ?? 1;
+                        final resolvedAt =
+                            _formatDateTime(record['resolved_at']);
 
                         String moderatorName =
                             record['moderator_name']?.toString() ??
@@ -892,7 +976,7 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                                       BorderRadius.circular(20),
                                     ),
                                     child: Text(
-                                      status.toUpperCase(),
+                                      isDeleted ? 'DELETED' : status.toUpperCase(),
                                       style:
                                       GoogleFonts.plusJakartaSans(
                                         fontSize: 10,
@@ -962,48 +1046,43 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                                 const SizedBox(height: 12),
                               ],
 
-                              Text(
-                                'Original Report Reason',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-
-                              const SizedBox(height: 4),
-
-                              Text(
-                                reportReason,
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-
-                              if (reportNotes != null &&
-                                  reportNotes
-                                      .trim()
-                                      .isNotEmpty) ...[
-                                const SizedBox(height: 12),
+                              if (isModeration || (reportsInvolved ?? 0) > 1) ...[
                                 Text(
-                                  'Reporter Notes',
-                                  style:
-                                  GoogleFonts.plusJakartaSans(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
+                                  reportsInvolved == null
+                                      ? 'Reports involved: Unknown (举报人数无法确认)'
+                                      : 'Reports involved: $reportsInvolved',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 12,
                                     color: Colors.grey[600],
                                   ),
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  reportNotes,
-                                  style:
-                                  GoogleFonts.plusJakartaSans(
-                                    fontSize: 13,
-                                  ),
-                                ),
+                                const SizedBox(height: 12),
                               ],
+
+                              if (!isModeration) ...[
+                                Text('Original Reports', style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey[600])),
+                                const SizedBox(height: 8),
+                              ],
+                              if (!isModeration && displayedReports.isEmpty)
+                                Text(reportReason, style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w600)),
+                              ...displayedReports.asMap().entries.map((entry) {
+                                final report = entry.value;
+                                final date = _formatDateTime(report['created_at']);
+                                return Container(
+                                  width: double.infinity,
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(8)),
+                                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                    Text('${isModeration ? 'Reporter' : 'Report'} ${entry.key + 1}', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold)),
+                                    Text('${isModeration ? 'Username' : 'Reporter username'}: ${report['reporter_username'] ?? 'Unknown User'}'),
+                                    Text('${isModeration ? 'ID' : 'Reporter ID'}: ${report['reporter_id']}'),
+                                    Text('${isModeration ? 'Original Report Reason' : 'Reason'}: ${report['reason'] ?? 'No reason provided'}'),
+                                    Text('${isModeration ? 'Original Report Notes' : 'Notes'}: ${report['notes'] ?? 'None'}'),
+                                    Text('Reported at: $date'),
+                                  ]),
+                                );
+                              }),
 
                               if (isActioned &&
                                   deletionReason != null &&
@@ -1012,7 +1091,7 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                                       .isNotEmpty) ...[
                                 const SizedBox(height: 12),
                                 Text(
-                                  'Admin Deletion Reason',
+                                  'Admin Deletion Reason:',
                                   style:
                                   GoogleFonts.plusJakartaSans(
                                     fontSize: 11,
@@ -1069,7 +1148,8 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                                       ],
                                     ),
                                   ),
-                                  if (targetId.isNotEmpty && targetId != 'null')
+                                  if (!isModeration &&
+                                      targetId.isNotEmpty && targetId != 'null')
                                     Container(
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 8, vertical: 4),
@@ -1088,7 +1168,7 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                                         ),
                                       ),
                                     ),
-                                  if (reporterId.isNotEmpty &&
+                                  if (!isModeration && reporterId.isNotEmpty &&
                                       reporterId != 'null' &&
                                       reporterId != 'Unknown')
                                     Text(

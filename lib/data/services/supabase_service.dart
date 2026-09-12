@@ -4145,36 +4145,6 @@ class SupabaseService {
           }
         }
 
-        // =====================================================
-        // Query active pending reports from forum_reports table
-        // =====================================================
-        final Set<String> activePendingPostReports = {};
-        final Set<String> activePendingReplyReports = {};
-        final Map<String, Map<String, dynamic>> activeReportDetails = {};
-
-        try {
-          final pendingReportsRes = await client
-              .from('forum_reports')
-              .select('post_id, reply_id, reason, notes, status')
-              .eq('status', 'pending');
-
-          for (final r in pendingReportsRes) {
-            final rMap = Map<String, dynamic>.from(r);
-            final pId = rMap['post_id']?.toString();
-            final repId = rMap['reply_id']?.toString();
-            if (pId != null && pId.isNotEmpty) {
-              activePendingPostReports.add(pId);
-              activeReportDetails['post_$pId'] = rMap;
-            }
-            if (repId != null && repId.isNotEmpty) {
-              activePendingReplyReports.add(repId);
-              activeReportDetails['reply_$repId'] = rMap;
-            }
-          }
-        } catch (e) {
-          debugPrint('fetch pending reports note: $e');
-        }
-
         final List<ForumThread> remote = [];
         if (res is List && res.isNotEmpty) {
           for (final row in res) {
@@ -4191,40 +4161,8 @@ class SupabaseService {
             _sessionThreadVotes[_threadVoteKey(threadId)] = persistedVote;
             threadMap['userVote'] = persistedVote;
 
-            // Content is reported ONLY if there is an active pending report in Supabase, and NOT dismissed
-            bool isPostReported = false;
-            String? postReportReason;
-            String? postReportNotes;
-
-            if (!_deletedPostIds.contains(threadId) &&
-                !_dismissedReportPostIds.contains(threadId)) {
-              if (activePendingPostReports.contains(threadId)) {
-                isPostReported = true;
-                postReportReason =
-                    activeReportDetails['post_$threadId']?['reason']
-                        ?.toString() ??
-                    threadMap['report_reason']?.toString() ??
-                    'Reported Content';
-                postReportNotes =
-                    activeReportDetails['post_$threadId']?['notes']
-                        ?.toString() ??
-                    threadMap['report_notes']?.toString();
-              } else {
-                // If not in active pending reports from Supabase, clear from local queue
-                _localReportQueue.removeWhere(
-                  (r) =>
-                      (r['postId']?.toString() == threadId ||
-                          r['id']?.toString() == threadId) &&
-                      (r['type'] == null || r['type'] == 'post'),
-                );
-              }
-            }
-
-            threadMap['is_reported'] = isPostReported;
-            threadMap['report_reason'] = isPostReported
-                ? postReportReason
-                : null;
-            threadMap['report_notes'] = isPostReported ? postReportNotes : null;
+            // is_reported is the database quarantine decision, not the presence
+            // of a pending report. Keep its value and safety metadata intact.
 
             final localMatch = _forumStore
                 .where((l) => l.id == threadMap['id'])
@@ -4271,38 +4209,7 @@ class SupabaseService {
                   _sessionReplyVotes[_replyVoteKey(replyId)] = pReplyVote;
                   rMap['userVote'] = pReplyVote;
 
-                  // Reply is reported ONLY if there is an active pending report, and NOT dismissed
-                  bool isReplyReported = false;
-                  String? replyReportReason;
-                  String? replyReportNotes;
-
-                  if (!_dismissedReportReplyIds.contains(replyId)) {
-                    if (activePendingReplyReports.contains(replyId)) {
-                      isReplyReported = true;
-                      replyReportReason =
-                          activeReportDetails['reply_$replyId']?['reason']
-                              ?.toString() ??
-                          rMap['report_reason']?.toString() ??
-                          'Reported Reply';
-                      replyReportNotes =
-                          activeReportDetails['reply_$replyId']?['notes']
-                              ?.toString() ??
-                          rMap['report_notes']?.toString();
-                    } else {
-                      _localReportQueue.removeWhere(
-                        (rep) =>
-                            rep['replyId'] == replyId && rep['type'] == 'reply',
-                      );
-                    }
-                  }
-
-                  rMap['is_reported'] = isReplyReported;
-                  rMap['report_reason'] = isReplyReported
-                      ? replyReportReason
-                      : null;
-                  rMap['report_notes'] = isReplyReported
-                      ? replyReportNotes
-                      : null;
+                  // Preserve the database quarantine decision for replies too.
 
                   processedReplies.add(rMap);
                 }
@@ -4446,22 +4353,26 @@ class SupabaseService {
         final List<Map<String, dynamic>> reports =
             List<Map<String, dynamic>>.from(response);
 
+        // Drop stale local reports, retaining the existing queue fallback for
+        // quarantined content whose safety-report insertion may have failed.
+        groupedReports.removeWhere((key, _) => !_forumStore.any(
+          (thread) => key == 'post_${thread.id}'
+              ? thread.isReported
+              : thread.replies.any(
+                  (reply) => key == 'reply_${reply.id}' && reply.isReported,
+                ),
+        ));
+        _localReportQueue.clear();
+
         for (final report in reports) {
           final String? postId = report['post_id']?.toString();
 
           final String? replyId = report['reply_id']?.toString();
 
-          // Skip deleted/dismissed posts
-          if (postId != null &&
-              (_deletedPostIds.contains(postId) ||
-                  _dismissedReportPostIds.contains(postId))) {
-            continue;
-          }
-
-          // Skip dismissed replies
-          if (replyId != null && _dismissedReportReplyIds.contains(replyId)) {
-            continue;
-          }
+          // Session dismissal caches must not hide a fresh pending report.
+          if (postId != null && _deletedPostIds.contains(postId)) continue;
+          if (postId != null) _dismissedReportPostIds.remove(postId);
+          if (replyId != null) _dismissedReportReplyIds.remove(replyId);
 
           // Make sure target still exists
           if (_forumStore.isNotEmpty) {
@@ -4543,6 +4454,121 @@ class SupabaseService {
       }
     }
 
+    // Enrich the admin queue in one batched pass. This metadata is consumed
+    // only by AdminForumModerationTab; normal forum models remain unchanged.
+    if (client != null && groupedReports.isNotEmpty) {
+      try {
+        final allRows = await client
+            .from('forum_reports')
+            .select('reporter_id, post_id, reply_id, status');
+        final reporterIds = <String>{};
+        final targetAuthorIds = <String, String>{};
+        final targetAuthorEmails = <String, String>{};
+        final pendingManualByTarget = <String, Set<String>>{};
+        final stats = <String, Map<String, int>>{};
+        for (final raw in allRows) {
+          final row = Map<String, dynamic>.from(raw);
+          final reporter = row['reporter_id']?.toString();
+          final post = row['post_id']?.toString();
+          final reply = row['reply_id']?.toString();
+          final target = post != null && post != 'null'
+              ? 'post_$post'
+              : reply != null && reply != 'null' ? 'reply_$reply' : null;
+          if (reporter != null && reporter != 'null' && reporter.isNotEmpty) {
+            reporterIds.add(reporter);
+            final entry = stats.putIfAbsent(reporter, () => {
+              'total': 0, 'pending': 0, 'dismissed': 0, 'actioned': 0,
+            });
+            entry['total'] = entry['total']! + 1;
+            final status = row['status']?.toString();
+            if (status == 'pending') entry['pending'] = entry['pending']! + 1;
+            if (status == 'dismissed') entry['dismissed'] = entry['dismissed']! + 1;
+            if (status == 'actioned') entry['actioned'] = entry['actioned']! + 1;
+            if (status == 'pending' && target != null) {
+              pendingManualByTarget.putIfAbsent(target, () => <String>{}).add(reporter);
+            }
+          }
+        }
+        for (final entry in groupedReports.entries) {
+          final key = entry.key;
+          if (key.startsWith('post_')) {
+            final id = key.substring(5);
+            final thread = _forumStore.where((t) => t.id == id).firstOrNull;
+            if (thread?.userId != null) targetAuthorIds[key] = thread!.userId!;
+          } else if (key.startsWith('reply_')) {
+            final id = key.substring(6);
+            for (final thread in _forumStore) {
+              final reply = thread.replies.where((r) => r.id == id).firstOrNull;
+              if (reply != null && reply.authorEmail.trim().isNotEmpty) {
+                targetAuthorEmails[key] = reply.authorEmail.trim();
+                break;
+              }
+            }
+          }
+        }
+        reporterIds.addAll(targetAuthorIds.values);
+        final users = reporterIds.isEmpty
+            ? <dynamic>[]
+            : await client.from('users').select('id, username').inFilter('id', reporterIds.toList());
+        final usernames = <String, String>{};
+        for (final raw in users) {
+          final row = Map<String, dynamic>.from(raw);
+          final id = row['id']?.toString();
+          final username = row['username']?.toString().trim();
+          if (id != null && username != null && username.isNotEmpty) usernames[id] = username;
+        }
+        if (targetAuthorEmails.isNotEmpty) {
+          final emailRows = await client
+              .from('users')
+              .select('id, email, username')
+              .inFilter('email', targetAuthorEmails.values.toSet().toList());
+          final emailUsernames = <String, String>{};
+          for (final raw in emailRows) {
+            final row = Map<String, dynamic>.from(raw);
+            final email = row['email']?.toString().trim().toLowerCase();
+            final id = row['id']?.toString();
+            final username = row['username']?.toString().trim();
+            if (email != null && username != null && username.isNotEmpty) {
+              emailUsernames[email] = username;
+              final target = targetAuthorEmails.entries
+                  .where((entry) => entry.value.toLowerCase() == email)
+                  .map((entry) => entry.key)
+                  .firstOrNull;
+              if (target != null && id != null) targetAuthorIds[target] = id;
+            }
+          }
+          for (final entry in targetAuthorEmails.entries) {
+            final username = emailUsernames[entry.value.toLowerCase()];
+            if (username != null) usernames[entry.key] = username;
+          }
+        }
+        for (final entry in groupedReports.entries) {
+          final item = entry.value;
+          final target = entry.key;
+          item['distinctPendingManualReporters'] = pendingManualByTarget[target]?.length ?? 0;
+          item['contentAuthorId'] = targetAuthorIds[target] ?? 'Unknown';
+          item['contentAuthorUsername'] = usernames[target] ?? 'Unknown User';
+          for (final report in List<Map<String, dynamic>>.from(item['reports'] ?? const [])) {
+            final id = report['reporter_id']?.toString();
+            if (id == null || id.isEmpty || id == 'null') {
+              report['reporterUsername'] = 'Automated Safety System';
+              report['reporterDisplayId'] = 'System';
+              continue;
+            }
+            final counts = stats[id];
+            report['reporterUsername'] = usernames[id] ?? 'Unknown User';
+            report['reporterDisplayId'] = id;
+            report['reporterTotalCount'] = counts?['total'];
+            report['reporterPendingCount'] = counts?['pending'];
+            report['reporterDismissedCount'] = counts?['dismissed'];
+            report['reporterActionedCount'] = counts?['actioned'];
+          }
+        }
+      } catch (e) {
+        debugPrint('fetchForumReportQueue admin metadata note: $e');
+      }
+    }
+
     return groupedReports.values.toList();
   }
 
@@ -4584,42 +4610,178 @@ class SupabaseService {
         }
 
         final remoteHistory = List<Map<String, dynamic>>.from(response ?? []);
-        for (final item in remoteHistory) {
-          final id = item['id']?.toString();
-          final postId = item['post_id']?.toString();
-          final replyId = item['reply_id']?.toString();
+        final groups = <String, List<Map<String, dynamic>>>{};
+        final remoteIds = remoteHistory.map((row) => row['id']?.toString()).toSet();
 
-          if (id != null && !_dismissedNoticeIds.contains(id)) {
-            // Check if this post or reply is already in history (e.g. from local history)
-            final existingIdx = history.indexWhere(
-              (h) =>
-                  h['id']?.toString() == id ||
-                  (postId != null &&
-                      postId.isNotEmpty &&
-                      h['post_id']?.toString() == postId) ||
-                  (replyId != null &&
-                      replyId.isNotEmpty &&
-                      h['reply_id']?.toString() == replyId),
-            );
+        // Successful deletes are represented only by persisted records.
+        // Retain the existing local Dismiss fallback, matching exact row/target IDs.
+        history.removeWhere((local) =>
+            local['status'] == 'actioned' ||
+            remoteIds.contains(local['id']?.toString()) ||
+            (local['status'] == 'dismissed' && remoteHistory.any((remote) =>
+                remote['status'] == 'dismissed' &&
+                ((local['post_id'] != null &&
+                      local['post_id'] == remote['post_id']) ||
+                 (local['reply_id'] != null &&
+                      local['reply_id'] == remote['reply_id'])))));
 
-            if (existingIdx != -1) {
-              // Merge remote item with local item, preserving moderator_name if local has it
-              history[existingIdx] = {
-                ...item,
-                if (history[existingIdx]['moderator_name'] != null)
-                  'moderator_name': history[existingIdx]['moderator_name'],
-                if (history[existingIdx]['author_name'] != null)
-                  'author_name': history[existingIdx]['author_name'],
-                if (history[existingIdx]['post_title'] != null)
-                  'post_title': history[existingIdx]['post_title'],
-              };
-            } else {
-              history.add(item);
-            }
+        for (final row in remoteHistory) {
+          final id = row['id']?.toString();
+          if (id == null || _dismissedNoticeIds.contains(id)) continue;
+          final actionId = row['moderation_action_id']?.toString().trim();
+          final isDelete = row['status'] == 'actioned' &&
+              row['action_type'] == 'deleted';
+          final key = (isDelete || row['status'] == 'dismissed') && actionId != null &&
+                  actionId.isNotEmpty && actionId != 'null'
+              ? 'action:${row['status']}:$actionId'
+              : 'row:$id';
+          groups.putIfAbsent(key, () => []).add(row);
+        }
+
+        for (final entry in groups.entries) {
+          final rows = entry.value;
+          if (!entry.key.startsWith('action:')) {
+            history.add({...rows.single});
+            continue;
           }
+          final parents = rows.where((row) =>
+              row['is_moderation_action'] == true).toList();
+          if (parents.length != 1) {
+            // Pre-migration/incomplete actions have no provable canonical parent.
+            // Never guess from reporter_id, reason, author, or timestamp.
+            history.addAll(rows.map((row) => {...row}));
+            continue;
+          }
+          final parent = parents.single;
+          final audit = rows.where((row) =>
+              row['id'] != parent['id']).map((row) =>
+                  Map<String, dynamic>.from(row)).toList();
+          final manualReports = audit.where((row) {
+            final reporterId = row['reporter_id']?.toString();
+            return parent['target_id'] != null &&
+                parent['target_type'] != null &&
+                row['target_id'] == parent['target_id'] &&
+                row['target_type'] == parent['target_type'] &&
+                reporterId != null &&
+                reporterId.isNotEmpty &&
+                reporterId != 'null';
+          }).toList();
+          // Preserve the fetch order of original reports.
+          history.add({
+            ...parent,
+            'report_rows': audit,
+            'reports_involved': manualReports
+                .map((row) => row['reporter_id'].toString())
+                .toSet().length,
+          });
         }
       } catch (e) {
         debugPrint('fetchForumModerationHistory Supabase note: $e');
+      }
+    }
+    String historyAuthorName(
+      Map<String, dynamic> item, [
+      String? liveUsername,
+    ]) {
+      for (final value in [item['target_author_name'], item['author_name']]) {
+        final name = value?.toString().trim();
+        if (name != null && name.isNotEmpty && name != 'null' &&
+            name != 'Community Member' && name != 'Unknown User') {
+          return name;
+        }
+      }
+      return liveUsername ?? 'Community Member';
+    }
+
+    final involvedUserIds = <String>{};
+    for (final item in history) {
+      // A standalone legacy report is still an audit entry. Its row ID stays
+      // separate; it cannot establish the total for the original delete action.
+      if (((item['status'] == 'actioned' && item['action_type'] == 'deleted') ||
+              item['status'] == 'dismissed') &&
+          item['is_moderation_action'] != true &&
+          !item.containsKey('report_rows')) {
+        final reporterId = item['reporter_id']?.toString();
+        if (reporterId != null && reporterId.isNotEmpty && reporterId != 'null') {
+          item['report_rows'] = [Map<String, dynamic>.from(item)];
+        }
+      }
+      final authorId = item['target_author_id']?.toString();
+      if (authorId != null && authorId.isNotEmpty && authorId != 'null') {
+        involvedUserIds.add(authorId);
+      }
+      for (final raw in List<Map<String, dynamic>>.from(
+        item['report_rows'] ?? const [],
+      )) {
+        final reporterId = raw['reporter_id']?.toString();
+        if (reporterId != null &&
+            reporterId.isNotEmpty &&
+            reporterId != 'null') {
+          involvedUserIds.add(reporterId);
+        }
+      }
+    }
+    if (client != null && involvedUserIds.isNotEmpty) {
+      try {
+        final users = await client
+            .from('users')
+            .select('id, username')
+            .inFilter('id', involvedUserIds.toList());
+        final usernames = <String, String>{
+          for (final user in users)
+            if ((user['username'] ?? '').toString().trim().isNotEmpty)
+              user['id'].toString(): user['username'].toString().trim(),
+        };
+        for (final item in history) {
+          final authorId = item['target_author_id']?.toString();
+          item['target_author_name'] =
+              historyAuthorName(item, usernames[authorId]);
+          final rows = List<Map<String, dynamic>>.from(
+            item['report_rows'] ?? const [],
+          );
+          for (final row in rows) {
+            final reporterId = row['reporter_id']?.toString();
+            row['reporter_username'] = reporterId == null ||
+                    reporterId.isEmpty ||
+                    reporterId == 'null'
+                ? 'Automated Safety System'
+                : usernames[reporterId] ?? 'Unknown User';
+          }
+          item['report_rows'] = rows;
+        }
+      } catch (e) {
+        debugPrint('fetchForumModerationHistory author lookup note: $e');
+        for (final item in history) {
+          item['target_author_name'] = historyAuthorName(item);
+          final rows = List<Map<String, dynamic>>.from(
+            item['report_rows'] ?? const [],
+          );
+          for (final row in rows) {
+            final reporterId = row['reporter_id']?.toString();
+            row['reporter_username'] = reporterId == null ||
+                    reporterId.isEmpty ||
+                    reporterId == 'null'
+                ? 'Automated Safety System'
+                : 'Unknown User';
+          }
+          item['report_rows'] = rows;
+        }
+      }
+    } else {
+      for (final item in history) {
+        item['target_author_name'] = historyAuthorName(item);
+        final rows = List<Map<String, dynamic>>.from(
+          item['report_rows'] ?? const [],
+        );
+        for (final row in rows) {
+          final reporterId = row['reporter_id']?.toString();
+          row['reporter_username'] = reporterId == null ||
+                  reporterId.isEmpty ||
+                  reporterId == 'null'
+              ? 'Automated Safety System'
+              : 'Unknown User';
+        }
+        item['report_rows'] = rows;
       }
     }
     return history;
@@ -4663,6 +4825,10 @@ class SupabaseService {
   }
 
   Future<void> createThread(ForumThread thread) async {
+    if (!const ['artisan', 'tourist'].contains(thread.authorRoleAtCreation) ||
+        thread.replies.any((reply) => !const ['artisan', 'tourist'].contains(reply.authorRoleAtCreation))) {
+      throw StateError('Forum creation requires a role snapshot');
+    }
     _deletedPostIds.remove(thread.id);
     _dismissedReportPostIds.remove(thread.id);
     _forumStore.insert(0, thread);
@@ -4712,6 +4878,7 @@ class SupabaseService {
       final Map<String, dynamic> verifiedDbMap = {
         'id': thread.id,
         'user_id': effectiveUid,
+ 'author_role_at_creation': thread.authorRoleAtCreation,
         'tag': tagValue,
         'community': thread.community,
         'title': thread.title,
@@ -4748,7 +4915,8 @@ class SupabaseService {
             'user_id': effectiveUid,
             'content': reply.text,
             'upvotes': reply.upvotes,
-            'is_verified_answer': reply.isVerifiedAnswer,
+            'author_role_at_creation': reply.authorRoleAtCreation,
+ 'is_verified_answer': reply.isVerifiedAnswer,
             'is_edited': reply.isEdited,
           });
         } catch (re) {
@@ -4762,7 +4930,8 @@ class SupabaseService {
                 'post_id': thread.id,
                 'content': reply.text,
                 'upvotes': reply.upvotes,
-                'is_verified_answer': reply.isVerifiedAnswer,
+                'author_role_at_creation': reply.authorRoleAtCreation,
+ 'is_verified_answer': reply.isVerifiedAnswer,
                 'is_edited': reply.isEdited,
               });
             } catch (_) {}
@@ -4773,6 +4942,9 @@ class SupabaseService {
   }
 
   Future<void> postReply(String threadId, ThreadReply reply) async {
+    if (!const ['artisan', 'tourist'].contains(reply.authorRoleAtCreation)) {
+      throw StateError('Forum creation requires a role snapshot');
+    }
     _dismissedReportReplyIds.remove(reply.id);
     final postVoteKey = _replyVoteKey(reply.id);
     _sessionReplyVotes[postVoteKey] = 0;
@@ -4821,7 +4993,7 @@ class SupabaseService {
       final String? userStoreUid = _userStore[reply.authorEmail]?['id']
           ?.toString();
       final String effectiveUid =
-          authUid ?? userStoreUid ?? '00000000-0000-4000-8000-000000000001';
+          reply.userId ?? authUid ?? userStoreUid ?? '00000000-0000-4000-8000-000000000001';
 
       final Map<String, dynamic> verifiedReplyMap = {
         'id': reply.id,
@@ -4829,7 +5001,8 @@ class SupabaseService {
         'user_id': effectiveUid,
         'content': reply.text,
         'upvotes': reply.upvotes,
-        'is_verified_answer': reply.isVerifiedAnswer,
+        'author_role_at_creation': reply.authorRoleAtCreation,
+ 'is_verified_answer': reply.isVerifiedAnswer,
         'is_edited': reply.isEdited,
         'is_reported': reply.isReported,
         if (reply.reportReason != null) 'report_reason': reply.reportReason,
@@ -5171,189 +5344,31 @@ class SupabaseService {
     }
   }
 
-  // Returns empty string on full success, or an error/status message.
+  // The RPC is the sole delete/history writer. Failure propagates to the UI;
+  // local content is removed only after the transaction commits.
   Future<String> adminDeleteForumPost(
     String postId,
     String deletionReason, [
     String? adminUsername,
   ]) async {
-    final foundThread = _forumStore.where((t) => t.id == postId).firstOrNull;
-
-    final String authorEmail = foundThread?.authorEmail ?? '';
-    String authorName = '';
-    final String postTitle = foundThread?.title ?? 'Post';
-    final String modName = adminUsername ?? 'Admin';
-
     final client = _client;
-
-    // Always use username for moderation history
-    if (client != null && authorEmail.trim().isNotEmpty) {
-      try {
-        final userRow = await client
-            .from('users')
-            .select('username')
-            .ilike('email', authorEmail.trim())
-            .maybeSingle();
-
-        if (userRow != null) {
-          final String username = (userRow['username'] ?? '').toString().trim();
-
-          if (username.isNotEmpty) {
-            authorName = username;
-          }
-        }
-      } catch (e) {
-        debugPrint('adminDeleteForumPost author lookup note: $e');
-      }
+    if (client == null) throw StateError('Supabase client not initialized');
+    final result = await client.rpc('admin_delete_forum_content', params: {
+      'p_post_id': postId,
+      'p_reply_id': null,
+      'p_deletion_reason': deletionReason,
+    });
+    if (result is! Map || result['success'] != true) {
+      throw StateError('Post deletion was not confirmed');
     }
-
-    if (authorName.trim().isEmpty) {
-      authorName = 'Unknown User';
-    }
-
-    // 2. Immediately update local state (admin sees deletion instantly)
     _forumStore.removeWhere((thread) => thread.id == postId);
     _deletedPostIds.add(postId);
     _dismissedReportPostIds.remove(postId);
-    // Persist so deletion survives app restart
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setStringList(
-        'wk_admin_deleted_posts',
-        _deletedPostIds.toList(),
-      );
-    } catch (_) {}
-    _localReportQueue.removeWhere(
-      (r) =>
-          (r['postId']?.toString() == postId ||
-              r['id']?.toString() == postId) &&
-          (r['type'] == null || r['type'] == 'post'),
-    );
-
-    // 3. Add a local moderation history entry (user gets notification even if network fails)
-    _localModerationHistory.insert(0, {
-      'id': 'hist_${DateTime.now().millisecondsSinceEpoch}',
-      'post_id': postId,
-      'post_title': postTitle,
-      'author_email': authorEmail,
-      'author_name': authorName,
-      'moderator_name': modName,
-      'status': 'actioned',
-      'action_type': 'deleted',
-      'reason': deletionReason,
-      'admin_reason': deletionReason,
-      'notes':
-          'Post "$postTitle" by $authorName ($authorEmail) deleted by Admin $modName: $deletionReason',
-      'resolution_notes': deletionReason,
-      'resolved_at': DateTime.now().toIso8601String(),
-    });
-
-    if (client == null) return 'Supabase client not initialized';
-
-    String deleteError = '';
-
-    // Mark existing reports for this post as actioned in Supabase DB immediately
-    try {
-      await client
-          .from('forum_reports')
-          .update({
-            'status': 'actioned',
-            'action_type': 'deleted',
-            'resolution_notes': deletionReason,
-            'deletion_reason': deletionReason,
-            'notes':
-                'Post "$postTitle" by $authorName ($authorEmail) deleted by Admin $modName: $deletionReason',
-            'resolved_at': DateTime.now().toIso8601String(),
-          })
-          .eq('post_id', postId);
-    } catch (_) {}
-
-    // 4. Try stored procedure
-    try {
-      await client.rpc(
-        'admin_delete_forum_content',
-        params: {
-          'p_post_id': postId,
-          'p_reply_id': null,
-          'p_deletion_reason': deletionReason,
-        },
-      );
-      debugPrint('adminDeleteForumPost: RPC succeeded for $postId');
-      deleteError = '';
-    } catch (e) {
-      deleteError = e.toString();
-      debugPrint('adminDeleteForumPost: RPC failed ($e)');
-    }
-
-    // 5. If RPC failed, try direct delete with .select() to confirm result
-    if (deleteError.isNotEmpty) {
-      try {
-        // Unlink reports so ON DELETE CASCADE does not wipe out moderation history
-        try {
-          await client
-              .from('forum_reports')
-              .update({
-                'status': 'actioned',
-                'action_type': 'deleted',
-                'resolution_notes': deletionReason,
-                'deletion_reason': deletionReason,
-                'resolved_at': DateTime.now().toIso8601String(),
-                'post_id': null,
-              })
-              .eq('post_id', postId);
-        } catch (_) {}
-
-        final result = await client
-            .from('forum_posts')
-            .delete()
-            .eq('id', postId)
-            .select('id');
-        debugPrint('adminDeleteForumPost: direct delete result: $result');
-        if (result.isEmpty) {
-          // Deleted successfully (no rows returned means the row is gone)
-          deleteError = '';
-        } else if (result.isNotEmpty) {
-          // Row still exists somehow - report as error
-          deleteError =
-              'Post still exists after delete (rows returned: ${result.length})';
-        } else {
-          deleteError = '';
-        }
-      } catch (e) {
-        deleteError = 'Direct delete FAILED: $e';
-        debugPrint('adminDeleteForumPost: direct delete FAILED ($e)');
-      }
-    }
-
-    // 6. Insert a standalone forum_reports record for the artisan/tourist notification
-    try {
-      try {
-        await client.from('forum_reports').insert({
-          'reason': deletionReason,
-          'status': 'actioned',
-          'action_type': 'deleted',
-          'notes':
-              'Post "$postTitle" by $authorName ($authorEmail) deleted: $deletionReason',
-          'resolution_notes': deletionReason,
-          'deletion_reason': deletionReason,
-          'resolved_at': DateTime.now().toIso8601String(),
-        });
-      } catch (_) {
-        // Fallback for older database schemas missing action_type / resolution_notes columns
-        await client.from('forum_reports').insert({
-          'reason': deletionReason,
-          'status': 'actioned',
-          'notes':
-              'Post "$postTitle" by $authorName ($authorEmail) deleted: $deletionReason',
-        });
-      }
-      debugPrint('adminDeleteForumPost: standalone report inserted');
-    } catch (e) {
-      debugPrint('adminDeleteForumPost: report insert FAILED ($e)');
-      if (deleteError.isEmpty) deleteError = 'Report insert failed: $e';
-    }
-
-    return deleteError;
+    _localReportQueue.removeWhere((row) =>
+        (row['postId']?.toString() == postId || row['id']?.toString() == postId) &&
+        (row['type'] == null || row['type'] == 'post'));
+    // ForumViewModel refreshes threads, queue, and remote history after success.
+    return '';
   }
 
   Future<String> adminDeleteForumReply(
@@ -5362,188 +5377,28 @@ class SupabaseService {
     String deletionReason, [
     String? adminUsername,
   ]) async {
-    // 1. Capture reply metadata BEFORE removing from local store
-    String authorEmail = '';
-    String authorName = '';
-    String replyText = '';
-    final modName = adminUsername ?? 'Admin';
-    for (final t in _forumStore) {
-      final r = t.replies.where((rep) => rep.id == replyId).firstOrNull;
-
-      if (r != null) {
-        authorEmail = r.authorEmail;
-        authorName = r.sender;
-        replyText = r.text;
-        break;
-      }
-    }
-
-    // =====================================================
-    // Resolve the REAL author name from public.users
-    // instead of relying only on reply.sender
-    // =====================================================
     final client = _client;
-
-    if (client != null && authorEmail.trim().isNotEmpty) {
-      try {
-        final userRow = await client
-            .from('users')
-            .select('username')
-            .ilike('email', authorEmail.trim())
-            .maybeSingle();
-
-        if (userRow != null) {
-          final String username = (userRow['username'] ?? '').toString().trim();
-
-          if (username.isNotEmpty) {
-            authorName = username;
-          }
-        }
-      } catch (e) {
-        debugPrint('adminDeleteForumReply author lookup note: $e');
-      }
+    if (client == null) throw StateError('Supabase client not initialized');
+    final result = await client.rpc('admin_delete_forum_content', params: {
+      'p_post_id': null,
+      'p_reply_id': replyId,
+      'p_deletion_reason': deletionReason,
+    });
+    if (result is! Map || result['success'] != true) {
+      throw StateError('Reply deletion was not confirmed');
     }
-
-    if (authorName.trim().isEmpty ||
-        authorName.trim().toLowerCase() == 'community member') {
-      authorName = 'Unknown User';
-    }
-
-    // 2. Immediately update local state
     for (int i = 0; i < _forumStore.length; i++) {
-      final t = _forumStore[i];
-      final rIdx = t.replies.indexWhere((r) => r.id == replyId);
-      if (rIdx != -1) {
-        final updatedReplies = List<ThreadReply>.from(t.replies)
-          ..removeAt(rIdx);
-        _forumStore[i] = t.copyWith(
-          replies: updatedReplies,
-          replyCount: updatedReplies.length,
-        );
-      }
+      final thread = _forumStore[i];
+      if (thread.id != threadId) continue;
+      final replies = thread.replies.where((reply) => reply.id != replyId).toList();
+      _forumStore[i] = thread.copyWith(replies: replies, replyCount: replies.length);
     }
     _dismissedReportReplyIds.add(replyId);
-    _localReportQueue.removeWhere(
-      (r) =>
-          (r['replyId']?.toString() == replyId ||
-              r['id']?.toString() == replyId) &&
-          (r['type'] == null || r['type'] == 'reply'),
-    );
-
-    // 3. Add local moderation history entry
-    _localModerationHistory.insert(0, {
-      'id': 'hist_${DateTime.now().millisecondsSinceEpoch}',
-      'reply_id': replyId,
-      'reply_text': replyText,
-      'author_email': authorEmail,
-      'author_name': authorName,
-      'moderator_name': modName,
-      'status': 'actioned',
-      'action_type': 'deleted',
-      'reason': deletionReason,
-      'admin_reason': deletionReason,
-      'notes':
-          'Reply by $authorName ($authorEmail) deleted by Admin $modName: $deletionReason',
-      'resolution_notes': deletionReason,
-      'resolved_at': DateTime.now().toIso8601String(),
-    });
-
-    if (client == null) return 'Supabase client not initialized';
-
-    String deleteError = '';
-
-    // Mark existing reports for this reply as actioned in Supabase DB immediately
-    try {
-      await client
-          .from('forum_reports')
-          .update({
-            'status': 'actioned',
-            'action_type': 'deleted',
-            'resolution_notes': deletionReason,
-            'deletion_reason': deletionReason,
-            'notes':
-                'Reply by $authorName ($authorEmail) deleted by Admin $modName: $deletionReason',
-            'resolved_at': DateTime.now().toIso8601String(),
-          })
-          .eq('reply_id', replyId);
-    } catch (_) {}
-
-    // 4. Try stored procedure
-    try {
-      await client.rpc(
-        'admin_delete_forum_content',
-        params: {
-          'p_post_id': null,
-          'p_reply_id': replyId,
-          'p_deletion_reason': deletionReason,
-        },
-      );
-      debugPrint('adminDeleteForumReply: RPC succeeded for $replyId');
-    } catch (e) {
-      deleteError = e.toString();
-      debugPrint('adminDeleteForumReply: RPC failed ($e)');
-    }
-
-    // 5. If RPC failed, direct delete
-    if (deleteError.isNotEmpty) {
-      try {
-        try {
-          await client
-              .from('forum_reports')
-              .update({
-                'status': 'actioned',
-                'action_type': 'deleted',
-                'resolution_notes': deletionReason,
-                'deletion_reason': deletionReason,
-                'resolved_at': DateTime.now().toIso8601String(),
-                'reply_id': null,
-              })
-              .eq('reply_id', replyId);
-        } catch (_) {}
-
-        await client
-            .from('forum_replies')
-            .delete()
-            .eq('id', replyId)
-            .select('id');
-        debugPrint(
-          'adminDeleteForumReply: direct delete succeeded for $replyId',
-        );
-        deleteError = '';
-      } catch (e) {
-        deleteError = 'Direct delete FAILED: $e';
-        debugPrint('adminDeleteForumReply: direct delete FAILED ($e)');
-      }
-    }
-
-    // 6. Insert standalone report record
-    try {
-      try {
-        await client.from('forum_reports').insert({
-          'reason': deletionReason,
-          'status': 'actioned',
-          'action_type': 'deleted',
-          'notes':
-              'Reply by $authorName ($authorEmail) deleted: $deletionReason',
-          'resolution_notes': deletionReason,
-          'deletion_reason': deletionReason,
-          'resolved_at': DateTime.now().toIso8601String(),
-        });
-      } catch (_) {
-        await client.from('forum_reports').insert({
-          'reason': deletionReason,
-          'status': 'actioned',
-          'notes':
-              'Reply by $authorName ($authorEmail) deleted: $deletionReason',
-        });
-      }
-      debugPrint('adminDeleteForumReply: report record inserted for $replyId');
-    } catch (e) {
-      debugPrint('adminDeleteForumReply: report insert FAILED ($e)');
-      if (deleteError.isEmpty) deleteError = 'Report insert failed: $e';
-    }
-
-    return deleteError;
+    _localReportQueue.removeWhere((row) =>
+        (row['replyId']?.toString() == replyId || row['id']?.toString() == replyId) &&
+        (row['type'] == null || row['type'] == 'reply'));
+    // ForumViewModel refreshes threads, queue, and remote history after success.
+    return '';
   }
 
   Future<void> editReply(
@@ -5661,12 +5516,89 @@ class SupabaseService {
     }
   }
 
+  // Submit before mutating local quarantine/queue state. Database errors must
+  // never fall through to an unchecked insert or a success notification.
+  Future<Map<String, dynamic>> _submitForumReport({
+    required String targetId,
+    required bool isReply,
+    required String reason,
+    required String notes,
+    required bool isAutomated,
+  }) async {
+    final client = _client;
+    if (client == null || client.auth.currentUser == null) {
+      return {
+        'success': false,
+        'already_reported': false,
+        'message': 'You must be signed in to submit a report.',
+      };
+    }
+
+    try {
+      final result = await client.rpc(
+        isAutomated
+            ? 'flag_own_forum_content'
+            : (isReply ? 'report_forum_reply' : 'report_forum_post'),
+        params: isAutomated
+            ? {
+                'p_post_id': isReply ? null : targetId,
+                'p_reply_id': isReply ? targetId : null,
+                'p_reason': reason,
+                'p_notes': notes,
+              }
+            : {
+                if (isReply) 'p_reply_id': targetId else 'p_post_id': targetId,
+                'p_reason': reason,
+                'p_notes': notes,
+              },
+      );
+      if (result is Map) {
+        return Map<String, dynamic>.from(result);
+      }
+    } on PostgrestException catch (e) {
+      if (e.code == '23505') {
+        return {'success': false, 'already_reported': true};
+      }
+      if (e.code == 'PFR02' || e.code == 'PFR03') {
+        return {
+          'success': false,
+          'already_reported': false,
+          'rate_limited': e.code == 'PFR02',
+          'cooldown': e.code == 'PFR03',
+          'message': e.code == 'PFR02'
+              ? 'You have submitted too many reports recently. Please wait a few minutes before reporting again.'
+              : 'Please wait 30 seconds before submitting another report.',
+        };
+      }
+      debugPrint('Forum report submission failed: $e');
+    } catch (e) {
+      debugPrint('Forum report submission failed: $e');
+    }
+
+    return {
+      'success': false,
+      'already_reported': false,
+      'message': 'Unable to submit your report. Please try again.',
+    };
+  }
+
   Future<Map<String, dynamic>> reportReply(
     String threadId,
     String replyId,
     String reason,
-    String notes,
-  ) async {
+    String notes, {
+    bool isAutomated = false,
+  }) async {
+    final result = await _submitForumReport(
+      targetId: replyId,
+      isReply: true,
+      reason: reason,
+      notes: notes,
+      isAutomated: isAutomated,
+    );
+    if (result['success'] != true) return result;
+    final quarantined = isAutomated || result['quarantined'] == true;
+
     // 1. Unmark dismissed if reported anew
     _dismissedReportReplyIds.remove(replyId);
 
@@ -5676,15 +5608,19 @@ class SupabaseService {
       final rIdx = t.replies.indexWhere((r) => r.id == replyId);
       if (rIdx != -1) {
         final updatedReply = t.replies[rIdx].copyWith(
-          isReported: true,
-          reportReason: reason,
-          reportNotes: notes,
+          isReported: quarantined,
+          reportReason: quarantined ? reason : null,
+          reportNotes: quarantined ? notes : null,
         );
         final updatedReplies = List<ThreadReply>.from(t.replies);
         updatedReplies[rIdx] = updatedReply;
         _forumStore[i] = t.copyWith(replies: updatedReplies);
       }
     }
+
+    // The automated RPC returns success for an existing system flag.
+    // Do not manufacture another local report for that idempotent result.
+    if (result['already_reported'] == true) return result;
 
     // 3. Add to _localReportQueue
     final existingIdx = _localReportQueue.indexWhere(
@@ -5712,52 +5648,7 @@ class SupabaseService {
       });
     }
 
-    final client = _client;
-    if (client == null) {
-      return {'success': true, 'already_reported': false};
-    }
-
-    final String? currentUserId = client.auth.currentUser?.id;
-
-    try {
-      final result = await client.rpc(
-        'report_forum_reply',
-        params: {'p_reply_id': replyId, 'p_reason': reason, 'p_notes': notes},
-      );
-
-      if (result is Map) {
-        return Map<String, dynamic>.from(result);
-      }
-      return {'success': true, 'already_reported': false};
-    } catch (e) {
-      final error = e.toString();
-      if (error.contains('23505') ||
-          error.toLowerCase().contains('duplicate key')) {
-        return {'success': false, 'already_reported': true};
-      }
-      debugPrint('reportReply RPC note: $e, using direct table fallback');
-      try {
-        await client.from('forum_reports').insert({
-          'reply_id': replyId,
-          if (currentUserId != null) 'reporter_id': currentUserId,
-          'reason': reason,
-          'notes': notes,
-          'status': 'pending',
-        });
-        await client
-            .from('forum_replies')
-            .update({
-              'is_reported': true,
-              'report_reason': reason,
-              'report_notes': notes,
-            })
-            .eq('id', replyId);
-        return {'success': true, 'already_reported': false};
-      } catch (dbErr) {
-        debugPrint('reportReply direct fallback note: $dbErr');
-        return {'success': true, 'already_reported': false};
-      }
-    }
+    return result;
   }
 
   Future<void> dismissReplyReport(
@@ -5765,7 +5656,16 @@ class SupabaseService {
     String replyId, [
     String? adminUsername,
   ]) async {
-    final modName = adminUsername ?? 'Admin';
+    final client = _client;
+    if (client == null) throw StateError('Supabase client not initialized');
+    final result = await client.rpc(
+      'dismiss_forum_reports',
+      params: {'p_post_id': null, 'p_reply_id': replyId},
+    );
+    if (result is! Map || result['success'] != true) {
+      throw StateError('Forum dismissal was not confirmed');
+    }
+    // Only update local visibility after the server transaction succeeds.
     for (int i = 0; i < _forumStore.length; i++) {
       final t = _forumStore[i];
       final rIdx = t.replies.indexWhere((r) => r.id == replyId);
@@ -5787,65 +5687,39 @@ class SupabaseService {
               r['id']?.toString() == replyId) &&
           (r['type'] == null || r['type'] == 'reply'),
     );
-    _localModerationHistory.insert(0, {
-      'id': 'hist_${DateTime.now().millisecondsSinceEpoch}',
-      'reply_id': replyId,
-      'status': 'dismissed',
-      'moderator_name': modName,
-      'notes': 'Reply flag dismissed by Admin $modName',
-      'resolved_at': DateTime.now().toIso8601String(),
-    });
-
-    final client = _client;
-    if (client == null) return;
-
-    try {
-      await client.rpc(
-        'dismiss_forum_reports',
-        params: {'p_post_id': null, 'p_reply_id': replyId},
-      );
-    } catch (e) {
-      debugPrint(
-        'dismissReplyReport RPC note: $e, using direct table fallback',
-      );
-      try {
-        await client
-            .from('forum_reports')
-            .update({
-              'status': 'dismissed',
-              'resolved_at': DateTime.now().toIso8601String(),
-            })
-            .eq('reply_id', replyId);
-        await client
-            .from('forum_replies')
-            .update({
-              'is_reported': false,
-              'report_reason': null,
-              'report_notes': null,
-            })
-            .eq('id', replyId);
-      } catch (dbErr) {
-        debugPrint('dismissReplyReport direct fallback note: $dbErr');
-      }
-    }
   }
 
   Future<Map<String, dynamic>> reportThread(
     String threadId,
     String reason,
-    String notes,
-  ) async {
+    String notes, {
+    bool isAutomated = false,
+  }) async {
+    final result = await _submitForumReport(
+      targetId: threadId,
+      isReply: false,
+      reason: reason,
+      notes: notes,
+      isAutomated: isAutomated,
+    );
+    if (result['success'] != true) return result;
+    final quarantined = isAutomated || result['quarantined'] == true;
+
     _dismissedReportPostIds.remove(threadId);
     _deletedPostIds.remove(threadId);
 
     final tIdx = _forumStore.indexWhere((t) => t.id == threadId);
     if (tIdx != -1) {
       _forumStore[tIdx] = _forumStore[tIdx].copyWith(
-        isReported: true,
-        reportReason: reason,
-        reportNotes: notes,
+        isReported: quarantined,
+        reportReason: quarantined ? reason : null,
+        reportNotes: quarantined ? notes : null,
       );
     }
+
+    // The automated RPC returns success for an existing system flag.
+    // Do not manufacture another local report for that idempotent result.
+    if (result['already_reported'] == true) return result;
 
     final existingIdx = _localReportQueue.indexWhere(
       (r) => r['postId'] == threadId && r['type'] == 'post',
@@ -5871,56 +5745,20 @@ class SupabaseService {
       });
     }
 
-    final client = _client;
-    if (client == null) {
-      return {'success': true, 'already_reported': false};
-    }
-
-    final String? currentUserId = client.auth.currentUser?.id;
-
-    try {
-      final result = await client.rpc(
-        'report_forum_post',
-        params: {'p_post_id': threadId, 'p_reason': reason, 'p_notes': notes},
-      );
-
-      if (result is Map) {
-        return Map<String, dynamic>.from(result);
-      }
-      return {'success': true, 'already_reported': false};
-    } catch (e) {
-      final error = e.toString();
-      if (error.contains('23505') ||
-          error.toLowerCase().contains('duplicate key')) {
-        return {'success': false, 'already_reported': true};
-      }
-      debugPrint('reportThread RPC note: $e, using direct table fallback');
-      try {
-        await client.from('forum_reports').insert({
-          'post_id': threadId,
-          if (currentUserId != null) 'reporter_id': currentUserId,
-          'reason': reason,
-          'notes': notes,
-          'status': 'pending',
-        });
-        await client
-            .from('forum_posts')
-            .update({
-              'is_reported': true,
-              'report_reason': reason,
-              'report_notes': notes,
-            })
-            .eq('id', threadId);
-        return {'success': true, 'already_reported': false};
-      } catch (dbErr) {
-        debugPrint('reportThread direct fallback note: $dbErr');
-        return {'success': true, 'already_reported': false};
-      }
-    }
+    return result;
   }
 
   Future<void> dismissReport(String threadId, [String? adminUsername]) async {
-    final modName = adminUsername ?? 'Admin';
+    final client = _client;
+    if (client == null) throw StateError('Supabase client not initialized');
+    final result = await client.rpc(
+      'dismiss_forum_reports',
+      params: {'p_post_id': threadId, 'p_reply_id': null},
+    );
+    if (result is! Map || result['success'] != true) {
+      throw StateError('Forum dismissal was not confirmed');
+    }
+    // Only update local visibility after the server transaction succeeds.
     _deletedPostIds.remove(threadId);
     _dismissedReportPostIds.add(threadId);
 
@@ -5939,45 +5777,6 @@ class SupabaseService {
               r['id']?.toString() == threadId) &&
           (r['type'] == null || r['type'] == 'post'),
     );
-    _localModerationHistory.insert(0, {
-      'id': 'hist_${DateTime.now().millisecondsSinceEpoch}',
-      'post_id': threadId,
-      'status': 'dismissed',
-      'moderator_name': modName,
-      'notes': 'Flag dismissed by Admin $modName',
-      'resolved_at': DateTime.now().toIso8601String(),
-    });
-
-    final client = _client;
-    if (client == null) return;
-
-    try {
-      await client.rpc(
-        'dismiss_forum_reports',
-        params: {'p_post_id': threadId, 'p_reply_id': null},
-      );
-    } catch (e) {
-      debugPrint('dismissReport RPC note: $e, using direct table fallback');
-      try {
-        await client
-            .from('forum_reports')
-            .update({
-              'status': 'dismissed',
-              'resolved_at': DateTime.now().toIso8601String(),
-            })
-            .eq('post_id', threadId);
-        await client
-            .from('forum_posts')
-            .update({
-              'is_reported': false,
-              'report_reason': null,
-              'report_notes': null,
-            })
-            .eq('id', threadId);
-      } catch (dbErr) {
-        debugPrint('dismissReport direct fallback note: $dbErr');
-      }
-    }
   }
 
   // --- Gamification Services ---

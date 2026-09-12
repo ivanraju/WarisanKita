@@ -27,12 +27,14 @@ class ForumRepository {
   Future<Map<String, dynamic>> reportThread(
       String threadId,
       String reason,
-      String notes,
-      ) async {
+      String notes, {
+      bool isAutomated = false,
+      }) async {
     return await _service.reportThread(
       threadId,
       reason,
       notes,
+      isAutomated: isAutomated,
     );
   }
 
@@ -74,13 +76,15 @@ class ForumRepository {
       String threadId,
       String replyId,
       String reason,
-      String notes,
-      ) async {
+      String notes, {
+      bool isAutomated = false,
+      }) async {
     return await _service.reportReply(
       threadId,
       replyId,
       reason,
       notes,
+      isAutomated: isAutomated,
     );
   }
 

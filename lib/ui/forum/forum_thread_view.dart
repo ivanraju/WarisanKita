@@ -30,12 +30,20 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
           title: Row(
             children: [
               const Icon(Icons.flag_rounded, color: Color(0xFFEF4444)),
               const SizedBox(width: 10),
-              Text('Report / Flag Post', style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF004D40))),
+              Text(
+                'Report / Flag Post',
+                style: GoogleFonts.dmSerifDisplay(
+                  fontSize: 20,
+                  color: const Color(0xFF004D40),
+                ),
+              ),
             ],
           ),
           content: Column(
@@ -46,22 +54,49 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
                 'Report post: "$title"',
                 maxLines: 2,
                 softWrap: true,
-                style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey[800]),
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[800],
+                ),
               ),
               const SizedBox(height: 14),
-              Text('Select Moderation Reason:', style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[600])),
+              Text(
+                'Select Moderation Reason:',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 11,
+                  color: Colors.grey[600],
+                ),
+              ),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: selectedReason,
                 decoration: InputDecoration(
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                 ),
                 items: const [
-                  DropdownMenuItem(value: 'Inappropriate Content', child: Text('Inappropriate / Offensive Content')),
-                  DropdownMenuItem(value: 'Misinformation', child: Text('Misinformation / Fake Heritage Claim')),
-                  DropdownMenuItem(value: 'Spam/Off-topic', child: Text('Spam or Off-topic Advertisement')),
-                  DropdownMenuItem(value: 'Harassment', child: Text('Harassment or Abusive Language')),
+                  DropdownMenuItem(
+                    value: 'Inappropriate Content',
+                    child: Text('Inappropriate / Offensive Content'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'Misinformation',
+                    child: Text('Misinformation / Fake Heritage Claim'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'Spam/Off-topic',
+                    child: Text('Spam or Off-topic Advertisement'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'Harassment',
+                    child: Text('Harassment or Abusive Language'),
+                  ),
                 ],
                 onChanged: (val) {
                   if (val != null) setDialogState(() => selectedReason = val);
@@ -74,7 +109,9 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
                 decoration: InputDecoration(
                   labelText: 'Additional Notes for Admin (Optional)',
                   hintText: 'Provide details for the admin moderation team...',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ],
@@ -89,13 +126,17 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('🚩 Post reported to Admin Moderation Officers ($selectedReason)'),
+                    content: Text(
+                      '🚩 Post reported to Admin Moderation Officers ($selectedReason)',
+                    ),
                     backgroundColor: const Color(0xFFEF4444),
                     behavior: SnackBarBehavior.floating,
                   ),
                 );
               },
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFEF4444),
+              ),
               icon: const Icon(Icons.flag_rounded, size: 16),
               label: const Text('SUBMIT REPORT'),
             ),
@@ -154,7 +195,7 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
             color: Colors.black.withOpacity(0.04),
             blurRadius: 30,
             offset: const Offset(0, 15),
-          )
+          ),
         ],
       ),
       child: Column(
@@ -175,8 +216,23 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(widget.thread.authorName, softWrap: true, style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 14)),
-                          const Text('Heritage Member', softWrap: true, style: TextStyle(color: Colors.black26, fontSize: 11, fontWeight: FontWeight.bold)),
+                          Text(
+                            widget.thread.authorName,
+                            softWrap: true,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const Text(
+                            'Heritage Member',
+                            softWrap: true,
+                            style: TextStyle(
+                              color: Colors.black26,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -189,11 +245,22 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: const Color(0xFFEF4444),
                   side: const BorderSide(color: Color(0xFFFCA5A5)),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
                 icon: const Icon(Icons.flag_rounded, size: 14),
-                label: Text('Report', style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold)),
+                label: Text(
+                  'Report',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ],
           ),
@@ -209,7 +276,9 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
           const SizedBox(height: 16),
           Wrap(
             spacing: 8,
-            children: widget.thread.tags.map((t) => _buildTag(t.toUpperCase())).toList(),
+            children: widget.thread.tags
+                .map((t) => _buildTag(t.toUpperCase()))
+                .toList(),
           ),
         ],
       ),
@@ -292,17 +361,41 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
                     CircleAvatar(
                       radius: 14,
                       backgroundColor: const Color(0xFF004D40),
-                      child: Text(
-                        reply.authorName[0],
-                        style: GoogleFonts.plusJakartaSans(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-                      ),
+                      child: (reply.avatarUrl?.trim().isNotEmpty == true)
+                          ? ClipOval(
+                              child: Image.network(
+                                reply.avatarUrl!.trim(),
+                                width: 28,
+                                height: 28,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, error, stackTrace) =>
+                                    const Icon(
+                                      Icons.person,
+                                      color: Colors.white,
+                                      size: 14,
+                                    ),
+                              ),
+                            )
+                          : Text(
+                              reply.authorName.isEmpty
+                                  ? '?'
+                                  : reply.authorName[0],
+                              style: GoogleFonts.plusJakartaSans(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         reply.authorName,
                         softWrap: true,
-                        style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 13),
+                        style: GoogleFonts.plusJakartaSans(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                   ],
@@ -317,7 +410,11 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
           const SizedBox(height: 12),
           Text(
             reply.content,
-            style: GoogleFonts.plusJakartaSans(fontSize: 13, color: Colors.black87, height: 1.5),
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 13,
+              color: Colors.black87,
+              height: 1.5,
+            ),
           ),
         ],
       ),
@@ -336,7 +433,7 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
             color: Colors.black.withOpacity(0.05),
             blurRadius: 20,
             offset: const Offset(0, -5),
-          )
+          ),
         ],
       ),
       child: SafeArea(
@@ -347,14 +444,20 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
                 controller: _replyController,
                 decoration: InputDecoration(
                   hintText: 'Share your heritage insights...',
-                  hintStyle: GoogleFonts.plusJakartaSans(fontSize: 13, color: Colors.black26),
+                  hintStyle: GoogleFonts.plusJakartaSans(
+                    fontSize: 13,
+                    color: Colors.black26,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(24),
                     borderSide: BorderSide.none,
                   ),
                   filled: true,
                   fillColor: const Color(0xFFF8F9FA),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 14,
+                  ),
                 ),
               ),
             ),
@@ -363,7 +466,11 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
               radius: 24,
               backgroundColor: const Color(0xFF004D40),
               child: IconButton(
-                icon: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+                icon: const Icon(
+                  Icons.send_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
                 onPressed: () {
                   if (_replyController.text.trim().isNotEmpty) {
                     final authVM = context.read<AuthViewModel>();
@@ -371,9 +478,18 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
                     forumVM.postReply(
                       threadId: widget.thread.id,
                       text: _replyController.text.trim(),
-                      authorName: user?.displayName ?? user?.effectiveUsername ?? 'Community Member',
+                      authorName:
+                          user?.displayName ??
+                          user?.effectiveUsername ??
+                          'Community Member',
                       authorEmail: user?.email ?? '',
-                      isArtisan: user?.isArtisan ?? false,
+                      isArtisan:
+                          normalizeForumCreationRole(authVM.activeRole) ==
+                          'artisan',
+                      authorRoleAtCreation: normalizeForumCreationRole(
+                        authVM.activeRole,
+                      ),
+                      authorUserId: user!.id,
                     );
                     _replyController.clear();
                     ScaffoldMessenger.of(context).showSnackBar(
