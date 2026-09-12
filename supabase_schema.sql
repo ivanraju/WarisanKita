@@ -275,29 +275,36 @@ DROP FUNCTION IF EXISTS public.deactivate_artisan_studio(uuid);
 CREATE OR REPLACE FUNCTION public.deactivate_artisan_studio(p_user_id uuid)
 RETURNS JSONB AS $$
 BEGIN
-    -- 1. Update public.users
-    UPDATE public.users
-    SET role = 'Tourist',
-        artisan_status = 'CLOSED',
-        status = 'ACTIVE',
-        updated_at = now()
-    WHERE id = p_user_id;
+    -- 1. Delete artisan documents
+    DELETE FROM public.artisan_documents
+    WHERE artisan_id IN (SELECT id FROM public.artisan_profiles WHERE user_id = p_user_id);
 
-    -- 2. Update auth.users metadata
-    UPDATE auth.users
-    SET raw_user_meta_data = raw_user_meta_data || '{"role": "Tourist", "artisan_status": "CLOSED", "status": "ACTIVE"}'::jsonb
-    WHERE id = p_user_id;
-
-    -- 3. Retire quests owned by this artisan
+    -- 2. Retire quests owned by this artisan
     UPDATE public.quests
     SET status = 'RETIRED'
     WHERE artisan_id IN (SELECT id FROM public.artisan_profiles WHERE user_id = p_user_id);
 
-    -- 4. Mark artisan_profile as CLOSED
-    UPDATE public.artisan_profiles
-    SET status = 'CLOSED',
-        updated_at = now()
+    -- 3. Delete from public.artisan_profiles
+    DELETE FROM public.artisan_profiles
     WHERE user_id = p_user_id;
+
+    -- 4. Update public.users
+    UPDATE public.users
+    SET role = 'Tourist',
+        roles = ARRAY['Tourist']::TEXT[],
+        artisan_status = 'CLOSED',
+        status = 'ACTIVE',
+        studio_name = NULL,
+        craft_category = NULL,
+        ssm_number = NULL,
+        is_live_open = FALSE,
+        updated_at = now()
+    WHERE id = p_user_id;
+
+    -- 5. Update auth.users metadata
+    UPDATE auth.users
+    SET raw_user_meta_data = raw_user_meta_data || '{"role": "Tourist", "roles": ["Tourist"], "artisan_status": "CLOSED", "status": "ACTIVE", "studio_name": null, "craft_category": null, "ssm_number": null}'::jsonb
+    WHERE id = p_user_id;
 
     RETURN jsonb_build_object('success', true);
 END;
@@ -1108,25 +1115,36 @@ GRANT EXECUTE ON FUNCTION public.delete_user_account(UUID) TO anon, authenticate
 CREATE OR REPLACE FUNCTION public.deactivate_artisan_studio(p_user_id uuid)
 RETURNS JSONB AS $$
 BEGIN
-    UPDATE public.users
-    SET role = 'Tourist',
-        artisan_status = 'CLOSED',
-        status = 'ACTIVE',
-        updated_at = now()
-    WHERE id = p_user_id;
+    -- 1. Delete artisan documents
+    DELETE FROM public.artisan_documents
+    WHERE artisan_id IN (SELECT id FROM public.artisan_profiles WHERE user_id = p_user_id);
 
-    UPDATE auth.users
-    SET raw_user_meta_data = raw_user_meta_data || '{"role": "Tourist", "artisan_status": "CLOSED", "status": "ACTIVE"}'::jsonb
-    WHERE id = p_user_id;
-
+    -- 2. Retire quests owned by this artisan
     UPDATE public.quests
     SET status = 'RETIRED'
     WHERE artisan_id IN (SELECT id FROM public.artisan_profiles WHERE user_id = p_user_id);
 
-    UPDATE public.artisan_profiles
-    SET status = 'CLOSED',
-        updated_at = now()
+    -- 3. Delete from public.artisan_profiles
+    DELETE FROM public.artisan_profiles
     WHERE user_id = p_user_id;
+
+    -- 4. Update public.users
+    UPDATE public.users
+    SET role = 'Tourist',
+        roles = ARRAY['Tourist']::TEXT[],
+        artisan_status = 'CLOSED',
+        status = 'ACTIVE',
+        studio_name = NULL,
+        craft_category = NULL,
+        ssm_number = NULL,
+        is_live_open = FALSE,
+        updated_at = now()
+    WHERE id = p_user_id;
+
+    -- 5. Update auth.users metadata
+    UPDATE auth.users
+    SET raw_user_meta_data = raw_user_meta_data || '{"role": "Tourist", "roles": ["Tourist"], "artisan_status": "CLOSED", "status": "ACTIVE", "studio_name": null, "craft_category": null, "ssm_number": null}'::jsonb
+    WHERE id = p_user_id;
 
     RETURN jsonb_build_object('success', true);
 END;

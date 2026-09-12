@@ -3499,7 +3499,7 @@ class SupabaseService {
         );
       }
 
-      // Retire active quests owned by this artisan so they immediately disappear from directory
+      // Retire active quests and remove artisan documents for this studio
       try {
         final apRows = await client
             .from('artisan_profiles')
@@ -3509,6 +3509,12 @@ class SupabaseService {
           if (ap['id'] != null) {
             try {
               await client
+                  .from('artisan_documents')
+                  .delete()
+                  .eq('artisan_id', ap['id']);
+            } catch (_) {}
+            try {
+              await client
                   .from('quests')
                   .update({'status': 'RETIRED'})
                   .eq('artisan_id', ap['id']);
@@ -3516,29 +3522,34 @@ class SupabaseService {
           }
         }
       } catch (e) {
-        debugPrint('deactivateArtisanStudio retire quests note: $e');
+        debugPrint('deactivateArtisanStudio retire quests/docs note: $e');
       }
 
-      // Mark artisan_profiles as CLOSED
+      // Remove artisan_profiles row upon studio deactivation
+      bool profileRemoved = false;
       try {
         await client
             .from('artisan_profiles')
-            .update({
-              'status': 'CLOSED',
-              'updated_at': DateTime.now().toIso8601String(),
-            })
+            .delete()
             .or('user_id.eq.$effectiveUid,user_id.eq.$userId');
+        profileRemoved = true;
       } catch (e) {
-        debugPrint('deactivateArtisanStudio profile status note: $e');
+        debugPrint('deactivateArtisanStudio delete artisan_profiles note: $e');
+      }
+
+      // Fallback: If delete was blocked by a foreign key constraint, mark as CLOSED (never SUSPENDED)
+      if (!profileRemoved) {
         try {
           await client
               .from('artisan_profiles')
               .update({
-                'status': 'SUSPENDED',
+                'status': 'CLOSED',
                 'updated_at': DateTime.now().toIso8601String(),
               })
               .or('user_id.eq.$effectiveUid,user_id.eq.$userId');
-        } catch (_) {}
+        } catch (e) {
+          debugPrint('deactivateArtisanStudio profile status note: $e');
+        }
       }
 
       // Resilient 3-tier user table update
