@@ -21,7 +21,7 @@ class MatchmakerViewModel extends ChangeNotifier {
   Map<int, String> get answers => Map.unmodifiable(_answers);
   CraftPersonality? get currentPersonality => _currentPersonality;
   bool get isLoading => _isLoading;
-  bool get isQuizCompleted => _currentPersonality != null || _answers.length >= 4;
+  bool get isQuizCompleted => _currentPersonality != null || _answers.length >= 6;
 
   List<String> get preferenceTags =>
       _currentPersonality?.preferenceTags.isNotEmpty == true
@@ -34,6 +34,12 @@ class MatchmakerViewModel extends ChangeNotifier {
   String? get region => _answers[3] ?? _currentPersonality?.region;
   List<String> get matchingCrafts => _currentPersonality?.matchingCrafts ?? const [];
   String get primaryCategory => _currentPersonality?.primaryCategory ?? 'All Crafts';
+  String? get secondaryCategory => _currentPersonality?.secondaryCategory;
+  Map<String, int> get craftScores => _currentPersonality?.craftScores ?? const {};
+  Map<String, int> get traitScores => _currentPersonality?.traitScores ?? const {};
+  String get topTrait => _currentPersonality?.topTrait ?? '';
+  bool get isBlended => _currentPersonality?.isBlended ?? false;
+  List<String> get blendedCategories => _currentPersonality?.blendedCategories ?? const [];
 
   /// Update user context (e.g. after login/logout)
   void updateUserContext(String? email) {
@@ -60,7 +66,7 @@ class MatchmakerViewModel extends ChangeNotifier {
 
       if (savedPersonality != null) {
         _currentPersonality = savedPersonality;
-      } else if (_answers.length >= 4) {
+      } else if (_answers.length >= 6) {
         _currentPersonality = _repository.calculatePersonality(_answers);
       }
     } catch (e) {
@@ -71,25 +77,32 @@ class MatchmakerViewModel extends ChangeNotifier {
     }
   }
 
-  /// Update a single answer during quiz progress
+  /// Update a single answer during quiz progress and dynamically recalculate if all questions answered
   void setAnswer(int questionIndex, String optionLabel) {
     _answers[questionIndex] = optionLabel;
+    if (_answers.length >= 6) {
+      _currentPersonality = _repository.calculatePersonality(_answers);
+    }
     notifyListeners();
   }
 
   /// Save complete quiz results, compute personality and persist to storage
   Future<CraftPersonality> saveQuizResults({
-    required String experienceType,
-    required String environment,
-    required String material,
-    required String region,
+    String? experienceType,
+    String? environment,
+    String? material,
+    String? region,
+    Map<int, String>? answers,
     String? userEmail,
   }) async {
     final targetEmail = userEmail ?? _currentUserEmail;
-    _answers[0] = experienceType;
-    _answers[1] = environment;
-    _answers[2] = material;
-    _answers[3] = region;
+    if (answers != null) {
+      _answers.addAll(answers);
+    }
+    if (experienceType != null) _answers[0] = experienceType;
+    if (environment != null) _answers[1] = environment;
+    if (material != null) _answers[2] = material;
+    if (region != null) _answers[3] = region;
 
     final calculatedPersonality = _repository.calculatePersonality(_answers);
     _currentPersonality = calculatedPersonality;
@@ -106,9 +119,6 @@ class MatchmakerViewModel extends ChangeNotifier {
 
   /// Calculate or retrieve current personality result
   CraftPersonality calculateResult() {
-    if (_currentPersonality != null) {
-      return _currentPersonality!;
-    }
     final result = _repository.calculatePersonality(_answers);
     _currentPersonality = result;
     return result;

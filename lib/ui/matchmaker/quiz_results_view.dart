@@ -96,7 +96,7 @@ class QuizResultsScreen extends StatelessWidget {
                   ],
 
                   const SizedBox(height: 20),
-                  _buildResultCard(context, langVM, result.description, result.matchingCrafts),
+                  _buildResultCard(context, langVM, result),
                   const SizedBox(height: 28),
 
                   _buildExploreButton(
@@ -158,7 +158,14 @@ class QuizResultsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildResultCard(BuildContext context, LanguageViewModel langVM, String description, List<String> matchingCrafts) {
+  Widget _buildResultCard(BuildContext context, LanguageViewModel langVM, dynamic result) {
+    final String description = result.description as String;
+    final List<String> matchingCrafts = (result.matchingCrafts as List<String>);
+    final bool isBlended = result.isBlended == true;
+    final String primaryCategory = result.primaryCategory as String;
+    final String? secondaryCategory = result.secondaryCategory as String?;
+    final String topTrait = (result.topTrait ?? '') as String;
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -168,11 +175,86 @@ class QuizResultsScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
+          if (isBlended)
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFD54F).withOpacity(0.2),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFFFFD54F)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.explore_rounded, color: Color(0xFFFFD54F), size: 16),
+                  const SizedBox(width: 6),
+                  Text(
+                    langVM.translate('Harmonious Blended Match'),
+                    style: const TextStyle(
+                      color: Color(0xFFFFD54F),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
           Text(
             description,
             textAlign: TextAlign.center,
             style: GoogleFonts.plusJakartaSans(color: Colors.white.withOpacity(0.9), fontSize: 14, height: 1.7),
           ),
+          const SizedBox(height: 20),
+
+          // Primary & Secondary Craft recommendations
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFD54F).withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFFFD54F)),
+                ),
+                child: Text(
+                  '⭐ ${langVM.translate("Primary:")} $primaryCategory',
+                  style: const TextStyle(color: Color(0xFFFFD54F), fontSize: 11, fontWeight: FontWeight.bold),
+                ),
+              ),
+              if (secondaryCategory != null && secondaryCategory.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white30),
+                  ),
+                  child: Text(
+                    '✨ ${langVM.translate("Secondary:")} $secondaryCategory',
+                    style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              if (topTrait.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFF10B981)),
+                  ),
+                  child: Text(
+                    '🎯 ${langVM.translate("Trait:")} $topTrait',
+                    style: const TextStyle(color: Color(0xFF34D399), fontSize: 11, fontWeight: FontWeight.bold),
+                  ),
+                ),
+            ],
+          ),
+
           const SizedBox(height: 20),
           Text(
             langVM.translate('MATCHING HERITAGE DISCIPLINES').toUpperCase(),
