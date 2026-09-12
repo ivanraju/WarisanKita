@@ -265,7 +265,7 @@ class _RotatingArtisanImageCarouselState
                   child: widget.topLeading!,
                 ),
 
-              // 4. Top Trailing Widget (e.g., "+150 EXP")
+              // 4. Optional top-trailing quest XP badge.
               if (widget.topTrailing != null)
                 Positioned(
                   top: 14,

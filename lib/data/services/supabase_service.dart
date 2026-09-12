@@ -534,7 +534,8 @@ class SupabaseService {
             row['rejection_reason'] = null;
           } else if (artisanStatus == 'APPROVED' && !isUserClosedOrPending) {
             final userRole = (row['role'] ?? '').toString();
-            final hasStudio = (row['studio_name'] != null &&
+            final hasStudio =
+                (row['studio_name'] != null &&
                     row['studio_name'].toString().trim().isNotEmpty) ||
                 (artisan['studio_name'] != null &&
                     artisan['studio_name'].toString().trim().isNotEmpty);
@@ -648,7 +649,8 @@ class SupabaseService {
               row['rejection_reason'] = null;
             } else if (artisanStatus == 'APPROVED' && !isUserClosedOrPending) {
               final userRole = (row['role'] ?? '').toString();
-              final hasStudio = (row['studio_name'] != null &&
+              final hasStudio =
+                  (row['studio_name'] != null &&
                       row['studio_name'].toString().trim().isNotEmpty) ||
                   (artisan['studio_name'] != null &&
                       artisan['studio_name'].toString().trim().isNotEmpty);
@@ -730,8 +732,7 @@ class SupabaseService {
       } else if (userMeta?['phone'] != null &&
           userMeta!['phone'].toString().trim().isNotEmpty) {
         row['phone_number'] = userMeta['phone'].toString().trim();
-      } else if (authUser.phone != null &&
-          authUser.phone!.trim().isNotEmpty) {
+      } else if (authUser.phone != null && authUser.phone!.trim().isNotEmpty) {
         row['phone_number'] = authUser.phone!.trim();
       } else if (_userStore.containsKey(authUser.email?.toLowerCase())) {
         final cached = _userStore[authUser.email!.toLowerCase()];
@@ -2073,7 +2074,8 @@ class SupabaseService {
                   'pending_relocation_date':
                       relocData['pending_relocation_date'],
                   if (certUrl != null) 'pending_relocation_cert_url': certUrl,
-                  if (certName != null) 'pending_relocation_cert_name': certName,
+                  if (certName != null)
+                    'pending_relocation_cert_name': certName,
                   'updated_at': DateTime.now().toIso8601String(),
                 })
                 .eq('user_id', userId);
@@ -2092,7 +2094,8 @@ class SupabaseService {
                   'pending_relocation_date':
                       relocData['pending_relocation_date'],
                   if (certUrl != null) 'pending_relocation_cert_url': certUrl,
-                  if (certName != null) 'pending_relocation_cert_name': certName,
+                  if (certName != null)
+                    'pending_relocation_cert_name': certName,
                   'updated_at': DateTime.now().toIso8601String(),
                 })
                 .eq('id', userId);
@@ -2465,9 +2468,11 @@ class SupabaseService {
               rowMap['experience'] ??=
                   (ap['experience'] != null &&
                       ap['experience'].toString().trim().isNotEmpty)
-                  ? (RegExp(r'^\d+$').hasMatch(ap['experience'].toString().trim())
-                      ? '${ap['experience'].toString().trim()} Years'
-                      : ap['experience'].toString().trim())
+                  ? (RegExp(
+                          r'^\d+$',
+                        ).hasMatch(ap['experience'].toString().trim())
+                        ? '${ap['experience'].toString().trim()} Years'
+                        : ap['experience'].toString().trim())
                   : (ap['years_experience'] != null &&
                             (ap['years_experience'] as num) > 1
                         ? '${(ap['years_experience'] as num).toInt()} Years'
@@ -2539,37 +2544,50 @@ class SupabaseService {
                 !results.any(
                   (r) => (r['email'] ?? '').toString().toLowerCase() == email,
                 )) {
-              final apExp = (pMap['experience'] != null &&
+              final apExp =
+                  (pMap['experience'] != null &&
                       pMap['experience'].toString().trim().isNotEmpty)
-                  ? (RegExp(r'^\d+$').hasMatch(pMap['experience'].toString().trim())
-                      ? '${pMap['experience'].toString().trim()} Years'
-                      : pMap['experience'].toString().trim())
+                  ? (RegExp(
+                          r'^\d+$',
+                        ).hasMatch(pMap['experience'].toString().trim())
+                        ? '${pMap['experience'].toString().trim()} Years'
+                        : pMap['experience'].toString().trim())
                   : (pMap['years_experience'] != null &&
-                          (pMap['years_experience'] as num) > 1
-                      ? '${(pMap['years_experience'] as num).toInt()} Years'
-                      : (u['experience'] != null &&
-                              u['experience'].toString().trim().isNotEmpty
-                          ? (RegExp(r'^\d+$').hasMatch(u['experience'].toString().trim())
-                              ? '${u['experience'].toString().trim()} Years'
-                              : u['experience'].toString().trim())
-                          : 'Verified Studio'));
+                            (pMap['years_experience'] as num) > 1
+                        ? '${(pMap['years_experience'] as num).toInt()} Years'
+                        : (u['experience'] != null &&
+                                  u['experience'].toString().trim().isNotEmpty
+                              ? (RegExp(r'^\d+$').hasMatch(
+                                      u['experience'].toString().trim(),
+                                    )
+                                    ? '${u['experience'].toString().trim()} Years'
+                                    : u['experience'].toString().trim())
+                              : 'Verified Studio'));
               final combined = <String, dynamic>{
                 'id': u['id'] ?? pMap['user_id'] ?? pMap['id'],
-                'full_name': u['full_name'] ??
+                'full_name':
+                    u['full_name'] ??
                     u['display_name'] ??
                     pMap['studio_name'] ??
                     'Artisan Applicant',
                 'email': email,
                 'studio_name': pMap['studio_name'] ?? u['studio_name'],
-                'craft_category':
-                    pMap['craft_category'] ?? u['craft_category'],
+                'craft_category': pMap['craft_category'] ?? u['craft_category'],
                 'ssm_number': pMap['ssm_number'] ?? u['ssm_number'],
                 'bio': pMap['bio'] ?? u['bio'],
                 'state': pMap['state'] ?? u['state'],
                 'address': pMap['address'] ?? u['address'],
                 'experience': apExp,
-                'phone': u['phone_number'] ?? u['phone'] ?? pMap['phone'] ?? pMap['phone_number'],
-                'phone_number': u['phone_number'] ?? u['phone'] ?? pMap['phone'] ?? pMap['phone_number'],
+                'phone':
+                    u['phone_number'] ??
+                    u['phone'] ??
+                    pMap['phone'] ??
+                    pMap['phone_number'],
+                'phone_number':
+                    u['phone_number'] ??
+                    u['phone'] ??
+                    pMap['phone'] ??
+                    pMap['phone_number'],
                 'artisan_status': 'PENDING_APPROVAL',
                 'artisan_profiles': pMap,
               };
@@ -4000,14 +4018,22 @@ class SupabaseService {
             storeArtisanStatus = storeData['artisan_status']?.toString();
           }
 
-          final userRole = (userRow?['role'] ?? storeRole)?.toString().toLowerCase() ?? '';
-          final userStatus = (userRow?['status'] ?? storeStatus)?.toString().toUpperCase() ?? '';
+          final userRole =
+              (userRow?['role'] ?? storeRole)?.toString().toLowerCase() ?? '';
+          final userStatus =
+              (userRow?['status'] ?? storeStatus)?.toString().toUpperCase() ??
+              '';
           final artisanStatus =
-              (userRow?['artisan_status'] ?? storeArtisanStatus)?.toString().toUpperCase() ?? '';
+              (userRow?['artisan_status'] ?? storeArtisanStatus)
+                  ?.toString()
+                  .toUpperCase() ??
+              '';
 
-          final isAlreadyApproved = (artisanStatus == 'APPROVED') ||
+          final isAlreadyApproved =
+              (artisanStatus == 'APPROVED') ||
               (userRole == 'artisan' && userStatus == 'ACTIVE');
-          final resolvedStatus = initialStatus?.trim().toUpperCase() ??
+          final resolvedStatus =
+              initialStatus?.trim().toUpperCase() ??
               (isAlreadyApproved ? 'APPROVED' : 'PENDING_APPROVAL');
 
           final newProfile = {
@@ -4577,13 +4603,15 @@ class SupabaseService {
 
         // Drop stale local reports, retaining the existing queue fallback for
         // quarantined content whose safety-report insertion may have failed.
-        groupedReports.removeWhere((key, _) => !_forumStore.any(
-          (thread) => key == 'post_${thread.id}'
-              ? thread.isReported
-              : thread.replies.any(
-                  (reply) => key == 'reply_${reply.id}' && reply.isReported,
-                ),
-        ));
+        groupedReports.removeWhere(
+          (key, _) => !_forumStore.any(
+            (thread) => key == 'post_${thread.id}'
+                ? thread.isReported
+                : thread.replies.any(
+                    (reply) => key == 'reply_${reply.id}' && reply.isReported,
+                  ),
+          ),
+        );
         _localReportQueue.clear();
 
         for (final report in reports) {
@@ -4695,19 +4723,26 @@ class SupabaseService {
           final reply = row['reply_id']?.toString();
           final target = post != null && post != 'null'
               ? 'post_$post'
-              : reply != null && reply != 'null' ? 'reply_$reply' : null;
+              : reply != null && reply != 'null'
+              ? 'reply_$reply'
+              : null;
           if (reporter != null && reporter != 'null' && reporter.isNotEmpty) {
             reporterIds.add(reporter);
-            final entry = stats.putIfAbsent(reporter, () => {
-              'total': 0, 'pending': 0, 'dismissed': 0, 'actioned': 0,
-            });
+            final entry = stats.putIfAbsent(
+              reporter,
+              () => {'total': 0, 'pending': 0, 'dismissed': 0, 'actioned': 0},
+            );
             entry['total'] = entry['total']! + 1;
             final status = row['status']?.toString();
             if (status == 'pending') entry['pending'] = entry['pending']! + 1;
-            if (status == 'dismissed') entry['dismissed'] = entry['dismissed']! + 1;
-            if (status == 'actioned') entry['actioned'] = entry['actioned']! + 1;
+            if (status == 'dismissed')
+              entry['dismissed'] = entry['dismissed']! + 1;
+            if (status == 'actioned')
+              entry['actioned'] = entry['actioned']! + 1;
             if (status == 'pending' && target != null) {
-              pendingManualByTarget.putIfAbsent(target, () => <String>{}).add(reporter);
+              pendingManualByTarget
+                  .putIfAbsent(target, () => <String>{})
+                  .add(reporter);
             }
           }
         }
@@ -4731,13 +4766,17 @@ class SupabaseService {
         reporterIds.addAll(targetAuthorIds.values);
         final users = reporterIds.isEmpty
             ? <dynamic>[]
-            : await client.from('users').select('id, username').inFilter('id', reporterIds.toList());
+            : await client
+                  .from('users')
+                  .select('id, username')
+                  .inFilter('id', reporterIds.toList());
         final usernames = <String, String>{};
         for (final raw in users) {
           final row = Map<String, dynamic>.from(raw);
           final id = row['id']?.toString();
           final username = row['username']?.toString().trim();
-          if (id != null && username != null && username.isNotEmpty) usernames[id] = username;
+          if (id != null && username != null && username.isNotEmpty)
+            usernames[id] = username;
         }
         if (targetAuthorEmails.isNotEmpty) {
           final emailRows = await client
@@ -4767,10 +4806,13 @@ class SupabaseService {
         for (final entry in groupedReports.entries) {
           final item = entry.value;
           final target = entry.key;
-          item['distinctPendingManualReporters'] = pendingManualByTarget[target]?.length ?? 0;
+          item['distinctPendingManualReporters'] =
+              pendingManualByTarget[target]?.length ?? 0;
           item['contentAuthorId'] = targetAuthorIds[target] ?? 'Unknown';
           item['contentAuthorUsername'] = usernames[target] ?? 'Unknown User';
-          for (final report in List<Map<String, dynamic>>.from(item['reports'] ?? const [])) {
+          for (final report in List<Map<String, dynamic>>.from(
+            item['reports'] ?? const [],
+          )) {
             final id = report['reporter_id']?.toString();
             if (id == null || id.isEmpty || id == 'null') {
               report['reporterUsername'] = 'Automated Safety System';
@@ -4833,28 +4875,38 @@ class SupabaseService {
 
         final remoteHistory = List<Map<String, dynamic>>.from(response ?? []);
         final groups = <String, List<Map<String, dynamic>>>{};
-        final remoteIds = remoteHistory.map((row) => row['id']?.toString()).toSet();
+        final remoteIds = remoteHistory
+            .map((row) => row['id']?.toString())
+            .toSet();
 
         // Successful deletes are represented only by persisted records.
         // Retain the existing local Dismiss fallback, matching exact row/target IDs.
-        history.removeWhere((local) =>
-            local['status'] == 'actioned' ||
-            remoteIds.contains(local['id']?.toString()) ||
-            (local['status'] == 'dismissed' && remoteHistory.any((remote) =>
-                remote['status'] == 'dismissed' &&
-                ((local['post_id'] != null &&
-                      local['post_id'] == remote['post_id']) ||
-                 (local['reply_id'] != null &&
-                      local['reply_id'] == remote['reply_id'])))));
+        history.removeWhere(
+          (local) =>
+              local['status'] == 'actioned' ||
+              remoteIds.contains(local['id']?.toString()) ||
+              (local['status'] == 'dismissed' &&
+                  remoteHistory.any(
+                    (remote) =>
+                        remote['status'] == 'dismissed' &&
+                        ((local['post_id'] != null &&
+                                local['post_id'] == remote['post_id']) ||
+                            (local['reply_id'] != null &&
+                                local['reply_id'] == remote['reply_id'])),
+                  )),
+        );
 
         for (final row in remoteHistory) {
           final id = row['id']?.toString();
           if (id == null || _dismissedNoticeIds.contains(id)) continue;
           final actionId = row['moderation_action_id']?.toString().trim();
-          final isDelete = row['status'] == 'actioned' &&
-              row['action_type'] == 'deleted';
-          final key = (isDelete || row['status'] == 'dismissed') && actionId != null &&
-                  actionId.isNotEmpty && actionId != 'null'
+          final isDelete =
+              row['status'] == 'actioned' && row['action_type'] == 'deleted';
+          final key =
+              (isDelete || row['status'] == 'dismissed') &&
+                  actionId != null &&
+                  actionId.isNotEmpty &&
+                  actionId != 'null'
               ? 'action:${row['status']}:$actionId'
               : 'row:$id';
           groups.putIfAbsent(key, () => []).add(row);
@@ -4866,8 +4918,9 @@ class SupabaseService {
             history.add({...rows.single});
             continue;
           }
-          final parents = rows.where((row) =>
-              row['is_moderation_action'] == true).toList();
+          final parents = rows
+              .where((row) => row['is_moderation_action'] == true)
+              .toList();
           if (parents.length != 1) {
             // Pre-migration/incomplete actions have no provable canonical parent.
             // Never guess from reporter_id, reason, author, or timestamp.
@@ -4875,9 +4928,10 @@ class SupabaseService {
             continue;
           }
           final parent = parents.single;
-          final audit = rows.where((row) =>
-              row['id'] != parent['id']).map((row) =>
-                  Map<String, dynamic>.from(row)).toList();
+          final audit = rows
+              .where((row) => row['id'] != parent['id'])
+              .map((row) => Map<String, dynamic>.from(row))
+              .toList();
           final manualReports = audit.where((row) {
             final reporterId = row['reporter_id']?.toString();
             return parent['target_id'] != null &&
@@ -4894,7 +4948,8 @@ class SupabaseService {
             'report_rows': audit,
             'reports_involved': manualReports
                 .map((row) => row['reporter_id'].toString())
-                .toSet().length,
+                .toSet()
+                .length,
           });
         }
       } catch (e) {
@@ -4907,8 +4962,11 @@ class SupabaseService {
     ]) {
       for (final value in [item['target_author_name'], item['author_name']]) {
         final name = value?.toString().trim();
-        if (name != null && name.isNotEmpty && name != 'null' &&
-            name != 'Community Member' && name != 'Unknown User') {
+        if (name != null &&
+            name.isNotEmpty &&
+            name != 'null' &&
+            name != 'Community Member' &&
+            name != 'Unknown User') {
           return name;
         }
       }
@@ -4924,7 +4982,9 @@ class SupabaseService {
           item['is_moderation_action'] != true &&
           !item.containsKey('report_rows')) {
         final reporterId = item['reporter_id']?.toString();
-        if (reporterId != null && reporterId.isNotEmpty && reporterId != 'null') {
+        if (reporterId != null &&
+            reporterId.isNotEmpty &&
+            reporterId != 'null') {
           item['report_rows'] = [Map<String, dynamic>.from(item)];
         }
       }
@@ -4956,16 +5016,17 @@ class SupabaseService {
         };
         for (final item in history) {
           final authorId = item['target_author_id']?.toString();
-          item['target_author_name'] =
-              historyAuthorName(item, usernames[authorId]);
+          item['target_author_name'] = historyAuthorName(
+            item,
+            usernames[authorId],
+          );
           final rows = List<Map<String, dynamic>>.from(
             item['report_rows'] ?? const [],
           );
           for (final row in rows) {
             final reporterId = row['reporter_id']?.toString();
-            row['reporter_username'] = reporterId == null ||
-                    reporterId.isEmpty ||
-                    reporterId == 'null'
+            row['reporter_username'] =
+                reporterId == null || reporterId.isEmpty || reporterId == 'null'
                 ? 'Automated Safety System'
                 : usernames[reporterId] ?? 'Unknown User';
           }
@@ -4980,9 +5041,8 @@ class SupabaseService {
           );
           for (final row in rows) {
             final reporterId = row['reporter_id']?.toString();
-            row['reporter_username'] = reporterId == null ||
-                    reporterId.isEmpty ||
-                    reporterId == 'null'
+            row['reporter_username'] =
+                reporterId == null || reporterId.isEmpty || reporterId == 'null'
                 ? 'Automated Safety System'
                 : 'Unknown User';
           }
@@ -4997,9 +5057,8 @@ class SupabaseService {
         );
         for (final row in rows) {
           final reporterId = row['reporter_id']?.toString();
-          row['reporter_username'] = reporterId == null ||
-                  reporterId.isEmpty ||
-                  reporterId == 'null'
+          row['reporter_username'] =
+              reporterId == null || reporterId.isEmpty || reporterId == 'null'
               ? 'Automated Safety System'
               : 'Unknown User';
         }
@@ -5048,7 +5107,12 @@ class SupabaseService {
 
   Future<void> createThread(ForumThread thread) async {
     if (!const ['artisan', 'tourist'].contains(thread.authorRoleAtCreation) ||
-        thread.replies.any((reply) => !const ['artisan', 'tourist'].contains(reply.authorRoleAtCreation))) {
+        thread.replies.any(
+          (reply) => !const [
+            'artisan',
+            'tourist',
+          ].contains(reply.authorRoleAtCreation),
+        )) {
       throw StateError('Forum creation requires a role snapshot');
     }
     _deletedPostIds.remove(thread.id);
@@ -5100,7 +5164,7 @@ class SupabaseService {
       final Map<String, dynamic> verifiedDbMap = {
         'id': thread.id,
         'user_id': effectiveUid,
- 'author_role_at_creation': thread.authorRoleAtCreation,
+        'author_role_at_creation': thread.authorRoleAtCreation,
         'tag': tagValue,
         'community': thread.community,
         'title': thread.title,
@@ -5138,7 +5202,7 @@ class SupabaseService {
             'content': reply.text,
             'upvotes': reply.upvotes,
             'author_role_at_creation': reply.authorRoleAtCreation,
- 'is_verified_answer': reply.isVerifiedAnswer,
+            'is_verified_answer': reply.isVerifiedAnswer,
             'is_edited': reply.isEdited,
           });
         } catch (re) {
@@ -5153,7 +5217,7 @@ class SupabaseService {
                 'content': reply.text,
                 'upvotes': reply.upvotes,
                 'author_role_at_creation': reply.authorRoleAtCreation,
- 'is_verified_answer': reply.isVerifiedAnswer,
+                'is_verified_answer': reply.isVerifiedAnswer,
                 'is_edited': reply.isEdited,
               });
             } catch (_) {}
@@ -5215,7 +5279,10 @@ class SupabaseService {
       final String? userStoreUid = _userStore[reply.authorEmail]?['id']
           ?.toString();
       final String effectiveUid =
-          reply.userId ?? authUid ?? userStoreUid ?? '00000000-0000-4000-8000-000000000001';
+          reply.userId ??
+          authUid ??
+          userStoreUid ??
+          '00000000-0000-4000-8000-000000000001';
 
       final Map<String, dynamic> verifiedReplyMap = {
         'id': reply.id,
@@ -5224,7 +5291,7 @@ class SupabaseService {
         'content': reply.text,
         'upvotes': reply.upvotes,
         'author_role_at_creation': reply.authorRoleAtCreation,
- 'is_verified_answer': reply.isVerifiedAnswer,
+        'is_verified_answer': reply.isVerifiedAnswer,
         'is_edited': reply.isEdited,
         'is_reported': reply.isReported,
         if (reply.reportReason != null) 'report_reason': reply.reportReason,
@@ -5575,20 +5642,26 @@ class SupabaseService {
   ]) async {
     final client = _client;
     if (client == null) throw StateError('Supabase client not initialized');
-    final result = await client.rpc('admin_delete_forum_content', params: {
-      'p_post_id': postId,
-      'p_reply_id': null,
-      'p_deletion_reason': deletionReason,
-    });
+    final result = await client.rpc(
+      'admin_delete_forum_content',
+      params: {
+        'p_post_id': postId,
+        'p_reply_id': null,
+        'p_deletion_reason': deletionReason,
+      },
+    );
     if (result is! Map || result['success'] != true) {
       throw StateError('Post deletion was not confirmed');
     }
     _forumStore.removeWhere((thread) => thread.id == postId);
     _deletedPostIds.add(postId);
     _dismissedReportPostIds.remove(postId);
-    _localReportQueue.removeWhere((row) =>
-        (row['postId']?.toString() == postId || row['id']?.toString() == postId) &&
-        (row['type'] == null || row['type'] == 'post'));
+    _localReportQueue.removeWhere(
+      (row) =>
+          (row['postId']?.toString() == postId ||
+              row['id']?.toString() == postId) &&
+          (row['type'] == null || row['type'] == 'post'),
+    );
     // ForumViewModel refreshes threads, queue, and remote history after success.
     return '';
   }
@@ -5601,24 +5674,35 @@ class SupabaseService {
   ]) async {
     final client = _client;
     if (client == null) throw StateError('Supabase client not initialized');
-    final result = await client.rpc('admin_delete_forum_content', params: {
-      'p_post_id': null,
-      'p_reply_id': replyId,
-      'p_deletion_reason': deletionReason,
-    });
+    final result = await client.rpc(
+      'admin_delete_forum_content',
+      params: {
+        'p_post_id': null,
+        'p_reply_id': replyId,
+        'p_deletion_reason': deletionReason,
+      },
+    );
     if (result is! Map || result['success'] != true) {
       throw StateError('Reply deletion was not confirmed');
     }
     for (int i = 0; i < _forumStore.length; i++) {
       final thread = _forumStore[i];
       if (thread.id != threadId) continue;
-      final replies = thread.replies.where((reply) => reply.id != replyId).toList();
-      _forumStore[i] = thread.copyWith(replies: replies, replyCount: replies.length);
+      final replies = thread.replies
+          .where((reply) => reply.id != replyId)
+          .toList();
+      _forumStore[i] = thread.copyWith(
+        replies: replies,
+        replyCount: replies.length,
+      );
     }
     _dismissedReportReplyIds.add(replyId);
-    _localReportQueue.removeWhere((row) =>
-        (row['replyId']?.toString() == replyId || row['id']?.toString() == replyId) &&
-        (row['type'] == null || row['type'] == 'reply'));
+    _localReportQueue.removeWhere(
+      (row) =>
+          (row['replyId']?.toString() == replyId ||
+              row['id']?.toString() == replyId) &&
+          (row['type'] == null || row['type'] == 'reply'),
+    );
     // ForumViewModel refreshes threads, queue, and remote history after success.
     return '';
   }
@@ -6159,13 +6243,11 @@ class SupabaseService {
     var stampRows = <Map<String, dynamic>>[];
     var availableQuestRows = <Map<String, dynamic>>[];
     var completedQuestRows = <Map<String, dynamic>>[];
-    var digitalPlaqueCount = 0;
     var xpAvailable = false;
     var taskAwardsAvailable = false;
     var stampsAvailable = false;
     var availableQuestsAvailable = false;
     var questStatisticsAvailable = false;
-    var digitalPlaquesAvailable = false;
 
     try {
       experienceRow = await client
@@ -6248,26 +6330,11 @@ class SupabaseService {
       debugPrint('fetchPassportData quest statistics note: $error');
     }
 
-    try {
-      final plaqueRows = List<Map<String, dynamic>>.from(
-        await client
-            .from('digital_plaques')
-            .select('id')
-            .eq('user_id', user.id),
-      );
-      digitalPlaqueCount = plaqueRows.length;
-      digitalPlaquesAvailable = true;
-    } catch (error) {
-      warnings.add('digital_plaques');
-      debugPrint('fetchPassportData digital plaques note: $error');
-    }
-
     if (!xpAvailable &&
         !taskAwardsAvailable &&
         !stampsAvailable &&
         !availableQuestsAvailable &&
-        !questStatisticsAvailable &&
-        !digitalPlaquesAvailable) {
+        !questStatisticsAvailable) {
       throw StateError('Unable to load your Heritage Passport.');
     }
 
@@ -6278,13 +6345,11 @@ class SupabaseService {
       'stamps': stampRows,
       'available_quests': availableQuestRows,
       'completed_quests': completedQuestRows,
-      'digital_plaque_count': digitalPlaqueCount,
       'xp_available': xpAvailable,
       'task_awards_available': taskAwardsAvailable,
       'stamps_available': stampsAvailable,
       'available_quests_available': availableQuestsAvailable,
       'quest_statistics_available': questStatisticsAvailable,
-      'digital_plaques_available': digitalPlaquesAvailable,
       'warnings': warnings,
     };
   }

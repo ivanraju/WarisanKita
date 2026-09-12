@@ -31,10 +31,10 @@ class HeritageProgress {
 class HeritageProgression {
   static const List<HeritageTier> tiers = [
     HeritageTier(level: 1, title: 'Heritage Observer', minimumXp: 0),
-    HeritageTier(level: 2, title: 'Heritage Explorer', minimumXp: 200),
-    HeritageTier(level: 3, title: 'Heritage Apprentice', minimumXp: 500),
-    HeritageTier(level: 4, title: 'Heritage Guardian', minimumXp: 1000),
-    HeritageTier(level: 5, title: 'Heritage Champion', minimumXp: 2000),
+    HeritageTier(level: 2, title: 'Heritage Explorer', minimumXp: 300),
+    HeritageTier(level: 3, title: 'Heritage Apprentice', minimumXp: 800),
+    HeritageTier(level: 4, title: 'Heritage Guardian', minimumXp: 1500),
+    HeritageTier(level: 5, title: 'Heritage Champion', minimumXp: 3000),
   ];
 
   static HeritageProgress fromXp(int earnedXp) {
@@ -198,13 +198,11 @@ class PassportSnapshot {
   final int completedTaskCount;
   final int completedQuestCount;
   final int visitedQuestCount;
-  final int digitalPlaqueCount;
   final int availableStampCount;
   final bool hasXpData;
   final bool hasStampData;
   final bool hasQuestStatistics;
   final bool hasVisitedStudioData;
-  final bool hasDigitalPlaqueData;
   final bool hasAvailableStampData;
   final List<String> warnings;
   final List<HeritageStamp> stamps;
@@ -216,13 +214,11 @@ class PassportSnapshot {
     required this.completedTaskCount,
     required this.completedQuestCount,
     required this.visitedQuestCount,
-    required this.digitalPlaqueCount,
     required this.availableStampCount,
     required this.hasXpData,
     required this.hasStampData,
     required this.hasQuestStatistics,
     this.hasVisitedStudioData = true,
-    required this.hasDigitalPlaqueData,
     required this.hasAvailableStampData,
     this.warnings = const [],
     required this.stamps,
@@ -234,12 +230,10 @@ class PassportSnapshot {
     required List<HeritageStamp> earnedStamps,
     Iterable<Map<String, dynamic>> availableQuests = const [],
     Iterable<CompletedPassportQuest> completedQuests = const [],
-    int digitalPlaqueCount = 0,
     bool hasXpData = true,
     bool hasStampData = true,
     bool hasQuestStatistics = true,
     bool hasVisitedStudioData = true,
-    bool hasDigitalPlaqueData = true,
     bool hasAvailableStampData = true,
     List<String> warnings = const [],
   }) {
@@ -290,13 +284,11 @@ class PassportSnapshot {
       completedTaskCount: validTasks.length,
       completedQuestCount: completedByQuest.length,
       visitedQuestCount: visitedStudios.length,
-      digitalPlaqueCount: digitalPlaqueCount < 0 ? 0 : digitalPlaqueCount,
       availableStampCount: availableByQuest.length,
       hasXpData: hasXpData,
       hasStampData: hasStampData,
       hasQuestStatistics: hasQuestStatistics,
       hasVisitedStudioData: hasVisitedStudioData,
-      hasDigitalPlaqueData: hasDigitalPlaqueData,
       hasAvailableStampData: hasAvailableStampData,
       warnings: List.unmodifiable(warnings),
       stamps: List.unmodifiable([...sortedEarnedStamps, ...lockedStamps]),
