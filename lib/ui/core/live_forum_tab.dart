@@ -1,11 +1,14 @@
 import 'package:warisan_kita/domain/models/forum_post.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:warisan_kita/ui/core/widgets/heritage_background.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/forum_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
 import 'package:warisan_kita/ui/forum/forum_user_profile_page.dart';
+import 'package:warisan_kita/ui/forum/forum_public_passport.dart';
 import 'package:warisan_kita/domain/models/badge.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -57,33 +60,12 @@ class _ForumProfilePreviewDialog extends StatelessWidget {
       debugPrint('Forum studio details unavailable (${error.runtimeType})');
     }
     if (historicalRole == 'artisan') return {'profile': row};
-    HeritageProgress? progress;
-    HeritageStamp? badge;
-    try {
-      final xp = await client
-          .from('user_experience')
-          .select('total_xp')
-          .eq('user_id', userId)
-          .maybeSingle();
-      progress = HeritageProgression.fromXp(
-        (xp?['total_xp'] as num?)?.toInt() ?? 0,
-      );
-    } catch (error) {
-      debugPrint('Forum profile XP lookup failed (${error.runtimeType})');
-    }
-    try {
-      final stamps = await client
-          .from('passport_stamps')
-          .select('*, quests(*)')
-          .eq('user_id', userId)
-          .limit(1);
-      if (stamps.isNotEmpty) {
-        badge = HeritageStamp.fromMap(Map<String, dynamic>.from(stamps.first));
-      }
-    } catch (error) {
-      debugPrint('Forum profile badge lookup failed (${error.runtimeType})');
-    }
-    return {'profile': row, 'progress': progress, 'badge': badge};
+    final passport = await ForumPublicPassport.load(client, userId);
+    return {
+      'profile': row,
+      'progress': passport.progress,
+      'badge': passport.stamps.isEmpty ? null : passport.stamps.first,
+    };
   }
 
   @override
@@ -1702,10 +1684,12 @@ class _LiveForumTabState extends State<LiveForumTab> {
       _activeThread = updated;
     }
 
-    return Scaffold(
-      backgroundColor: isDark
-          ? const Color(0xFF041412)
-          : const Color(0xFFF1F5F9),
+    return HeritageBackground(
+      isDark: isDark,
+      opacity: isDark ? 0.24 : 0.22,
+      baseColor: isDark ? const Color(0xFF041412) : const Color(0xFFFAF7EF),
+      child: Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: FittedBox(
           fit: BoxFit.scaleDown,
@@ -1734,7 +1718,11 @@ class _LiveForumTabState extends State<LiveForumTab> {
             ],
           ),
         ),
-        backgroundColor: isDark ? const Color(0xFF041412) : Colors.white,
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        systemOverlayStyle: isDark
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
         elevation: 0,
         centerTitle: true,
         leading: _activeThread != null
@@ -1797,7 +1785,11 @@ class _LiveForumTabState extends State<LiveForumTab> {
           : _buildQuoraThreadDetailView(langVM, isDark),
       floatingActionButton: _activeThread == null
           ? Padding(
-              padding: const EdgeInsets.only(bottom: 85),
+              padding: EdgeInsets.only(
+                bottom: Scaffold.maybeOf(context)?.widget.extendBody == true
+                    ? 85
+                    : 8,
+              ),
               child: FloatingActionButton.extended(
                 onPressed: () => _showCreateThreadModal(langVM),
                 backgroundColor:
@@ -1818,6 +1810,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
               ),
             )
           : null,
+      ),
     );
   }
 
@@ -2231,7 +2224,18 @@ class _LiveForumTabState extends State<LiveForumTab> {
           ),
         // Subreddit / Community Filter Chips Header
         Container(
-          color: isDark ? const Color(0xFF041412) : Colors.white,
+          decoration: BoxDecoration(
+            color: isDark
+                ? const Color(0xD90D2825)
+                : const Color(0xBFFFFFFB),
+            border: Border(
+              bottom: BorderSide(
+                color: isDark
+                    ? const Color(0x332E7D68)
+                    : const Color(0xFFE9E2D3),
+              ),
+            ),
+          ),
           padding: const EdgeInsets.symmetric(vertical: 10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
