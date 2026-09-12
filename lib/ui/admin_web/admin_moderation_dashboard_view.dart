@@ -311,7 +311,8 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
       child: Consumer<ModerationViewModel>(
         builder: (context, viewModel, child) {
           final isUserManagementTab = viewModel.activeTab == 'User Management';
-          final isRelocationTab = viewModel.activeTab == 'Workshop Relocations';
+          final isRelocationTab = viewModel.activeTab == 'Workshop Relocations' ||
+              viewModel.activeTab == 'Premise Relocations';
 
           return Scaffold(
             backgroundColor: const Color(0xFFF8FAFC),

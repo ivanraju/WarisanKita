@@ -228,5 +228,48 @@ void main() {
       vm.setHistoryTypeFilter('All Types');
       expect(vm.filteredApprovalHistory.length >= 2, isTrue);
     });
+
+    test('relocation request persists and remains visible across refreshAllData()', () async {
+      final vm = ModerationViewModel(repository: repository);
+      await vm.refreshAllData();
+
+      const reloc = PendingArtisanProfile(
+        id: 'reloc_persisted_777',
+        name: 'Mahani Songket Atelier',
+        craftCategory: 'Textile Weaving',
+        state: 'Kelantan',
+        dateSubmitted: 'Today',
+        imageUrl: 'https://example.com/mahani.jpg',
+        email: 'mahani@songket.my',
+        experience: '25 Years',
+        phone: '+60 12-3334444',
+        isRelocationRequest: true,
+        currentAddress: '10 Kota Bharu Bazaar',
+        proposedAddress: '88 Pasir Mas Heritage Craft Village',
+        proposedState: 'Kelantan',
+        proposedLatitude: 6.0421,
+        proposedLongitude: 102.1432,
+      );
+
+      vm.addRelocationRequest(reloc);
+
+      // Verify immediate presence
+      expect(vm.pendingRelocations.any((r) => r.id == 'reloc_persisted_777'), isTrue);
+
+      // Simulate admin dashboard refresh (which invokes refreshAllData and fetchPendingArtisans)
+      await vm.refreshAllData();
+
+      // Ensure relocation was NOT wiped by fetchPendingArtisans
+      expect(vm.pendingRelocations.any((r) => r.id == 'reloc_persisted_777'), isTrue);
+      expect(vm.filteredRelocations.any((r) => r.id == 'reloc_persisted_777'), isTrue);
+
+      // Verify tab switching resets filter query so relocations are not accidentally hidden
+      vm.setSearchQuery('NonExistentArtisan');
+      expect(vm.filteredRelocations.isEmpty, isTrue);
+
+      vm.setActiveTab('Workshop Relocations');
+      expect(vm.searchQuery, isEmpty);
+      expect(vm.filteredRelocations.any((r) => r.id == 'reloc_persisted_777'), isTrue);
+    });
   });
 }
