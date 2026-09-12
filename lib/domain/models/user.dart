@@ -527,9 +527,16 @@ class UserModel {
          resolvedArtisanStatus?.toUpperCase() == 'PENDING' ||
          map['artisan_status']?.toString().toUpperCase() == 'PENDING_APPROVAL' ||
          map['artisanStatus']?.toString().toUpperCase() == 'PENDING_APPROVAL');
+    final bool hasStudio = (map['studio_name'] != null &&
+            map['studio_name'].toString().trim().isNotEmpty) ||
+        (map['studioName'] != null &&
+            map['studioName'].toString().trim().isNotEmpty) ||
+        (artisanMap?['studio_name'] != null &&
+            artisanMap!['studio_name'].toString().trim().isNotEmpty);
     final bool isApprovedArtisanStatus = !isClosedArtisan &&
         !isPendingArtisanStatus &&
-        resolvedArtisanStatus?.toUpperCase() == 'APPROVED';
+        resolvedArtisanStatus?.toUpperCase() == 'APPROVED' &&
+        !(map['role'] == 'Tourist' && !hasStudio);
 
     final String resolvedRole;
     final List<String> resolvedRoles;

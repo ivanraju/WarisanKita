@@ -482,6 +482,10 @@ class SupabaseService {
             row['role'] = 'Tourist';
             row['roles'] = ['Tourist'];
             row['artisan_status'] = 'CLOSED';
+            row['studio_name'] = null;
+            row['craft_category'] = null;
+            row['ssm_number'] = null;
+            row['artisan_profiles'] = null;
           } else if (artisanStatus == 'PENDING_APPROVAL' ||
               artisanStatus == 'PENDING' ||
               userArtisanStat == 'PENDING_APPROVAL' ||
@@ -491,9 +495,16 @@ class SupabaseService {
             row['artisan_status'] = 'PENDING_APPROVAL';
             row['rejection_reason'] = null;
           } else if (artisanStatus == 'APPROVED' && !isUserClosedOrPending) {
-            row['role'] = 'Artisan';
-            row['roles'] = ['Artisan'];
-            row['artisan_status'] = 'APPROVED';
+            final userRole = (row['role'] ?? '').toString();
+            final hasStudio = (row['studio_name'] != null &&
+                    row['studio_name'].toString().trim().isNotEmpty) ||
+                (artisan['studio_name'] != null &&
+                    artisan['studio_name'].toString().trim().isNotEmpty);
+            if (userRole.toLowerCase().contains('artisan') || hasStudio) {
+              row['role'] = 'Artisan';
+              row['roles'] = ['Artisan'];
+              row['artisan_status'] = 'APPROVED';
+            }
           } else if (artisanStatus == 'REJECTED') {
             row['artisan_status'] = 'REJECTED';
             if (artisan['rejection_reason'] != null) {
@@ -584,6 +595,10 @@ class SupabaseService {
               row['role'] = 'Tourist';
               row['roles'] = ['Tourist'];
               row['artisan_status'] = 'CLOSED';
+              row['studio_name'] = null;
+              row['craft_category'] = null;
+              row['ssm_number'] = null;
+              row['artisan_profiles'] = null;
             } else if (artisanStatus == 'PENDING_APPROVAL' ||
                 artisanStatus == 'PENDING' ||
                 userArtisanStat == 'PENDING_APPROVAL' ||
@@ -593,9 +608,16 @@ class SupabaseService {
               row['artisan_status'] = 'PENDING_APPROVAL';
               row['rejection_reason'] = null;
             } else if (artisanStatus == 'APPROVED' && !isUserClosedOrPending) {
-              row['role'] = 'Artisan';
-              row['roles'] = ['Artisan'];
-              row['artisan_status'] = 'APPROVED';
+              final userRole = (row['role'] ?? '').toString();
+              final hasStudio = (row['studio_name'] != null &&
+                      row['studio_name'].toString().trim().isNotEmpty) ||
+                  (artisan['studio_name'] != null &&
+                      artisan['studio_name'].toString().trim().isNotEmpty);
+              if (userRole.toLowerCase().contains('artisan') || hasStudio) {
+                row['role'] = 'Artisan';
+                row['roles'] = ['Artisan'];
+                row['artisan_status'] = 'APPROVED';
+              }
             } else if (artisanStatus == 'REJECTED') {
               row['artisan_status'] = 'REJECTED';
               if (artisan['rejection_reason'] != null) {
@@ -3252,10 +3274,22 @@ class SupabaseService {
     final client = _client;
     if (client != null && cloudUser != null) {
       final userId = cloudUser.id;
+      String effectiveUid = userId;
+      try {
+        final userLookup = await client
+            .from('users')
+            .select('id')
+            .ilike('email', email)
+            .maybeSingle();
+        if (userLookup != null && userLookup['id'] != null) {
+          effectiveUid = userLookup['id'].toString();
+        }
+      } catch (_) {}
+
       try {
         await client.rpc(
           'deactivate_artisan_studio',
-          params: {'p_user_id': userId},
+          params: {'p_user_id': effectiveUid},
         );
       } catch (e) {
         debugPrint('deactivate_artisan_studio RPC note: $e');
@@ -3277,6 +3311,28 @@ class SupabaseService {
           'deactivateArtisanStudio admin_update_user_status fallback note: $e',
         );
       }
+
+      // Retire active quests owned by this artisan so they immediately disappear from directory
+      try {
+        final apRows = await client
+            .from('artisan_profiles')
+            .select('id')
+            .or('user_id.eq.$effectiveUid,user_id.eq.$userId');
+        for (final ap in apRows) {
+          if (ap['id'] != null) {
+            try {
+              await client
+                  .from('quests')
+                  .update({'status': 'RETIRED'})
+                  .eq('artisan_id', ap['id']);
+            } catch (_) {}
+          }
+        }
+      } catch (e) {
+        debugPrint('deactivateArtisanStudio retire quests note: $e');
+      }
+
+      // Mark artisan_profiles as CLOSED
       try {
         await client
             .from('artisan_profiles')
@@ -3284,7 +3340,7 @@ class SupabaseService {
               'status': 'CLOSED',
               'updated_at': DateTime.now().toIso8601String(),
             })
-            .eq('user_id', userId);
+            .or('user_id.eq.$effectiveUid,user_id.eq.$userId');
       } catch (e) {
         debugPrint('deactivateArtisanStudio profile status note: $e');
         try {
@@ -3294,32 +3350,99 @@ class SupabaseService {
                 'status': 'SUSPENDED',
                 'updated_at': DateTime.now().toIso8601String(),
               })
-              .eq('user_id', userId);
+              .or('user_id.eq.$effectiveUid,user_id.eq.$userId');
         } catch (_) {}
       }
+
+      // Resilient 3-tier user table update
+      final fullPayload = <String, dynamic>{
+        'role': 'Tourist',
+        'roles': ['Tourist'],
+        'artisan_status': 'CLOSED',
+        'status': 'ACTIVE',
+        'studio_name': null,
+        'craft_category': null,
+        'ssm_number': null,
+        'is_live_open': false,
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+      bool userUpdated = false;
       try {
-        await client.from('artisan_profiles').delete().eq('user_id', userId);
+        await client.from('users').update(fullPayload).eq('id', effectiveUid);
+        userUpdated = true;
       } catch (e) {
-        debugPrint('deactivateArtisanStudio profile cleanup note: $e');
+        debugPrint('deactivateArtisanStudio full update by id note: $e');
       }
-      try {
-        await client
-            .from('users')
-            .update({
-              'role': 'Tourist',
-              'roles': ['Tourist'],
-              'artisan_status': 'CLOSED',
-              'status': 'ACTIVE',
-              'studio_name': null,
-              'craft_category': null,
-              'ssm_number': null,
-              'is_live_open': false,
-              'updated_at': DateTime.now().toIso8601String(),
-            })
-            .eq('id', userId);
-      } catch (e) {
-        debugPrint('deactivateArtisanStudio user update note: $e');
+      if (!userUpdated) {
+        try {
+          await client.from('users').update(fullPayload).ilike('email', email);
+          userUpdated = true;
+        } catch (e) {
+          debugPrint('deactivateArtisanStudio full update by email note: $e');
+        }
       }
+      if (!userUpdated) {
+        final fallbackPayload = <String, dynamic>{
+          'role': 'Tourist',
+          'artisan_status': 'CLOSED',
+          'status': 'ACTIVE',
+          'studio_name': null,
+          'craft_category': null,
+          'ssm_number': null,
+          'updated_at': DateTime.now().toIso8601String(),
+        };
+        try {
+          await client
+              .from('users')
+              .update(fallbackPayload)
+              .eq('id', effectiveUid);
+          userUpdated = true;
+        } catch (e) {
+          debugPrint('deactivateArtisanStudio fallback update by id note: $e');
+        }
+        if (!userUpdated) {
+          try {
+            await client
+                .from('users')
+                .update(fallbackPayload)
+                .ilike('email', email);
+            userUpdated = true;
+          } catch (e) {
+            debugPrint(
+              'deactivateArtisanStudio fallback update by email note: $e',
+            );
+          }
+        }
+      }
+      if (!userUpdated) {
+        final minimalPayload = <String, dynamic>{
+          'role': 'Tourist',
+          'status': 'ACTIVE',
+          'updated_at': DateTime.now().toIso8601String(),
+        };
+        try {
+          await client
+              .from('users')
+              .update(minimalPayload)
+              .eq('id', effectiveUid);
+          userUpdated = true;
+        } catch (e) {
+          debugPrint('deactivateArtisanStudio minimal update by id note: $e');
+        }
+        if (!userUpdated) {
+          try {
+            await client
+                .from('users')
+                .update(minimalPayload)
+                .ilike('email', email);
+          } catch (e) {
+            debugPrint(
+              'deactivateArtisanStudio minimal update by email note: $e',
+            );
+          }
+        }
+      }
+
       try {
         await client.auth.updateUser(
           UserAttributes(

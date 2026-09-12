@@ -690,4 +690,23 @@ void main() {
     expect(tourist.isArtisan, isFalse);
     expect(tourist.isTourist, isTrue);
   });
+
+  test('UserModel.fromMap preserves Tourist role when studio is closed or absent', () {
+    final userMap = {
+      'id': 'user-closed-1',
+      'email': 'closed.artisan@test.com',
+      'role': 'Tourist',
+      'roles': ['Tourist'],
+      'status': 'ACTIVE',
+      'studio_name': null,
+      'artisan_profiles': {
+        'status': 'APPROVED',
+        'studio_name': null,
+      },
+    };
+    final user = UserModel.fromMap(userMap);
+    expect(user.role, 'Tourist');
+    expect(user.isApprovedArtisan, isFalse);
+    expect(user.isTourist, isTrue);
+  });
 }
