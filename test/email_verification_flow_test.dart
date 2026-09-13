@@ -155,5 +155,53 @@ void main() {
       // Verify account was removed from backend
       expect(backend.accounts.containsKey('typo@warisankita.my'), isFalse);
     });
+
+    testWidgets('AppBar back button pops without cancelling pending registration (Option A)', (tester) async {
+      backend.add(
+        'pending@warisankita.my',
+        username: 'pendinguser',
+        role: 'Tourist',
+        confirmed: false,
+        password: 'Password123!',
+      );
+
+      bool popped = false;
+      await tester.pumpWidget(
+        ChangeNotifierProvider<AuthViewModel>.value(
+          value: authVM,
+          child: MaterialApp(
+            home: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const EmailVerificationScreen(
+                        email: 'pending@warisankita.my',
+                        autoStartTimer: false,
+                      ),
+                    ),
+                  );
+                  popped = true;
+                },
+                child: const Text('Open'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      // Tap AppBar back arrow
+      await tester.tap(find.byIcon(Icons.arrow_back_rounded));
+      await tester.pumpAndSettle();
+
+      // Verify popped back
+      expect(popped, isTrue);
+      // Account is STILL in backend (not deleted!)
+      expect(backend.accounts.containsKey('pending@warisankita.my'), isTrue);
+    });
   });
 }

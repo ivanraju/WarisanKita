@@ -298,26 +298,24 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     final isDesktop = MediaQuery.of(context).size.width > 800;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) async {
-        if (didPop) return;
-        await _handleChangeEmail();
-      },
-      child: HeritageBackground(
-        child: Scaffold(
+    return HeritageBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
           backgroundColor: Colors.transparent,
-          appBar: AppBar(
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            leading: IconButton(
-              icon: Icon(
-                Icons.arrow_back_rounded,
-                color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
-              ),
-              onPressed: _handleChangeEmail,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(
+              Icons.arrow_back_rounded,
+              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
             ),
+            onPressed: () {
+              context.read<AuthViewModel>().clearError();
+              ScaffoldMessenger.of(context).clearSnackBars();
+              Navigator.of(context).pop(false);
+            },
           ),
+        ),
         body: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -597,7 +595,6 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 }
