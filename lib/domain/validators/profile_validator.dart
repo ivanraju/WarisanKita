@@ -39,17 +39,19 @@ class ProfileValidator {
     'Johor',
     'Kedah',
     'Kelantan',
+    'Kuala Lumpur',
+    'Labuan',
     'Melaka',
     'Negeri Sembilan',
     'Pahang',
     'Penang',
     'Perak',
     'Perlis',
+    'Putrajaya',
     'Sabah',
     'Sarawak',
     'Selangor',
     'Terengganu',
-    'Kuala Lumpur',
   ];
 
   static const List<String> supportedCraftCategories = [
@@ -61,6 +63,9 @@ class ProfileValidator {
     'Handicraft & Heritage',
     'Wau & Kite Making',
     'Metalwork & Kris',
+    'Heritage Food',
+    'Wayang Kulit & Puppetry',
+    'Rattan & Bamboo Craft',
   ];
 
   /// Validates an account username or handle.

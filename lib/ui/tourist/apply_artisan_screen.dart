@@ -210,6 +210,8 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
     'Selangor': LatLng(3.0738, 101.5183),
     'Terengganu': LatLng(5.3296, 103.1370),
     'Kuala Lumpur': LatLng(3.1390, 101.6869),
+    'Putrajaya': LatLng(2.9264, 101.6964),
+    'Labuan': LatLng(5.2831, 115.2308),
   };
 
   final List<String> _craftCategories = const [
@@ -227,17 +229,19 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
     'Johor',
     'Kedah',
     'Kelantan',
+    'Kuala Lumpur',
+    'Labuan',
     'Melaka',
     'Negeri Sembilan',
     'Pahang',
     'Penang',
     'Perak',
     'Perlis',
+    'Putrajaya',
     'Sabah',
     'Sarawak',
     'Selangor',
     'Terengganu',
-    'Kuala Lumpur',
   ];
 
   LatLng get _selectedStateCenter =>
