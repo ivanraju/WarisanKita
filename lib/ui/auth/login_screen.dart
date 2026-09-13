@@ -9,6 +9,7 @@ import 'package:warisan_kita/ui/artisan/artisan_application_pending_screen.dart'
 import 'package:warisan_kita/ui/auth/email_verification_screen.dart';
 import 'package:warisan_kita/ui/auth/forgot_password_screen.dart';
 import 'package:warisan_kita/ui/core/widgets/heritage_background.dart';
+import 'package:warisan_kita/ui/widgets/heritage_logo.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -332,14 +333,16 @@ class _LoginScreenState extends State<LoginScreen> {
               FilledButton(
                 style: FilledButton.styleFrom(backgroundColor: const Color(0xFF004D40)),
                 onPressed: () {
+                  final targetEmail = result.unverifiedEmail ?? _emailController.text.trim();
                   Navigator.pop(dialogCtx);
                   context.read<AuthViewModel>().clearError();
                   ScaffoldMessenger.of(context).clearSnackBars();
                   Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => EmailVerificationScreen(
-                        email: result.unverifiedEmail ?? _emailController.text.trim(),
+                        email: targetEmail,
                         targetRoute: '/tourist',
+                        resendOnOpen: true,
                       ),
                     ),
                   );
@@ -492,19 +495,17 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   // Header Logo Badge
                   Center(
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? const Color(0xFFFFD54F).withValues(alpha: 0.12)
-                            : const Color(0xFF004D40).withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        kIsWeb ? Icons.security_rounded : Icons.auto_awesome_mosaic_rounded,
-                        size: 36,
-                        color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
-                      ),
+                    child: HeritageLogo(
+                      size: 48,
+                      showBadge: true,
+                      glow: true,
+                      badgeColor: isDark
+                          ? const Color(0xFF1E3A34)
+                          : Colors.white,
+                      primaryColor: isDark
+                          ? const Color(0xFFFFD54F)
+                          : const Color(0xFF004D40),
+                      accentColor: const Color(0xFFFFD54F),
                     ),
                   ),
                   const SizedBox(height: 16),

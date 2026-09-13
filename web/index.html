@@ -1,38 +1,231 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
-
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
-
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
-  -->
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="WarisanKita — Discover authentic Malaysian traditional crafts, connect with master artisans, and explore living cultural heritage.">
+  <meta name="theme-color" content="#004D40">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="warisan_kita">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="WarisanKita">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>warisan_kita</title>
+  <title>WarisanKita • Malaysian Living Cultural Heritage</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Preload fonts for smooth loading presentation -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: #004D40;
+      color: #FFFFFF;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      overflow: hidden;
+    }
+
+    #app-loading-screen {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at center, #005f50 0%, #004D40 70%, #00332c 100%);
+      z-index: 999999;
+      transition: opacity 0.5s ease-out, visibility 0.5s ease-out;
+    }
+
+    #app-loading-screen.fade-out {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .brand-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 24px;
+      animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .logo-badge {
+      width: 104px;
+      height: 104px;
+      border-radius: 50%;
+      background-color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 35px rgba(255, 213, 79, 0.45), 0 8px 24px rgba(0, 0, 0, 0.25);
+      margin-bottom: 24px;
+      animation: gentlePulse 3s infinite ease-in-out;
+    }
+
+    .logo-badge img {
+      width: 76px;
+      height: 76px;
+      object-fit: contain;
+    }
+
+    .app-title {
+      font-family: 'DM Serif Display', Georgia, serif;
+      font-size: 38px;
+      font-weight: 700;
+      color: #FFFFFF;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+
+    .badge-tagline {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .badge-tagline .line {
+      width: 24px;
+      height: 1.5px;
+      background-color: rgba(255, 213, 79, 0.7);
+    }
+
+    .badge-tagline .text {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 3px;
+      color: #FFD54F;
+      text-transform: uppercase;
+    }
+
+    .subtitle {
+      font-size: 13.5px;
+      color: rgba(255, 255, 255, 0.85);
+      font-weight: 500;
+      letter-spacing: 0.4px;
+      margin-bottom: 36px;
+    }
+
+    .spinner-ring {
+      width: 28px;
+      height: 28px;
+      border: 2.5px solid rgba(255, 213, 79, 0.25);
+      border-top-color: #FFD54F;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes gentlePulse {
+      0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 0 32px rgba(255, 213, 79, 0.4), 0 8px 24px rgba(0, 0, 0, 0.25);
+      }
+      50% {
+        transform: scale(1.035);
+        box-shadow: 0 0 45px rgba(255, 213, 79, 0.65), 0 10px 28px rgba(0, 0, 0, 0.3);
+      }
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.96);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+  </style>
 </head>
 <body>
+  <!-- Cultural Heritage Pre-Loader -->
+  <div id="app-loading-screen">
+    <div class="brand-container">
+      <div class="logo-badge">
+        <img src="icons/Icon-192.png" alt="WarisanKita Bunga Tanjung Heritage Emblem" />
+      </div>
+      <h1 class="app-title">WarisanKita</h1>
+      <div class="badge-tagline">
+        <span class="line"></span>
+        <span class="text">Living Cultural Heritage</span>
+        <span class="line"></span>
+      </div>
+      <p class="subtitle">Traditional Crafts • Master Artisans • Cultural Discovery</p>
+      <div class="spinner-ring"></div>
+    </div>
+  </div>
+
+  <script>
+    function dismissLoadingScreen() {
+      var loader = document.getElementById('app-loading-screen');
+      if (loader && !loader.classList.contains('fade-out')) {
+        loader.classList.add('fade-out');
+        setTimeout(function() {
+          if (loader && loader.parentNode) {
+            loader.parentNode.removeChild(loader);
+          }
+        }, 500);
+      }
+    }
+
+    // 1. Detect Flutter engine mount via MutationObserver
+    try {
+      var observer = new MutationObserver(function(mutations, obs) {
+        if (document.querySelector('flutter-view') || 
+            document.querySelector('flt-glass-pane') || 
+            document.querySelector('flt-scene-host') ||
+            document.querySelector('flt-renderer')) {
+          dismissLoadingScreen();
+          obs.disconnect();
+        }
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+    } catch (e) {
+      console.warn('Observer not supported', e);
+    }
+
+    // 2. Fast poll every 60ms for instant removal upon engine mount
+    var checkInterval = setInterval(function() {
+      if (document.querySelector('flutter-view') || 
+          document.querySelector('flt-glass-pane') || 
+          document.querySelector('flt-scene-host')) {
+        clearInterval(checkInterval);
+        dismissLoadingScreen();
+      }
+    }, 60);
+
+    // 3. Unconditional safety fallback (max 3.5s)
+    setTimeout(function() {
+      clearInterval(checkInterval);
+      dismissLoadingScreen();
+    }, 3500);
+
+    window.addEventListener('flutter-first-frame', dismissLoadingScreen);
+  </script>
+
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

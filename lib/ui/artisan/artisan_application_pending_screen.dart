@@ -264,8 +264,8 @@ class _ArtisanApplicationPendingScreenState
                         _buildTimelineItem(
                           isDark: isDark,
                           step: '3',
-                          title: 'Marketplace Directory Activation',
-                          subtitle: 'Public tourist search & quest completion active',
+                          title: 'Heritage Directory Activation',
+                          subtitle: 'Public cultural discovery & artisan profile active',
                           isCompleted: false,
                           isCurrent: false,
                         ),
