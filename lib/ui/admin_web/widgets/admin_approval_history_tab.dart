@@ -165,6 +165,47 @@ class _AdminApprovalHistoryTabState extends State<AdminApprovalHistoryTab> {
                                 color: const Color(0xFF0F172A),
                               ),
                             ),
+                            const SizedBox(width: 12),
+                            Tooltip(
+                              message: 'Reconcile & Synchronize Ledger with Live Database',
+                              child: InkWell(
+                                onTap: () async {
+                                  await viewModel.refreshAllData();
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Approval Ledger synchronized with live database.'),
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
+                                  }
+                                },
+                                borderRadius: BorderRadius.circular(6),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF1F5F9),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.sync_rounded, size: 14, color: Color(0xFF0F766E)),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Sync Live',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: const Color(0xFF0F766E),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                         if (viewModel.historySearchQuery.isNotEmpty ||
@@ -1313,89 +1354,167 @@ class _AdminApprovalHistoryTabState extends State<AdminApprovalHistoryTab> {
             )
           else ...[
             ...docs.map((doc) {
-              final name = doc['name']?.toString() ?? 'Document';
-              final url = doc['url']?.toString() ?? '';
-              final type = doc['type']?.toString() ?? '';
+              final rawName = doc['name'] ?? doc['file_name'] ?? doc['fileName'] ?? doc['title'];
+              final rawUrl = doc['url'] ?? doc['file_url'] ?? doc['fileUrl'] ?? doc['link'];
+              final rawType = (doc['type'] ?? doc['doc_type'] ?? doc['docType'] ?? '').toString().toLowerCase();
+
+              final url = (rawUrl?.toString() ?? '').trim();
+              String name = (rawName?.toString() ?? '').trim();
+              if (name.isEmpty || name.toLowerCase() == 'document') {
+                if (rawType.contains('ssm')) {
+                  name = 'SSM Business Registration Certificate';
+                } else if (rawType.contains('kraftangan') || rawType.contains('cert')) {
+                  name = 'Kraftangan Master Certificate';
+                } else if (rawType.contains('crafting') || rawType.contains('photo')) {
+                  name = 'Crafting Proof Photo';
+                } else if (url.isNotEmpty) {
+                  name = url.split('?').first.split('/').last;
+                } else {
+                  name = 'Verification Document';
+                }
+              }
 
               IconData icon = Icons.article_rounded;
               Color iconColor = const Color(0xFF0284C7);
+              String typeBadge = 'DOCUMENT';
+              Color badgeBg = const Color(0xFFE0F2FE);
+              Color badgeFg = const Color(0xFF0369A1);
 
-              if (type == 'crafting_proof' || type == 'photo') {
+              if (rawType.contains('crafting') || rawType.contains('photo')) {
                 icon = Icons.photo_library_rounded;
                 iconColor = const Color(0xFF0D9488);
-              } else if (type == 'certificate' ||
-                  type == 'relocation_certificate') {
+                typeBadge = 'PHOTO EVIDENCE';
+                badgeBg = const Color(0xFFCCFBF1);
+                badgeFg = const Color(0xFF0F766E);
+              } else if (rawType.contains('kraftangan') || rawType.contains('cert')) {
                 icon = Icons.workspace_premium_rounded;
                 iconColor = const Color(0xFFD97706);
-              } else if (type == 'ssm') {
+                typeBadge = 'KRAFTANGAN CERT';
+                badgeBg = const Color(0xFFFEF3C7);
+                badgeFg = const Color(0xFFB45309);
+              } else if (rawType.contains('ssm')) {
                 icon = Icons.verified_user_rounded;
                 iconColor = const Color(0xFF2563EB);
+                typeBadge = 'SSM CERT';
+                badgeBg = const Color(0xFFDBEAFE);
+                badgeFg = const Color(0xFF1D4ED8);
               }
 
               return Container(
                 margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: const Color(0xFFE2E8F0)),
                 ),
-                child: Row(
-                  children: [
-                    Icon(icon, size: 16, color: iconColor),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF0F172A),
-                        ),
+                child: Material(
+                  color: Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: url.isNotEmpty ? () => _launchURL(url) : null,
+                    hoverColor: const Color(0xFFF8FAFC),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: iconColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Icon(icon, size: 18, color: iconColor),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: badgeBg,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        typeBadge,
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                          color: badgeFg,
+                                          letterSpacing: 0.4,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF0F172A),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (url.isNotEmpty) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF0284C7),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'View Document',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Icon(
+                                    Icons.open_in_new_rounded,
+                                    size: 13,
+                                    color: Colors.white,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ] else ...[
+                            Text(
+                              'No Link',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 10,
+                                color: const Color(0xFF94A3B8),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
-                    if (url.isNotEmpty) ...[
-                      const SizedBox(width: 8),
-                      InkWell(
-                        onTap: () => _launchURL(url),
-                        borderRadius: BorderRadius.circular(6),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF1F5F9),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                'View',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 10.5,
-                                  fontWeight: FontWeight.bold,
-                                  color: const Color(0xFF0284C7),
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              const Icon(
-                                Icons.open_in_new_rounded,
-                                size: 12,
-                                color: Color(0xFF0284C7),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
+                  ),
                 ),
               );
             }),
@@ -1450,11 +1569,20 @@ class _AdminApprovalHistoryTabState extends State<AdminApprovalHistoryTab> {
   Future<void> _launchURL(String url) async {
     try {
       final uri = Uri.parse(url);
-      if (await canLaunchUrl(uri)) {
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+        webOnlyWindowName: '_blank',
+      );
+      if (!launched) {
         await launchUrl(uri);
       }
     } catch (e) {
-      debugPrint('Error launching document URL: $e');
+      try {
+        await launchUrl(Uri.parse(url));
+      } catch (err) {
+        debugPrint('Error launching document URL: $err');
+      }
     }
   }
 }
