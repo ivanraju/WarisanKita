@@ -657,7 +657,8 @@ class ModerationViewModel extends ChangeNotifier {
 
       final matchesCategory =
           _selectedCategory == 'All Categories' ||
-          artisan.craftCategory == _selectedCategory;
+          artisan.craftCategory.trim().toLowerCase() ==
+              _selectedCategory.trim().toLowerCase();
 
       return matchesSearch && matchesCategory;
     }).toList();
