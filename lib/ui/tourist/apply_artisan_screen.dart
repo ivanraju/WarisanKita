@@ -745,7 +745,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
     }
 
     try {
-      final updatedUser = authVM.currentUser ?? user;
+      final updatedUser = result.user ?? authVM.currentUser ?? user;
       context.read<ModerationViewModel>().addPendingArtisan(
         PendingArtisanProfile(
           id: updatedUser?.id ?? 'p_${DateTime.now().millisecondsSinceEpoch}',
@@ -759,12 +759,12 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
           phone: phone ?? '',
           ssmNumber: ssm.isNotEmpty ? ssm : (_isVillageWorkshop ? 'Village Crafter (Endorsement Letter)' : null),
           ssmFileName: _ssmFile?.name ?? updatedUser?.ssmFileName,
-          ssmFileUrl: updatedUser?.ssmFileUrl,
+          ssmFileUrl: updatedUser?.ssmFileUrl ?? _ssmFile?.path,
           certFileName: _kraftanganFile?.name ?? updatedUser?.certFileName,
-          certFileUrl: updatedUser?.certFileUrl,
+          certFileUrl: updatedUser?.certFileUrl ?? _kraftanganFile?.path,
           photos: (updatedUser?.photos != null && updatedUser!.photos.isNotEmpty)
               ? updatedUser.photos
-              : _uploadedPhotos.map((p) => p.name).toList(),
+              : _uploadedPhotos.map((p) => p.path ?? p.name).toList(),
           bio: bio.isNotEmpty
               ? bio
               : '${_isVillageWorkshop ? 'Village craft workshop' : 'Master studio'} application for $_selectedCraftCategory in $_selectedState.',
@@ -792,7 +792,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
       ),
     );
 
-    final updatedUser = authVM.currentUser ?? user;
+    final updatedUser = result.user ?? authVM.currentUser ?? user;
 
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
@@ -802,12 +802,12 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
           ssmNumber: ssm,
           premiseType: _selectedPremiseType,
           ssmFileName: _ssmFile?.name ?? updatedUser?.ssmFileName,
-          ssmFileUrl: updatedUser?.ssmFileUrl,
+          ssmFileUrl: updatedUser?.ssmFileUrl ?? _ssmFile?.path,
           certFileName: _kraftanganFile?.name ?? updatedUser?.certFileName,
-          certFileUrl: updatedUser?.certFileUrl,
+          certFileUrl: updatedUser?.certFileUrl ?? _kraftanganFile?.path,
           photos: (updatedUser?.photos != null && updatedUser!.photos.isNotEmpty)
               ? updatedUser.photos
-              : _uploadedPhotos.map((p) => p.name).toList(),
+              : _uploadedPhotos.map((p) => p.path ?? p.name).toList(),
         ),
       ),
     );
