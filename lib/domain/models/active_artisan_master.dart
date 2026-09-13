@@ -116,6 +116,16 @@ class ActiveArtisanMaster {
     const bool isDual = false;
     final String? premiseType = (ap?['premise_type'] ?? ap?['premiseType'] ?? map['premise_type'] ?? map['premiseType'])?.toString();
 
+    final bool hasClosedTag = (ap != null && ap['tags'] is List && (ap['tags'] as List).contains('__LIVE_DEMO_CLOSED__')) ||
+        (map['tags'] is List && (map['tags'] as List).contains('__LIVE_DEMO_CLOSED__'));
+    final bool resolvedLiveOpen = hasClosedTag
+        ? false
+        : (map['is_live_open'] as bool? ??
+            map['isLiveOpen'] as bool? ??
+            ap?['is_live_open'] as bool? ??
+            ap?['isLiveOpen'] as bool? ??
+            true);
+
     return ActiveArtisanMaster(
       id: (map['id'] ?? ap?['id'] ?? '').toString(),
       name: name,
@@ -124,8 +134,7 @@ class ActiveArtisanMaster {
       state: state,
       experience: exp,
       plaques: (map['plaques'] as int?) ?? (ap?['workshop_count'] as int?) ?? 1,
-      isLiveOpen: map['is_live_open'] ??
-          (ap != null && ap['tags'] is List && (ap['tags'] as List).contains('__LIVE_DEMO_CLOSED__') ? false : true),
+      isLiveOpen: resolvedLiveOpen,
       licenseNo: license,
       verifiedDate: verifiedDate,
       imageUrl: (map['avatar_url'] ?? map['imageUrl'] ?? 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600').toString(),

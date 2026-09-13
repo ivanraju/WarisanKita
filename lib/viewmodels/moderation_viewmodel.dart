@@ -1613,14 +1613,33 @@ class ModerationViewModel extends ChangeNotifier {
         : message;
   }
 
-  void toggleActiveArtisanLiveStatus(String id) {
+  Future<void> toggleActiveArtisanLiveStatus(String id) async {
     final idx = _activeArtisanMasters.indexWhere((a) => a.id == id);
     if (idx != -1) {
       final current = _activeArtisanMasters[idx];
+      final newStatus = !current.isLiveOpen;
       _activeArtisanMasters[idx] = current.copyWith(
-        isLiveOpen: !current.isLiveOpen,
+        isLiveOpen: newStatus,
       );
+
+      final uIdx = _registeredUsers.indexWhere(
+        (u) => u.email.toLowerCase() == current.email.toLowerCase(),
+      );
+      if (uIdx != -1) {
+        _registeredUsers[uIdx] = _registeredUsers[uIdx].copyWith(
+          isLiveOpen: newStatus,
+        );
+      }
       notifyListeners();
+
+      try {
+        await _repository.updateUserProfile(
+          email: current.email,
+          isLiveOpen: newStatus,
+        );
+      } catch (e) {
+        debugPrint('toggleActiveArtisanLiveStatus note: $e');
+      }
     }
   }
 

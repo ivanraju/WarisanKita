@@ -1122,6 +1122,58 @@ void main() {
       expect(reactivatedMaster.statusText, '🟢 OPEN FOR DEMOS');
     });
 
+    test('ModerationViewModel.toggleActiveArtisanLiveStatus toggles status, synchronizes users, and persists to repository', () async {
+      final backend = AuthBackend();
+      addTearDown(backend.client.dispose);
+      final record = backend.add('artisan.toggle@warisankita.my', role: 'Artisan', username: 'togglemaster');
+      final artisanId = record['id'] as String;
+      final service = SupabaseService(client: backend.client);
+      final repo = UserRepository(service: service);
+      final modVM = ModerationViewModel(repository: repo);
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      modVM.activeArtisanMasters.add(
+        ActiveArtisanMaster(
+          id: artisanId,
+          name: 'Toggle Master',
+          email: 'artisan.toggle@warisankita.my',
+          category: 'Batik',
+          state: 'Kelantan',
+          experience: '10 Years',
+          plaques: 3,
+          isLiveOpen: true,
+          licenseNo: 'SSM-99887',
+          verifiedDate: '2024-01-01',
+          imageUrl: '',
+          bio: 'Batik artisan',
+          phone: '+60123456789',
+          isSuspended: false,
+        ),
+      );
+
+      expect(modVM.activeArtisanMasters.firstWhere((a) => a.id == artisanId).isLiveOpen, isTrue);
+
+      // Admin toggles live status off (Paused)
+      await modVM.toggleActiveArtisanLiveStatus(artisanId);
+
+      final toggledMaster = modVM.activeArtisanMasters.firstWhere((a) => a.id == artisanId);
+      expect(toggledMaster.isLiveOpen, isFalse);
+      expect(toggledMaster.statusText, '🔴 IN SESSION (PAUSED)');
+
+      final synchronizedUser = modVM.registeredUsers.firstWhere((u) => u.id == artisanId);
+      expect(synchronizedUser.isLiveOpen, isFalse);
+
+      // Admin toggles live status back on (Open)
+      await modVM.toggleActiveArtisanLiveStatus(artisanId);
+
+      final reopenedMaster = modVM.activeArtisanMasters.firstWhere((a) => a.id == artisanId);
+      expect(reopenedMaster.isLiveOpen, isTrue);
+      expect(reopenedMaster.statusText, '🟢 OPEN FOR DEMOS');
+
+      final reopenedUser = modVM.registeredUsers.firstWhere((u) => u.id == artisanId);
+      expect(reopenedUser.isLiveOpen, isTrue);
+    });
+
     test('Artisan application rejection excludes profile from pending approvals across refresh', () async {
       final backend = AuthBackend();
       addTearDown(backend.client.dispose);
