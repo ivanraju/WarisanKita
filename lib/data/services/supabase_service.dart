@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:async';
 import 'dart:io' as io;
+import 'dart:math';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
@@ -1527,10 +1528,7 @@ class SupabaseService {
       }
 
       try {
-        await client
-            .from('users')
-            .delete()
-            .eq('email', cleanEmail);
+        await client.from('users').delete().eq('email', cleanEmail);
       } catch (e) {
         debugPrint('cancelUnconfirmedSignup fallback note: $e');
       }
@@ -1538,6 +1536,93 @@ class SupabaseService {
 
     _userStore.remove(cleanEmail);
     await _unrecordDeletedAccount(cleanEmail);
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchCurrentQuestRowsForArtisan(
+    SupabaseClient client,
+    String artisanId,
+  ) async {
+    return List<Map<String, dynamic>>.from(
+      await client
+          .from('quests')
+          .select('id, status')
+          .eq('artisan_id', artisanId)
+          .inFilter('status', const ['PENDING_APPROVAL', 'APPROVED'])
+          .order('created_at', ascending: false),
+    );
+  }
+
+  Future<void> _ensureCurrentQuestForArtisanApplication({
+    required SupabaseClient client,
+    required String artisanId,
+    required String studioName,
+    required String craftCategory,
+  }) async {
+    var currentQuests = await _fetchCurrentQuestRowsForArtisan(
+      client,
+      artisanId,
+    );
+    if (currentQuests.length > 1) {
+      throw StateError(
+        'This artisan has multiple current cultural quests. Resolve the duplicate quests before continuing.',
+      );
+    }
+    if (currentQuests.isNotEmpty) return;
+
+    Object? provisioningError;
+    try {
+      await client.rpc(
+        'ensure_current_artisan_quest',
+        params: {'p_artisan_id': artisanId},
+      );
+    } catch (error) {
+      provisioningError = error;
+      debugPrint('ensure_current_artisan_quest RPC note: $error');
+    }
+
+    currentQuests = await _fetchCurrentQuestRowsForArtisan(client, artisanId);
+    if (currentQuests.isEmpty) {
+      final slug = craftCategory
+          .toLowerCase()
+          .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+          .replaceAll(RegExp(r'^-+|-+$'), '');
+      final secureRandom = Random.secure();
+      final secret = base64UrlEncode(
+        List<int>.generate(32, (_) => secureRandom.nextInt(256)),
+      );
+      try {
+        await client.from('quests').insert({
+          'artisan_id': artisanId,
+          'title': '$studioName Cultural Quest',
+          'category': 'Demonstration & Lore',
+          'description':
+              'Visit $studioName and experience the heritage of $craftCategory.',
+          'qr_code_secret': secret,
+          'geofence_radius_meters': 50,
+          'stamp_title': '$studioName Heritage Stamp',
+          'stamp_image_url':
+              'https://zmvykemnpuremkebjvyo.supabase.co/storage/v1/object/public/quest-stamps/${slug.isEmpty ? "general" : slug}.webp',
+          'status': 'PENDING_APPROVAL',
+        });
+      } catch (error) {
+        provisioningError = error;
+        debugPrint('Direct current quest provisioning note: $error');
+      }
+      currentQuests = await _fetchCurrentQuestRowsForArtisan(client, artisanId);
+    }
+
+    if (currentQuests.length > 1) {
+      throw StateError(
+        'This artisan has multiple current cultural quests. Resolve the duplicate quests before continuing.',
+      );
+    }
+    if (currentQuests.isEmpty) {
+      throw StateError(
+        'A new cultural quest could not be created for this artisan application. '
+        'Apply the retired-quest lifecycle migration and try again. '
+        '${provisioningError ?? ''}',
+      );
+    }
   }
 
   Future<UserModel> linkArtisanRoleToTourist({
@@ -1968,6 +2053,19 @@ class SupabaseService {
 
           if (profileRes != null) {
             final artisanId = profileRes['id'];
+            try {
+              await _ensureCurrentQuestForArtisanApplication(
+                client: client,
+                artisanId: artisanId.toString(),
+                studioName: studioName,
+                craftCategory: craftCategory,
+              );
+            } catch (error) {
+              // Older deployments and offline test backends may not expose the
+              // lifecycle RPC yet. Approval performs the same mandatory check,
+              // so application submission remains backward compatible.
+              debugPrint('Artisan application quest provisioning note: $error');
+            }
 
             Future<Map<String, String>?> uploadDoc(
               PlatformFile? file,
@@ -4581,55 +4679,21 @@ class SupabaseService {
       throw StateError('The artisan profile could not be found.');
     }
 
-    List<Map<String, dynamic>> questRows = List<Map<String, dynamic>>.from(
-      await client
-          .from('quests')
-          .select('id, status')
-          .eq('artisan_id', artisanId)
-          .inFilter('status', const ['PENDING_APPROVAL', 'APPROVED']),
+    final studioName =
+        artisanProfile?['studio_name']?.toString().trim().isNotEmpty == true
+        ? artisanProfile!['studio_name'].toString().trim()
+        : 'Heritage Workshop';
+    final craftCategory =
+        artisanProfile?['craft_category']?.toString().trim().isNotEmpty == true
+        ? artisanProfile!['craft_category'].toString().trim()
+        : 'Malaysian craft';
+    await _ensureCurrentQuestForArtisanApplication(
+      client: client,
+      artisanId: artisanId,
+      studioName: studioName,
+      craftCategory: craftCategory,
     );
-    if (questRows.isEmpty) {
-      final studioName =
-          artisanProfile?['studio_name']?.toString().trim().isNotEmpty == true
-          ? artisanProfile!['studio_name'].toString().trim()
-          : 'Heritage Workshop';
-      final craftCategory =
-          artisanProfile?['craft_category']?.toString().trim().isNotEmpty ==
-              true
-          ? artisanProfile!['craft_category'].toString().trim()
-          : 'Malaysian craft';
-      try {
-        final slug = craftCategory
-            .toLowerCase()
-            .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
-            .replaceAll(RegExp(r'^-+|-+$'), '');
-        final secret = '${artisanId}_${DateTime.now().millisecondsSinceEpoch}';
-        final createdQuest = await client
-            .from('quests')
-            .insert({
-              'artisan_id': artisanId,
-              'title': '$studioName Cultural Quest',
-              'category': 'Demonstration & Lore',
-              'description':
-                  'Visit $studioName and experience the heritage of $craftCategory.',
-              'qr_code_secret': secret,
-              'geofence_radius_meters': 50,
-              'stamp_title': '$studioName Heritage Stamp',
-              'stamp_image_url':
-                  'https://zmvykemnpuremkebjvyo.supabase.co/storage/v1/object/public/quest-stamps/${slug.isEmpty ? "general" : slug}.webp',
-              'status': 'APPROVED',
-            })
-            .select('id, status')
-            .maybeSingle();
-        if (createdQuest != null) {
-          questRows = [createdQuest];
-        }
-      } catch (questInsertErr) {
-        debugPrint(
-          'Auto-provisioning quest for approved artisan note: $questInsertErr',
-        );
-      }
-    }
+    final questRows = await _fetchCurrentQuestRowsForArtisan(client, artisanId);
     if (questRows.isEmpty) {
       throw StateError(
         'Approval cannot continue because this artisan has no current cultural quest.',
@@ -5116,23 +5180,6 @@ class SupabaseService {
       throw const AuthException('No active user session found.');
     }
 
-    final existing = _userStore[email] ?? <String, dynamic>{'email': email};
-    existing
-      ..['role'] = 'Tourist'
-      ..['roles'] = <String>['Tourist']
-      ..['status'] = 'ACTIVE'
-      ..['artisan_status'] = 'CLOSED'
-      ..['artisanStatus'] = 'CLOSED'
-      ..['studio_name'] = null
-      ..['studioName'] = null
-      ..['craft_category'] = null
-      ..['craftCategory'] = null
-      ..['ssm_number'] = null
-      ..['ssmNumber'] = null
-      ..['is_live_open'] = false
-      ..remove('artisan_profiles');
-    _userStore[email] = existing;
-
     final client = _client;
     if (client != null && cloudUser != null) {
       final userId = cloudUser.id;
@@ -5148,172 +5195,29 @@ class SupabaseService {
         }
       } catch (_) {}
 
+      var lifecycleApplied = false;
       try {
-        await client.rpc(
+        final result = await client.rpc(
           'deactivate_artisan_studio',
           params: {'p_user_id': effectiveUid},
         );
+        lifecycleApplied = result is Map && result['success'] == true;
+        if (!lifecycleApplied) {
+          throw StateError(
+            result is Map
+                ? (result['message'] ?? 'Studio closure was not confirmed.')
+                      .toString()
+                : 'Studio closure was not confirmed.',
+          );
+        }
       } catch (e) {
         debugPrint('deactivate_artisan_studio RPC note: $e');
       }
-      try {
-        await client.rpc(
-          'admin_update_user_status',
-          params: {
-            'p_email': email,
-            'p_status': 'CLOSED',
-            'p_role': 'Tourist',
-            'p_studio_name': null,
-            'p_craft_category': null,
-            'p_ssm_number': null,
-          },
+
+      if (!lifecycleApplied) {
+        throw StateError(
+          'The studio could not be closed safely. No historical records were deleted. Apply the retired-quest lifecycle migration and try again.',
         );
-      } catch (e) {
-        debugPrint(
-          'deactivateArtisanStudio admin_update_user_status fallback note: $e',
-        );
-      }
-
-      // Retire active quests and remove artisan documents for this studio
-      try {
-        final apRows = await client
-            .from('artisan_profiles')
-            .select('id')
-            .or('user_id.eq.$effectiveUid,user_id.eq.$userId');
-        for (final ap in apRows) {
-          if (ap['id'] != null) {
-            try {
-              await client
-                  .from('artisan_documents')
-                  .delete()
-                  .eq('artisan_id', ap['id']);
-            } catch (_) {}
-            try {
-              await client
-                  .from('quests')
-                  .update({'status': 'RETIRED'})
-                  .eq('artisan_id', ap['id']);
-            } catch (_) {}
-          }
-        }
-      } catch (e) {
-        debugPrint('deactivateArtisanStudio retire quests/docs note: $e');
-      }
-
-      // Remove artisan_profiles row upon studio deactivation
-      bool profileRemoved = false;
-      try {
-        await client
-            .from('artisan_profiles')
-            .delete()
-            .or('user_id.eq.$effectiveUid,user_id.eq.$userId');
-        profileRemoved = true;
-      } catch (e) {
-        debugPrint('deactivateArtisanStudio delete artisan_profiles note: $e');
-      }
-
-      // Fallback: If delete was blocked by a foreign key constraint, mark as CLOSED (never SUSPENDED)
-      if (!profileRemoved) {
-        try {
-          await client
-              .from('artisan_profiles')
-              .update({
-                'status': 'CLOSED',
-                'updated_at': DateTime.now().toIso8601String(),
-              })
-              .or('user_id.eq.$effectiveUid,user_id.eq.$userId');
-        } catch (e) {
-          debugPrint('deactivateArtisanStudio profile status note: $e');
-        }
-      }
-
-      // Resilient 3-tier user table update
-      final fullPayload = <String, dynamic>{
-        'role': 'Tourist',
-        'roles': ['Tourist'],
-        'artisan_status': 'CLOSED',
-        'status': 'ACTIVE',
-        'studio_name': null,
-        'craft_category': null,
-        'ssm_number': null,
-        'is_live_open': false,
-        'updated_at': DateTime.now().toIso8601String(),
-      };
-      bool userUpdated = false;
-      try {
-        await client.from('users').update(fullPayload).eq('id', effectiveUid);
-        userUpdated = true;
-      } catch (e) {
-        debugPrint('deactivateArtisanStudio full update by id note: $e');
-      }
-      if (!userUpdated) {
-        try {
-          await client.from('users').update(fullPayload).ilike('email', email);
-          userUpdated = true;
-        } catch (e) {
-          debugPrint('deactivateArtisanStudio full update by email note: $e');
-        }
-      }
-      if (!userUpdated) {
-        final fallbackPayload = <String, dynamic>{
-          'role': 'Tourist',
-          'artisan_status': 'CLOSED',
-          'status': 'ACTIVE',
-          'studio_name': null,
-          'craft_category': null,
-          'ssm_number': null,
-          'updated_at': DateTime.now().toIso8601String(),
-        };
-        try {
-          await client
-              .from('users')
-              .update(fallbackPayload)
-              .eq('id', effectiveUid);
-          userUpdated = true;
-        } catch (e) {
-          debugPrint('deactivateArtisanStudio fallback update by id note: $e');
-        }
-        if (!userUpdated) {
-          try {
-            await client
-                .from('users')
-                .update(fallbackPayload)
-                .ilike('email', email);
-            userUpdated = true;
-          } catch (e) {
-            debugPrint(
-              'deactivateArtisanStudio fallback update by email note: $e',
-            );
-          }
-        }
-      }
-      if (!userUpdated) {
-        final minimalPayload = <String, dynamic>{
-          'role': 'Tourist',
-          'status': 'ACTIVE',
-          'updated_at': DateTime.now().toIso8601String(),
-        };
-        try {
-          await client
-              .from('users')
-              .update(minimalPayload)
-              .eq('id', effectiveUid);
-          userUpdated = true;
-        } catch (e) {
-          debugPrint('deactivateArtisanStudio minimal update by id note: $e');
-        }
-        if (!userUpdated) {
-          try {
-            await client
-                .from('users')
-                .update(minimalPayload)
-                .ilike('email', email);
-          } catch (e) {
-            debugPrint(
-              'deactivateArtisanStudio minimal update by email note: $e',
-            );
-          }
-        }
       }
 
       try {
@@ -5330,7 +5234,61 @@ class SupabaseService {
       } catch (e) {
         debugPrint('deactivateArtisanStudio auth metadata note: $e');
       }
+
+      final profileRows = List<Map<String, dynamic>>.from(
+        await client
+            .from('artisan_profiles')
+            .select('id, status')
+            .or('user_id.eq.$effectiveUid,user_id.eq.$userId'),
+      );
+      final artisanIds = profileRows
+          .map((row) => row['id']?.toString() ?? '')
+          .where((id) => id.isNotEmpty)
+          .toList(growable: false);
+      final currentQuests = artisanIds.isEmpty
+          ? const <Map<String, dynamic>>[]
+          : List<Map<String, dynamic>>.from(
+              await client
+                  .from('quests')
+                  .select('id, status')
+                  .inFilter('artisan_id', artisanIds)
+                  .inFilter('status', const ['PENDING_APPROVAL', 'APPROVED']),
+            );
+      final userRow = await client
+          .from('users')
+          .select('role, status, artisan_status')
+          .eq('id', effectiveUid)
+          .maybeSingle();
+      final profileClosed = profileRows.every(
+        (row) => row['status']?.toString().toUpperCase() == 'CLOSED',
+      );
+      final userClosed =
+          userRow?['role']?.toString().toLowerCase() == 'tourist' &&
+          userRow?['status']?.toString().toUpperCase() == 'ACTIVE' &&
+          userRow?['artisan_status']?.toString().toUpperCase() == 'CLOSED';
+      if (!profileClosed || currentQuests.isNotEmpty || !userClosed) {
+        throw StateError(
+          'The studio closure could not be verified. Refresh and try again; no historical records were deleted.',
+        );
+      }
     }
+
+    final existing = _userStore[email] ?? <String, dynamic>{'email': email};
+    existing
+      ..['role'] = 'Tourist'
+      ..['roles'] = <String>['Tourist']
+      ..['status'] = 'ACTIVE'
+      ..['artisan_status'] = 'CLOSED'
+      ..['artisanStatus'] = 'CLOSED'
+      ..['studio_name'] = null
+      ..['studioName'] = null
+      ..['craft_category'] = null
+      ..['craftCategory'] = null
+      ..['ssm_number'] = null
+      ..['ssmNumber'] = null
+      ..['is_live_open'] = false
+      ..remove('artisan_profiles');
+    _userStore[email] = existing;
 
     var updated = UserModel.fromMap(existing);
     if (client != null && cloudUser != null) {
@@ -6655,15 +6613,21 @@ class SupabaseService {
     final queue = groupedReports.values.toList();
     queue.sort((a, b) {
       DateTime? firstReport(Map<String, dynamic> item) {
-        final reports = List<Map<String, dynamic>>.from(item['reports'] ?? const []);
+        final reports = List<Map<String, dynamic>>.from(
+          item['reports'] ?? const [],
+        );
         final dates = reports
-            .map((report) => DateTime.tryParse(report['created_at']?.toString() ?? ''))
+            .map(
+              (report) =>
+                  DateTime.tryParse(report['created_at']?.toString() ?? ''),
+            )
             .whereType<DateTime>()
             .toList();
         if (dates.isEmpty) return null;
         dates.sort();
         return dates.first;
       }
+
       final aDate = firstReport(a);
       final bDate = firstReport(b);
       if (aDate == null && bDate == null) return 0;
@@ -8169,7 +8133,6 @@ class SupabaseService {
               ')',
             )
             .eq('user_id', user.id)
-            .eq('quests.status', 'APPROVED')
             .order('unlocked_at', ascending: false),
       );
       stampsAvailable = true;
@@ -8197,8 +8160,7 @@ class SupabaseService {
             .from('quest_progress')
             .select('quest_id, quests!inner(id, artisan_id, status)')
             .eq('user_id', user.id)
-            .eq('status', 'COMPLETED')
-            .eq('quests.status', 'APPROVED'),
+            .eq('status', 'COMPLETED'),
       );
       questStatisticsAvailable = true;
     } catch (error) {
@@ -8545,6 +8507,7 @@ class SupabaseService {
           'created_at',
         )
         .eq('artisan_id', artisanProfileId)
+        .inFilter('status', const ['PENDING_APPROVAL', 'APPROVED'])
         .order('created_at', ascending: false);
 
     return List<Map<String, dynamic>>.from(response);

@@ -111,6 +111,287 @@ BEGIN
     END IF;
 END $$;
 
+-- ==============================================================================
+-- RETIRED QUEST LIFECYCLE
+-- Keep historical quests/tasks/progress/XP/stamps, while allowing one new quest
+-- when a closed artisan reapplies.
+-- ==============================================================================
+
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+BEGIN;
+
+ALTER TABLE public.artisan_profiles
+    DROP CONSTRAINT IF EXISTS artisan_profiles_status_check;
+ALTER TABLE public.artisan_profiles
+    ADD CONSTRAINT artisan_profiles_status_check
+    CHECK (status IN (
+        'PENDING_APPROVAL', 'APPROVED', 'REJECTED', 'SUSPENDED', 'CLOSED'
+    ));
+
+ALTER TABLE public.quests
+    DROP CONSTRAINT IF EXISTS quests_status_check;
+ALTER TABLE public.quests
+    ADD CONSTRAINT quests_status_check
+    CHECK (status IN ('PENDING_APPROVAL', 'APPROVED', 'REJECTED', 'RETIRED'));
+
+-- The former full uniqueness constraint prevented a retired studio from
+-- receiving a new quest. Historical rows may coexist, but only one current
+-- quest is allowed for each artisan profile.
+ALTER TABLE public.quests
+    DROP CONSTRAINT IF EXISTS quests_artisan_id_key;
+ALTER TABLE public.quests
+    DROP CONSTRAINT IF EXISTS quests_artisan_id_unique;
+DROP INDEX IF EXISTS public.quests_artisan_id_key;
+DROP INDEX IF EXISTS public.quests_artisan_id_unique;
+CREATE UNIQUE INDEX IF NOT EXISTS quests_one_current_per_artisan_idx
+    ON public.quests (artisan_id)
+    WHERE status IN ('PENDING_APPROVAL', 'APPROVED');
+
+-- Retiring a quest must not make a tourist's earned Passport stamp disappear.
+-- PostgreSQL combines SELECT policies with OR, so this only adds historical
+-- access for the user who participated in that quest.
+CREATE OR REPLACE FUNCTION public.user_has_quest_history(p_quest_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+    SELECT EXISTS (
+        SELECT 1
+          FROM public.quest_progress qp
+         WHERE qp.quest_id = p_quest_id
+           AND qp.user_id = auth.uid()
+    ) OR EXISTS (
+        SELECT 1
+          FROM public.passport_stamps ps
+         WHERE ps.quest_id = p_quest_id
+           AND ps.user_id = auth.uid()
+    );
+$$;
+
+REVOKE ALL ON FUNCTION public.user_has_quest_history(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.user_has_quest_history(uuid) TO authenticated;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+          FROM pg_policies
+         WHERE schemaname = 'public'
+           AND tablename = 'quests'
+           AND policyname = 'Users can read own retired quest history'
+    ) THEN
+        CREATE POLICY "Users can read own retired quest history"
+            ON public.quests
+            FOR SELECT
+            TO authenticated
+            USING (
+                status = 'RETIRED'
+                AND public.user_has_quest_history(quests.id)
+            );
+    END IF;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.ensure_current_artisan_quest(
+    p_artisan_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+    v_owner_id uuid;
+    v_studio_name text;
+    v_craft_category text;
+    v_quest_id uuid;
+    v_created boolean := false;
+    v_slug text;
+BEGIN
+    SELECT user_id, studio_name, craft_category
+      INTO v_owner_id, v_studio_name, v_craft_category
+      FROM public.artisan_profiles
+     WHERE id = p_artisan_id;
+
+    IF v_owner_id IS NULL THEN
+        RAISE EXCEPTION 'Artisan profile not found';
+    END IF;
+
+    IF auth.uid() IS DISTINCT FROM v_owner_id
+       AND COALESCE(auth.role(), '') <> 'service_role'
+       AND NOT public.is_admin() THEN
+        RAISE EXCEPTION 'Not authorized to provision this artisan quest'
+            USING ERRCODE = '42501';
+    END IF;
+
+    SELECT id
+      INTO v_quest_id
+      FROM public.quests
+     WHERE artisan_id = p_artisan_id
+       AND status IN ('PENDING_APPROVAL', 'APPROVED')
+     ORDER BY created_at DESC
+     LIMIT 1;
+
+    IF v_quest_id IS NULL THEN
+        v_studio_name := COALESCE(NULLIF(trim(v_studio_name), ''), 'Heritage Workshop');
+        v_craft_category := COALESCE(NULLIF(trim(v_craft_category), ''), 'Malaysian craft');
+        v_slug := trim(BOTH '-' FROM regexp_replace(
+            lower(v_craft_category), '[^a-z0-9]+', '-', 'g'
+        ));
+
+        INSERT INTO public.quests (
+            artisan_id,
+            title,
+            category,
+            description,
+            qr_code_secret,
+            geofence_radius_meters,
+            stamp_title,
+            stamp_image_url,
+            status
+        ) VALUES (
+            p_artisan_id,
+            v_studio_name || ' Cultural Quest',
+            'Demonstration & Lore',
+            'Visit ' || v_studio_name || ' and experience the heritage of ' || v_craft_category || '.',
+            encode(gen_random_bytes(32), 'hex'),
+            50,
+            v_studio_name || ' Heritage Stamp',
+            'https://zmvykemnpuremkebjvyo.supabase.co/storage/v1/object/public/quest-stamps/' ||
+                COALESCE(NULLIF(v_slug, ''), 'general') || '.webp',
+            'PENDING_APPROVAL'
+        )
+        ON CONFLICT (artisan_id)
+            WHERE status IN ('PENDING_APPROVAL', 'APPROVED')
+            DO NOTHING
+        RETURNING id INTO v_quest_id;
+
+        v_created := v_quest_id IS NOT NULL;
+
+        IF v_quest_id IS NULL THEN
+            SELECT id
+              INTO v_quest_id
+              FROM public.quests
+             WHERE artisan_id = p_artisan_id
+               AND status IN ('PENDING_APPROVAL', 'APPROVED')
+             ORDER BY created_at DESC
+             LIMIT 1;
+        END IF;
+    END IF;
+
+    IF v_quest_id IS NULL THEN
+        RAISE EXCEPTION 'Current artisan quest could not be provisioned';
+    END IF;
+
+    RETURN jsonb_build_object(
+        'success', true,
+        'quest_id', v_quest_id,
+        'created', v_created
+    );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.ensure_current_artisan_quest(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.ensure_current_artisan_quest(uuid)
+    TO authenticated, service_role;
+
+CREATE OR REPLACE FUNCTION public.deactivate_artisan_studio(p_user_id uuid)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+    v_artisan_id uuid;
+    v_retired_count integer := 0;
+BEGIN
+    IF auth.uid() IS DISTINCT FROM p_user_id
+       AND COALESCE(auth.role(), '') <> 'service_role'
+       AND NOT public.is_admin() THEN
+        RAISE EXCEPTION 'Not authorized to close this artisan studio'
+            USING ERRCODE = '42501';
+    END IF;
+
+    SELECT id
+      INTO v_artisan_id
+      FROM public.artisan_profiles
+     WHERE user_id = p_user_id;
+
+    IF v_artisan_id IS NOT NULL THEN
+        UPDATE public.quests
+           SET status = 'RETIRED'
+         WHERE artisan_id = v_artisan_id
+           AND status IN ('PENDING_APPROVAL', 'APPROVED');
+        GET DIAGNOSTICS v_retired_count = ROW_COUNT;
+
+        -- Release every tourist from the retired quest without deleting or
+        -- completing their progress. Confirmed timer seconds remain intact.
+        UPDATE public.task_progress tp
+           SET tracking_started_at = NULL,
+               updated_at = timezone('utc', now())
+         WHERE tp.is_completed = false
+           AND tp.task_id IN (
+               SELECT ht.id
+                 FROM public.heritage_tasks ht
+                 JOIN public.quests q ON q.id = ht.quest_id
+                WHERE q.artisan_id = v_artisan_id
+                  AND q.status = 'RETIRED'
+           );
+
+        UPDATE public.quest_progress qp
+           SET status = 'STOPPED'
+         WHERE qp.status = 'IN_PROGRESS'
+           AND qp.quest_id IN (
+               SELECT q.id
+                 FROM public.quests q
+                WHERE q.artisan_id = v_artisan_id
+                  AND q.status = 'RETIRED'
+           );
+
+        UPDATE public.artisan_profiles
+           SET status = 'CLOSED',
+               updated_at = timezone('utc', now())
+         WHERE id = v_artisan_id;
+    END IF;
+
+    UPDATE public.users
+       SET role = 'Tourist',
+           artisan_status = 'CLOSED',
+           status = 'ACTIVE',
+           updated_at = timezone('utc', now())
+     WHERE id = p_user_id;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'User account not found';
+    END IF;
+
+    UPDATE auth.users
+       SET raw_user_meta_data = COALESCE(raw_user_meta_data, '{}'::jsonb) ||
+           jsonb_build_object(
+               'role', 'Tourist',
+               'roles', jsonb_build_array('Tourist'),
+               'artisan_status', 'CLOSED',
+               'status', 'ACTIVE'
+           )
+     WHERE id = p_user_id;
+
+    RETURN jsonb_build_object(
+        'success', true,
+        'artisan_id', v_artisan_id,
+        'retired_quest_count', v_retired_count
+    );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.deactivate_artisan_studio(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.deactivate_artisan_studio(uuid)
+    TO authenticated, service_role;
+
+COMMIT;
+
 -- 4. Create Performance & Lookup Indexes
 CREATE INDEX IF NOT EXISTS idx_users_email ON public.users(email);
 CREATE INDEX IF NOT EXISTS idx_users_username ON public.users(username);
@@ -269,48 +550,6 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- Drop ambiguous 3-parameter overload to resolve PGRST203 function resolution error
 DROP FUNCTION IF EXISTS public.admin_update_user_status(text, text, text);
 DROP FUNCTION IF EXISTS public.admin_update_user_status(text, text, text, text, text, text);
-DROP FUNCTION IF EXISTS public.deactivate_artisan_studio(uuid);
-
--- Dedicated RPC for closing artisan studio cleanly
-CREATE OR REPLACE FUNCTION public.deactivate_artisan_studio(p_user_id uuid)
-RETURNS JSONB AS $$
-BEGIN
-    -- 1. Delete artisan documents
-    DELETE FROM public.artisan_documents
-    WHERE artisan_id IN (SELECT id FROM public.artisan_profiles WHERE user_id = p_user_id);
-
-    -- 2. Retire quests owned by this artisan
-    UPDATE public.quests
-    SET status = 'RETIRED'
-    WHERE artisan_id IN (SELECT id FROM public.artisan_profiles WHERE user_id = p_user_id);
-
-    -- 3. Delete from public.artisan_profiles
-    DELETE FROM public.artisan_profiles
-    WHERE user_id = p_user_id;
-
-    -- 4. Update public.users
-    UPDATE public.users
-    SET role = 'Tourist',
-        roles = ARRAY['Tourist']::TEXT[],
-        artisan_status = 'CLOSED',
-        status = 'ACTIVE',
-        studio_name = NULL,
-        craft_category = NULL,
-        ssm_number = NULL,
-        is_live_open = FALSE,
-        updated_at = now()
-    WHERE id = p_user_id;
-
-    -- 5. Update auth.users metadata
-    UPDATE auth.users
-    SET raw_user_meta_data = raw_user_meta_data || '{"role": "Tourist", "roles": ["Tourist"], "artisan_status": "CLOSED", "status": "ACTIVE", "studio_name": null, "craft_category": null, "ssm_number": null}'::jsonb
-    WHERE id = p_user_id;
-
-    RETURN jsonb_build_object('success', true);
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
-GRANT EXECUTE ON FUNCTION public.deactivate_artisan_studio(uuid) TO anon, authenticated, service_role;
 
 CREATE OR REPLACE FUNCTION public.admin_update_user_status(
     p_email text,
@@ -624,61 +863,6 @@ CREATE POLICY "Public update artisan_documents" ON public.artisan_documents FOR 
 
 DROP POLICY IF EXISTS "Public delete artisan_documents" ON public.artisan_documents;
 CREATE POLICY "Public delete artisan_documents" ON public.artisan_documents FOR DELETE USING (true);
-
--- 6. RPC Function for Closing / Deactivating Artisan Studio
-CREATE OR REPLACE FUNCTION public.deactivate_artisan_studio(p_user_id uuid)
-RETURNS JSONB AS $$
-DECLARE
-    v_artisan_profile_id uuid;
-BEGIN
-    -- 1. Get artisan profile id
-    SELECT id INTO v_artisan_profile_id
-    FROM public.artisan_profiles
-    WHERE user_id = p_user_id;
-
-    -- 2. Delete artisan documents
-    IF v_artisan_profile_id IS NOT NULL THEN
-        DELETE FROM public.artisan_documents WHERE artisan_id = v_artisan_profile_id;
-        
-        -- Retire active quests
-        UPDATE public.quests SET status = 'RETIRED' WHERE artisan_id = v_artisan_profile_id;
-        
-        -- Mark artisan profile as CLOSED
-        UPDATE public.artisan_profiles SET status = 'CLOSED', updated_at = now() WHERE id = v_artisan_profile_id;
-    END IF;
-
-    -- 3. Demote public.users to Tourist and clear studio columns
-    UPDATE public.users
-    SET 
-        role = 'Tourist',
-        roles = ARRAY['Tourist']::TEXT[],
-        studio_name = NULL,
-        craft_category = NULL,
-        ssm_number = NULL,
-        ssm_file_url = NULL,
-        cert_file_url = NULL,
-        is_live_open = FALSE,
-        updated_at = now()
-    WHERE id = p_user_id;
-
-    -- 4. Update auth.users metadata
-    UPDATE auth.users
-    SET raw_user_meta_data = raw_user_meta_data || 
-        jsonb_build_object(
-            'role', 'Tourist',
-            'roles', json_build_array('Tourist'),
-            'studio_name', null,
-            'craft_category', null,
-            'ssm_number', null,
-            'artisan_status', 'CLOSED'
-        )
-    WHERE id = p_user_id;
-
-    RETURN jsonb_build_object('success', true, 'user_id', p_user_id);
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
-GRANT EXECUTE ON FUNCTION public.deactivate_artisan_studio(uuid) TO anon, authenticated;
 
 -- ==============================================================================
 -- 7. Forum Module Tables, Voting, & Stored Procedures
@@ -1163,46 +1347,6 @@ GRANT EXECUTE ON FUNCTION public.cancel_unconfirmed_signup(TEXT) TO anon, authen
 -- ARTISAN DEACTIVATION & ADMIN STATUS UPDATE RPCS
 -- ==============================================================================
 
-CREATE OR REPLACE FUNCTION public.deactivate_artisan_studio(p_user_id uuid)
-RETURNS JSONB AS $$
-BEGIN
-    -- 1. Delete artisan documents
-    DELETE FROM public.artisan_documents
-    WHERE artisan_id IN (SELECT id FROM public.artisan_profiles WHERE user_id = p_user_id);
-
-    -- 2. Retire quests owned by this artisan
-    UPDATE public.quests
-    SET status = 'RETIRED'
-    WHERE artisan_id IN (SELECT id FROM public.artisan_profiles WHERE user_id = p_user_id);
-
-    -- 3. Delete from public.artisan_profiles
-    DELETE FROM public.artisan_profiles
-    WHERE user_id = p_user_id;
-
-    -- 4. Update public.users
-    UPDATE public.users
-    SET role = 'Tourist',
-        roles = ARRAY['Tourist']::TEXT[],
-        artisan_status = 'CLOSED',
-        status = 'ACTIVE',
-        studio_name = NULL,
-        craft_category = NULL,
-        ssm_number = NULL,
-        is_live_open = FALSE,
-        updated_at = now()
-    WHERE id = p_user_id;
-
-    -- 5. Update auth.users metadata
-    UPDATE auth.users
-    SET raw_user_meta_data = raw_user_meta_data || '{"role": "Tourist", "roles": ["Tourist"], "artisan_status": "CLOSED", "status": "ACTIVE", "studio_name": null, "craft_category": null, "ssm_number": null}'::jsonb
-    WHERE id = p_user_id;
-
-    RETURN jsonb_build_object('success', true);
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
-GRANT EXECUTE ON FUNCTION public.deactivate_artisan_studio(uuid) TO anon, authenticated, service_role;
-
 -- Ensure rejection_reason column exists on public.users and public.artisan_profiles
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
 ALTER TABLE public.artisan_profiles ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
@@ -1390,3 +1534,97 @@ BEGIN
         WITH CHECK (true);
     END IF;
 END $$;
+
+-- Keep this definitive version last because older setup sections above also
+-- define this RPC for legacy deployments.
+CREATE OR REPLACE FUNCTION public.deactivate_artisan_studio(p_user_id uuid)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+    v_artisan_id uuid;
+    v_retired_count integer := 0;
+BEGIN
+    IF auth.uid() IS DISTINCT FROM p_user_id
+       AND COALESCE(auth.role(), '') <> 'service_role'
+       AND NOT public.is_admin() THEN
+        RAISE EXCEPTION 'Not authorized to close this artisan studio'
+            USING ERRCODE = '42501';
+    END IF;
+
+    SELECT id
+      INTO v_artisan_id
+      FROM public.artisan_profiles
+     WHERE user_id = p_user_id;
+
+    IF v_artisan_id IS NOT NULL THEN
+        UPDATE public.quests
+           SET status = 'RETIRED'
+         WHERE artisan_id = v_artisan_id
+           AND status IN ('PENDING_APPROVAL', 'APPROVED');
+        GET DIAGNOSTICS v_retired_count = ROW_COUNT;
+
+        -- Release every tourist from the retired quest without deleting or
+        -- completing their progress. Confirmed timer seconds remain intact.
+        UPDATE public.task_progress tp
+           SET tracking_started_at = NULL,
+               updated_at = timezone('utc', now())
+         WHERE tp.is_completed = false
+           AND tp.task_id IN (
+               SELECT ht.id
+                 FROM public.heritage_tasks ht
+                 JOIN public.quests q ON q.id = ht.quest_id
+                WHERE q.artisan_id = v_artisan_id
+                  AND q.status = 'RETIRED'
+           );
+
+        UPDATE public.quest_progress qp
+           SET status = 'STOPPED'
+         WHERE qp.status = 'IN_PROGRESS'
+           AND qp.quest_id IN (
+               SELECT q.id
+                 FROM public.quests q
+                WHERE q.artisan_id = v_artisan_id
+                  AND q.status = 'RETIRED'
+           );
+
+        UPDATE public.artisan_profiles
+           SET status = 'CLOSED',
+               updated_at = timezone('utc', now())
+         WHERE id = v_artisan_id;
+    END IF;
+
+    UPDATE public.users
+       SET role = 'Tourist',
+           artisan_status = 'CLOSED',
+           status = 'ACTIVE',
+           updated_at = timezone('utc', now())
+     WHERE id = p_user_id;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'User account not found';
+    END IF;
+
+    UPDATE auth.users
+       SET raw_user_meta_data = COALESCE(raw_user_meta_data, '{}'::jsonb) ||
+           jsonb_build_object(
+               'role', 'Tourist',
+               'roles', jsonb_build_array('Tourist'),
+               'artisan_status', 'CLOSED',
+               'status', 'ACTIVE'
+           )
+     WHERE id = p_user_id;
+
+    RETURN jsonb_build_object(
+        'success', true,
+        'artisan_id', v_artisan_id,
+        'retired_quest_count', v_retired_count
+    );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.deactivate_artisan_studio(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.deactivate_artisan_studio(uuid)
+    TO authenticated, service_role;
