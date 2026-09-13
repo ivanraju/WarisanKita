@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
+import 'package:warisan_kita/ui/widgets/heritage_logo.dart';
 import 'package:warisan_kita/ui/auth/sign_up_view.dart';
 import 'package:warisan_kita/ui/dashboard/dashboard_view.dart';
 import 'package:warisan_kita/ui/dashboard/artisan_dashboard_view.dart';
@@ -60,14 +61,12 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _buildHeroSection() {
     return Column(
       children: [
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white24),
-          ),
-          child: const Icon(Icons.auto_awesome_mosaic_rounded, size: 64, color: Color(0xFFFFD54F)),
+        const HeritageLogo(
+          size: 64,
+          glow: true,
+          badgeColor: Colors.white,
+          primaryColor: Color(0xFF004D40),
+          accentColor: Color(0xFFFFD54F),
         ),
         const SizedBox(height: 24),
         Text(
@@ -78,14 +77,23 @@ class _LoginScreenState extends State<LoginScreen> {
             letterSpacing: -1,
           ),
         ),
-        Text(
-          'CONNECTING CULTURES',
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 12,
-            fontWeight: FontWeight.w800,
-            color: Colors.white60,
-            letterSpacing: 4,
-          ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(width: 14, height: 1, color: Colors.white38),
+            const SizedBox(width: 8),
+            Text(
+              'LIVING CULTURAL HERITAGE',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFFFFD54F),
+                letterSpacing: 3,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(width: 14, height: 1, color: Colors.white38),
+          ],
         ),
       ],
     );

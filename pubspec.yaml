@@ -28,6 +28,7 @@ dependencies:
   qr_flutter: ^4.1.0
   image: ^4.9.2
   flutter_image_compress: ^2.5.1
+  connectivity_plus: ^6.1.0
 
 dev_dependencies:
   flutter_test:
@@ -40,3 +41,4 @@ flutter:
     - assets/images/heritage_batik_background.png
     - assets/images/cultural_quest_journey_background.png
     - assets/images/heritage_passport_background.png
+    - assets/images/app_icon.png

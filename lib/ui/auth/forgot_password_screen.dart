@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:warisan_kita/ui/auth/login_screen.dart';
 import 'package:warisan_kita/ui/auth/widgets/password_strength_meter.dart';
 import 'package:warisan_kita/ui/core/widgets/heritage_background.dart';
+import 'package:warisan_kita/data/services/connectivity_service.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
@@ -77,6 +78,26 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   // Step 1: Submit Email for Reset Token (UC003 Step 1-6)
   Future<void> _handleSendResetEmail() async {
+    final connectivity = context.read<ConnectivityService?>();
+    if (connectivity != null && connectivity.isOffline) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.wifi_off_rounded, color: Colors.white, size: 20),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text('Cannot reset password while offline. Please connect to the internet.'),
+              ),
+            ],
+          ),
+          backgroundColor: Color(0xFFC2410C),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     final email = _emailController.text.trim();
     final authVM = context.read<AuthViewModel>();
 
@@ -108,6 +129,26 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   // Step 3: Submit New Password (UC003 Step 9-13)
   Future<void> _handleConfirmReset() async {
+    final connectivity = context.read<ConnectivityService?>();
+    if (connectivity != null && connectivity.isOffline) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.wifi_off_rounded, color: Colors.white, size: 20),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text('Cannot reset password while offline. Please connect to the internet.'),
+              ),
+            ],
+          ),
+          backgroundColor: Color(0xFFC2410C),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     final email = _emailController.text.trim();
     final token = _tokenController.text.trim();
     final newPassword = _newPasswordController.text.trim();
