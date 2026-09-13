@@ -133,7 +133,7 @@ class ActiveArtisanMaster {
       category: category,
       state: state,
       experience: exp,
-      plaques: (map['plaques'] as int?) ?? (ap?['workshop_count'] as int?) ?? 1,
+      plaques: (map['plaques'] as int?) ?? (ap?['workshop_count'] as int?) ?? 0,
       isLiveOpen: resolvedLiveOpen,
       licenseNo: license,
       verifiedDate: verifiedDate,

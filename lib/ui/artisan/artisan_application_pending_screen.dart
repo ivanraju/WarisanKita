@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:warisan_kita/domain/models/user.dart';
 import 'package:warisan_kita/ui/tourist/apply_artisan_screen.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 import 'package:warisan_kita/ui/core/widgets/heritage_background.dart';
@@ -11,6 +13,11 @@ class ArtisanApplicationPendingScreen extends StatefulWidget {
   final String craftCategory;
   final String ssmNumber;
   final String premiseType;
+  final String? ssmFileName;
+  final String? ssmFileUrl;
+  final String? certFileName;
+  final String? certFileUrl;
+  final List<String>? photos;
 
   const ArtisanApplicationPendingScreen({
     super.key,
@@ -18,6 +25,11 @@ class ArtisanApplicationPendingScreen extends StatefulWidget {
     this.craftCategory = '',
     this.ssmNumber = '',
     this.premiseType = '',
+    this.ssmFileName,
+    this.ssmFileUrl,
+    this.certFileName,
+    this.certFileUrl,
+    this.photos,
   });
 
   @override
@@ -87,6 +99,32 @@ class _ArtisanApplicationPendingScreenState
         widget.premiseType.contains('Kediaman');
 
     final bool isRejected = user?.isRejectedArtisan == true;
+
+    // Document resolution
+    final String? ssmDocName = (user?.ssmFileName != null && user!.ssmFileName!.isNotEmpty)
+        ? user.ssmFileName
+        : widget.ssmFileName;
+    final String? ssmDocUrl = (user?.ssmFileUrl != null && user!.ssmFileUrl!.isNotEmpty)
+        ? user.ssmFileUrl
+        : widget.ssmFileUrl;
+
+    final String? certDocName = (user?.certFileName != null && user!.certFileName!.isNotEmpty)
+        ? user.certFileName
+        : widget.certFileName;
+    final String? certDocUrl = (user?.certFileUrl != null && user!.certFileUrl!.isNotEmpty)
+        ? user.certFileUrl
+        : widget.certFileUrl;
+
+    final String? craftingPhotoName = (user?.craftingPhotoName != null && user!.craftingPhotoName!.isNotEmpty)
+        ? user.craftingPhotoName
+        : (isVillage ? (ssmDocName ?? user?.ssmFileName) : null);
+    final String? craftingPhotoUrl = (user?.craftingPhotoUrl != null && user!.craftingPhotoUrl!.isNotEmpty)
+        ? user.craftingPhotoUrl
+        : (isVillage ? (ssmDocUrl ?? user?.ssmFileUrl) : null);
+
+    final List<String> allPhotos = (user?.photos != null && user!.photos.isNotEmpty)
+        ? user.photos
+        : (widget.photos ?? const []);
 
     return HeritageBackground(
       child: Scaffold(
@@ -309,19 +347,29 @@ class _ArtisanApplicationPendingScreenState
                             ? 'Exempted (Village Crafter)'
                             : effectiveSsm,
                       ),
-                      const SizedBox(height: 8),
-                      _buildSummaryRow(
-                        isDark,
-                        'Uploaded Proof:',
-                        isVillage
-                            ? (user?.ssmFileName ?? 'Crafting_Photo.jpg')
-                            : (user?.ssmFileName ?? 'SSM_Cert.pdf, Kraftangan_Cert.pdf'),
-                      ),
                     ],
                   ),
                 ),
 
-                const SizedBox(height: 28),
+                const SizedBox(height: 18),
+
+                // 📜 Uploaded Verification Documents Section
+                _buildUploadedDocumentsSection(
+                  context: context,
+                  isDark: isDark,
+                  isVillage: isVillage,
+                  ssmDocName: ssmDocName,
+                  ssmDocUrl: ssmDocUrl,
+                  certDocName: certDocName,
+                  certDocUrl: certDocUrl,
+                  craftingPhotoName: craftingPhotoName,
+                  craftingPhotoUrl: craftingPhotoUrl,
+                  photos: allPhotos,
+                  effectiveSsm: effectiveSsm,
+                  user: user,
+                ),
+
+                const SizedBox(height: 24),
 
                 if (isRejected) ...[
                   // Rejection Official Feedback Notice
@@ -735,5 +783,718 @@ class _ArtisanApplicationPendingScreenState
         ),
       ],
     );
+  }
+
+  Widget _buildUploadedDocumentsSection({
+    required BuildContext context,
+    required bool isDark,
+    required bool isVillage,
+    required String? ssmDocName,
+    required String? ssmDocUrl,
+    required String? certDocName,
+    required String? certDocUrl,
+    required String? craftingPhotoName,
+    required String? craftingPhotoUrl,
+    required List<String> photos,
+    required String effectiveSsm,
+    required UserModel? user,
+  }) {
+    final hasExplicitSsmInDocs = user?.artisanDocuments.any(
+          (d) =>
+              d['doc_type'] == 'SSM_BUSINESS_CERT' ||
+              d['doc_type'] == 'SSM_CERT' ||
+              d['doc_type'] == 'SSM',
+        ) ??
+        false;
+    final bool hasSsmDoc = !isVillage
+        ? ((ssmDocName != null && ssmDocName.isNotEmpty) ||
+            (ssmDocUrl != null && ssmDocUrl.isNotEmpty))
+        : hasExplicitSsmInDocs ||
+            (effectiveSsm != 'VILLAGE_EXEMPT' &&
+                !effectiveSsm.toLowerCase().contains('village') &&
+                effectiveSsm != 'Under Verification' &&
+                effectiveSsm != 'Exempted (Village Crafter)' &&
+                ssmDocName != null &&
+                !ssmDocName.toLowerCase().contains('crafting') &&
+                !ssmDocName.toLowerCase().contains('photo'));
+
+    final hasCertDoc = (certDocName != null && certDocName.isNotEmpty) ||
+        (certDocUrl != null && certDocUrl.isNotEmpty);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF041412) : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFE2E8F0),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? const Color(0xFF1E3A34)
+                      : const Color(0xFF004D40).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  isVillage ? Icons.cottage_outlined : Icons.business_outlined,
+                  size: 18,
+                  color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isVillage
+                          ? 'Home Studio Uploaded Documents'
+                          : 'Commercial Studio Uploaded Documents',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF0F172A),
+                      ),
+                    ),
+                    Text(
+                      'Tap any document to review attached files',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 10.5,
+                        color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          if (isVillage) ...[
+            // 1. Mandatory Crafting Photo Evidence
+            _buildDocCard(
+              context: context,
+              isDark: isDark,
+              icon: Icons.camera_alt_rounded,
+              iconColor: const Color(0xFF10B981),
+              badgeText: 'MANDATORY PROOF',
+              badgeBg: isDark ? const Color(0xFF064E3B) : const Color(0xFFD1FAE5),
+              badgeFg: isDark ? const Color(0xFF6EE7B7) : const Color(0xFF065F46),
+              title: 'Crafting Photo Evidence (Proof)',
+              fileName: craftingPhotoName ?? 'Crafting_Proof_Photo.jpg',
+              fileUrl: craftingPhotoUrl,
+              isImage: true,
+              actionLabel: 'View Proof Photo',
+            ),
+            const SizedBox(height: 10),
+
+            // 2. Optional Stuff - Kraftangan Cert (if uploaded)
+            if (hasCertDoc) ...[
+              _buildDocCard(
+                context: context,
+                isDark: isDark,
+                icon: Icons.workspace_premium_rounded,
+                iconColor: const Color(0xFFD97706),
+                badgeText: 'OPTIONAL ACCREDITATION',
+                badgeBg: isDark ? const Color(0xFF78350F) : const Color(0xFFFEF3C7),
+                badgeFg: isDark ? const Color(0xFFFDE68A) : const Color(0xFF92400E),
+                title: 'Kraftangan Master Certificate',
+                fileName: certDocName ?? 'Kraftangan_Certificate.pdf',
+                fileUrl: certDocUrl,
+                isImage: _isImageFile(certDocName ?? certDocUrl ?? ''),
+                actionLabel: 'View Certificate',
+              ),
+            ] else ...[
+              _buildExemptionNoticeCard(
+                isDark: isDark,
+                icon: Icons.workspace_premium_outlined,
+                title: 'Kraftangan Certificate',
+                notice: 'Not attached (Optional for Home / Village Workshops)',
+              ),
+            ],
+            const SizedBox(height: 10),
+
+            // 3. Optional Stuff - SSM Registration (if provided)
+            if (hasSsmDoc) ...[
+              _buildDocCard(
+                context: context,
+                isDark: isDark,
+                icon: Icons.description_rounded,
+                iconColor: const Color(0xFF3B82F6),
+                badgeText: 'OPTIONAL SSM REGISTRATION',
+                badgeBg: isDark ? const Color(0xFF1E3A8A) : const Color(0xFFDBEAFE),
+                badgeFg: isDark ? const Color(0xFF93C5FD) : const Color(0xFF1E40AF),
+                title: 'SSM Registration Certificate',
+                fileName: ssmDocName ?? 'SSM_Registration.pdf',
+                fileUrl: ssmDocUrl,
+                isImage: _isImageFile(ssmDocName ?? ssmDocUrl ?? ''),
+                actionLabel: 'View SSM Document',
+              ),
+            ] else ...[
+              _buildExemptionNoticeCard(
+                isDark: isDark,
+                icon: Icons.verified_user_outlined,
+                title: 'SSM Business Registration',
+                notice: 'Exempted for Home / Village Crafters (Crafting photo is primary verification)',
+              ),
+            ],
+            const SizedBox(height: 12),
+
+            // 4. Optional Stuff - Studio / Workshop Photos
+            if (photos.isNotEmpty) ...[
+              _buildPhotosSection(
+                context: context,
+                isDark: isDark,
+                photos: photos,
+                title: 'Optional Studio / Workshop Photos (${photos.length})',
+              ),
+            ] else ...[
+              _buildExemptionNoticeCard(
+                isDark: isDark,
+                icon: Icons.photo_library_outlined,
+                title: 'Studio / Workshop Photos',
+                notice: 'None attached (Optional)',
+              ),
+            ],
+          ] else ...[
+            // Commercial Studio:
+            // 1. SSM Business Registration Document (Mandatory)
+            _buildDocCard(
+              context: context,
+              isDark: isDark,
+              icon: Icons.description_rounded,
+              iconColor: const Color(0xFF3B82F6),
+              badgeText: 'MANDATORY SSM',
+              badgeBg: isDark ? const Color(0xFF1E3A8A) : const Color(0xFFDBEAFE),
+              badgeFg: isDark ? const Color(0xFF93C5FD) : const Color(0xFF1E40AF),
+              title: 'SSM Business Registration Document',
+              fileName: ssmDocName ?? 'SSM_Business_Registration.pdf',
+              fileUrl: ssmDocUrl,
+              isImage: _isImageFile(ssmDocName ?? ssmDocUrl ?? ''),
+              actionLabel: 'View SSM Document',
+            ),
+            const SizedBox(height: 10),
+
+            // 2. Kraftangan Master Accreditation Certificate (Mandatory)
+            _buildDocCard(
+              context: context,
+              isDark: isDark,
+              icon: Icons.workspace_premium_rounded,
+              iconColor: const Color(0xFFD97706),
+              badgeText: 'MANDATORY ACCREDITATION',
+              badgeBg: isDark ? const Color(0xFF78350F) : const Color(0xFFFEF3C7),
+              badgeFg: isDark ? const Color(0xFFFDE68A) : const Color(0xFF92400E),
+              title: 'Kraftangan Master Accreditation Certificate',
+              fileName: certDocName ?? 'Kraftangan_Master_Certificate.pdf',
+              fileUrl: certDocUrl,
+              isImage: _isImageFile(certDocName ?? certDocUrl ?? ''),
+              actionLabel: 'View Certificate',
+            ),
+            const SizedBox(height: 12),
+
+            // 3. Optional Studio Photos (if attached)
+            if (photos.isNotEmpty) ...[
+              _buildPhotosSection(
+                context: context,
+                isDark: isDark,
+                photos: photos,
+                title: 'Studio / Workshop Photos (${photos.length})',
+              ),
+            ] else ...[
+              _buildExemptionNoticeCard(
+                isDark: isDark,
+                icon: Icons.photo_library_outlined,
+                title: 'Studio / Workshop Photos',
+                notice: 'None attached (Optional)',
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDocCard({
+    required BuildContext context,
+    required bool isDark,
+    required IconData icon,
+    required Color iconColor,
+    required String badgeText,
+    required Color badgeBg,
+    required Color badgeFg,
+    required String title,
+    required String fileName,
+    required String? fileUrl,
+    required bool isImage,
+    required String actionLabel,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF0D2825) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFE2E8F0),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => _openDocumentPreview(
+            context: context,
+            title: title,
+            fileName: fileName,
+            fileUrl: fileUrl,
+            isImage: isImage,
+            isDark: isDark,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: iconColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(icon, color: iconColor, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: badgeBg,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              badgeText,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                                color: badgeFg,
+                                letterSpacing: 0.4,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        title,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : const Color(0xFF0F172A),
+                        ),
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        fileName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1E3A34) : const Color(0xFF004D40),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'View',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? const Color(0xFFFFD54F) : Colors.white,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        isImage ? Icons.visibility_rounded : Icons.open_in_new_rounded,
+                        size: 13,
+                        color: isDark ? const Color(0xFFFFD54F) : Colors.white,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPhotosSection({
+    required BuildContext context,
+    required bool isDark,
+    required List<String> photos,
+    required String title,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+          ),
+        ),
+        const SizedBox(height: 6),
+        SizedBox(
+          height: 76,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: photos.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemBuilder: (ctx, idx) {
+              final photo = photos[idx];
+              final isUrl = photo.startsWith('http');
+              return InkWell(
+                onTap: () => _openDocumentPreview(
+                  context: context,
+                  title: 'Studio Photo #${idx + 1}',
+                  fileName: isUrl ? photo.split('/').last : photo,
+                  fileUrl: isUrl ? photo : null,
+                  isImage: true,
+                  isDark: isDark,
+                ),
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  width: 76,
+                  height: 76,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFCBD5E1),
+                    ),
+                    color: isDark ? const Color(0xFF0D2825) : const Color(0xFFF1F5F9),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: isUrl
+                      ? Image.network(
+                          photo,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const Center(
+                            child: Icon(
+                              Icons.photo_rounded,
+                              color: Color(0xFF94A3B8),
+                              size: 24,
+                            ),
+                          ),
+                        )
+                      : Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.image_outlined,
+                                color: Color(0xFF004D40),
+                                size: 20,
+                              ),
+                              const SizedBox(height: 2),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 4),
+                                child: Text(
+                                  photo,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontSize: 9),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildExemptionNoticeCard({
+    required bool isDark,
+    required IconData icon,
+    required String title,
+    required String notice,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF0A221E) : const Color(0xFFF0FDF4),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isDark ? const Color(0xFF164E43) : const Color(0xFFBBF7D0),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: const Color(0xFF10B981)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '$title: $notice',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w600,
+                color: isDark ? const Color(0xFF6EE7B7) : const Color(0xFF15803D),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openDocumentPreview({
+    required BuildContext context,
+    required String title,
+    required String fileName,
+    required String? fileUrl,
+    required bool isImage,
+    required bool isDark,
+  }) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: isDark ? const Color(0xFF0D2825) : Colors.white,
+        child: Container(
+          width: 500,
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    isImage
+                        ? Icons.photo_library_outlined
+                        : Icons.description_outlined,
+                    color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: GoogleFonts.dmSerifDisplay(
+                        fontSize: 18,
+                        color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded),
+                    onPressed: () => Navigator.of(dialogCtx).pop(),
+                    tooltip: 'Close',
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Attached File: $fileName',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12,
+                  color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 16),
+              if (isImage && fileUrl != null && fileUrl.isNotEmpty) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    constraints: const BoxConstraints(maxHeight: 320),
+                    color: isDark ? const Color(0xFF041412) : const Color(0xFFF1F5F9),
+                    child: InteractiveViewer(
+                      clipBehavior: Clip.antiAlias,
+                      child: Image.network(
+                        fileUrl,
+                        fit: BoxFit.contain,
+                        loadingBuilder: (_, child, progress) {
+                          if (progress == null) return child;
+                          return const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(32),
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          );
+                        },
+                        errorBuilder: (_, __, ___) => Container(
+                          padding: const EdgeInsets.all(32),
+                          alignment: Alignment.center,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.image_not_supported_outlined,
+                                size: 48,
+                                color: Color(0xFF94A3B8),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Image preview unavailable offline or invalid URL.',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11,
+                                  color: const Color(0xFF94A3B8),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ] else ...[
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF041412) : const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFE2E8F0),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(
+                        isImage
+                            ? Icons.image_rounded
+                            : Icons.picture_as_pdf_rounded,
+                        size: 48,
+                        color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        fileName,
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : const Color(0xFF0F172A),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        fileUrl != null && fileUrl.isNotEmpty
+                            ? 'Uploaded to Kraftangan Document Storage'
+                            : 'Local Document Attached with Application',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+              if (fileUrl != null && fileUrl.isNotEmpty) ...[
+                FilledButton.icon(
+                  onPressed: () => _launchURL(fileUrl),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: isDark
+                        ? const Color(0xFFFFD54F)
+                        : const Color(0xFF004D40),
+                    foregroundColor: isDark ? const Color(0xFF041412) : Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                  label: Text(
+                    'Open Full Document Link',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+              OutlinedButton(
+                onPressed: () => Navigator.of(dialogCtx).pop(),
+                style: OutlinedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                child: const Text('Close Preview'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _launchURL(String url) async {
+    try {
+      final uri = Uri.parse(url);
+      final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!launched) {
+        await launchUrl(uri, mode: LaunchMode.platformDefault);
+      }
+    } catch (e) {
+      debugPrint('Error launching url: $e');
+    }
+  }
+
+  bool _isImageFile(String path) {
+    return RegExp(
+      r'\.(jpg|jpeg|png|webp|gif|bmp)(\?.*)?$',
+      caseSensitive: false,
+    ).hasMatch(path);
   }
 }
