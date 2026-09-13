@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:warisan_kita/data/repositories/artisan_repository.dart';
 import 'package:warisan_kita/domain/models/heritage_task.dart';
 import 'package:warisan_kita/domain/models/quest.dart';
+import 'package:warisan_kita/domain/models/quest_location_validation.dart';
 import 'package:warisan_kita/domain/models/workshop_location.dart';
 import 'package:warisan_kita/viewmodels/map_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/gamification_viewmodel.dart';
@@ -783,39 +784,53 @@ class _QuestDetailViewState extends State<QuestDetailView>
               ],
               if (!isCompleted && !task.isSystemTask) ...[
                 const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: viewModel.canVerifyTaskWithQr(task)
-                        ? () => _openTaskScanner(task)
-                        : null,
-                    icon: const Icon(Icons.qr_code_scanner_rounded, size: 17),
-                    label: Text(viewModel.qrVerificationLabel(task)),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: _isDark
-                          ? const Color(0xFF6EE7B7)
-                          : const Color(0xFF005B4F),
-                      disabledForegroundColor: _isDark
-                          ? const Color(0xFF86EFAC).withValues(alpha: 0.75)
-                          : const Color(0xFF64748B),
-                      side: BorderSide(
-                        color: viewModel.canVerifyTaskWithQr(task)
-                            ? (_isDark
-                                  ? const Color(0xFF3FAE91)
-                                  : const Color(0xFF005B4F))
-                            : (_isDark
-                                  ? const Color(
-                                      0xFF6EE7B7,
-                                    ).withValues(alpha: 0.5)
-                                  : const Color(0xFFCBD5E1)),
-                        width: 1.2,
+                Builder(
+                  builder: (context) {
+                    final isQrEligible = viewModel.canVerifyTaskWithQr(task);
+                    final canScan =
+                        isQrEligible && viewModel.isInsideQuestGeofence;
+                    final label =
+                        isQrEligible && !viewModel.isInsideQuestGeofence
+                        ? 'Move Within Quest Zone'
+                        : viewModel.qrVerificationLabel(task);
+                    return SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: canScan
+                            ? () => _openTaskScanner(task)
+                            : null,
+                        icon: const Icon(
+                          Icons.qr_code_scanner_rounded,
+                          size: 17,
+                        ),
+                        label: Text(label),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: _isDark
+                              ? const Color(0xFF6EE7B7)
+                              : const Color(0xFF005B4F),
+                          disabledForegroundColor: _isDark
+                              ? const Color(0xFF86EFAC).withValues(alpha: 0.75)
+                              : const Color(0xFF64748B),
+                          side: BorderSide(
+                            color: canScan
+                                ? (_isDark
+                                      ? const Color(0xFF3FAE91)
+                                      : const Color(0xFF005B4F))
+                                : (_isDark
+                                      ? const Color(
+                                          0xFF6EE7B7,
+                                        ).withValues(alpha: 0.5)
+                                      : const Color(0xFFCBD5E1)),
+                            width: 1.2,
+                          ),
+                          textStyle: GoogleFonts.plusJakartaSans(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
                       ),
-                      textStyle: GoogleFonts.plusJakartaSans(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
+                    );
+                  },
                 ),
               ],
             ],
@@ -883,13 +898,51 @@ class _QuestDetailViewState extends State<QuestDetailView>
   }
 
   Future<void> _openTaskScanner(HeritageTask task) async {
+    if (!await _confirmWorkshopAvailable(context)) return;
+    if (!mounted) return;
+
+    final verifiedLocation = await _validateQrTaskLocation();
+    if (!mounted) return;
+    if (!verifiedLocation.isValid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            verifiedLocation.message ??
+                'Move within the quest zone before scanning.',
+          ),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: const Color(0xFFB42318),
+        ),
+      );
+      return;
+    }
+
     await Navigator.of(context).push<bool>(
       MaterialPageRoute(
-        builder: (_) => QRScannerScreen(quest: quest, task: task),
+        builder: (_) => QRScannerScreen(
+          quest: quest,
+          task: task,
+          validateLocation: _validateQrTaskLocation,
+        ),
       ),
     );
     if (!mounted) return;
     _scheduleQuestCompletionDialog(context.read<GamificationViewModel>());
+  }
+
+  Future<QuestLocationValidationResult> _validateQrTaskLocation() async {
+    final location = await context
+        .read<MapViewModel>()
+        .validateFreshQuestLocation(
+          workshop: workshop,
+          radiusMeters: quest.geofenceRadiusMeters.toDouble(),
+        );
+    if (!mounted) return location;
+
+    await context.read<GamificationViewModel>().handleQuestProximityChanged(
+      location.isValid,
+    );
+    return location;
   }
 
   Future<void> _showQuestCompletionDialog() {

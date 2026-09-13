@@ -5,13 +5,20 @@ import 'package:provider/provider.dart';
 
 import 'package:warisan_kita/domain/models/heritage_task.dart';
 import 'package:warisan_kita/domain/models/quest.dart';
+import 'package:warisan_kita/domain/models/quest_location_validation.dart';
 import 'package:warisan_kita/viewmodels/gamification_viewmodel.dart';
 
 class QRScannerScreen extends StatefulWidget {
   final Quest quest;
   final HeritageTask task;
+  final Future<QuestLocationValidationResult> Function() validateLocation;
 
-  const QRScannerScreen({super.key, required this.quest, required this.task});
+  const QRScannerScreen({
+    super.key,
+    required this.quest,
+    required this.task,
+    required this.validateLocation,
+  });
 
   @override
   State<QRScannerScreen> createState() => _QRScannerScreenState();
@@ -39,10 +46,29 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     await _scannerController.stop();
     if (!mounted) return;
 
+    final verifiedLocation = await widget.validateLocation();
+    if (!mounted) return;
+    if (!verifiedLocation.isValid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            verifiedLocation.message ??
+                'Move within the quest zone before scanning.',
+          ),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: const Color(0xFFB42318),
+        ),
+      );
+      setState(() => _isProcessing = false);
+      await _scannerController.start();
+      return;
+    }
+
     final viewModel = context.read<GamificationViewModel>();
     final completed = await viewModel.verifyArtisanQrForTask(
       task: widget.task,
       qrPayload: payload,
+      verifiedLocation: verifiedLocation,
     );
     if (!mounted) return;
 
