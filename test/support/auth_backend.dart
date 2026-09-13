@@ -156,6 +156,12 @@ class AuthBackend {
       accounts.removeWhere((_, row) => row['id'] == body['p_user_id']);
       return _json({'success': true});
     }
+    if (path.endsWith('/rpc/cancel_unconfirmed_signup')) {
+      final email = (body['p_email'] ?? '').toString().trim().toLowerCase();
+      accounts.removeWhere((k, row) =>
+          k.toLowerCase() == email && row['confirmed'] != true);
+      return _json({'success': true});
+    }
     if (path.endsWith('/rpc/deactivate_artisan_studio')) {
       final uid = body['p_user_id'];
       for (final row in accounts.values) {

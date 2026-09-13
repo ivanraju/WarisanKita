@@ -209,6 +209,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       hasError = true;
     }
 
+    final personalErr = ProfileValidator.validatePasswordPersonalDetails(
+      newPassword,
+      email: email,
+    );
+    if (!hasError && personalErr != null) {
+      _newError = personalErr;
+      hasError = true;
+    }
+
     if (hasError) {
       setState(() {});
       return;
