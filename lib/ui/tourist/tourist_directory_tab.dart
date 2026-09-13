@@ -447,7 +447,10 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                             child: FilledButton(
                               onPressed: () => Navigator.of(context).pop(),
                               style: FilledButton.styleFrom(
-                                backgroundColor: const Color(0xFF004D40),
+                                backgroundColor: isDark
+                                    ? const Color(0xFF00897B)
+                                    : const Color(0xFF004D40),
+                                foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(16),
                                 ),
@@ -458,6 +461,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                               child: Text(
                                 langVM.translate('APPLY FILTERS'),
                                 style: const TextStyle(
+                                  color: Colors.white,
                                   fontWeight: FontWeight.bold,
                                   letterSpacing: 1.1,
                                 ),
@@ -2456,8 +2460,9 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                         onPressed: () => _openArtisanQuest(context, artisan),
                         style: FilledButton.styleFrom(
                           backgroundColor: isDark
-                              ? const Color(0xFF00695C)
+                              ? const Color(0xFF00897B)
                               : const Color(0xFF004D40),
+                          foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
@@ -2477,6 +2482,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.plusJakartaSans(
+                            color: Colors.white,
                             fontSize: 11,
                             fontWeight: FontWeight.w900,
                             letterSpacing: 0.5,

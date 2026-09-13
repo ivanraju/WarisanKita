@@ -700,13 +700,24 @@ class _QuestCompletionScreenState extends State<QuestCompletionScreen> {
                   onPressed: _handleStartQuest,
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFF004D40),
+                    foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  icon: const Icon(Icons.play_arrow_rounded, size: 22),
-                  label: const Text('START QUEST & TIMER'),
+                  icon: const Icon(
+                    Icons.play_arrow_rounded,
+                    size: 22,
+                    color: Colors.white,
+                  ),
+                  label: const Text(
+                    'START QUEST & TIMER',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               )
             else
@@ -716,13 +727,24 @@ class _QuestCompletionScreenState extends State<QuestCompletionScreen> {
                   onPressed: _openQrHandshakeScanner,
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFF10B981),
+                    foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  icon: const Icon(Icons.qr_code_scanner_rounded, size: 22),
-                  label: const Text('SCAN ARTISAN\'S QUEST QR CODE'),
+                  icon: const Icon(
+                    Icons.qr_code_scanner_rounded,
+                    size: 22,
+                    color: Colors.white,
+                  ),
+                  label: const Text(
+                    'SCAN ARTISAN\'S QUEST QR CODE',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
           ],
