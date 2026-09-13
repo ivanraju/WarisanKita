@@ -93,4 +93,26 @@ void main() {
 
     expect(find.text('New passwords do not match'), findsOneWidget);
   });
+
+  testWidgets('renders properly with high-contrast elements in dark mode', (tester) async {
+    await tester.pumpWidget(
+      ChangeNotifierProvider<AuthViewModel>.value(
+        value: authVM,
+        child: MaterialApp(
+          theme: ThemeData.dark(),
+          home: const Scaffold(
+            body: ChangePasswordDialog(),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Change Password'), findsOneWidget);
+    expect(find.byIcon(Icons.lock_reset_rounded), findsOneWidget);
+    expect(find.text('Forgot current password? Reset via email'), findsOneWidget);
+    expect(find.text('Cancel'), findsOneWidget);
+    expect(find.text('Update Password'), findsOneWidget);
+  });
 }
