@@ -99,7 +99,12 @@ class UserModel {
       isVillageWorkshop ? 'Heritage Village Crafter' : 'Master Artisan';
 
   bool get hasPendingRelocation =>
-      pendingRelocationAddress != null && pendingRelocationAddress!.trim().isNotEmpty;
+      (pendingRelocationAddress != null &&
+          pendingRelocationAddress!.trim().isNotEmpty) ||
+      (pendingRelocationDate != null &&
+          pendingRelocationDate!.trim().isNotEmpty) ||
+      (pendingRelocationReason != null &&
+          pendingRelocationReason!.trim().isNotEmpty);
 
   /// Extracts the base integer years from [experience].
   int? get baseExperienceYears {

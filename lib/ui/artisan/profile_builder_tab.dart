@@ -1012,12 +1012,20 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                             }
                           }
 
+                          final effectiveProposedState =
+                              proposedState ?? currentUser.state ?? 'Melaka';
+                          final effectiveProposedAddress = (proposedAddress != null &&
+                                  proposedAddress!.trim().isNotEmpty)
+                              ? proposedAddress!.trim()
+                              : (proposedPin != null
+                                  ? '$effectiveProposedState (${proposedPin!.latitude.toStringAsFixed(4)}, ${proposedPin!.longitude.toStringAsFixed(4)})'
+                                  : '$effectiveProposedState Premise');
                           final reason = reasonController.text.trim().isNotEmpty
                               ? reasonController.text.trim()
-                              : 'Premise relocation to $proposedAddress';
+                              : 'Premise relocation to $effectiveProposedAddress';
                           await authVM.submitRelocationRequest(
-                            address: proposedAddress!,
-                            state: proposedState ?? currentUser.state ?? 'Melaka',
+                            address: effectiveProposedAddress,
+                            state: effectiveProposedState,
                             latitude: proposedPin!.latitude,
                             longitude: proposedPin!.longitude,
                             reason: reason,
@@ -1044,10 +1052,10 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                                   isUpgradeFromTourist: false,
                                   isRelocationRequest: true,
                                   currentAddress: currentUser.address,
-                                  proposedAddress: proposedAddress,
+                                  proposedAddress: effectiveProposedAddress,
                                   proposedLatitude: proposedPin!.latitude,
                                   proposedLongitude: proposedPin!.longitude,
-                                  proposedState: proposedState ?? currentUser.state,
+                                  proposedState: effectiveProposedState,
                                   relocationReason: reason,
                                   relocationCertFileName: certFileName,
                                   relocationCertFileUrl: certFileUrl,

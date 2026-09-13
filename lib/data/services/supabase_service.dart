@@ -273,12 +273,26 @@ class SupabaseService {
             .select()
             .eq('user_id', userId)
             .maybeSingle();
-        if (apRow != null &&
-            apRow['pending_relocation_address'] != null &&
-            apRow['pending_relocation_address'].toString().trim().isNotEmpty) {
+        final hasReloc = apRow != null &&
+            ((apRow['pending_relocation_address'] != null &&
+                apRow['pending_relocation_address'].toString().trim().isNotEmpty) ||
+             (apRow['pending_relocation_date'] != null &&
+                apRow['pending_relocation_date'].toString().trim().isNotEmpty) ||
+             (apRow['pending_relocation_reason'] != null &&
+                apRow['pending_relocation_reason'].toString().trim().isNotEmpty));
+        if (hasReloc) {
+          var relocAddr = (apRow['pending_relocation_address'] ?? '').toString().trim();
+          if (relocAddr.isEmpty) {
+            final pState = apRow['pending_relocation_state'] ?? apRow['state'] ?? 'Proposed Premise';
+            final lat = apRow['pending_relocation_lat'];
+            final lng = apRow['pending_relocation_lng'];
+            relocAddr = (lat != null && lng != null)
+                ? '$pState (${(lat as num).toDouble().toStringAsFixed(4)}, ${(lng as num).toDouble().toStringAsFixed(4)})'
+                : '$pState Premise';
+          }
           final data = <String, dynamic>{
-            'pending_relocation_address': apRow['pending_relocation_address'],
-            'pending_relocation_state': apRow['pending_relocation_state'],
+            'pending_relocation_address': relocAddr,
+            'pending_relocation_state': apRow['pending_relocation_state'] ?? apRow['state'],
             'pending_relocation_lat': apRow['pending_relocation_lat'],
             'pending_relocation_lng': apRow['pending_relocation_lng'],
             'pending_relocation_reason': apRow['pending_relocation_reason'],
@@ -2590,8 +2604,12 @@ class SupabaseService {
     final cleanEmail = email.trim().toLowerCase();
     await Future.delayed(const Duration(milliseconds: 200));
 
+    final cleanAddress = address.trim().isNotEmpty
+        ? address.trim()
+        : '${state.trim()} ($latitude, $longitude)';
+
     final relocData = <String, dynamic>{
-      'pending_relocation_address': address.trim(),
+      'pending_relocation_address': cleanAddress,
       'pending_relocation_state': state.trim(),
       'pending_relocation_lat': latitude,
       'pending_relocation_lng': longitude,
@@ -2629,7 +2647,7 @@ class SupabaseService {
         if (userId != null || artisanProfileId != null) {
           try {
             final updatePayload = <String, dynamic>{
-              'pending_relocation_address': address.trim(),
+              'pending_relocation_address': cleanAddress,
               'pending_relocation_state': state.trim(),
               'pending_relocation_lat': latitude,
               'pending_relocation_lng': longitude,
@@ -2677,7 +2695,7 @@ class SupabaseService {
               await client
                   .from('users')
                   .update({
-                    'pending_relocation_address': address.trim(),
+                    'pending_relocation_address': cleanAddress,
                     'pending_relocation_state': state.trim(),
                     'pending_relocation_lat': latitude,
                     'pending_relocation_lng': longitude,
@@ -2699,7 +2717,7 @@ class SupabaseService {
     }
 
     final updatedModel = UserModel.fromMap(userRecord).copyWith(
-      pendingRelocationAddress: address.trim(),
+      pendingRelocationAddress: cleanAddress,
       pendingRelocationState: state.trim(),
       pendingRelocationLatitude: latitude,
       pendingRelocationLongitude: longitude,
@@ -3468,12 +3486,19 @@ class SupabaseService {
           final pendingRelocations = await client
               .from('artisan_profiles')
               .select('*, users(*), artisan_documents(*)')
-              .not('pending_relocation_address', 'is', null);
+              .or('pending_relocation_date.not.is.null,pending_relocation_address.not.is.null,pending_relocation_reason.not.is.null');
           for (final p in pendingRelocations) {
             final pMap = Map<String, dynamic>.from(p);
-            final relocAddr =
+            var relocAddr =
                 (pMap['pending_relocation_address'] ?? '').toString().trim();
-            if (relocAddr.isEmpty) continue;
+            if (relocAddr.isEmpty) {
+              final pState = pMap['pending_relocation_state'] ?? pMap['state'] ?? 'Proposed Premise';
+              final lat = pMap['pending_relocation_lat'];
+              final lng = pMap['pending_relocation_lng'];
+              relocAddr = (lat != null && lng != null)
+                  ? '$pState (${(lat as num).toDouble().toStringAsFixed(4)}, ${(lng as num).toDouble().toStringAsFixed(4)})'
+                  : '$pState Premise';
+            }
             final u = pMap['users'] is Map
                 ? Map<String, dynamic>.from(pMap['users'])
                 : <String, dynamic>{};
@@ -3492,6 +3517,9 @@ class SupabaseService {
                   email = (userLookup['email'] ?? '').toString().toLowerCase();
                 }
               } catch (_) {}
+            }
+            if (email.isEmpty && pMap['email'] != null) {
+              email = pMap['email'].toString().toLowerCase().trim();
             }
             if (email.isEmpty) continue;
 
@@ -3564,11 +3592,19 @@ class SupabaseService {
         if (clean.isEmpty) continue;
         final data = await _getPendingRelocation(clean);
         if (data != null) {
-          final relocAddr =
+          var relocAddr =
               (data['pending_relocation_address'] ?? data['address'])
                   ?.toString()
                   .trim();
-          if (relocAddr != null && relocAddr.isNotEmpty) {
+          if (relocAddr == null || relocAddr.isEmpty) {
+            final pState = data['pending_relocation_state'] ?? data['state'] ?? 'Proposed Premise';
+            final lat = data['pending_relocation_lat'] ?? data['latitude'];
+            final lng = data['pending_relocation_lng'] ?? data['longitude'];
+            relocAddr = (lat != null && lng != null)
+                ? '$pState (${(lat as num).toDouble().toStringAsFixed(4)}, ${(lng as num).toDouble().toStringAsFixed(4)})'
+                : '$pState Premise';
+          }
+          if (relocAddr.isNotEmpty) {
             final existingIdx = results.indexWhere(
               (r) => (r['email'] ?? '').toString().toLowerCase() == clean,
             );
