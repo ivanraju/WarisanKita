@@ -1098,8 +1098,11 @@ class ModerationViewModel extends ChangeNotifier {
                   .map((d) => (d['file_url'] ?? '').toString())
                   .where((url) => url.isNotEmpty)
                   .toList();
-              for (final p in u.photos) {
-                if (!photos.contains(p) && p.isNotEmpty) photos.add(p);
+              for (final t in u.tags) {
+                if (t.startsWith('doc_studio_photo:')) {
+                  final p = t.substring('doc_studio_photo:'.length);
+                  if (p.isNotEmpty && !photos.contains(p)) photos.add(p);
+                }
               }
               String? ssmUrl = u.ssmFileUrl;
               String? ssmName = u.ssmFileName;
