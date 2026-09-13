@@ -332,7 +332,7 @@ void main() {
       expect(userWithStudioTag.craftingPhotoName, equals('studio_photo.webp'));
     });
 
-    test('ArtisanModel.fromMap cleans tags and resolves crafting photo as cover image', () {
+    test('ArtisanModel.fromMap cleans tags, excludes crafting photo from portfolio images, and exposes craftingPhotoUrl', () {
       final artisanMap = {
         'id': 'art-123',
         'studio_name': 'Warisan Craft Studio',
@@ -350,7 +350,9 @@ void main() {
 
       final artisan = ArtisanModel.fromMap(artisanMap);
       expect(artisan.isVillageWorkshop, isTrue);
-      expect(artisan.imageUrl, equals('https://storage/artisan_craft.webp'));
+      expect(artisan.craftingPhotoUrl, equals('https://storage/artisan_craft.webp'));
+      expect(artisan.images.contains('https://storage/artisan_craft.webp'), isFalse);
+      expect(artisan.imageUrl, isNot(equals('https://storage/artisan_craft.webp')));
       expect(artisan.tags, equals(['Canting Pen', 'Silk Fabric']));
       expect(artisan.toolsAndMaterials, equals(['Canting Pen', 'Silk Fabric']));
     });
