@@ -399,17 +399,17 @@ class SupabaseService {
     final clean = phone.trim();
     if (clean.isEmpty) return false;
 
-    // 1. Check local in-memory store
+    // 1. Check local in-memory store (fast cache & offline unit tests)
     for (final entry in _userStore.entries) {
       if (excludeEmail != null &&
-          entry.key.toLowerCase() == excludeEmail.toLowerCase()) {
+          entry.key.toLowerCase().trim() == excludeEmail.toLowerCase().trim()) {
         continue;
       }
       final u = entry.value;
-      if (excludeUserId != null && u['id'] == excludeUserId) {
+      if (excludeUserId != null && u['id']?.toString() == excludeUserId.trim()) {
         continue;
       }
-      final existingPhone = (u['phone'] ?? u['phone_number']) as String?;
+      final existingPhone = (u['phone_number'] ?? u['phone']) as String?;
       if (existingPhone != null && existingPhone.trim().isNotEmpty) {
         if (ProfileValidator.arePhonesEqual(existingPhone, clean)) {
           return true;
@@ -417,45 +417,30 @@ class SupabaseService {
       }
     }
 
-    // 2. Check Supabase database
+    // 2. Check Supabase database (deployed users table)
     final client = _client;
     if (client != null) {
       try {
-        // Query users table
         final userRows = await client
             .from('users')
-            .select('id, email, phone_number, phone')
-            .timeout(const Duration(seconds: 5));
+            .select('id, email, phone_number, status')
+            .not('phone_number', 'is', null)
+            .timeout(const Duration(seconds: 10));
 
         for (final row in userRows) {
+          final status = (row['status'] ?? '').toString().toUpperCase();
+          if (status == 'DELETED') continue;
+
           if (excludeEmail != null &&
-              row['email']?.toString().toLowerCase() ==
-                  excludeEmail.toLowerCase()) {
+              row['email']?.toString().toLowerCase().trim() ==
+                  excludeEmail.toLowerCase().trim()) {
             continue;
           }
-          if (excludeUserId != null && row['id']?.toString() == excludeUserId) {
-            continue;
-          }
-          final rowPhone = (row['phone_number'] ?? row['phone'])?.toString();
-          if (rowPhone != null && rowPhone.trim().isNotEmpty) {
-            if (ProfileValidator.arePhonesEqual(rowPhone, clean)) {
-              return true;
-            }
-          }
-        }
-
-        // Query artisan_profiles table
-        final apRows = await client
-            .from('artisan_profiles')
-            .select('id, user_id, phone_number, phone')
-            .timeout(const Duration(seconds: 5));
-
-        for (final row in apRows) {
           if (excludeUserId != null &&
-              row['user_id']?.toString() == excludeUserId) {
+              row['id']?.toString() == excludeUserId.trim()) {
             continue;
           }
-          final rowPhone = (row['phone_number'] ?? row['phone'])?.toString();
+          final rowPhone = row['phone_number']?.toString();
           if (rowPhone != null && rowPhone.trim().isNotEmpty) {
             if (ProfileValidator.arePhonesEqual(rowPhone, clean)) {
               return true;
@@ -2000,7 +1985,28 @@ class SupabaseService {
       userRecord['craftCategory'] = craftCategory;
       userRecord['craft_category'] = craftCategory;
     }
-    if (phone != null) userRecord['phone'] = phone;
+    if (phone != null && phone.trim().isNotEmpty) {
+      final cleanPhone = phone.trim();
+      final phoneErr = ProfileValidator.validatePhone(cleanPhone, isRequired: true);
+      if (phoneErr != null) {
+        throw Exception('INVALID_PHONE: $phoneErr');
+      }
+      final currentPhone = (userRecord['phone_number'] ?? userRecord['phone']) as String?;
+      if (currentPhone == null || !ProfileValidator.arePhonesEqual(currentPhone, cleanPhone)) {
+        final isTaken = await isPhoneRegistered(
+          cleanPhone,
+          excludeEmail: cleanEmail,
+          excludeUserId: userRecord['id']?.toString(),
+        );
+        if (isTaken) {
+          throw Exception(
+            'DUPLICATE_PHONE: An artisan studio or user account is already registered with contact phone "$cleanPhone".',
+          );
+        }
+      }
+      userRecord['phone'] = cleanPhone;
+      userRecord['phone_number'] = cleanPhone;
+    }
     if (experience != null) userRecord['experience'] = experience;
     final List<String> currentTags = (userRecord['tags'] is List
         ? List<String>.from(userRecord['tags'])
@@ -4048,6 +4054,8 @@ class SupabaseService {
               profileUpdatePayload['rejection_reason'] = rejectionReason;
             } else if (resolvedArtisanStatus == 'APPROVED') {
               profileUpdatePayload['rejection_reason'] = null;
+              profileUpdatePayload['verified_at'] =
+                  DateTime.now().toIso8601String();
             }
             await client
                 .from('artisan_profiles')
@@ -4089,6 +4097,42 @@ class SupabaseService {
           rethrow;
         }
       }
+    }
+  }
+
+  Future<bool> saveApprovalHistoryRecord(
+    Map<String, dynamic> recordDbMap,
+  ) async {
+    final client = _client;
+    if (client == null) return false;
+    try {
+      await client.from('approval_history').insert(recordDbMap);
+      return true;
+    } catch (e) {
+      debugPrint(
+        'saveApprovalHistoryRecord note (table may not exist yet or offline): $e',
+      );
+      return false;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> fetchApprovalHistoryRecords() async {
+    final client = _client;
+    if (client == null) return [];
+    try {
+      final res = await client
+          .from('approval_history')
+          .select()
+          .order('approved_at', ascending: false);
+      if (res is List) {
+        return res
+            .map((item) => Map<String, dynamic>.from(item as Map))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      debugPrint('fetchApprovalHistoryRecords note: $e');
+      return [];
     }
   }
 

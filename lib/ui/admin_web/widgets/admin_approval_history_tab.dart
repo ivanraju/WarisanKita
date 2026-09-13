@@ -635,6 +635,8 @@ class _AdminApprovalHistoryTabState extends State<AdminApprovalHistoryTab> {
   DataRow _buildDataRow(BuildContext context, ApprovalHistoryRecord record) {
     final isRelocation = record.isRelocation;
     final isRejected = record.status.toUpperCase() == 'REJECTED';
+    final isSuspended = record.status.toUpperCase() == 'SUSPENDED';
+    final isModeration = record.isAccountModeration;
 
     return DataRow(
       cells: [
@@ -648,11 +650,13 @@ class _AdminApprovalHistoryTabState extends State<AdminApprovalHistoryTab> {
                 height: 40,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: isRejected
+                    colors: isRejected || isSuspended
                         ? [const Color(0xFFDC2626), const Color(0xFF991B1B)]
-                        : isRelocation
-                            ? [const Color(0xFFD97706), const Color(0xFFB45309)]
-                            : [const Color(0xFF004D40), const Color(0xFF00796B)],
+                        : isModeration
+                            ? [const Color(0xFF475569), const Color(0xFF334155)]
+                            : isRelocation
+                                ? [const Color(0xFFD97706), const Color(0xFFB45309)]
+                                : [const Color(0xFF004D40), const Color(0xFF00796B)],
                   ),
                   shape: BoxShape.circle,
                 ),
@@ -731,49 +735,61 @@ class _AdminApprovalHistoryTabState extends State<AdminApprovalHistoryTab> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              color: isRejected
+              color: isRejected || isSuspended
                   ? const Color(0xFFFEE2E2)
-                  : isRelocation
-                      ? const Color(0xFFFEF3C7)
-                      : const Color(0xFFD1FAE5),
+                  : isModeration
+                      ? const Color(0xFFF1F5F9)
+                      : isRelocation
+                          ? const Color(0xFFFEF3C7)
+                          : const Color(0xFFD1FAE5),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: isRejected
+                color: isRejected || isSuspended
                     ? const Color(0xFFEF4444).withValues(alpha: 0.3)
-                    : isRelocation
-                        ? const Color(0xFFF59E0B).withValues(alpha: 0.3)
-                        : const Color(0xFF10B981).withValues(alpha: 0.3),
+                    : isModeration
+                        ? const Color(0xFF64748B).withValues(alpha: 0.3)
+                        : isRelocation
+                            ? const Color(0xFFF59E0B).withValues(alpha: 0.3)
+                            : const Color(0xFF10B981).withValues(alpha: 0.3),
               ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
-                  isRejected
-                      ? Icons.cancel_rounded
-                      : isRelocation
-                          ? Icons.swap_horiz_rounded
-                          : Icons.verified_rounded,
+                  isRejected || isSuspended
+                      ? (isSuspended ? Icons.block_rounded : Icons.cancel_rounded)
+                      : isModeration
+                          ? Icons.gavel_rounded
+                          : isRelocation
+                              ? Icons.swap_horiz_rounded
+                              : Icons.verified_rounded,
                   size: 14,
-                  color: isRejected
+                  color: isRejected || isSuspended
                       ? const Color(0xFFDC2626)
-                      : isRelocation
-                          ? const Color(0xFFB45309)
-                          : const Color(0xFF047857),
+                      : isModeration
+                          ? const Color(0xFF475569)
+                          : isRelocation
+                              ? const Color(0xFFB45309)
+                              : const Color(0xFF047857),
                 ),
                 const SizedBox(width: 6),
                 Text(
                   isRejected
                       ? 'Rejected (${record.approvalType})'
-                      : record.approvalType,
+                      : isSuspended
+                          ? 'Suspended (${record.approvalType})'
+                          : record.approvalType,
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 11.5,
                     fontWeight: FontWeight.bold,
-                    color: isRejected
+                    color: isRejected || isSuspended
                         ? const Color(0xFFDC2626)
-                        : isRelocation
-                            ? const Color(0xFFB45309)
-                            : const Color(0xFF047857),
+                        : isModeration
+                            ? const Color(0xFF475569)
+                            : isRelocation
+                                ? const Color(0xFFB45309)
+                                : const Color(0xFF047857),
                   ),
                 ),
               ],

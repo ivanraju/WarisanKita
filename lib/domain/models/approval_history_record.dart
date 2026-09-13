@@ -98,6 +98,10 @@ class ApprovalHistoryRecord {
   }
 
   bool get isRelocation => approvalType == 'Premise Relocation';
+  bool get isAccountModeration =>
+      approvalType == 'Account Moderation' ||
+      approvalType == 'Studio Moderation' ||
+      status == 'SUSPENDED';
 
   bool get hasDocuments =>
       (ssmFileUrl != null && ssmFileUrl!.trim().isNotEmpty) ||
@@ -265,6 +269,33 @@ class ApprovalHistoryRecord {
     };
   }
 
+  Map<String, dynamic> toDbMap() {
+    return {
+      'id': id,
+      'title': title,
+      'target_name': targetName,
+      'target_email': targetEmail,
+      'approval_type': approvalType,
+      'craft_category': craftCategory,
+      'state': state,
+      'details': details,
+      'previous_premise': previousPremise,
+      'new_premise': newPremise,
+      'ssm_number': ssmNumber,
+      'ssm_file_name': ssmFileName,
+      'ssm_file_url': ssmFileUrl,
+      'cert_file_name': certFileName,
+      'cert_file_url': certFileUrl,
+      'photos': photos,
+      'relocation_cert_file_name': relocationCertFileName,
+      'relocation_cert_file_url': relocationCertFileUrl,
+      'documents': documents,
+      'approved_at': approvedAt.toIso8601String(),
+      'approved_by': approvedBy,
+      'status': status,
+    };
+  }
+
   factory ApprovalHistoryRecord.fromMap(Map<String, dynamic> map) {
     List<String> parsedPhotos = [];
     if (map['photos'] is List) {
@@ -285,30 +316,43 @@ class ApprovalHistoryRecord {
       }
     }
 
+    final rawApprovedAt = map['approvedAt'] ??
+        map['approved_at'] ??
+        map['created_at'] ??
+        map['date'];
+
     return ApprovalHistoryRecord(
       id: map['id']?.toString() ?? '',
       title: map['title']?.toString() ?? 'Approved Record',
-      targetName: map['targetName']?.toString() ?? 'Artisan Studio',
-      targetEmail: map['targetEmail']?.toString() ?? '',
-      approvalType: map['approvalType']?.toString() ?? 'Artisan Profile',
-      craftCategory: map['craftCategory']?.toString() ?? 'Heritage Craft',
+      targetName: (map['targetName'] ?? map['target_name'])?.toString() ??
+          'Artisan Studio',
+      targetEmail: (map['targetEmail'] ?? map['target_email'])?.toString() ?? '',
+      approvalType: (map['approvalType'] ?? map['approval_type'])?.toString() ??
+          'Artisan Profile',
+      craftCategory: (map['craftCategory'] ?? map['craft_category'])?.toString() ??
+          'Heritage Craft',
       state: map['state']?.toString() ?? 'Malaysia',
       details: map['details']?.toString() ?? '',
-      previousPremise: map['previousPremise']?.toString(),
-      newPremise: map['newPremise']?.toString(),
-      ssmNumber: map['ssmNumber']?.toString(),
-      ssmFileName: map['ssmFileName']?.toString(),
-      ssmFileUrl: map['ssmFileUrl']?.toString(),
-      certFileName: map['certFileName']?.toString(),
-      certFileUrl: map['certFileUrl']?.toString(),
+      previousPremise:
+          (map['previousPremise'] ?? map['previous_premise'])?.toString(),
+      newPremise: (map['newPremise'] ?? map['new_premise'])?.toString(),
+      ssmNumber: (map['ssmNumber'] ?? map['ssm_number'])?.toString(),
+      ssmFileName: (map['ssmFileName'] ?? map['ssm_file_name'])?.toString(),
+      ssmFileUrl: (map['ssmFileUrl'] ?? map['ssm_file_url'])?.toString(),
+      certFileName: (map['certFileName'] ?? map['cert_file_name'])?.toString(),
+      certFileUrl: (map['certFileUrl'] ?? map['cert_file_url'])?.toString(),
       photos: parsedPhotos,
-      relocationCertFileName: map['relocationCertFileName']?.toString(),
-      relocationCertFileUrl: map['relocationCertFileUrl']?.toString(),
+      relocationCertFileName: (map['relocationCertFileName'] ??
+              map['relocation_cert_file_name'])
+          ?.toString(),
+      relocationCertFileUrl: (map['relocationCertFileUrl'] ??
+              map['relocation_cert_file_url'])
+          ?.toString(),
       documents: parsedDocs,
-      approvedAt:
-          DateTime.tryParse(map['approvedAt']?.toString() ?? '') ??
+      approvedAt: DateTime.tryParse(rawApprovedAt?.toString() ?? '') ??
           DateTime.now(),
-      approvedBy: map['approvedBy']?.toString() ?? 'Admin Moderator',
+      approvedBy: (map['approvedBy'] ?? map['approved_by'])?.toString() ??
+          'Admin Moderator',
       status: map['status']?.toString() ?? 'APPROVED',
     );
   }

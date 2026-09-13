@@ -138,7 +138,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
       return;
     }
 
-    final formatErr = ProfileValidator.validatePhone(raw);
+    final formatErr = ProfileValidator.validatePhone(raw, isRequired: false);
     if (formatErr != null) {
       setState(() {
         _isCheckingPhone = false;
@@ -150,20 +150,33 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
 
     setState(() {
       _isCheckingPhone = true;
-      _phoneStatusMessage = 'Validating phone availability...';
+      _phoneStatusMessage = 'Checking whether this phone number is registered…';
     });
 
-    _phoneDebounce = Timer(const Duration(milliseconds: 350), () async {
-      final authVM = context.read<AuthViewModel>();
-      final isAvailable = await authVM.isPhoneAvailable(raw);
-      if (!mounted) return;
-      setState(() {
-        _isCheckingPhone = false;
-        _isPhoneAvailable = isAvailable;
-        _phoneStatusMessage = isAvailable
-            ? '✓ Validated & Available contact phone'
-            : '⚠️ This phone number is already registered by another artisan / user';
-      });
+    _phoneDebounce = Timer(const Duration(milliseconds: 400), () async {
+      try {
+        final authVM = context.read<AuthViewModel>();
+        final isAvailable = await authVM.isPhoneAvailable(
+          raw,
+          excludeEmail: authVM.currentUser?.email,
+          excludeUserId: authVM.currentUser?.id,
+        );
+        if (!mounted || _phoneController.text.trim() != raw) return;
+        setState(() {
+          _isCheckingPhone = false;
+          _isPhoneAvailable = isAvailable;
+          _phoneStatusMessage = isAvailable
+              ? '✓ This contact phone number is available'
+              : '⚠️ This phone number is already registered by another account';
+        });
+      } catch (_) {
+        if (!mounted || _phoneController.text.trim() != raw) return;
+        setState(() {
+          _isCheckingPhone = false;
+          _isPhoneAvailable = null;
+          _phoneStatusMessage = 'Unable to check phone number availability right now.';
+        });
+      }
     });
   }
   
@@ -550,7 +563,8 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
 
     final phoneText = _phoneController.text.trim();
     if (phoneText.isNotEmpty) {
-      final phoneErr = ProfileValidator.validatePhone(phoneText);
+      _phoneDebounce?.cancel();
+      final phoneErr = ProfileValidator.validatePhone(phoneText, isRequired: false);
       if (phoneErr != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -561,12 +575,43 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
         );
         return;
       }
-      final isPhoneAvail = await authVM.isPhoneAvailable(phoneText);
-      if (!isPhoneAvail) {
+      setState(() {
+        _isCheckingPhone = true;
+      });
+      try {
+        final isPhoneAvail = await authVM.isPhoneAvailable(
+          phoneText,
+          excludeEmail: authVM.currentUser?.email,
+          excludeUserId: authVM.currentUser?.id,
+        );
         if (!mounted) return;
+        setState(() {
+          _isCheckingPhone = false;
+          _isPhoneAvailable = isPhoneAvail;
+          _phoneStatusMessage = isPhoneAvail
+              ? '✓ This contact phone number is available'
+              : '⚠️ This phone number is already registered by another account';
+        });
+        if (!isPhoneAvail) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('⚠️ This contact phone number is already registered by another artisan studio or account.'),
+              backgroundColor: Color(0xFFEF4444),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          return;
+        }
+      } catch (_) {
+        if (!mounted) return;
+        setState(() {
+          _isCheckingPhone = false;
+          _isPhoneAvailable = null;
+          _phoneStatusMessage = 'Unable to check phone number availability right now.';
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('⚠️ This contact phone number is already registered by another artisan studio or account.'),
+            content: Text('Unable to verify contact phone number with the database. Please try again.'),
             backgroundColor: Color(0xFFEF4444),
             behavior: SnackBarBehavior.floating,
           ),
@@ -1231,6 +1276,30 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                             Icons.phone_outlined,
                             color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
                           ),
+                          suffixIcon: _isCheckingPhone
+                              ? Padding(
+                                  padding: const EdgeInsets.all(14),
+                                  child: SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: isDark
+                                          ? const Color(0xFFFFD54F)
+                                          : const Color(0xFF004D40),
+                                    ),
+                                  ),
+                                )
+                              : (_phoneStatusMessage == null
+                                  ? null
+                                  : Icon(
+                                      _isPhoneAvailable == true
+                                          ? Icons.check_circle_outline_rounded
+                                          : Icons.error_outline_rounded,
+                                      color: _isPhoneAvailable == true
+                                          ? const Color(0xFF10B981)
+                                          : const Color(0xFFDC2626),
+                                    )),
                           filled: true,
                           fillColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
                           errorMaxLines: 2,
@@ -1268,7 +1337,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                           final formatErr = ProfileValidator.validatePhone(trimmed, isRequired: false);
                           if (formatErr != null) return formatErr;
                           if (_isPhoneAvailable == false) {
-                            return _phoneStatusMessage ?? 'This phone number is already registered';
+                            return 'This phone number is already registered by another user';
                           }
                           return null;
                         },

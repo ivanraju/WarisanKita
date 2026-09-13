@@ -125,6 +125,40 @@ void main() {
       expect(restored.photos, record.photos);
       expect(restored.allDocuments.length, 5);
     });
+
+    test('correctly converts toDbMap with snake_case and reconstructs from snake_case map', () {
+      final now = DateTime(2026, 9, 13, 12, 0);
+      final record = ApprovalHistoryRecord(
+        id: 'audit_db_test',
+        title: 'Master Artisan Profile Approved',
+        targetName: 'Kuala Kangsar Pottery',
+        targetEmail: 'kk.pottery@warisankita.my',
+        approvalType: 'Artisan Profile',
+        craftCategory: 'Clay & Ceramics',
+        state: 'Perak',
+        details: 'Approved SSM details',
+        ssmNumber: 'SSM-12345',
+        ssmFileName: 'pottery_ssm.pdf',
+        ssmFileUrl: 'https://storage.warisankita.my/docs/pottery_ssm.pdf',
+        approvedAt: now,
+      );
+
+      final dbMap = record.toDbMap();
+      expect(dbMap['target_name'], 'Kuala Kangsar Pottery');
+      expect(dbMap['target_email'], 'kk.pottery@warisankita.my');
+      expect(dbMap['approval_type'], 'Artisan Profile');
+      expect(dbMap['craft_category'], 'Clay & Ceramics');
+      expect(dbMap['ssm_file_name'], 'pottery_ssm.pdf');
+      expect(dbMap['ssm_file_url'], 'https://storage.warisankita.my/docs/pottery_ssm.pdf');
+
+      final reconstructed = ApprovalHistoryRecord.fromMap(dbMap);
+      expect(reconstructed.id, 'audit_db_test');
+      expect(reconstructed.targetName, 'Kuala Kangsar Pottery');
+      expect(reconstructed.targetEmail, 'kk.pottery@warisankita.my');
+      expect(reconstructed.approvalType, 'Artisan Profile');
+      expect(reconstructed.craftCategory, 'Clay & Ceramics');
+      expect(reconstructed.ssmFileName, 'pottery_ssm.pdf');
+    });
   });
 
   group('ModerationViewModel Approval History Integration Tests', () {
@@ -432,5 +466,183 @@ void main() {
       expect(latest.ssmFileUrl, 'https://storage.warisankita.my/docs/blurry_ssm.jpg');
       expect(latest.details, contains('SSM document is illegible'));
     });
+
+    test('approval history persists across reload even before fetchActiveArtisans/fetchAllUsers complete', () async {
+      // Step 1: Initialize ViewModel and approve an artisan
+      final vm1 = ModerationViewModel(repository: repository);
+      await vm1.refreshAllData();
+
+      final profile = const PendingArtisanProfile(
+        id: 'p_persist_reload_1',
+        name: 'Reload Persistence Test Master',
+        craftCategory: 'Woodcraft',
+        state: 'Perak',
+        dateSubmitted: 'Today',
+        imageUrl: 'https://example.com/wood.jpg',
+        email: 'persist.reload@warisankita.my',
+        experience: '15 Years',
+        phone: '+60 12-3456789',
+        ssmNumber: 'SSM-RELOAD-12345',
+      );
+      vm1.addPendingArtisan(profile);
+      final success = await vm1.approveArtisan('p_persist_reload_1');
+      expect(success, isTrue);
+      expect(vm1.approvalHistory.any((r) => r.targetEmail == 'persist.reload@warisankita.my'), isTrue);
+
+      // Step 2: Simulate page reload (F5) - a new ModerationViewModel instance is created.
+      // On browser reload, SharedPreferences is already populated from Step 1,
+      // but activeArtisans and registeredUsers are still empty until network fetches finish.
+      final vmReload = ModerationViewModel(repository: repository);
+      await vmReload.loadApprovalHistory();
+
+      // Ensure the history was NOT wiped out by pruning while activeArtisans was empty!
+      expect(
+        vmReload.approvalHistory.any((r) => r.targetEmail == 'persist.reload@warisankita.my'),
+        isTrue,
+        reason: 'Approval history must survive page reload when active artisans have not loaded yet',
+      );
+    });
+
+    test('loadApprovalHistory reconciles approved artisans from registered users on fresh device', () async {
+      // Simulate a fresh device: clear SharedPreferences
+      SharedPreferences.setMockInitialValues({});
+
+      final vmFresh = ModerationViewModel(repository: repository);
+      // Simulate fetchAllUsers returning an approved artisan
+      vmFresh.addUserForTesting(
+        const UserModel(
+          id: 'u_approved_reconcile',
+          email: 'reconciled.artisan@warisankita.my',
+          displayName: 'Reconciled Artisan Master',
+          role: 'Artisan',
+          status: 'ACTIVE',
+          artisanStatus: 'APPROVED',
+          craftCategory: 'Batik Craft',
+          state: 'Kelantan',
+          joinedDate: '2026-01-15T10:00:00.000Z',
+        ),
+      );
+
+      await vmFresh.loadApprovalHistory();
+
+      expect(
+        vmFresh.approvalHistory.any((r) => r.targetEmail == 'reconciled.artisan@warisankita.my'),
+        isTrue,
+        reason: 'Approved users in Supabase should be reconciled into approval history even on a fresh device',
+      );
+    });
+
+    test('suspendUser and reactivateUser record Account Moderation history entries', () async {
+      final vm = ModerationViewModel(repository: repository);
+      await vm.refreshAllData();
+
+      final user = const UserModel(
+        id: 'u_suspension_target',
+        email: 'bad.actor@warisankita.my',
+        displayName: 'Suspended Account User',
+        role: 'Tourist',
+        status: 'ACTIVE',
+      );
+      vm.addUserForTesting(user);
+
+      await vm.suspendUser('u_suspension_target', reason: 'Spamming forum reports');
+
+      expect(
+        vm.approvalHistory.any(
+          (r) =>
+              r.targetEmail == 'bad.actor@warisankita.my' &&
+              r.status == 'SUSPENDED' &&
+              r.isAccountModeration &&
+              r.details.contains('Spamming forum reports'),
+        ),
+        isTrue,
+      );
+
+      // Now reactivate
+      await vm.reactivateUser('u_suspension_target');
+
+      expect(
+        vm.approvalHistory.any(
+          (r) =>
+              r.targetEmail == 'bad.actor@warisankita.my' &&
+              r.status == 'ACTIVE' &&
+              r.isAccountModeration &&
+              r.title == 'User Account Reactivated',
+        ),
+        isTrue,
+      );
+    });
+
+    test('suspendActiveArtisan and reactivateActiveArtisan record Studio Moderation history entries', () async {
+      final vm = ModerationViewModel(repository: repository);
+      await vm.refreshAllData();
+
+      // Seed an active artisan master directly into vm
+      final profile = const PendingArtisanProfile(
+        id: 'p_studio_mod_target',
+        name: 'Heritage Pewter Forge',
+        craftCategory: 'Pewter Craft',
+        state: 'Selangor',
+        dateSubmitted: 'Today',
+        imageUrl: 'https://example.com/forge.jpg',
+        email: 'forge.mod@warisankita.my',
+        experience: '10 Years',
+        phone: '+60 12-9988776',
+        ssmNumber: 'SSM-MOD-101',
+      );
+      vm.addPendingArtisan(profile);
+      await vm.approveArtisan('p_studio_mod_target');
+
+      // Suspend studio
+      await vm.suspendActiveArtisan('p_studio_mod_target');
+
+      expect(
+        vm.approvalHistory.any(
+          (r) =>
+              r.targetEmail == 'forge.mod@warisankita.my' &&
+              r.status == 'SUSPENDED' &&
+              r.approvalType == 'Studio Moderation',
+        ),
+        isTrue,
+      );
+
+      // Reactivate studio
+      await vm.reactivateActiveArtisan('p_studio_mod_target');
+
+      expect(
+        vm.approvalHistory.any(
+          (r) =>
+              r.targetEmail == 'forge.mod@warisankita.my' &&
+              r.status == 'APPROVED' &&
+              r.approvalType == 'Studio Moderation',
+        ),
+        isTrue,
+      );
+    });
+
+    test('Account Moderations filter isolates account and studio moderation entries', () async {
+      final vm = ModerationViewModel(repository: repository);
+      await vm.refreshAllData();
+
+      final user = const UserModel(
+        id: 'u_mod_filter_test',
+        email: 'mod.filter@warisankita.my',
+        displayName: 'Moderation Filter Test',
+        role: 'Tourist',
+        status: 'ACTIVE',
+      );
+      vm.addUserForTesting(user);
+
+      await vm.suspendUser('u_mod_filter_test', reason: 'Violation of community guidelines');
+
+      vm.setHistoryTypeFilter('Account Moderations');
+      final filtered = vm.filteredApprovalHistory;
+
+      expect(filtered.isNotEmpty, isTrue);
+      expect(filtered.every((r) => r.isAccountModeration), isTrue);
+      expect(filtered.any((r) => r.targetEmail == 'mod.filter@warisankita.my'), isTrue);
+    });
   });
 }
+
+
