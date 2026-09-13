@@ -27,24 +27,42 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
       builder: (dialogCtx) => AlertDialog(
         backgroundColor: isDark ? const Color(0xFF0D2825) : Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Log Out Studio Account', style: GoogleFonts.dmSerifDisplay(color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40))),
-        content: Text('Are you sure you want to log out of $studio?', style: GoogleFonts.plusJakartaSans(fontSize: 13, color: isDark ? Colors.white70 : const Color(0xFF334155))),
+        title: Text(
+          'Log Out Studio Account',
+          style: GoogleFonts.dmSerifDisplay(
+            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+          ),
+        ),
+        content: Text(
+          'Are you sure you want to log out of $studio?',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 13,
+            color: isDark ? Colors.white70 : const Color(0xFF334155),
+          ),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(dialogCtx).pop(), child: Text('Cancel', style: TextStyle(color: isDark ? Colors.white60 : null))),
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: isDark ? Colors.white60 : null),
+            ),
+          ),
           FilledButton(
             onPressed: () async {
               Navigator.of(dialogCtx).pop();
               await authVM.logout();
               nav.pushNamedAndRemoveUntil('/login', (route) => false);
             },
-            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444),
+            ),
             child: const Text('Log Out'),
           ),
         ],
       ),
     );
   }
-
 
   void _handleDeactivateStudio() {
     final nav = Navigator.of(context, rootNavigator: true);
@@ -59,16 +77,24 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
       builder: (dialogCtx) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           backgroundColor: isDark ? const Color(0xFF0D2825) : Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           title: Row(
             children: [
-              const Icon(Icons.storefront_outlined, color: Color(0xFFD97706), size: 28),
+              const Icon(
+                Icons.storefront_outlined,
+                color: Color(0xFFD97706),
+                size: 28,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   'Close Studio & Revert to Explorer',
                   style: GoogleFonts.dmSerifDisplay(
-                    color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                    color: isDark
+                        ? const Color(0xFFFFD54F)
+                        : const Color(0xFF004D40),
                     fontSize: 20,
                   ),
                 ),
@@ -105,7 +131,9 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: isSubmitting ? null : () => Navigator.of(dialogCtx).pop(),
+              onPressed: isSubmitting
+                  ? null
+                  : () => Navigator.of(dialogCtx).pop(),
               child: Text(
                 'Cancel',
                 style: TextStyle(color: isDark ? Colors.white60 : null),
@@ -118,22 +146,32 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
                       setDialogState(() => isSubmitting = true);
                       final result = await authVM.deactivateArtisanStudio();
                       if (!mounted) return;
-                      Navigator.of(dialogCtx).pop();
+                      if (dialogCtx.mounted) {
+                        Navigator.of(dialogCtx).pop();
+                      }
                       if (result.success) {
                         try {
                           context.read<DirectoryViewModel>().fetchArtisans();
                         } catch (_) {}
                         scaffoldMessenger.showSnackBar(
                           SnackBar(
-                            content: Text(result.message ?? 'Studio closed. You are now exploring as a Cultural Explorer.'),
+                            content: Text(
+                              result.message ??
+                                  'Studio closed. You are now exploring as a Cultural Explorer.',
+                            ),
                             backgroundColor: const Color(0xFF004D40),
                           ),
                         );
-                        nav.pushNamedAndRemoveUntil('/tourist', (route) => false);
+                        nav.pushNamedAndRemoveUntil(
+                          '/tourist',
+                          (route) => false,
+                        );
                       } else {
                         scaffoldMessenger.showSnackBar(
                           SnackBar(
-                            content: Text(result.message ?? 'Failed to close studio.'),
+                            content: Text(
+                              result.message ?? 'Failed to close studio.',
+                            ),
                             backgroundColor: const Color(0xFFEF4444),
                           ),
                         );
@@ -146,7 +184,10 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
                   ? const SizedBox(
                       width: 18,
                       height: 18,
-                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
                     )
                   : const Text('CLOSE STUDIO & REVERT'),
             ),
@@ -172,15 +213,24 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
       builder: (dialogCtx) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           backgroundColor: isDark ? const Color(0xFF0D2825) : Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           title: Row(
             children: [
-              const Icon(Icons.warning_amber_rounded, color: Color(0xFFEF4444), size: 28),
+              const Icon(
+                Icons.warning_amber_rounded,
+                color: Color(0xFFEF4444),
+                size: 28,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   'Delete Account Permanently',
-                  style: GoogleFonts.dmSerifDisplay(color: const Color(0xFFEF4444), fontSize: 20),
+                  style: GoogleFonts.dmSerifDisplay(
+                    color: const Color(0xFFEF4444),
+                    fontSize: 20,
+                  ),
                 ),
               ),
             ],
@@ -203,7 +253,9 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                    color: isDark
+                        ? const Color(0xFFFFD54F)
+                        : const Color(0xFF004D40),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -222,20 +274,28 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
                       fontSize: 13,
                     ),
                     filled: true,
-                    fillColor: isDark ? const Color(0xFF041412) : const Color(0xFFF1F5F9),
+                    fillColor: isDark
+                        ? const Color(0xFF041412)
+                        : const Color(0xFFF1F5F9),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(
-                        color: isDark ? const Color(0xFF1E3A34) : Colors.grey[300]!,
+                        color: isDark
+                            ? const Color(0xFF1E3A34)
+                            : Colors.grey[300]!,
                       ),
                     ),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        obscurePassword ? Icons.visibility_off : Icons.visibility,
+                        obscurePassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
                         color: isDark ? Colors.white54 : Colors.grey[600],
                       ),
                       onPressed: () {
-                        setDialogState(() => obscurePassword = !obscurePassword);
+                        setDialogState(
+                          () => obscurePassword = !obscurePassword,
+                        );
                       },
                     ),
                   ),
@@ -256,7 +316,9 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: isSubmitting ? null : () => Navigator.of(dialogCtx).pop(),
+              onPressed: isSubmitting
+                  ? null
+                  : () => Navigator.of(dialogCtx).pop(),
               child: Text(
                 'Cancel',
                 style: TextStyle(color: isDark ? Colors.white60 : null),
@@ -277,13 +339,19 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
                         isSubmitting = true;
                         localError = null;
                       });
-                      final result = await authVM.deleteCurrentAccount(password: pwd);
+                      final result = await authVM.deleteCurrentAccount(
+                        password: pwd,
+                      );
                       if (!mounted) return;
                       if (result.success) {
-                        Navigator.of(dialogCtx).pop();
+                        if (dialogCtx.mounted) {
+                          Navigator.of(dialogCtx).pop();
+                        }
                         scaffoldMessenger.showSnackBar(
                           const SnackBar(
-                            content: Text('Your account has been permanently deleted.'),
+                            content: Text(
+                              'Your account has been permanently deleted.',
+                            ),
                             backgroundColor: Color(0xFF004D40),
                           ),
                         );
@@ -293,13 +361,22 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
                           isSubmitting = false;
                           String? msg = result.message;
                           if (msg != null) {
-                            final match = RegExp(r'message:\s*([^,\)]+)').firstMatch(msg);
+                            final match = RegExp(
+                              r'message:\s*([^,\)]+)',
+                            ).firstMatch(msg);
                             if (match != null) {
                               msg = match.group(1)!.trim();
                             }
-                            msg = msg.replaceAll(RegExp(r'^AuthException:\s*|^Exception:\s*'), '').trim();
+                            msg = msg
+                                .replaceAll(
+                                  RegExp(r'^AuthException:\s*|^Exception:\s*'),
+                                  '',
+                                )
+                                .trim();
                           }
-                          localError = (msg != null && msg.isNotEmpty) ? msg : 'Failed to delete account.';
+                          localError = (msg != null && msg.isNotEmpty)
+                              ? msg
+                              : 'Failed to delete account.';
                         });
                       }
                     },
@@ -310,7 +387,10 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
                   ? const SizedBox(
                       width: 18,
                       height: 18,
-                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
                     )
                   : const Text('PERMANENTLY DELETE ACCOUNT'),
             ),
@@ -325,7 +405,8 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
     final isDark = context.watch<ThemeViewModel>().isDarkMode;
     final authVM = context.watch<AuthViewModel>();
     final user = authVM.currentUser;
-    final studioName = user?.studioName ?? user?.displayName ?? 'Artisan Studio';
+    final studioName =
+        user?.studioName ?? user?.displayName ?? 'Artisan Studio';
     final handle = user?.handle ?? (user?.effectiveUsername ?? '');
     final initials = user?.initials ?? 'AS';
     final craft = user?.craftCategory ?? 'Heritage Craft';
@@ -336,175 +417,208 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
         appBar: AppBar(
           title: Text(
             'Artisan Studio Settings',
-            style: GoogleFonts.dmSerifDisplay(color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40), fontSize: 22),
+            style: GoogleFonts.dmSerifDisplay(
+              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+              fontSize: 22,
+            ),
           ),
           backgroundColor: Colors.transparent,
           elevation: 0,
-        leading: Navigator.canPop(context)
-            ? IconButton(
-                icon: Icon(Icons.arrow_back_rounded, color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40)),
-                onPressed: () => Navigator.of(context).pop(),
-              )
-            : null,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(24.0),
-        children: [
-          // Studio Account Profile Card Banner
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF0D2825) : Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              border: isDark ? Border.all(color: const Color(0xFF1E3A34)) : null,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
+          leading: Navigator.canPop(context)
+              ? IconButton(
+                  icon: Icon(
+                    Icons.arrow_back_rounded,
+                    color: isDark
+                        ? const Color(0xFFFFD54F)
+                        : const Color(0xFF004D40),
+                  ),
+                  onPressed: () => Navigator.of(context).pop(),
                 )
-              ],
-            ),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 28,
-                  backgroundColor: const Color(0xFFD97706),
-                  backgroundImage: user?.avatarImageProvider,
-                  child: user?.avatarImageProvider != null
-                      ? null
-                      : Text(
-                          initials,
-                          style: GoogleFonts.dmSerifDisplay(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        studioName,
-                        style: GoogleFonts.dmSerifDisplay(
-                          fontSize: 18,
-                          color: isDark ? Colors.white : const Color(0xFF004D40),
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '@$handle • $craft',
-                        style: GoogleFonts.plusJakartaSans(fontSize: 12, color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFD97706), fontWeight: FontWeight.bold),
-                      ),
-                    ],
+              : null,
+        ),
+        body: ListView(
+          padding: const EdgeInsets.all(24.0),
+          children: [
+            // Studio Account Profile Card Banner
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF0D2825) : Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: isDark
+                    ? Border.all(color: const Color(0xFF1E3A34))
+                    : null,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
                   ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF10B981).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
+                ],
+              ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 28,
+                    backgroundColor: const Color(0xFFD97706),
+                    backgroundImage: user?.avatarImageProvider,
+                    child: user?.avatarImageProvider != null
+                        ? null
+                        : Text(
+                            initials,
+                            style: GoogleFonts.dmSerifDisplay(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                   ),
-                  child: const Text(
-                    'VERIFIED',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF10B981),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          studioName,
+                          style: GoogleFonts.dmSerifDisplay(
+                            fontSize: 18,
+                            color: isDark
+                                ? Colors.white
+                                : const Color(0xFF004D40),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '@$handle • $craft',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12,
+                            color: isDark
+                                ? const Color(0xFFFFD54F)
+                                : const Color(0xFFD97706),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ),
-              ],
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text(
+                      'VERIFIED',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF10B981),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
 
-          const SizedBox(height: 24),
+            const SizedBox(height: 24),
 
-          // Section 1: Studio & Business Management
-          _buildSectionHeader('STUDIO & BUSINESS MANAGEMENT'),
-          const SizedBox(height: 10),
+            // Section 1: Studio & Business Management
+            _buildSectionHeader('STUDIO & BUSINESS MANAGEMENT'),
+            const SizedBox(height: 10),
 
-          _buildSettingsTile(
-            context,
-            icon: Icons.storefront_rounded,
-            title: 'Edit Studio Profile & Story',
-            subtitle: 'Update business bio, category, and 3x3 portfolio photos',
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const ProfileBuilderTab()),
-              );
-            },
-          ),
-          _buildSettingsTile(
-            context,
-            icon: Icons.stars_rounded,
-            title: 'Manage Gamification Quests',
-            subtitle: 'Configure tasks & pre-defined library quests for tourists',
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const ArtisanTaskManagementScreen()),
-              );
-            },
-          ),
+            _buildSettingsTile(
+              context,
+              icon: Icons.storefront_rounded,
+              title: 'Edit Studio Profile & Story',
+              subtitle:
+                  'Update business bio, category, and 3x3 portfolio photos',
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ProfileBuilderTab()),
+                );
+              },
+            ),
+            _buildSettingsTile(
+              context,
+              icon: Icons.stars_rounded,
+              title: 'Manage Gamification Quests',
+              subtitle:
+                  'Configure tasks & pre-defined library quests for tourists',
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const ArtisanTaskManagementScreen(),
+                  ),
+                );
+              },
+            ),
 
-          const SizedBox(height: 28),
+            const SizedBox(height: 28),
 
-          // Section 2: Preferences
-          _buildSectionHeader('PREFERENCES'),
-          const SizedBox(height: 10),
-          _buildSwitchTile(
-            context,
-            icon: Icons.dark_mode_outlined,
-            title: 'Dark Theme Mode',
-            subtitle: 'Adjust studio interface contrast for night operations',
-            value: isDark,
-            onChanged: (val) => context.read<ThemeViewModel>().toggleTheme(val),
-          ),
+            // Section 2: Preferences
+            _buildSectionHeader('PREFERENCES'),
+            const SizedBox(height: 10),
+            _buildSwitchTile(
+              context,
+              icon: Icons.dark_mode_outlined,
+              title: 'Dark Theme Mode',
+              subtitle: 'Adjust studio interface contrast for night operations',
+              value: isDark,
+              onChanged: (val) =>
+                  context.read<ThemeViewModel>().toggleTheme(val),
+            ),
 
-          const SizedBox(height: 28),
+            const SizedBox(height: 28),
 
-          // Section 3: Portal Switcher
-          _buildSectionHeader('PORTAL SWITCHER'),
-          const SizedBox(height: 10),
-          _buildSettingsTile(
-            context,
-            icon: Icons.explore_rounded,
-            title: 'Switch to Cultural Explorer (Tourist) View',
-            subtitle: 'Browse craft directory, map radar, community forum, and quests',
-            onTap: () {
-              authVM.selectActiveRole('Tourist');
-              Navigator.of(context).pushReplacementNamed('/tourist');
-            },
-          ),
+            // Section 3: Portal Switcher
+            _buildSectionHeader('PORTAL SWITCHER'),
+            const SizedBox(height: 10),
+            _buildSettingsTile(
+              context,
+              icon: Icons.explore_rounded,
+              title: 'Switch to Cultural Explorer (Tourist) View',
+              subtitle:
+                  'Browse craft directory, map radar, community forum, and quests',
+              onTap: () {
+                authVM.selectActiveRole('Tourist');
+                Navigator.of(context).pushReplacementNamed('/tourist');
+              },
+            ),
 
-          const SizedBox(height: 28),
+            const SizedBox(height: 28),
 
-          // Section 4: Account & Studio Management
-          _buildSectionHeader('STUDIO & ACCOUNT MANAGEMENT', isDanger: true),
-          const SizedBox(height: 10),
-          _buildWarningTile(
-            icon: Icons.storefront_outlined,
-            title: 'Close Studio & Revert to Explorer',
-            subtitle: 'Retire your workshop listing. Keeps your personal account, passport stamps, and forum history intact.',
-            onTap: _handleDeactivateStudio,
-          ),
-          _buildDangerTile(
-            icon: Icons.logout_rounded,
-            title: 'Logout of Studio Account',
-            onTap: _handleLogout,
-          ),
-          _buildDangerTile(
-            icon: Icons.delete_forever_outlined,
-            title: 'Permanently Delete Account',
-            subtitle: 'Permanently remove your studio, craft items, tourist passport, and credentials.',
-            onTap: _handleDeleteAccount,
-          ),
+            // Section 4: Account & Studio Management
+            _buildSectionHeader('STUDIO & ACCOUNT MANAGEMENT', isDanger: true),
+            const SizedBox(height: 10),
+            _buildWarningTile(
+              icon: Icons.storefront_outlined,
+              title: 'Close Studio & Revert to Explorer',
+              subtitle:
+                  'Retire your workshop listing. Keeps your personal account, passport stamps, and forum history intact.',
+              onTap: _handleDeactivateStudio,
+            ),
+            _buildDangerTile(
+              icon: Icons.logout_rounded,
+              title: 'Logout of Studio Account',
+              onTap: _handleLogout,
+            ),
+            _buildDangerTile(
+              icon: Icons.delete_forever_outlined,
+              title: 'Permanently Delete Account',
+              subtitle:
+                  'Permanently remove your studio, craft items, tourist passport, and credentials.',
+              onTap: _handleDeleteAccount,
+            ),
 
-          const SizedBox(height: 32),
-        ],
+            const SizedBox(height: 32),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildSectionHeader(String title, {bool isDanger = false}) {
     return Text(
@@ -532,20 +646,37 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF0D2825) : Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isDark ? const Color(0xFF1E3A34) : Colors.black.withValues(alpha: 0.04)),
+        border: Border.all(
+          color: isDark
+              ? const Color(0xFF1E3A34)
+              : Colors.black.withValues(alpha: 0.04),
+        ),
       ),
       child: ListTile(
         onTap: onTap,
-        leading: Icon(icon, color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40)),
+        leading: Icon(
+          icon,
+          color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+        ),
         title: Text(
           title,
-          style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF0F172A)),
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
+          ),
         ),
         subtitle: Text(
           subtitle,
-          style: GoogleFonts.plusJakartaSans(fontSize: 11, color: isDark ? Colors.white70 : Colors.grey[600]),
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 11,
+            color: isDark ? Colors.white70 : Colors.grey[600],
+          ),
         ),
-        trailing: Icon(Icons.chevron_right_rounded, color: isDark ? Colors.white54 : Colors.grey),
+        trailing: Icon(
+          Icons.chevron_right_rounded,
+          color: isDark ? Colors.white54 : Colors.grey,
+        ),
       ),
     );
   }
@@ -565,21 +696,35 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF0D2825) : Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isDark ? const Color(0xFF1E3A34) : Colors.black.withValues(alpha: 0.04)),
+        border: Border.all(
+          color: isDark
+              ? const Color(0xFF1E3A34)
+              : Colors.black.withValues(alpha: 0.04),
+        ),
       ),
       child: SwitchListTile(
         value: value,
         onChanged: onChanged,
         activeThumbColor: const Color(0xFFFFD54F),
         activeTrackColor: const Color(0xFF10B981),
-        secondary: Icon(icon, color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40)),
+        secondary: Icon(
+          icon,
+          color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+        ),
         title: Text(
           title,
-          style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF0F172A)),
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
+          ),
         ),
         subtitle: Text(
           subtitle,
-          style: GoogleFonts.plusJakartaSans(fontSize: 11, color: isDark ? Colors.white70 : Colors.grey[600]),
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 11,
+            color: isDark ? Colors.white70 : Colors.grey[600],
+          ),
         ),
       ),
     );
@@ -616,7 +761,10 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
             color: const Color(0xFF92400E),
           ),
         ),
-        trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFFD97706)),
+        trailing: const Icon(
+          Icons.chevron_right_rounded,
+          color: Color(0xFFD97706),
+        ),
       ),
     );
   }
@@ -654,7 +802,10 @@ class _ArtisanSettingsScreenState extends State<ArtisanSettingsScreen> {
                 ),
               )
             : null,
-        trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFFEF4444)),
+        trailing: const Icon(
+          Icons.chevron_right_rounded,
+          color: Color(0xFFEF4444),
+        ),
       ),
     );
   }

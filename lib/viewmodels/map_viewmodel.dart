@@ -89,7 +89,7 @@ class MapViewModel extends ChangeNotifier {
 
   // Application-defined gameplay radius. This is independent from both the
   // nearby-workshop search radius and GPS accuracy.
-  static const double _questInteractionRadiusMeters = 50.0;
+  static const double _questInteractionRadiusMeters = 75.0;
   double get questInteractionRadiusMeters => _questInteractionRadiusMeters;
   static const Duration maximumQuestLocationAge = Duration(seconds: 30);
   static const double maximumQuestLocationAccuracyMeters = 35.0;

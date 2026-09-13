@@ -920,9 +920,9 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                   Container(
                                     padding: const EdgeInsets.all(10),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFEF4444).withValues(
-                                        alpha: 0.15,
-                                      ),
+                                      color: const Color(
+                                        0xFFEF4444,
+                                      ).withValues(alpha: 0.15),
                                       shape: BoxShape.circle,
                                     ),
                                     child: const Icon(
@@ -934,55 +934,79 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Wrap(
                                           spacing: 8,
                                           runSpacing: 4,
-                                          crossAxisAlignment: WrapCrossAlignment.center,
+                                          crossAxisAlignment:
+                                              WrapCrossAlignment.center,
                                           children: [
                                             Text(
                                               'Artisan Application',
-                                              style: GoogleFonts.plusJakartaSans(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 14,
-                                                color: isDark
-                                                    ? const Color(0xFFFCA5A5)
-                                                    : const Color(0xFF991B1B),
-                                              ),
+                                              style:
+                                                  GoogleFonts.plusJakartaSans(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 14,
+                                                    color: isDark
+                                                        ? const Color(
+                                                            0xFFFCA5A5,
+                                                          )
+                                                        : const Color(
+                                                            0xFF991B1B,
+                                                          ),
+                                                  ),
                                             ),
                                             Container(
-                                              padding: const EdgeInsets.symmetric(
-                                                horizontal: 7,
-                                                vertical: 2,
-                                              ),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 7,
+                                                    vertical: 2,
+                                                  ),
                                               decoration: BoxDecoration(
                                                 color: isDark
                                                     ? const Color(0xFF3F161A)
                                                     : const Color(0xFFFEE2E2),
-                                                borderRadius: BorderRadius.circular(6),
+                                                borderRadius:
+                                                    BorderRadius.circular(6),
                                                 border: Border.all(
-                                                  color: const Color(0xFFEF4444),
+                                                  color: const Color(
+                                                    0xFFEF4444,
+                                                  ),
                                                 ),
                                               ),
                                               child: Text(
                                                 'REQUIRES REVISION',
-                                                style: GoogleFonts.plusJakartaSans(
-                                                  fontSize: 8.5,
-                                                  fontWeight: FontWeight.w900,
-                                                  color: isDark
-                                                      ? const Color(0xFFFCA5A5)
-                                                      : const Color(0xFFB91C1C),
-                                                  letterSpacing: 0.5,
-                                                ),
+                                                style:
+                                                    GoogleFonts.plusJakartaSans(
+                                                      fontSize: 8.5,
+                                                      fontWeight:
+                                                          FontWeight.w900,
+                                                      color: isDark
+                                                          ? const Color(
+                                                              0xFFFCA5A5,
+                                                            )
+                                                          : const Color(
+                                                              0xFFB91C1C,
+                                                            ),
+                                                      letterSpacing: 0.5,
+                                                    ),
                                               ),
                                             ),
                                           ],
                                         ),
                                         const SizedBox(height: 4),
                                         Text(
-                                          (authVM.currentUser?.rejectionReason != null &&
-                                                  authVM.currentUser!.rejectionReason!.trim().isNotEmpty)
+                                          (authVM
+                                                          .currentUser
+                                                          ?.rejectionReason !=
+                                                      null &&
+                                                  authVM
+                                                      .currentUser!
+                                                      .rejectionReason!
+                                                      .trim()
+                                                      .isNotEmpty)
                                               ? 'Feedback: "${authVM.currentUser!.rejectionReason!.trim()}" - Tap to revise and resubmit.'
                                               : 'Kraftangan review requires document updates. Tap to revise and resubmit your application.',
                                           style: GoogleFonts.plusJakartaSans(
@@ -1005,11 +1029,24 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                   onPressed: () {
                                     Navigator.of(context).push(
                                       MaterialPageRoute(
-                                        builder: (_) => ArtisanApplicationPendingScreen(
-                                          studioName: authVM.currentUser?.studioName ?? 'Your Craft Studio',
-                                          craftCategory: authVM.currentUser?.craftCategory ?? 'Malaysian Heritage Craft',
-                                          ssmNumber: authVM.currentUser?.ssmNumber ?? 'Pending Document Verification',
-                                        ),
+                                        builder: (_) =>
+                                            ArtisanApplicationPendingScreen(
+                                              studioName:
+                                                  authVM
+                                                      .currentUser
+                                                      ?.studioName ??
+                                                  'Your Craft Studio',
+                                              craftCategory:
+                                                  authVM
+                                                      .currentUser
+                                                      ?.craftCategory ??
+                                                  'Malaysian Heritage Craft',
+                                              ssmNumber:
+                                                  authVM
+                                                      .currentUser
+                                                      ?.ssmNumber ??
+                                                  'Pending Document Verification',
+                                            ),
                                       ),
                                     );
                                   },
@@ -1072,9 +1109,9 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                   Container(
                                     padding: const EdgeInsets.all(10),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFD97706).withValues(
-                                        alpha: isDark ? 0.25 : 0.15,
-                                      ),
+                                      color: const Color(
+                                        0xFFD97706,
+                                      ).withValues(alpha: isDark ? 0.25 : 0.15),
                                       shape: BoxShape.circle,
                                     ),
                                     child: const Icon(
@@ -1086,33 +1123,42 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Wrap(
                                           spacing: 8,
                                           runSpacing: 4,
-                                          crossAxisAlignment: WrapCrossAlignment.center,
+                                          crossAxisAlignment:
+                                              WrapCrossAlignment.center,
                                           children: [
                                             Text(
                                               'Artisan Studio Application',
-                                              style: GoogleFonts.plusJakartaSans(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 14,
-                                                color: isDark
-                                                    ? const Color(0xFFFFD54F)
-                                                    : const Color(0xFF92400E),
-                                              ),
+                                              style:
+                                                  GoogleFonts.plusJakartaSans(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 14,
+                                                    color: isDark
+                                                        ? const Color(
+                                                            0xFFFFD54F,
+                                                          )
+                                                        : const Color(
+                                                            0xFF92400E,
+                                                          ),
+                                                  ),
                                             ),
                                             Container(
-                                              padding: const EdgeInsets.symmetric(
-                                                horizontal: 7,
-                                                vertical: 2,
-                                              ),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 7,
+                                                    vertical: 2,
+                                                  ),
                                               decoration: BoxDecoration(
                                                 color: isDark
                                                     ? const Color(0xFF2E2305)
                                                     : const Color(0xFFFEF3C7),
-                                                borderRadius: BorderRadius.circular(6),
+                                                borderRadius:
+                                                    BorderRadius.circular(6),
                                                 border: Border.all(
                                                   color: isDark
                                                       ? const Color(0xFFD97706)
@@ -1121,14 +1167,20 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                               ),
                                               child: Text(
                                                 'PENDING REVIEW',
-                                                style: GoogleFonts.plusJakartaSans(
-                                                  fontSize: 8.5,
-                                                  fontWeight: FontWeight.w900,
-                                                  color: isDark
-                                                      ? const Color(0xFFFFD54F)
-                                                      : const Color(0xFF92400E),
-                                                  letterSpacing: 0.5,
-                                                ),
+                                                style:
+                                                    GoogleFonts.plusJakartaSans(
+                                                      fontSize: 8.5,
+                                                      fontWeight:
+                                                          FontWeight.w900,
+                                                      color: isDark
+                                                          ? const Color(
+                                                              0xFFFFD54F,
+                                                            )
+                                                          : const Color(
+                                                              0xFF92400E,
+                                                            ),
+                                                      letterSpacing: 0.5,
+                                                    ),
                                               ),
                                             ),
                                           ],
@@ -1158,16 +1210,22 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                       MaterialPageRoute(
                                         builder: (_) =>
                                             ArtisanApplicationPendingScreen(
-                                          studioName:
-                                              authVM.currentUser?.studioName ??
+                                              studioName:
+                                                  authVM
+                                                      .currentUser
+                                                      ?.studioName ??
                                                   'Your Craft Studio',
-                                          craftCategory: authVM.currentUser
-                                                  ?.craftCategory ??
-                                              'Malaysian Heritage Craft',
-                                          ssmNumber: authVM.currentUser
-                                                  ?.ssmNumber ??
-                                              'Pending Document Verification',
-                                        ),
+                                              craftCategory:
+                                                  authVM
+                                                      .currentUser
+                                                      ?.craftCategory ??
+                                                  'Malaysian Heritage Craft',
+                                              ssmNumber:
+                                                  authVM
+                                                      .currentUser
+                                                      ?.ssmNumber ??
+                                                  'Pending Document Verification',
+                                            ),
                                       ),
                                     );
                                   },
@@ -1199,12 +1257,16 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: isDark
+                                ? const Color(0xFF123D35)
+                                : Colors.white,
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
-                              color: const Color(
-                                0xFF004D40,
-                              ).withValues(alpha: 0.15),
+                              color: isDark
+                                  ? const Color(0xFF37675D)
+                                  : const Color(
+                                      0xFF004D40,
+                                    ).withValues(alpha: 0.15),
                             ),
                           ),
                           child: Row(
@@ -1212,14 +1274,18 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                               Container(
                                 padding: const EdgeInsets.all(10),
                                 decoration: BoxDecoration(
-                                  color: const Color(
-                                    0xFF004D40,
-                                  ).withValues(alpha: 0.08),
+                                  color: isDark
+                                      ? const Color(0xFF1D5047)
+                                      : const Color(
+                                          0xFF004D40,
+                                        ).withValues(alpha: 0.08),
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(
+                                child: Icon(
                                   Icons.palette_outlined,
-                                  color: Color(0xFF004D40),
+                                  color: isDark
+                                      ? const Color(0xFFFFD54F)
+                                      : const Color(0xFF004D40),
                                   size: 22,
                                 ),
                               ),
@@ -1233,14 +1299,18 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                       style: GoogleFonts.plusJakartaSans(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 13,
-                                        color: const Color(0xFF004D40),
+                                        color: isDark
+                                            ? const Color(0xFFF5EEDC)
+                                            : const Color(0xFF004D40),
                                       ),
                                     ),
                                     Text(
                                       'Register your traditional studio to host quests and earn Kraftangan recognition.',
                                       style: GoogleFonts.plusJakartaSans(
                                         fontSize: 11,
-                                        color: Colors.grey[600],
+                                        color: isDark
+                                            ? const Color(0xFFB7C8C2)
+                                            : Colors.grey[600],
                                       ),
                                     ),
                                   ],
@@ -1257,8 +1327,16 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                   );
                                 },
                                 style: OutlinedButton.styleFrom(
-                                  side: const BorderSide(
-                                    color: Color(0xFF004D40),
+                                  backgroundColor: isDark
+                                      ? const Color(0xFF0A2E28)
+                                      : null,
+                                  foregroundColor: isDark
+                                      ? const Color(0xFFFFD54F)
+                                      : const Color(0xFF004D40),
+                                  side: BorderSide(
+                                    color: isDark
+                                        ? const Color(0xFFFFD54F)
+                                        : const Color(0xFF004D40),
                                   ),
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 14,
@@ -1268,12 +1346,14 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                 ),
-                                child: const Text(
+                                child: Text(
                                   'Apply',
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 11,
-                                    color: Color(0xFF004D40),
+                                    color: isDark
+                                        ? const Color(0xFFFFD54F)
+                                        : const Color(0xFF004D40),
                                   ),
                                 ),
                               ),
@@ -1417,20 +1497,22 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 20.0),
                   sliver: SliverGrid(
-                    gridDelegate:
-                        SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 16,
-                          // A fixed aspect ratio made the serif title compete for
-                          // too little height on narrow phones with larger system
-                          // text. Keep the two-column layout, but let each card grow
-                          // with the user's text scale instead.
-                          mainAxisExtent: (238.0 +
-                              (MediaQuery.textScalerOf(context).scale(1.0) - 1.0)
-                                      .clamp(0.0, 0.5) *
-                                  60.0).toDouble(),
-                        ),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      // A fixed aspect ratio made the serif title compete for
+                      // too little height on narrow phones with larger system
+                      // text. Keep the two-column layout, but let each card grow
+                      // with the user's text scale instead.
+                      mainAxisExtent:
+                          (238.0 +
+                                  (MediaQuery.textScalerOf(context).scale(1.0) -
+                                              1.0)
+                                          .clamp(0.0, 0.5) *
+                                      60.0)
+                              .toDouble(),
+                    ),
                     delegate: SliverChildBuilderDelegate((context, index) {
                       final stamp = gameStat.stamps[index];
                       final unlocked = stamp.isUnlocked;
