@@ -675,8 +675,10 @@ class _ArtisanApplicationPendingScreenState
   Widget _buildSummaryRow(bool isDark, String label, String value) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Flexible(
+          flex: 2,
           child: Text(
             label,
             softWrap: true,
@@ -687,8 +689,9 @@ class _ArtisanApplicationPendingScreenState
             ),
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 12),
         Flexible(
+          flex: 3,
           child: Text(
             value,
             textAlign: TextAlign.right,

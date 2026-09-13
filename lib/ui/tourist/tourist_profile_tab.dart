@@ -911,136 +911,125 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                   : const Color(0xFFFCA5A5),
                             ),
                           ),
-                          child: Row(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: const Color(
-                                    0xFFEF4444,
-                                  ).withValues(alpha: 0.15),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.cancel_outlined,
-                                  color: Color(0xFFEF4444),
-                                  size: 24,
-                                ),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEF4444).withValues(
+                                        alpha: 0.15,
+                                      ),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.cancel_outlined,
+                                      color: Color(0xFFEF4444),
+                                      size: 22,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Flexible(
-                                          child: Text(
-                                            'Artisan Application',
-                                            softWrap: true,
-                                            style: GoogleFonts.plusJakartaSans(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 13,
-                                              color: isDark
-                                                  ? const Color(0xFFFCA5A5)
-                                                  : const Color(0xFF991B1B),
+                                        Wrap(
+                                          spacing: 8,
+                                          runSpacing: 4,
+                                          crossAxisAlignment: WrapCrossAlignment.center,
+                                          children: [
+                                            Text(
+                                              'Artisan Application',
+                                              style: GoogleFonts.plusJakartaSans(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14,
+                                                color: isDark
+                                                    ? const Color(0xFFFCA5A5)
+                                                    : const Color(0xFF991B1B),
+                                              ),
                                             ),
-                                          ),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 7,
+                                                vertical: 2,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: isDark
+                                                    ? const Color(0xFF3F161A)
+                                                    : const Color(0xFFFEE2E2),
+                                                borderRadius: BorderRadius.circular(6),
+                                                border: Border.all(
+                                                  color: const Color(0xFFEF4444),
+                                                ),
+                                              ),
+                                              child: Text(
+                                                'REQUIRES REVISION',
+                                                style: GoogleFonts.plusJakartaSans(
+                                                  fontSize: 8.5,
+                                                  fontWeight: FontWeight.w900,
+                                                  color: isDark
+                                                      ? const Color(0xFFFCA5A5)
+                                                      : const Color(0xFFB91C1C),
+                                                  letterSpacing: 0.5,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                        const SizedBox(width: 6),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 6,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          (authVM.currentUser?.rejectionReason != null &&
+                                                  authVM.currentUser!.rejectionReason!.trim().isNotEmpty)
+                                              ? 'Feedback: "${authVM.currentUser!.rejectionReason!.trim()}" - Tap to revise and resubmit.'
+                                              : 'Kraftangan review requires document updates. Tap to revise and resubmit your application.',
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 11.5,
                                             color: isDark
-                                                ? const Color(0xFF3F161A)
-                                                : const Color(0xFFFEE2E2),
-                                            borderRadius: BorderRadius.circular(
-                                              6,
-                                            ),
-                                            border: Border.all(
-                                              color: const Color(0xFFEF4444),
-                                            ),
-                                          ),
-                                          child: Text(
-                                            'REQUIRES REVISION',
-                                            style: GoogleFonts.plusJakartaSans(
-                                              fontSize: 8,
-                                              fontWeight: FontWeight.w900,
-                                              color: isDark
-                                                  ? const Color(0xFFFCA5A5)
-                                                  : const Color(0xFFB91C1C),
-                                            ),
+                                                ? Colors.white70
+                                                : const Color(0xFF7F1D1D),
+                                            height: 1.35,
                                           ),
                                         ),
                                       ],
                                     ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      (authVM.currentUser?.rejectionReason !=
-                                                  null &&
-                                              authVM
-                                                  .currentUser!
-                                                  .rejectionReason!
-                                                  .trim()
-                                                  .isNotEmpty)
-                                          ? 'Feedback: "${authVM.currentUser!.rejectionReason!.trim()}" - Tap to revise and resubmit.'
-                                          : 'Kraftangan review requires document updates. Tap to revise and resubmit your application.',
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 11,
-                                        color: isDark
-                                            ? Colors.white70
-                                            : const Color(0xFF7F1D1D),
-                                        height: 1.3,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 8),
-                              FilledButton(
-                                onPressed: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (_) =>
-                                          ArtisanApplicationPendingScreen(
-                                            studioName:
-                                                authVM
-                                                    .currentUser
-                                                    ?.studioName ??
-                                                'Your Craft Studio',
-                                            craftCategory:
-                                                authVM
-                                                    .currentUser
-                                                    ?.craftCategory ??
-                                                'Malaysian Heritage Craft',
-                                            ssmNumber:
-                                                authVM.currentUser?.ssmNumber ??
-                                                'Pending Document Verification',
-                                          ),
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                width: double.infinity,
+                                child: FilledButton(
+                                  onPressed: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => ArtisanApplicationPendingScreen(
+                                          studioName: authVM.currentUser?.studioName ?? 'Your Craft Studio',
+                                          craftCategory: authVM.currentUser?.craftCategory ?? 'Malaysian Heritage Craft',
+                                          ssmNumber: authVM.currentUser?.ssmNumber ?? 'Pending Document Verification',
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: const Color(0xFFEF4444),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 10,
                                     ),
-                                  );
-                                },
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: const Color(0xFFEF4444),
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 8,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
                                   ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                                child: const Text(
-                                  'Re-apply',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 11,
+                                  child: const Text(
+                                    'Re-apply',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -1064,121 +1053,141 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFFFBEB),
+                            color: isDark
+                                ? const Color(0xFF1F1805)
+                                : const Color(0xFFFFFBEB),
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: const Color(0xFFFCD34D)),
+                            border: Border.all(
+                              color: isDark
+                                  ? const Color(0xFF78590D)
+                                  : const Color(0xFFFCD34D),
+                            ),
                           ),
-                          child: Row(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: const Color(
-                                    0xFFD97706,
-                                  ).withValues(alpha: 0.15),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.hourglass_top_rounded,
-                                  color: Color(0xFFB45309),
-                                  size: 24,
-                                ),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFD97706).withValues(
+                                        alpha: isDark ? 0.25 : 0.15,
+                                      ),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.hourglass_top_rounded,
+                                      color: Color(0xFFD97706),
+                                      size: 22,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Flexible(
-                                          child: Text(
-                                            'Artisan Studio Application',
-                                            softWrap: true,
-                                            style: GoogleFonts.plusJakartaSans(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 13,
-                                              color: const Color(0xFF92400E),
+                                        Wrap(
+                                          spacing: 8,
+                                          runSpacing: 4,
+                                          crossAxisAlignment: WrapCrossAlignment.center,
+                                          children: [
+                                            Text(
+                                              'Artisan Studio Application',
+                                              style: GoogleFonts.plusJakartaSans(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14,
+                                                color: isDark
+                                                    ? const Color(0xFFFFD54F)
+                                                    : const Color(0xFF92400E),
+                                              ),
                                             ),
-                                          ),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 7,
+                                                vertical: 2,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: isDark
+                                                    ? const Color(0xFF2E2305)
+                                                    : const Color(0xFFFEF3C7),
+                                                borderRadius: BorderRadius.circular(6),
+                                                border: Border.all(
+                                                  color: isDark
+                                                      ? const Color(0xFFD97706)
+                                                      : const Color(0xFFF59E0B),
+                                                ),
+                                              ),
+                                              child: Text(
+                                                'PENDING REVIEW',
+                                                style: GoogleFonts.plusJakartaSans(
+                                                  fontSize: 8.5,
+                                                  fontWeight: FontWeight.w900,
+                                                  color: isDark
+                                                      ? const Color(0xFFFFD54F)
+                                                      : const Color(0xFF92400E),
+                                                  letterSpacing: 0.5,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                        const SizedBox(width: 6),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 6,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFFFEF3C7),
-                                            borderRadius: BorderRadius.circular(
-                                              6,
-                                            ),
-                                            border: Border.all(
-                                              color: const Color(0xFFF59E0B),
-                                            ),
-                                          ),
-                                          child: Text(
-                                            'PENDING REVIEW',
-                                            style: GoogleFonts.plusJakartaSans(
-                                              fontSize: 8,
-                                              fontWeight: FontWeight.w900,
-                                              color: const Color(0xFF92400E),
-                                            ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Your Master Artisan registration is undergoing Kraftangan Malaysia verification. Studio access unlocks upon approval.',
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 11.5,
+                                            color: isDark
+                                                ? Colors.white70
+                                                : const Color(0xFF78350F),
+                                            height: 1.35,
                                           ),
                                         ),
                                       ],
                                     ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'Your Master Artisan registration is undergoing Kraftangan Malaysia verification. Studio access unlocks upon approval.',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 11,
-                                        color: const Color(0xFF78350F),
-                                        height: 1.3,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 8),
-                              FilledButton(
-                                onPressed: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (_) =>
-                                          ArtisanApplicationPendingScreen(
-                                            studioName:
-                                                authVM
-                                                    .currentUser
-                                                    ?.studioName ??
-                                                'Your Craft Studio',
-                                            craftCategory:
-                                                authVM
-                                                    .currentUser
-                                                    ?.craftCategory ??
-                                                'Malaysian Heritage Craft',
-                                            ssmNumber:
-                                                authVM.currentUser?.ssmNumber ??
-                                                'Pending Document Verification',
-                                          ),
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                width: double.infinity,
+                                child: FilledButton(
+                                  onPressed: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            ArtisanApplicationPendingScreen(
+                                          studioName:
+                                              authVM.currentUser?.studioName ??
+                                                  'Your Craft Studio',
+                                          craftCategory: authVM.currentUser
+                                                  ?.craftCategory ??
+                                              'Malaysian Heritage Craft',
+                                          ssmNumber: authVM.currentUser
+                                                  ?.ssmNumber ??
+                                              'Pending Document Verification',
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: const Color(0xFFD97706),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 10,
                                     ),
-                                  );
-                                },
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: const Color(0xFFD97706),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 8,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
                                   ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                                child: const Text(
-                                  'View Application',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 11,
+                                  child: const Text(
+                                    'View Application',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
                                   ),
                                 ),
                               ),
