@@ -9339,17 +9339,62 @@ class SupabaseService {
       return const Stream<List<Map<String, dynamic>>>.empty();
     }
 
-    return client
-        .from('artisan_profiles')
-        .stream(primaryKey: const ['id'])
-        .eq('status', 'APPROVED')
-        .map(
-          (rows) => rows
-              .where(
-                (row) => row['latitude'] != null && row['longitude'] != null,
-              )
-              .map(Map<String, dynamic>.from)
-              .toList(growable: false),
-        );
+    late final StreamController<List<Map<String, dynamic>>> controller;
+    RealtimeChannel? channel;
+    var isClosed = false;
+    var refreshInProgress = false;
+    var refreshQueued = false;
+
+    Future<void> refreshApprovedWorkshops() async {
+      if (refreshInProgress) {
+        refreshQueued = true;
+        return;
+      }
+
+      refreshInProgress = true;
+      do {
+        refreshQueued = false;
+        final workshops = await fetchWorkshopLocations();
+        if (!isClosed) {
+          controller.add(workshops);
+        }
+      } while (refreshQueued && !isClosed);
+      refreshInProgress = false;
+    }
+
+    controller = StreamController<List<Map<String, dynamic>>>(
+      onListen: () {
+        unawaited(refreshApprovedWorkshops());
+
+        channel = client
+            .channel(
+              'workshop-catalog-${DateTime.now().microsecondsSinceEpoch}',
+            )
+            .onPostgresChanges(
+              event: PostgresChangeEvent.all,
+              schema: 'public',
+              table: 'artisan_profiles',
+              // Listen only to the non-sensitive fields needed to detect when
+              // a workshop enters or leaves the APPROVED catalogue. The full
+              // approved workshop list is fetched separately after each event.
+              select: const ['id', 'status'],
+              callback: (_) => unawaited(refreshApprovedWorkshops()),
+            )
+            .subscribe((status, error) {
+              if (status == RealtimeSubscribeStatus.channelError) {
+                debugPrint('Workshop catalogue realtime error: $error');
+              }
+            });
+      },
+      onCancel: () async {
+        isClosed = true;
+        final activeChannel = channel;
+        if (activeChannel != null) {
+          await client.removeChannel(activeChannel);
+        }
+      },
+    );
+
+    return controller.stream;
   }
 }
