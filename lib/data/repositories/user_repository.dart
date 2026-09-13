@@ -25,6 +25,18 @@ class UserRepository {
     );
   }
 
+  Future<bool> isPhoneRegistered(
+    String phone, {
+    String? excludeEmail,
+    String? excludeUserId,
+  }) {
+    return _service.isPhoneRegistered(
+      phone,
+      excludeEmail: excludeEmail,
+      excludeUserId: excludeUserId,
+    );
+  }
+
   Future<ExistingAccountCheck> checkExistingAccount(String email) {
     return _service.checkExistingAccount(email);
   }

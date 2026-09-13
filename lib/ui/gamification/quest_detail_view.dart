@@ -189,9 +189,13 @@ class _QuestDetailViewState extends State<QuestDetailView>
               content: Text(
                 'Quest stopped because you left the workshop area. '
                 'Your progress has been saved.',
+                style: TextStyle(
+                  color: Color(0xFFFFF8E1),
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               behavior: SnackBarBehavior.floating,
-              backgroundColor: Color(0xFF005B4F),
+              backgroundColor: Color(0xFF00695C),
             ),
           );
         }
@@ -1088,7 +1092,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
                       : isCompleted || isInProgress
                       ? const Color(0xFF087F5B)
                       : const Color(0xFFCBD5E1),
-                  disabledForegroundColor: Colors.white,
+                  disabledForegroundColor: const Color(0xFFFFF8E1),
                   padding: const EdgeInsets.symmetric(vertical: 15),
                 ),
                 icon: viewModel.isStartingQuest
@@ -1218,9 +1222,15 @@ class _QuestDetailViewState extends State<QuestDetailView>
     unawaited(context.read<MapViewModel>().loadJourneyData());
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Quest stopped. Your progress has been saved.'),
+        content: Text(
+          'Quest stopped. Your progress has been saved.',
+          style: TextStyle(
+            color: Color(0xFFFFF8E1),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         behavior: SnackBarBehavior.floating,
-        backgroundColor: Color(0xFF005B4F),
+        backgroundColor: Color(0xFF00695C),
       ),
     );
   }
@@ -1252,9 +1262,15 @@ class _QuestDetailViewState extends State<QuestDetailView>
     if (!context.mounted || !resumed) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Quest started. The workshop timer is running.'),
+        content: Text(
+          'Quest started. The workshop timer is running.',
+          style: TextStyle(
+            color: Color(0xFFFFF8E1),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         behavior: SnackBarBehavior.floating,
-        backgroundColor: Color(0xFF005B4F),
+        backgroundColor: Color(0xFF00695C),
       ),
     );
   }
@@ -1292,9 +1308,15 @@ class _QuestDetailViewState extends State<QuestDetailView>
     if (started) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Quest started. Your progress has been saved.'),
+          content: Text(
+            'Quest started. Your progress has been saved.',
+            style: TextStyle(
+              color: Color(0xFFFFF8E1),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           behavior: SnackBarBehavior.floating,
-          backgroundColor: Color(0xFF005B4F),
+          backgroundColor: Color(0xFF00695C),
         ),
       );
     } else if (!viewModel.canStartQuest(quest.id)) {

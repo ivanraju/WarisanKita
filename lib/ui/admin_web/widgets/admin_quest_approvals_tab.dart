@@ -296,12 +296,6 @@ class _AdminQuestApprovalsTabState extends State<AdminQuestApprovalsTab> {
               background: const Color(0xFFFEF3C7),
               foreground: const Color(0xFFB45309),
             ),
-            IconButton(
-              tooltip: 'Refresh requests',
-              onPressed: viewModel.isLoading ? null : viewModel.loadRequests,
-              icon: const Icon(Icons.refresh_rounded),
-              color: const Color(0xFF00695C),
-            ),
           ],
         ),
         const SizedBox(height: 6),

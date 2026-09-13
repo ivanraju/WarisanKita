@@ -12,6 +12,7 @@ import 'package:warisan_kita/domain/models/forum_post.dart';
 import 'package:warisan_kita/domain/models/system_task_provisioning.dart';
 import 'package:warisan_kita/domain/models/user.dart';
 import 'package:warisan_kita/domain/validators/ssm_validator.dart';
+import 'package:warisan_kita/domain/validators/profile_validator.dart';
 
 class EmailVerificationRequired extends AuthException {
   final String email;
@@ -379,6 +380,86 @@ class SupabaseService {
         }
       } catch (e) {
         debugPrint('Supabase SSM uniqueness check note: $e');
+      }
+    }
+
+    return false;
+  }
+
+  Future<bool> isPhoneRegistered(
+    String phone, {
+    String? excludeEmail,
+    String? excludeUserId,
+  }) async {
+    final clean = phone.trim();
+    if (clean.isEmpty) return false;
+
+    // 1. Check local in-memory store
+    for (final entry in _userStore.entries) {
+      if (excludeEmail != null &&
+          entry.key.toLowerCase() == excludeEmail.toLowerCase()) {
+        continue;
+      }
+      final u = entry.value;
+      if (excludeUserId != null && u['id'] == excludeUserId) {
+        continue;
+      }
+      final existingPhone = (u['phone'] ?? u['phone_number']) as String?;
+      if (existingPhone != null && existingPhone.trim().isNotEmpty) {
+        if (ProfileValidator.arePhonesEqual(existingPhone, clean)) {
+          return true;
+        }
+      }
+    }
+
+    // 2. Check Supabase database
+    final client = _client;
+    if (client != null) {
+      try {
+        // Query users table
+        final userRows = await client
+            .from('users')
+            .select('id, email, phone_number, phone')
+            .timeout(const Duration(seconds: 5));
+
+        for (final row in userRows) {
+          if (excludeEmail != null &&
+              row['email']?.toString().toLowerCase() ==
+                  excludeEmail.toLowerCase()) {
+            continue;
+          }
+          if (excludeUserId != null &&
+              row['id']?.toString() == excludeUserId) {
+            continue;
+          }
+          final rowPhone = (row['phone_number'] ?? row['phone'])?.toString();
+          if (rowPhone != null && rowPhone.trim().isNotEmpty) {
+            if (ProfileValidator.arePhonesEqual(rowPhone, clean)) {
+              return true;
+            }
+          }
+        }
+
+        // Query artisan_profiles table
+        final apRows = await client
+            .from('artisan_profiles')
+            .select('id, user_id, phone_number, phone')
+            .timeout(const Duration(seconds: 5));
+
+        for (final row in apRows) {
+          if (excludeUserId != null &&
+              row['user_id']?.toString() == excludeUserId) {
+            continue;
+          }
+          final rowPhone = (row['phone_number'] ?? row['phone'])?.toString();
+          if (rowPhone != null && rowPhone.trim().isNotEmpty) {
+            if (ProfileValidator.arePhonesEqual(rowPhone, clean)) {
+              return true;
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('Supabase phone uniqueness check note: $e');
       }
     }
 
@@ -1205,6 +1286,24 @@ class SupabaseService {
       throw Exception('INVALID_SSM: SSM registration number is required for Commercial Studios.');
     }
 
+    final cleanPhone = phone?.trim() ?? '';
+    if (cleanPhone.isNotEmpty) {
+      final phoneErr = ProfileValidator.validatePhone(cleanPhone);
+      if (phoneErr != null) {
+        throw Exception('INVALID_PHONE: $phoneErr');
+      }
+      final isPhoneTaken = await isPhoneRegistered(
+        cleanPhone,
+        excludeEmail: cleanEmail,
+        excludeUserId: userRecord['id'],
+      );
+      if (isPhoneTaken) {
+        throw Exception(
+          'DUPLICATE_PHONE: An artisan studio or user account is already registered with contact phone "$cleanPhone".',
+        );
+      }
+    }
+
     // Update user record with pending artisan credentials
     userRecord['studioName'] = studioName;
     userRecord['craftCategory'] = craftCategory;
@@ -1832,7 +1931,26 @@ class SupabaseService {
     }
     if (phone != null) userRecord['phone'] = phone;
     if (experience != null) userRecord['experience'] = experience;
-    if (toolsAndMaterials != null) userRecord['tags'] = toolsAndMaterials;
+    final List<String> currentTags = (userRecord['tags'] is List
+        ? List<String>.from(userRecord['tags'])
+        : (userRecord['artisan_profiles'] is Map && userRecord['artisan_profiles']['tags'] is List
+            ? List<String>.from(userRecord['artisan_profiles']['tags'])
+            : <String>[]));
+
+    final existingSystemTags = currentTags
+        .where((t) => t.startsWith('doc_') || t.startsWith('premise:'))
+        .toList();
+
+    List<String> existingUserTags;
+    if (toolsAndMaterials != null) {
+      final userTools = toolsAndMaterials
+          .where((t) => !t.startsWith('doc_') && !t.startsWith('premise:') && !t.startsWith('__'))
+          .toList();
+      existingUserTags = [...userTools, ...existingSystemTags];
+    } else {
+      existingUserTags = List<String>.from(currentTags);
+    }
+
     final bool currentIsLive =
         isLiveOpen ??
         (userRecord['is_live_open'] as bool?) ??
@@ -1847,11 +1965,6 @@ class SupabaseService {
       userRecord['isLiveOpen'] = isLiveOpen;
     }
 
-    final existingUserTags = userRecord['tags'] is List
-        ? List<String>.from(userRecord['tags'])
-        : (toolsAndMaterials != null
-              ? List<String>.from(toolsAndMaterials)
-              : <String>[]);
     if (!currentIsLive) {
       if (!existingUserTags.contains('__LIVE_DEMO_CLOSED__')) {
         existingUserTags.add('__LIVE_DEMO_CLOSED__');
@@ -1895,21 +2008,21 @@ class SupabaseService {
     if (latitude != null) apMap['latitude'] = latitude;
     if (longitude != null) apMap['longitude'] = longitude;
     if (craftCategory != null) apMap['craft_category'] = craftCategory;
-    if (toolsAndMaterials != null) apMap['tags'] = toolsAndMaterials;
     apMap['is_live_open'] = currentIsLive;
     apMap['isLiveOpen'] = currentIsLive;
 
-    final existingApTags = apMap['tags'] is List
-        ? List<String>.from(apMap['tags'])
-        : List<String>.from(existingUserTags);
-    if (!currentIsLive) {
-      if (!existingApTags.contains('__LIVE_DEMO_CLOSED__')) {
-        existingApTags.add('__LIVE_DEMO_CLOSED__');
+    final existingApTags = List<String>.from(existingUserTags);
+    if (apMap['tags'] is List) {
+      for (final t in (apMap['tags'] as List)) {
+        final st = t.toString();
+        if ((st.startsWith('doc_') || st.startsWith('premise:')) &&
+            !existingApTags.contains(st)) {
+          existingApTags.add(st);
+        }
       }
-    } else {
-      existingApTags.removeWhere((t) => t == '__LIVE_DEMO_CLOSED__');
     }
     apMap['tags'] = existingApTags;
+    userRecord['tags'] = existingApTags;
 
     if (workshopCount != null) apMap['workshop_count'] = workshopCount;
     userRecord['artisan_profiles'] = apMap;
@@ -2035,7 +2148,7 @@ class SupabaseService {
                 if (artisanUpdates.isNotEmpty) {
                   final existingProfile = await client
                       .from('artisan_profiles')
-                      .select('id, status')
+                      .select('id, status, tags')
                       .eq('user_id', effectiveUid)
                       .maybeSingle();
 
@@ -2044,6 +2157,18 @@ class SupabaseService {
                       apMap['id'] = existingProfile['id'];
                       userRecord['artisanProfileId'] = existingProfile['id'];
                       userRecord['artisan_profile_id'] = existingProfile['id'];
+                    }
+                    if (existingProfile['tags'] is List) {
+                      for (final t in (existingProfile['tags'] as List)) {
+                        final st = t.toString();
+                        if ((st.startsWith('doc_') || st.startsWith('premise:')) &&
+                            !effectiveTags.contains(st)) {
+                          effectiveTags.add(st);
+                        }
+                      }
+                      if (artisanUpdates.containsKey('tags')) {
+                        artisanUpdates['tags'] = effectiveTags;
+                      }
                     }
                     try {
                       await client
@@ -4520,12 +4645,59 @@ class SupabaseService {
       final url = client.storage.from(bucket).getPublicUrl(path);
 
       // Update DB
-      await client.from('artisan_documents').insert({
-        'artisan_id': effectiveArtisanId,
-        'doc_type': docType,
-        'file_name': finalFileName,
-        'file_url': url,
-      });
+      try {
+        await client.from('artisan_documents').insert({
+          'artisan_id': effectiveArtisanId,
+          'doc_type': docType,
+          'file_name': finalFileName,
+          'file_url': url,
+        });
+      } catch (insertErr) {
+        debugPrint('Error inserting into artisan_documents: $insertErr');
+      }
+
+      // Also persist document metadata directly into artisan_profiles.tags so documents
+      // are never lost if artisan_documents table is restricted by RLS
+      try {
+        final ap = await client
+            .from('artisan_profiles')
+            .select('tags')
+            .eq('id', effectiveArtisanId)
+            .maybeSingle();
+        final currentTags = (ap != null && ap['tags'] is List)
+            ? List<String>.from(ap['tags'])
+            : <String>[];
+        if (docType == 'CRAFTING_PHOTO' ||
+            docType == 'VILLAGE_CRAFTING_PHOTO' ||
+            docType == 'STUDIO_PHOTO') {
+          currentTags.removeWhere((t) =>
+              t.startsWith('doc_crafting_photo_url:') ||
+              t.startsWith('doc_crafting_photo_name:') ||
+              t.startsWith('doc_studio_photo:'));
+          currentTags.add('doc_crafting_photo_url:$url');
+          currentTags.add('doc_crafting_photo_name:$finalFileName');
+          currentTags.add('doc_studio_photo:$url');
+        } else if (docType == 'SSM_BUSINESS_CERT' || docType == 'SSM_CERT') {
+          currentTags.removeWhere((t) =>
+              t.startsWith('doc_ssm_cert_url:') ||
+              t.startsWith('doc_ssm_cert_name:'));
+          currentTags.add('doc_ssm_cert_url:$url');
+          currentTags.add('doc_ssm_cert_name:$finalFileName');
+        } else if (docType == 'KRAFTANGAN_MASTER_CERT' ||
+            docType == 'KRAFTANGAN_CERT') {
+          currentTags.removeWhere((t) =>
+              t.startsWith('doc_kraftangan_cert_url:') ||
+              t.startsWith('doc_kraftangan_cert_name:'));
+          currentTags.add('doc_kraftangan_cert_url:$url');
+          currentTags.add('doc_kraftangan_cert_name:$finalFileName');
+        }
+        await client
+            .from('artisan_profiles')
+            .update({'tags': currentTags})
+            .eq('id', effectiveArtisanId);
+      } catch (tagErr) {
+        debugPrint('uploadArtisanDocument tags fallback note: $tagErr');
+      }
 
       return {'url': url, 'name': finalFileName};
     } catch (e) {
@@ -8871,7 +9043,8 @@ class SupabaseService {
       final response = await client
           .from('artisan_profiles')
           .select(
-            'id, studio_name, craft_category, address, state, latitude, longitude',
+            'id, studio_name, craft_category, address, state, latitude, longitude, '
+            'artisan_documents(file_url, file_name, doc_type)',
           )
           .eq('status', 'APPROVED')
           .not('latitude', 'is', null)

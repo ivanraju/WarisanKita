@@ -47,12 +47,62 @@ class ApprovalHistoryRecord {
     this.status = 'APPROVED',
   });
 
+  ApprovalHistoryRecord copyWith({
+    String? id,
+    String? title,
+    String? targetName,
+    String? targetEmail,
+    String? approvalType,
+    String? craftCategory,
+    String? state,
+    String? details,
+    String? previousPremise,
+    String? newPremise,
+    String? ssmNumber,
+    String? ssmFileName,
+    String? ssmFileUrl,
+    String? certFileName,
+    String? certFileUrl,
+    List<String>? photos,
+    String? relocationCertFileName,
+    String? relocationCertFileUrl,
+    List<Map<String, dynamic>>? documents,
+    DateTime? approvedAt,
+    String? approvedBy,
+    String? status,
+  }) {
+    return ApprovalHistoryRecord(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      targetName: targetName ?? this.targetName,
+      targetEmail: targetEmail ?? this.targetEmail,
+      approvalType: approvalType ?? this.approvalType,
+      craftCategory: craftCategory ?? this.craftCategory,
+      state: state ?? this.state,
+      details: details ?? this.details,
+      previousPremise: previousPremise ?? this.previousPremise,
+      newPremise: newPremise ?? this.newPremise,
+      ssmNumber: ssmNumber ?? this.ssmNumber,
+      ssmFileName: ssmFileName ?? this.ssmFileName,
+      ssmFileUrl: ssmFileUrl ?? this.ssmFileUrl,
+      certFileName: certFileName ?? this.certFileName,
+      certFileUrl: certFileUrl ?? this.certFileUrl,
+      photos: photos ?? this.photos,
+      relocationCertFileName: relocationCertFileName ?? this.relocationCertFileName,
+      relocationCertFileUrl: relocationCertFileUrl ?? this.relocationCertFileUrl,
+      documents: documents ?? this.documents,
+      approvedAt: approvedAt ?? this.approvedAt,
+      approvedBy: approvedBy ?? this.approvedBy,
+      status: status ?? this.status,
+    );
+  }
+
   bool get isRelocation => approvalType == 'Premise Relocation';
 
   bool get hasDocuments =>
-      (ssmFileUrl != null && ssmFileUrl!.isNotEmpty) ||
-      (certFileUrl != null && certFileUrl!.isNotEmpty) ||
-      (relocationCertFileUrl != null && relocationCertFileUrl!.isNotEmpty) ||
+      (ssmFileUrl != null && ssmFileUrl!.trim().isNotEmpty) ||
+      (certFileUrl != null && certFileUrl!.trim().isNotEmpty) ||
+      (relocationCertFileUrl != null && relocationCertFileUrl!.trim().isNotEmpty) ||
       photos.isNotEmpty ||
       documents.isNotEmpty;
 
@@ -60,49 +110,101 @@ class ApprovalHistoryRecord {
     final List<Map<String, dynamic>> list = [];
     if (documents.isNotEmpty) {
       for (final doc in documents) {
-        list.add(Map<String, dynamic>.from(doc));
+        final rawName = doc['name'] ?? doc['file_name'] ?? doc['fileName'] ?? doc['title'];
+        final rawUrl = doc['url'] ?? doc['file_url'] ?? doc['fileUrl'] ?? doc['link'];
+        final rawType = doc['type'] ?? doc['doc_type'] ?? doc['docType'] ?? '';
+
+        final url = (rawUrl?.toString() ?? '').trim();
+        String name = (rawName?.toString() ?? '').trim();
+        final type = rawType.toString().trim();
+
+        if (name.isEmpty || name.toLowerCase() == 'document') {
+          final upperType = type.toUpperCase();
+          if (upperType.contains('SSM')) {
+            name = 'SSM Registration Certificate';
+          } else if (upperType.contains('KRAFTANGAN') || upperType.contains('CERT')) {
+            name = 'Kraftangan Master Certificate';
+          } else if (upperType.contains('CRAFTING') || upperType.contains('PHOTO')) {
+            name = 'Crafting Proof Photo';
+          } else if (url.isNotEmpty) {
+            final fileName = url.split('?').first.split('/').last;
+            name = fileName.isNotEmpty ? fileName : 'Verification Document';
+          } else {
+            name = 'Verification Document';
+          }
+        }
+
+        if (url.isEmpty || !list.any((d) => d['url'] == url)) {
+          list.add({
+            'name': name,
+            'file_name': name,
+            'url': url,
+            'file_url': url,
+            'type': type,
+            'doc_type': type,
+          });
+        }
       }
     }
-    if (ssmFileUrl != null && ssmFileUrl!.isNotEmpty) {
+    if (ssmFileUrl != null && ssmFileUrl!.trim().isNotEmpty) {
+      final cleanUrl = ssmFileUrl!.trim();
       final isVillage = details.toLowerCase().contains('village') ||
           (ssmNumber != null && ssmNumber!.toLowerCase().contains('exempt'));
-      final already = list.any((d) => d['url'] == ssmFileUrl);
+      final already = list.any((d) => d['url'] == cleanUrl);
       if (!already) {
+        final docName = ssmFileName ??
+            (isVillage ? 'Crafting Proof Photo' : 'SSM Registration Certificate');
         list.add({
-          'name': ssmFileName ??
-              (isVillage ? 'Crafting Proof Photo' : 'SSM Registration Certificate'),
-          'url': ssmFileUrl!,
+          'name': docName,
+          'file_name': docName,
+          'url': cleanUrl,
+          'file_url': cleanUrl,
           'type': isVillage ? 'crafting_proof' : 'ssm',
+          'doc_type': isVillage ? 'CRAFTING_PHOTO' : 'SSM_BUSINESS_CERT',
         });
       }
     }
-    if (certFileUrl != null && certFileUrl!.isNotEmpty) {
-      final already = list.any((d) => d['url'] == certFileUrl);
+    if (certFileUrl != null && certFileUrl!.trim().isNotEmpty) {
+      final cleanUrl = certFileUrl!.trim();
+      final already = list.any((d) => d['url'] == cleanUrl);
       if (!already) {
+        final docName = certFileName ?? 'Kraftangan Master Certificate';
         list.add({
-          'name': certFileName ?? 'Kraftangan Master Certificate',
-          'url': certFileUrl!,
+          'name': docName,
+          'file_name': docName,
+          'url': cleanUrl,
+          'file_url': cleanUrl,
           'type': 'certificate',
+          'doc_type': 'KRAFTANGAN_MASTER_CERT',
         });
       }
     }
-    if (relocationCertFileUrl != null && relocationCertFileUrl!.isNotEmpty) {
-      final already = list.any((d) => d['url'] == relocationCertFileUrl);
+    if (relocationCertFileUrl != null && relocationCertFileUrl!.trim().isNotEmpty) {
+      final cleanUrl = relocationCertFileUrl!.trim();
+      final already = list.any((d) => d['url'] == cleanUrl);
       if (!already) {
+        final docName = relocationCertFileName ?? 'Updated Premise Certificate';
         list.add({
-          'name': relocationCertFileName ?? 'Updated Premise Certificate',
-          'url': relocationCertFileUrl!,
+          'name': docName,
+          'file_name': docName,
+          'url': cleanUrl,
+          'file_url': cleanUrl,
           'type': 'relocation_certificate',
+          'doc_type': 'RELOCATION_CERT',
         });
       }
     }
     for (int i = 0; i < photos.length; i++) {
-      final photoUrl = photos[i];
+      final photoUrl = photos[i].trim();
       if (photoUrl.isNotEmpty && !list.any((d) => d['url'] == photoUrl)) {
+        final docName = 'Studio Photo ${i + 1}';
         list.add({
-          'name': 'Studio Photo ${i + 1}',
+          'name': docName,
+          'file_name': docName,
           'url': photoUrl,
+          'file_url': photoUrl,
           'type': 'photo',
+          'doc_type': 'STUDIO_PHOTO',
         });
       }
     }

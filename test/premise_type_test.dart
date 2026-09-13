@@ -275,4 +275,87 @@ void main() {
       expect(validationError, isNotNull, reason: 'If SSM is provided, it must conform to valid format');
     });
   });
+
+  group('Artisan Tools & Materials and Proof Photo Resolution Tests', () {
+    test('UserModel.toolsAndMaterials filters out doc_ and premise: metadata tags', () {
+      const user = UserModel(
+        id: 'u-tools-1',
+        email: 'crafter@tools.com',
+        role: 'Artisan',
+        tags: [
+          'Canting Tool',
+          'Beeswax & Pine Resin',
+          'Natural Indigo Dye',
+          'doc_crafting_photo_url:https://storage/proof.webp',
+          'doc_crafting_photo_name:proof.webp',
+          'doc_studio_photo:https://storage/studio.webp',
+          'premise:Home / Village Workshop (Bengkel Kediaman / Desa)',
+          '__LIVE_DEMO_CLOSED__',
+        ],
+      );
+
+      final tools = user.toolsAndMaterials;
+      expect(tools.length, equals(3));
+      expect(tools, contains('Canting Tool'));
+      expect(tools, contains('Beeswax & Pine Resin'));
+      expect(tools, contains('Natural Indigo Dye'));
+      expect(tools.any((t) => t.startsWith('doc_') || t.startsWith('premise:') || t.startsWith('__')), isFalse);
+    });
+
+    test('UserModel.craftingPhotoUrl resolves from artisanDocuments, doc tags, or photos fallback', () {
+      const userWithDocTag = UserModel(
+        id: 'u-proof-1',
+        email: 'crafter@proof.com',
+        role: 'Artisan',
+        premiseType: 'Home / Village Workshop (Bengkel Kediaman / Desa)',
+        tags: [
+          'Canting Tool',
+          'doc_crafting_photo_url:https://storage/proof_photo.webp',
+          'doc_crafting_photo_name:proof_photo.webp',
+        ],
+      );
+      expect(userWithDocTag.craftingPhotoUrl, equals('https://storage/proof_photo.webp'));
+      expect(userWithDocTag.craftingPhotoName, equals('proof_photo.webp'));
+
+      const userWithStudioTag = UserModel(
+        id: 'u-proof-2',
+        email: 'crafter2@proof.com',
+        role: 'Artisan',
+        premiseType: 'Home / Village Workshop (Bengkel Kediaman / Desa)',
+        tags: [
+          'Batik Dye',
+          'doc_studio_photo:https://storage/studio_photo.webp',
+          'doc_studio_photo_name:studio_photo.webp',
+        ],
+      );
+      expect(userWithStudioTag.craftingPhotoUrl, equals('https://storage/studio_photo.webp'));
+      expect(userWithStudioTag.craftingPhotoName, equals('studio_photo.webp'));
+    });
+
+    test('ArtisanModel.fromMap cleans tags, excludes crafting photo from portfolio images, and exposes craftingPhotoUrl', () {
+      final artisanMap = {
+        'id': 'art-123',
+        'studio_name': 'Warisan Craft Studio',
+        'craft_category': 'Batik',
+        'state': 'Selangor',
+        'ssm_number': 'VILLAGE_EXEMPT',
+        'tags': [
+          'Canting Pen',
+          'Silk Fabric',
+          'doc_crafting_photo_url:https://storage/artisan_craft.webp',
+          'premise:Home / Village Workshop (Bengkel Kediaman / Desa)',
+          '__LIVE_DEMO_CLOSED__',
+        ],
+      };
+
+      final artisan = ArtisanModel.fromMap(artisanMap);
+      expect(artisan.isVillageWorkshop, isTrue);
+      expect(artisan.craftingPhotoUrl, equals('https://storage/artisan_craft.webp'));
+      expect(artisan.images.contains('https://storage/artisan_craft.webp'), isFalse);
+      expect(artisan.imageUrl, isNot(equals('https://storage/artisan_craft.webp')));
+      expect(artisan.tags, equals(['Canting Pen', 'Silk Fabric']));
+      expect(artisan.toolsAndMaterials, equals(['Canting Pen', 'Silk Fabric']));
+    });
+  });
 }
+

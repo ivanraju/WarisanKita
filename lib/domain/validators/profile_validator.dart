@@ -171,6 +171,52 @@ class ProfileValidator {
     return null;
   }
 
+  /// Normalizes a phone number to standard format (e.g. +60123456789 for Malaysian numbers).
+  static String normalizePhone(String? phone) {
+    if (phone == null) return '';
+    final clean = phone.trim().replaceAll(RegExp(r'[\s\-\(\)\.]'), '');
+    if (clean.isEmpty) return '';
+
+    if (clean.startsWith('+60')) {
+      return clean;
+    } else if (clean.startsWith('60')) {
+      return '+$clean';
+    } else if (clean.startsWith('0')) {
+      return '+60${clean.substring(1)}';
+    } else if (clean.startsWith('+')) {
+      return clean;
+    }
+    return clean;
+  }
+
+  /// Extracts digits only from a phone number string.
+  static String phoneDigitsOnly(String? phone) {
+    if (phone == null) return '';
+    return phone.replaceAll(RegExp(r'\D'), '');
+  }
+
+  /// Compares two phone numbers to see if they refer to the same contact line.
+  static bool arePhonesEqual(String? a, String? b) {
+    if (a == null || b == null) return false;
+    final normA = normalizePhone(a);
+    final normB = normalizePhone(b);
+    if (normA.isNotEmpty && normA == normB) return true;
+
+    final digitsA = phoneDigitsOnly(a);
+    final digitsB = phoneDigitsOnly(b);
+    if (digitsA.isEmpty || digitsB.isEmpty) return false;
+
+    if (digitsA == digitsB) return true;
+
+    final suffixA = digitsA.startsWith('60')
+        ? digitsA.substring(2)
+        : (digitsA.startsWith('0') ? digitsA.substring(1) : digitsA);
+    final suffixB = digitsB.startsWith('60')
+        ? digitsB.substring(2)
+        : (digitsB.startsWith('0') ? digitsB.substring(1) : digitsB);
+    return suffixA.isNotEmpty && suffixA == suffixB;
+  }
+
   /// Validates a biography or description.
   static String? validateBio(
     String? value, {

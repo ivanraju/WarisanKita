@@ -57,7 +57,11 @@ class ArtisanDetailScreen extends StatefulWidget {
   bool get isVillageWorkshop =>
       premiseType?.toLowerCase().contains('village') == true ||
       premiseType?.toLowerCase().contains('desa') == true ||
-      premiseType?.toLowerCase().contains('kediaman') == true;
+      premiseType?.toLowerCase().contains('kediaman') == true ||
+      premiseType?.toLowerCase().contains('home') == true ||
+      ssmNumber == 'VILLAGE_EXEMPT' ||
+      (ssmNumber != null && ssmNumber!.toLowerCase().contains('exempt')) ||
+      (ssmNumber != null && ssmNumber!.toLowerCase().contains('village'));
 
   @override
   State<ArtisanDetailScreen> createState() => _ArtisanDetailScreenState();
@@ -419,7 +423,7 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                                 ),
                               ),
                             ),
-                            if (widget.premiseType != null && widget.premiseType!.isNotEmpty)
+                            if (widget.isVillageWorkshop || (widget.premiseType != null && widget.premiseType!.isNotEmpty))
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 10,
@@ -692,7 +696,9 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
-                              Icons.verified_rounded,
+                              widget.isVillageWorkshop
+                                  ? Icons.cottage_rounded
+                                  : Icons.verified_rounded,
                               color: isDark
                                   ? const Color(0xFF34D399)
                                   : const Color(0xFF004D40),
@@ -701,7 +707,9 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                             const SizedBox(width: 6),
                             Flexible(
                               child: Text(
-                                tr('Verified Artisan Studio'),
+                                widget.isVillageWorkshop
+                                    ? tr('Verified Village Crafter')
+                                    : tr('Verified Commercial Studio'),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: GoogleFonts.plusJakartaSans(
@@ -775,16 +783,45 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                   ),
                   const SizedBox(height: 12),
 
+                  if (widget.isVillageWorkshop) ...[
+                    _buildCredentialTile(
+                      icon: Icons.verified_user_rounded,
+                      title: tr('SSM Registration: Exempted (Village Crafter)'),
+                      subtitle: tr(
+                        'Exempted from commercial registration under National Heritage Preservation Scheme • Recognized traditional craft practitioner',
+                      ),
+                      isDark: isDark,
+                    ),
+                    _buildCredentialTile(
+                      icon: Icons.photo_camera_rounded,
+                      title: tr('Traditional Crafting Evidence & Workshop'),
+                      subtitle: tr(
+                        'Authentic handcrafted production and workshop evidence verified by Kraftangan Malaysia',
+                      ),
+                      isDark: isDark,
+                    ),
+                  ] else ...[
+                    _buildCredentialTile(
+                      icon: Icons.store_rounded,
+                      title: tr('SSM Business Registration'),
+                      subtitle: (widget.ssmNumber != null &&
+                              widget.ssmNumber!.trim().isNotEmpty &&
+                              widget.ssmNumber != 'VILLAGE_EXEMPT')
+                          ? tr(
+                              'Registration #${widget.ssmNumber!.trim()} • Official Registered Commercial Studio',
+                            )
+                          : tr('Official Registered Commercial Studio Premise'),
+                      isDark: isDark,
+                    ),
+                  ],
                   _buildCredentialTile(
-                    icon: Icons.verified_rounded,
+                    icon: Icons.workspace_premium_rounded,
                     title: tr('Kraftangan Malaysia Accredited Master'),
-                    subtitle:
-                        widget.documents.any((d) {
-                          final t =
-                              d['doc_type']?.toString().toUpperCase() ?? '';
-                          return t == 'KRAFTANGAN_MASTER_CERT' ||
-                              t == 'KRAFTANGAN_CERT';
-                        })
+                    subtitle: widget.documents.any((d) {
+                      final t = d['doc_type']?.toString().toUpperCase() ?? '';
+                      return t == 'KRAFTANGAN_MASTER_CERT' ||
+                          t == 'KRAFTANGAN_CERT';
+                    })
                         ? tr(
                             'Accredited in ${widget.craftCategory} (${widget.state}) • Official Certificate Verified',
                           )
@@ -794,19 +831,7 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                     isDark: isDark,
                   ),
                   _buildCredentialTile(
-                    icon: Icons.business_rounded,
-                    title: tr('SSM Business Registration'),
-                    subtitle:
-                        (widget.ssmNumber != null &&
-                            widget.ssmNumber!.trim().isNotEmpty)
-                        ? tr(
-                            'Registration #${widget.ssmNumber!.trim()} • Official Registered Heritage Studio',
-                          )
-                        : tr('Official Registered Heritage Studio Premise'),
-                    isDark: isDark,
-                  ),
-                  _buildCredentialTile(
-                    icon: Icons.workspace_premium_rounded,
+                    icon: Icons.history_edu_rounded,
                     title: tr('Heritage Craft Practitioner'),
                     subtitle: widget.experience.trim().isNotEmpty
                         ? tr(
@@ -818,7 +843,7 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                     isDark: isDark,
                   ),
 
-                  if (widget.tags.isNotEmpty) ...[
+                  if (widget.tags.any((t) => !t.startsWith('__') && !t.startsWith('doc_') && !t.startsWith('premise:'))) ...[
                     const SizedBox(height: 24),
                     Text(
                       tr('Materials & Traditional Tools Used'),
@@ -834,6 +859,10 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                       spacing: 8,
                       runSpacing: 8,
                       children: widget.tags
+                          .where((t) =>
+                              !t.startsWith('__') &&
+                              !t.startsWith('doc_') &&
+                              !t.startsWith('premise:'))
                           .map(
                             (tag) => Chip(
                               backgroundColor: isDark

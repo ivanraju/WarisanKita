@@ -1418,11 +1418,18 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                   padding: const EdgeInsets.symmetric(horizontal: 20.0),
                   sliver: SliverGrid(
                     gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
+                        SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
                           crossAxisSpacing: 16,
                           mainAxisSpacing: 16,
-                          childAspectRatio: 0.82,
+                          // A fixed aspect ratio made the serif title compete for
+                          // too little height on narrow phones with larger system
+                          // text. Keep the two-column layout, but let each card grow
+                          // with the user's text scale instead.
+                          mainAxisExtent: (238.0 +
+                              (MediaQuery.textScalerOf(context).scale(1.0) - 1.0)
+                                      .clamp(0.0, 0.5) *
+                                  60.0).toDouble(),
                         ),
                     delegate: SliverChildBuilderDelegate((context, index) {
                       final stamp = gameStat.stamps[index];
@@ -1473,22 +1480,26 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
 
                                 const SizedBox(height: 12),
 
-                                Flexible(
-                                  child: Text(
-                                    stamp.title,
-                                    maxLines: 3,
-                                    overflow: TextOverflow.ellipsis,
-                                    textAlign: TextAlign.center,
-                                    style: GoogleFonts.dmSerifDisplay(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.bold,
-                                      color: unlocked
-                                          ? (isDark
-                                                ? const Color(0xFFF5EBCF)
-                                                : const Color(0xFF0F172A))
-                                          : (isDark
-                                                ? const Color(0xFFB9C8C3)
-                                                : Colors.grey[500]),
+                                SizedBox(
+                                  height: 50,
+                                  child: Center(
+                                    child: Text(
+                                      stamp.title,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      textAlign: TextAlign.center,
+                                      style: GoogleFonts.dmSerifDisplay(
+                                        fontSize: 15,
+                                        height: 1.15,
+                                        fontWeight: FontWeight.bold,
+                                        color: unlocked
+                                            ? (isDark
+                                                  ? const Color(0xFFF5EBCF)
+                                                  : const Color(0xFF0F172A))
+                                            : (isDark
+                                                  ? const Color(0xFFB9C8C3)
+                                                  : Colors.grey[500]),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -1517,10 +1528,14 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                 ],
 
                                 Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 4,
+                                  constraints: BoxConstraints(
+                                    minHeight: unlocked ? 24 : 38,
                                   ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 5,
+                                  ),
+                                  alignment: Alignment.center,
                                   decoration: BoxDecoration(
                                     color: unlocked
                                         ? color.withValues(alpha: 0.1)
@@ -1533,8 +1548,12 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                     unlocked && stamp.earnedAt != null
                                         ? _formatStampDate(stamp.earnedAt!)
                                         : 'COMPLETE QUEST TO UNLOCK',
+                                    maxLines: unlocked ? 1 : 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    textAlign: TextAlign.center,
                                     style: GoogleFonts.plusJakartaSans(
                                       fontSize: unlocked ? 10 : 8,
+                                      height: 1.2,
                                       fontWeight: FontWeight.bold,
                                       color: unlocked
                                           ? color

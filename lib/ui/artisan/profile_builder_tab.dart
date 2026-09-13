@@ -151,10 +151,10 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     }
 
     // 10. Tools & Materials Tags
-    final userTags = user.tags;
-    if (_toolsAndMaterials.length != userTags.length) return true;
+    final userTools = user.toolsAndMaterials;
+    if (_toolsAndMaterials.length != userTools.length) return true;
     for (final tag in _toolsAndMaterials) {
-      if (!userTags.contains(tag)) return true;
+      if (!userTools.contains(tag)) return true;
     }
 
     return false;
@@ -274,31 +274,84 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
       _selectedWorkshopPin = LatLng(user.latitude!, user.longitude!);
     }
 
+    // 1. Sync documents
+    final newDocs = Map<String, String>.from(_documents);
+    for (var doc in user.artisanDocuments) {
+      final type = doc['doc_type'] as String?;
+      final url = doc['file_url'] as String?;
+      if (type != null && url != null && url.isNotEmpty) {
+        newDocs[type] = url;
+        if (type == 'STUDIO_PHOTO' ||
+            type == 'CRAFTING_PHOTO' ||
+            type == 'VILLAGE_CRAFTING_PHOTO') {
+          newDocs['CRAFTING_PHOTO'] = url;
+        }
+      }
+    }
+    if (user.isVillageWorkshop &&
+        (newDocs['CRAFTING_PHOTO'] == null ||
+            newDocs['CRAFTING_PHOTO']!.isEmpty)) {
+      final fallbackCraft = user.craftingPhotoUrl ?? user.ssmFileUrl;
+      if (fallbackCraft != null && fallbackCraft.isNotEmpty) {
+        newDocs['CRAFTING_PHOTO'] = fallbackCraft;
+      }
+    }
+    if (!user.isVillageWorkshop &&
+        (newDocs['SSM_BUSINESS_CERT'] == null ||
+            newDocs['SSM_BUSINESS_CERT']!.isEmpty)) {
+      final fallbackSsm = user.ssmFileUrl;
+      if (fallbackSsm != null && fallbackSsm.isNotEmpty) {
+        newDocs['SSM_BUSINESS_CERT'] = fallbackSsm;
+      }
+    }
+    if (newDocs['KRAFTANGAN_MASTER_CERT'] == null ||
+        newDocs['KRAFTANGAN_MASTER_CERT']!.isEmpty) {
+      final fallbackCert = user.certFileUrl;
+      if (fallbackCert != null && fallbackCert.isNotEmpty) {
+        newDocs['KRAFTANGAN_MASTER_CERT'] = fallbackCert;
+      }
+    }
+    if (user.isVillageWorkshop &&
+        (newDocs['CRAFTING_PHOTO'] == null ||
+            newDocs['CRAFTING_PHOTO']!.isEmpty)) {
+      if (_portfolioImages.isNotEmpty) {
+        newDocs['CRAFTING_PHOTO'] = _portfolioImages.first;
+      } else if (user.photos.isNotEmpty) {
+        newDocs['CRAFTING_PHOTO'] = user.photos.first;
+      }
+    }
+    _documents = newDocs;
+
+    // 2. Sync portfolio images (ONLY actual portfolio showcase images)
     if (force || _portfolioImages.isEmpty) {
       final newImages = <String>[];
-      final newDocs = <String, String>{};
       for (var doc in user.artisanDocuments) {
         final type = doc['doc_type'] as String?;
         final url = doc['file_url'] as String?;
-        if (type != null && url != null) {
-          if (type == 'PORTFOLIO_IMAGE' || type == 'STUDIO_PHOTO') {
-            newImages.add(url);
-          } else {
-            newDocs[type] = url;
-          }
+        if (type == 'PORTFOLIO_IMAGE' && url != null && url.isNotEmpty) {
+          if (!newImages.contains(url)) newImages.add(url);
         }
       }
       if (newImages.isNotEmpty) {
         _portfolioImages = newImages;
       }
-      if (newDocs.isNotEmpty) {
-        _documents = newDocs;
-      }
     }
 
+    // 3. Sync Tools & Materials
     if (force || _toolsAndMaterials.isEmpty) {
-      if (user.tags.isNotEmpty) {
-        _toolsAndMaterials = List<String>.from(user.tags);
+      final tools = user.toolsAndMaterials;
+      if (tools.isNotEmpty) {
+        _toolsAndMaterials = List<String>.from(tools);
+      } else if (user.tags.isNotEmpty) {
+        final filtered = user.tags
+            .where((t) =>
+                !t.startsWith('doc_') &&
+                !t.startsWith('premise:') &&
+                !t.startsWith('__'))
+            .toList();
+        if (filtered.isNotEmpty) {
+          _toolsAndMaterials = List<String>.from(filtered);
+        }
       }
     }
   }
@@ -1120,6 +1173,9 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
           phoneNumber: _phoneController.text.trim().isNotEmpty
               ? _phoneController.text.trim()
               : user?.phone,
+          premiseType: user?.isVillageWorkshop == true
+              ? 'Home / Village Workshop (Bengkel Kediaman / Desa)'
+              : (user?.premiseType ?? 'Commercial Studio'),
         ),
       ),
     );
@@ -1178,8 +1234,13 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
 
       if (uploadRes != null) {
         setState(() {
-          if (docType == 'PORTFOLIO_IMAGE' || docType == 'STUDIO_PHOTO') {
+          if (docType == 'PORTFOLIO_IMAGE') {
             _portfolioImages.add(uploadRes['url']!);
+          } else if (docType == 'STUDIO_PHOTO' ||
+              docType == 'CRAFTING_PHOTO' ||
+              docType == 'VILLAGE_CRAFTING_PHOTO') {
+            _documents['CRAFTING_PHOTO'] = uploadRes['url']!;
+            _documents[docType] = uploadRes['url']!;
           } else {
             _documents[docType] = uploadRes['url']!;
           }
@@ -1293,9 +1354,16 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final authVM = context.watch<AuthViewModel>();
     final currentUser = authVM.currentUser;
+    final bool isVillage = currentUser?.isVillageWorkshop ?? false;
     final int ssmUploaded = _documents['SSM_BUSINESS_CERT'] != null ? 1 : 0;
     final int certUploaded = _documents['KRAFTANGAN_MASTER_CERT'] != null ? 1 : 0;
-    final int totalUploadedDocs = ssmUploaded + certUploaded;
+    final int craftingPhotoUploaded = _documents['CRAFTING_PHOTO'] != null ? 1 : 0;
+    final int totalUploadedDocs = isVillage
+        ? (craftingPhotoUploaded + certUploaded)
+        : (ssmUploaded + certUploaded);
+    final String docCounterText = isVillage
+        ? (craftingPhotoUploaded > 0 ? '$totalUploadedDocs / 2 Uploaded' : '0 / 1 Required')
+        : '$totalUploadedDocs / 2 Uploaded';
     final bool hasUploadedDocs = totalUploadedDocs > 0;
 
     return HeritageBackground(
@@ -1372,30 +1440,75 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                 children: [
                   Container(
                     padding: const EdgeInsets.all(10),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF10B981),
+                    decoration: BoxDecoration(
+                      color: isVillage ? const Color(0xFF059669) : const Color(0xFF10B981),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.verified_user_rounded, color: Colors.white, size: 20),
+                    child: Icon(
+                      isVillage ? Icons.cottage_rounded : Icons.verified_user_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Verified Master Artisan Profile (Approved)',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? const Color(0xFF34D399) : const Color(0xFF065F46),
-                          ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                isVillage
+                                    ? 'Verified Heritage Village Crafter (Approved)'
+                                    : 'Verified Commercial Studio (Approved)',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? const Color(0xFF34D399) : const Color(0xFF065F46),
+                                ),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: isVillage
+                                    ? (isDark ? const Color(0xFF1E3A34) : const Color(0xFFD1FAE5))
+                                    : (isDark ? const Color(0xFF1E293B) : const Color(0xFFE0F2FE)),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    isVillage ? Icons.cottage_outlined : Icons.store_outlined,
+                                    size: 11,
+                                    color: isVillage ? const Color(0xFF047857) : const Color(0xFF0369A1),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    isVillage ? 'VILLAGE' : 'COMMERCIAL',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w800,
+                                      color: isVillage ? const Color(0xFF047857) : const Color(0xFF0369A1),
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
+                        const SizedBox(height: 3),
                         Text(
-                          'Your studio license is active & verified by Kraftangan Malaysia Officers. Profile edits sync live to tourists.',
+                          isVillage
+                              ? 'Premise: Home / Village Workshop (Bengkel Kediaman / Desa) • Legally exempted from SSM registration under the National Heritage Preservation Scheme.'
+                              : 'Premise: Commercial Studio (Premis Komersial) • Active studio license verified by Kraftangan Malaysia Officers. Profile edits sync live.',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 11,
                             color: isDark ? Colors.white70 : const Color(0xFF047857),
+                            height: 1.35,
                           ),
                         ),
                       ],
@@ -2276,7 +2389,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                         : null,
                   ),
                   child: Text(
-                    '$totalUploadedDocs / 2 Uploaded',
+                    docCounterText,
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
@@ -2290,7 +2403,9 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
             ),
             const SizedBox(height: 6),
             Text(
-              'Upload official certificates to populate master credentials on the Tourist Profile view.',
+              isVillage
+                  ? 'Village crafters are recognized under the National Heritage Preservation Scheme. Verification relies on your authentic craft proof photos.'
+                  : 'Upload official certificates to populate master credentials on the Tourist Profile view.',
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 12,
                 color: isDark ? Colors.white70 : Colors.grey[600],
@@ -2299,24 +2414,143 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
 
             const SizedBox(height: 16),
 
-            _buildDocumentUploadTile(
-              isDark: isDark,
-              title: 'Business Registration (SSM) Certificate',
-              subtitle: _documents['SSM_BUSINESS_CERT'] != null ? 'Uploaded Document' : 'Required',
-              icon: Icons.article_rounded,
-              isUploaded: _documents['SSM_BUSINESS_CERT'] != null,
-              onTap: () => _uploadDocument('SSM_BUSINESS_CERT'),
-              onView: _documents['SSM_BUSINESS_CERT'] != null ? () => _viewDocument(_documents['SSM_BUSINESS_CERT']!) : null,
-            ),
-            _buildDocumentUploadTile(
-              isDark: isDark,
-              title: 'Kraftangan Malaysia Master Certification',
-              subtitle: _documents['KRAFTANGAN_MASTER_CERT'] != null ? 'Uploaded Document' : 'Optional',
-              icon: Icons.workspace_premium_rounded,
-              isUploaded: _documents['KRAFTANGAN_MASTER_CERT'] != null,
-              onTap: () => _uploadDocument('KRAFTANGAN_MASTER_CERT'),
-              onView: _documents['KRAFTANGAN_MASTER_CERT'] != null ? () => _viewDocument(_documents['KRAFTANGAN_MASTER_CERT']!) : null,
-            ),
+            if (isVillage) ...[
+              // Dedicated SSM Exemption Notice Card
+              Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF0D2825) : const Color(0xFFECFDF5),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFA7F3D0),
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.verified_user_rounded,
+                        color: Color(0xFF059669),
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                'Business Registration (SSM)',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF10B981),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  'EXEMPTED',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Exempted (Village Crafter) • Traditional Home / Village Crafters are legally exempted from SSM registration under the National Heritage Preservation Scheme. Verification relies on your authentic craft proof photos.',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11,
+                              color: isDark ? Colors.white70 : const Color(0xFF047857),
+                              height: 1.4,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Crafting Proof Photo Tile
+              _buildDocumentUploadTile(
+                isDark: isDark,
+                title: 'Traditional Crafting Proof Photo',
+                subtitle: _documents['CRAFTING_PHOTO'] != null
+                    ? 'Uploaded & Verified Proof'
+                    : 'Required for Village Crafters',
+                icon: Icons.photo_camera_rounded,
+                isUploaded: _documents['CRAFTING_PHOTO'] != null,
+                onTap: () => _uploadDocument('CRAFTING_PHOTO'),
+                onView: _documents['CRAFTING_PHOTO'] != null
+                    ? () => _viewDocument(_documents['CRAFTING_PHOTO']!)
+                    : null,
+              ),
+
+              // Optional Kraftangan Master Certification
+              _buildDocumentUploadTile(
+                isDark: isDark,
+                title: 'Kraftangan Malaysia Master Certification',
+                subtitle: _documents['KRAFTANGAN_MASTER_CERT'] != null
+                    ? 'Uploaded Document'
+                    : 'Optional',
+                icon: Icons.workspace_premium_rounded,
+                isUploaded: _documents['KRAFTANGAN_MASTER_CERT'] != null,
+                onTap: () => _uploadDocument('KRAFTANGAN_MASTER_CERT'),
+                onView: _documents['KRAFTANGAN_MASTER_CERT'] != null
+                    ? () => _viewDocument(_documents['KRAFTANGAN_MASTER_CERT']!)
+                    : null,
+              ),
+            ] else ...[
+              // Commercial Studio SSM Certificate Tile
+              _buildDocumentUploadTile(
+                isDark: isDark,
+                title: 'Business Registration (SSM) Certificate',
+                subtitle: _documents['SSM_BUSINESS_CERT'] != null
+                    ? 'Uploaded Document'
+                    : 'Required',
+                icon: Icons.article_rounded,
+                isUploaded: _documents['SSM_BUSINESS_CERT'] != null,
+                onTap: () => _uploadDocument('SSM_BUSINESS_CERT'),
+                onView: _documents['SSM_BUSINESS_CERT'] != null
+                    ? () => _viewDocument(_documents['SSM_BUSINESS_CERT']!)
+                    : null,
+              ),
+
+              // Commercial Studio Kraftangan Master Certification
+              _buildDocumentUploadTile(
+                isDark: isDark,
+                title: 'Kraftangan Malaysia Master Certification',
+                subtitle: _documents['KRAFTANGAN_MASTER_CERT'] != null
+                    ? 'Uploaded Document'
+                    : 'Optional',
+                icon: Icons.workspace_premium_rounded,
+                isUploaded: _documents['KRAFTANGAN_MASTER_CERT'] != null,
+                onTap: () => _uploadDocument('KRAFTANGAN_MASTER_CERT'),
+                onView: _documents['KRAFTANGAN_MASTER_CERT'] != null
+                    ? () => _viewDocument(_documents['KRAFTANGAN_MASTER_CERT']!)
+                    : null,
+              ),
+            ],
 
             const SizedBox(height: 36),
 

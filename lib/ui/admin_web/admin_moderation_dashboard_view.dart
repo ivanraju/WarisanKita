@@ -5,6 +5,7 @@ import 'package:warisan_kita/domain/models/pending_artisan_profile.dart';
 import 'package:warisan_kita/domain/models/user.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/forum_viewmodel.dart';
+import 'package:warisan_kita/viewmodels/gamification_moderation_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/moderation_viewmodel.dart';
 import 'package:warisan_kita/ui/admin_web/widgets/admin_forum_moderation_tab.dart';
 import 'package:warisan_kita/ui/admin_web/widgets/admin_quest_approvals_tab.dart';
@@ -21,10 +22,12 @@ class AdminModerationDashboardView extends StatefulWidget {
   const AdminModerationDashboardView({super.key});
 
   @override
-  State<AdminModerationDashboardView> createState() => _AdminModerationDashboardViewState();
+  State<AdminModerationDashboardView> createState() =>
+      _AdminModerationDashboardViewState();
 }
 
-class _AdminModerationDashboardViewState extends State<AdminModerationDashboardView> {
+class _AdminModerationDashboardViewState
+    extends State<AdminModerationDashboardView> {
   bool _isVerifyingSession = true;
 
   @override
@@ -49,7 +52,10 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
     });
   }
 
-  Future<void> _handleApprove(BuildContext context, PendingArtisanProfile artisan) async {
+  Future<void> _handleApprove(
+    BuildContext context,
+    PendingArtisanProfile artisan,
+  ) async {
     final vm = context.read<ModerationViewModel>();
     final success = await vm.approveArtisan(artisan.id);
 
@@ -66,14 +72,18 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
                   artisan.isRelocationRequest
                       ? 'WORKSHOP RELOCATION APPROVED (${artisan.name})'
                       : 'PROFILE APPROVED SUCCESSFULLY (${artisan.name})',
-                  style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold),
+                  style: GoogleFonts.plusJakartaSans(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],
           ),
           backgroundColor: const Color(0xFF10B981),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
           width: 480,
         ),
       );
@@ -86,22 +96,31 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  vm.artisanApprovalError ?? 'Approval failed. Please check artisan quest state.',
-                  style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold),
+                  vm.artisanApprovalError ??
+                      'Approval failed. Please check artisan quest state.',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],
           ),
           backgroundColor: const Color(0xFFEF4444),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
           width: 480,
         ),
       );
     }
   }
 
-  Future<void> _handleReject(BuildContext context, PendingArtisanProfile artisan, [String? reason]) async {
+  Future<void> _handleReject(
+    BuildContext context,
+    PendingArtisanProfile artisan, [
+    String? reason,
+  ]) async {
     final vm = context.read<ModerationViewModel>();
     await vm.rejectArtisan(artisan.id, reason: reason);
 
@@ -116,11 +135,11 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
               child: Text(
                 reason != null && reason.trim().isNotEmpty
                     ? (artisan.isRelocationRequest
-                        ? 'RELOCATION REJECTED (${artisan.name}): "$reason"'
-                        : 'PROFILE REJECTED (${artisan.name}): "$reason"')
+                          ? 'RELOCATION REJECTED (${artisan.name}): "$reason"'
+                          : 'PROFILE REJECTED (${artisan.name}): "$reason"')
                     : (artisan.isRelocationRequest
-                        ? 'RELOCATION REJECTED (${artisan.name})'
-                        : 'PROFILE REJECTED (${artisan.name})'),
+                          ? 'RELOCATION REJECTED (${artisan.name})'
+                          : 'PROFILE REJECTED (${artisan.name})'),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -152,13 +171,17 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
               Icon(Icons.shield_outlined, color: Colors.white, size: 20),
               SizedBox(width: 10),
               Expanded(
-                child: Text('ADMIN SECURITY RESTRICTION: ADMINISTRATOR ACCOUNTS ARE PROTECTED AND CANNOT BE SUSPENDED'),
+                child: Text(
+                  'ADMIN SECURITY RESTRICTION: ADMINISTRATOR ACCOUNTS ARE PROTECTED AND CANNOT BE SUSPENDED',
+                ),
               ),
             ],
           ),
           backgroundColor: const Color(0xFFEF4444),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
           width: 560,
         ),
       );
@@ -169,20 +192,33 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
       context: context,
       builder: (dialogCtx) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: Row(
             children: [
-              const Icon(Icons.warning_amber_rounded, color: Color(0xFFEF4444), size: 24),
+              const Icon(
+                Icons.warning_amber_rounded,
+                color: Color(0xFFEF4444),
+                size: 24,
+              ),
               const SizedBox(width: 10),
               Text(
                 'Suspend User Account',
-                style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: const Color(0xFF0F172A)),
+                style: GoogleFonts.dmSerifDisplay(
+                  fontSize: 20,
+                  color: const Color(0xFF0F172A),
+                ),
               ),
             ],
           ),
           content: Text(
             'Are you sure you want to suspend ${user.displayName ?? user.email}? This will immediately invalidate their active sessions.',
-            style: GoogleFonts.plusJakartaSans(fontSize: 13, height: 1.5, color: const Color(0xFF475569)),
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 13,
+              height: 1.5,
+              color: const Color(0xFF475569),
+            ),
           ),
           actions: [
             TextButton(
@@ -193,7 +229,9 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFEF4444),
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
               onPressed: () {
                 final vm = context.read<ModerationViewModel>();
@@ -202,15 +240,22 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
 
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('USER ACCOUNT SUSPENDED: Login access revoked (${user.displayName ?? user.email})'),
+                    content: Text(
+                      'USER ACCOUNT SUSPENDED: Login access revoked (${user.displayName ?? user.email})',
+                    ),
                     backgroundColor: const Color(0xFFEF4444),
                     behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                     width: 480,
                   ),
                 );
               },
-              child: const Text('CONFIRM SUSPENSION', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: const Text(
+                'CONFIRM SUSPENSION',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
           ],
         );
@@ -224,7 +269,9 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('USER ACCOUNT REACTIVATED SUCCESSFULLY (${user.displayName ?? user.email})'),
+        content: Text(
+          'USER ACCOUNT REACTIVATED SUCCESSFULLY (${user.displayName ?? user.email})',
+        ),
         backgroundColor: const Color(0xFF10B981),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -245,13 +292,17 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
               Icon(Icons.shield_outlined, color: Colors.white, size: 20),
               SizedBox(width: 10),
               Expanded(
-                child: Text('ADMIN SECURITY RESTRICTION: Administrator credentials cannot be reset via moderation console.'),
+                child: Text(
+                  'ADMIN SECURITY RESTRICTION: Administrator credentials cannot be reset via moderation console.',
+                ),
               ),
             ],
           ),
           backgroundColor: const Color(0xFFEF4444),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
           width: 560,
         ),
       );
@@ -265,7 +316,11 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.mark_email_read_rounded, color: Colors.white, size: 20),
+            const Icon(
+              Icons.mark_email_read_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
             const SizedBox(width: 10),
             Text('PASSWORD RESET EMAIL SENT TO ${user.email}'),
           ],
@@ -286,9 +341,7 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
       return const Scaffold(
         backgroundColor: Color(0xFFF8FAFC),
         body: Center(
-          child: CircularProgressIndicator(
-            color: Color(0xFF10B981),
-          ),
+          child: CircularProgressIndicator(color: Color(0xFF10B981)),
         ),
       );
     }
@@ -311,7 +364,8 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
       child: Consumer<ModerationViewModel>(
         builder: (context, viewModel, child) {
           final isUserManagementTab = viewModel.activeTab == 'User Management';
-          final isRelocationTab = viewModel.activeTab == 'Workshop Relocations' ||
+          final isRelocationTab =
+              viewModel.activeTab == 'Workshop Relocations' ||
               viewModel.activeTab == 'Premise Relocations';
 
           return Scaffold(
@@ -348,27 +402,33 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
                         // Main Scrollable Area
                         Expanded(
                           child: viewModel.activeTab == 'Overview'
-                              ? AdminOverviewTab(onNavigateTab: (tab) => viewModel.setActiveTab(tab))
+                              ? AdminOverviewTab(
+                                  onNavigateTab: (tab) =>
+                                      viewModel.setActiveTab(tab),
+                                )
                               : viewModel.activeTab == 'Active Artisans'
-                                  ? const AdminActiveArtisansTab()
-                                  : viewModel.activeTab == 'Quest Approvals'
-                                      ? const AdminQuestApprovalsTab()
-                                      : viewModel.activeTab == 'Forum Moderation'
-                                          ? const AdminForumModerationTab()
-                                          : viewModel.activeTab == 'Approval History'
-                                              ? const AdminApprovalHistoryTab()
-                                              : SingleChildScrollView(
-                                  padding: EdgeInsets.all(isMobile ? 16.0 : 32.0),
+                              ? const AdminActiveArtisansTab()
+                              : viewModel.activeTab == 'Quest Approvals'
+                              ? const AdminQuestApprovalsTab()
+                              : viewModel.activeTab == 'Forum Moderation'
+                              ? const AdminForumModerationTab()
+                              : viewModel.activeTab == 'Approval History'
+                              ? const AdminApprovalHistoryTab()
+                              : SingleChildScrollView(
+                                  padding: EdgeInsets.all(
+                                    isMobile ? 16.0 : 32.0,
+                                  ),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       // Title & Subtitle Header
                                       Text(
                                         isUserManagementTab
                                             ? 'Registered User Management'
                                             : isRelocationTab
-                                                ? 'Workshop Premise Relocations'
-                                                : 'Pending Artisan Profiles',
+                                            ? 'Workshop Premise Relocations'
+                                            : 'Pending Artisan Profiles',
                                         style: GoogleFonts.dmSerifDisplay(
                                           fontSize: isMobile ? 24 : 32,
                                           fontWeight: FontWeight.bold,
@@ -380,8 +440,8 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
                                         isUserManagementTab
                                             ? 'Manage, monitor, and suspend active tourist and artisan accounts.'
                                             : isRelocationTab
-                                                ? 'Review, verify, and approve workshop premise relocation requests submitted by accredited master artisans.'
-                                                : 'Review, verify, and approve traditional Malaysian artisan profile submissions.',
+                                            ? 'Review, verify, and approve workshop premise relocation requests submitted by accredited master artisans.'
+                                            : 'Review, verify, and approve traditional Malaysian artisan profile submissions.',
                                         style: GoogleFonts.plusJakartaSans(
                                           fontSize: isMobile ? 12 : 14,
                                           color: const Color(0xFF64748B),
@@ -391,36 +451,71 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
                                       const SizedBox(height: 24),
 
                                       // Summary Metric Cards Row
-                                      _buildMetricsRow(context, viewModel, isUserManagementTab, isRelocationTab),
+                                      _buildMetricsRow(
+                                        context,
+                                        viewModel,
+                                        isUserManagementTab,
+                                        isRelocationTab,
+                                      ),
 
                                       const SizedBox(height: 28),
 
                                       // Controls Row
                                       if (isUserManagementTab)
-                                        _buildUserFilterControlsRow(context, viewModel)
+                                        _buildUserFilterControlsRow(
+                                          context,
+                                          viewModel,
+                                        )
                                       else
-                                        _buildFilterControlsRow(context, viewModel, isRelocation: isRelocationTab),
+                                        _buildFilterControlsRow(
+                                          context,
+                                          viewModel,
+                                          isRelocation: isRelocationTab,
+                                        ),
                                       const SizedBox(height: 20),
 
                                       // Main Data Table Component
                                       if (isUserManagementTab)
                                         UserManagementTable(
                                           users: viewModel.filteredUsers,
-                                          onSuspend: (user) => _handleSuspendUser(context, user),
-                                          onReactivate: (user) => _handleReactivateUser(context, user),
-                                          onResetPassword: (user) => _handleResetPassword(context, user),
+                                          onSuspend: (user) =>
+                                              _handleSuspendUser(context, user),
+                                          onReactivate: (user) =>
+                                              _handleReactivateUser(
+                                                context,
+                                                user,
+                                              ),
+                                          onResetPassword: (user) =>
+                                              _handleResetPassword(
+                                                context,
+                                                user,
+                                              ),
                                         )
                                       else if (isRelocationTab)
                                         PendingRelocationsTable(
-                                          relocations: viewModel.filteredRelocations,
-                                          onApprove: (artisan) => _handleApprove(context, artisan),
-                                          onReject: (artisan, reason) => _handleReject(context, artisan, reason),
+                                          relocations:
+                                              viewModel.filteredRelocations,
+                                          onApprove: (artisan) =>
+                                              _handleApprove(context, artisan),
+                                          onReject: (artisan, reason) =>
+                                              _handleReject(
+                                                context,
+                                                artisan,
+                                                reason,
+                                              ),
                                         )
                                       else
                                         PendingArtisansTable(
-                                          artisans: viewModel.filteredPendingProfiles,
-                                          onApprove: (artisan) => _handleApprove(context, artisan),
-                                          onReject: (artisan, reason) => _handleReject(context, artisan, reason),
+                                          artisans:
+                                              viewModel.filteredPendingProfiles,
+                                          onApprove: (artisan) =>
+                                              _handleApprove(context, artisan),
+                                          onReject: (artisan, reason) =>
+                                              _handleReject(
+                                                context,
+                                                artisan,
+                                                reason,
+                                              ),
                                         ),
                                     ],
                                   ),
@@ -455,12 +550,19 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
                 if (!isDesktop)
                   Builder(
                     builder: (scaffoldCtx) => IconButton(
-                      icon: const Icon(Icons.menu_rounded, color: Color(0xFF334155)),
+                      icon: const Icon(
+                        Icons.menu_rounded,
+                        color: Color(0xFF334155),
+                      ),
                       onPressed: () => Scaffold.of(scaffoldCtx).openDrawer(),
                       tooltip: 'Open Menu',
                     ),
                   ),
-                const Icon(Icons.admin_panel_settings_rounded, color: Color(0xFF10B981), size: 20),
+                const Icon(
+                  Icons.admin_panel_settings_rounded,
+                  color: Color(0xFF10B981),
+                  size: 20,
+                ),
                 const SizedBox(width: 8),
                 Flexible(
                   child: Text(
@@ -481,16 +583,22 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
             mainAxisSize: MainAxisSize.min,
             children: [
               IconButton(
-                icon: const Icon(Icons.refresh_rounded, color: Color(0xFF64748B)),
+                icon: const Icon(
+                  Icons.refresh_rounded,
+                  color: Color(0xFF64748B),
+                ),
                 tooltip: 'Refresh Moderation & User Data',
                 onPressed: () async {
                   final modVM = context.read<ModerationViewModel>();
                   final forumVM = context.read<ForumViewModel>();
+                  final questModerationVM = context
+                      .read<GamificationModerationViewModel>();
                   await Future.wait([
                     modVM.refreshAllData(),
                     forumVM.fetchThreads(),
                     forumVM.fetchForumReportQueue(),
                     forumVM.fetchForumModerationHistory(),
+                    questModerationVM.loadRequests(),
                   ]);
                   if (!context.mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -505,20 +613,32 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
               if (isDesktop) ...[
                 const SizedBox(width: 8),
                 IconButton(
-                  icon: const Icon(Icons.notifications_none_rounded, color: Color(0xFF64748B)),
+                  icon: const Icon(
+                    Icons.notifications_none_rounded,
+                    color: Color(0xFF64748B),
+                  ),
                   onPressed: () {
-                    final pendingCount = context.read<ModerationViewModel>().pendingArtisans.length;
+                    final pendingCount = context
+                        .read<ModerationViewModel>()
+                        .pendingArtisans
+                        .length;
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Row(
                           children: [
-                            const Icon(Icons.notifications_active_rounded, color: Color(0xFF10B981), size: 18),
+                            const Icon(
+                              Icons.notifications_active_rounded,
+                              color: Color(0xFF10B981),
+                              size: 18,
+                            ),
                             const SizedBox(width: 10),
                             Text(
                               pendingCount > 0
                                   ? '$pendingCount pending artisan application(s) awaiting review.'
                                   : 'All caught up! No pending moderation tasks.',
-                              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold),
+                              style: GoogleFonts.plusJakartaSans(
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ],
                         ),
@@ -539,22 +659,35 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
                     SnackBar(
                       content: Text(
                         'Admin session ended successfully.',
-                        style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold),
+                        style: GoogleFonts.plusJakartaSans(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       backgroundColor: const Color(0xFFEF4444),
                       behavior: SnackBarBehavior.floating,
                     ),
                   );
-                  Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil('/login', (route) => false);
+                  Navigator.of(
+                    context,
+                    rootNavigator: true,
+                  ).pushNamedAndRemoveUntil('/login', (route) => false);
                 },
                 style: OutlinedButton.styleFrom(
                   foregroundColor: const Color(0xFFEF4444),
                   side: const BorderSide(color: Color(0xFFEF4444), width: 1.5),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
                 icon: const Icon(Icons.logout_rounded, size: 16),
-                label: const Text('LOGOUT', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                label: const Text(
+                  'LOGOUT',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
+                ),
               ),
             ],
           ),
@@ -563,7 +696,12 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
     );
   }
 
-  Widget _buildMetricsRow(BuildContext context, ModerationViewModel viewModel, bool isUserManagement, [bool isRelocation = false]) {
+  Widget _buildMetricsRow(
+    BuildContext context,
+    ModerationViewModel viewModel,
+    bool isUserManagement, [
+    bool isRelocation = false,
+  ]) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isCompact = screenWidth < 800;
 
@@ -578,90 +716,98 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
             ),
             _buildMetricCard(
               title: 'Tourists',
-              value: viewModel.registeredUsers.where((u) => u.role.toLowerCase().contains('tourist')).length.toString(),
+              value: viewModel.registeredUsers
+                  .where((u) => u.role.toLowerCase().contains('tourist'))
+                  .length
+                  .toString(),
               subtitle: 'Cultural explorers',
               icon: Icons.explore_outlined,
               accentColor: const Color(0xFF10B981),
             ),
             _buildMetricCard(
               title: 'Artisans',
-              value: viewModel.registeredUsers.where((u) => u.role.toLowerCase().contains('artisan')).length.toString(),
+              value: viewModel.registeredUsers
+                  .where((u) => u.role.toLowerCase().contains('artisan'))
+                  .length
+                  .toString(),
               subtitle: 'Verified studio masters',
               icon: Icons.storefront_outlined,
               accentColor: const Color(0xFFD97706),
             ),
           ]
         : isRelocation
-            ? [
-                _buildMetricCard(
-                  title: 'Pending Relocations',
-                  value: viewModel.pendingRelocationCount.toString(),
-                  subtitle: viewModel.pendingRelocationCount > 0
-                      ? 'Requires admin review'
-                      : 'All relocations clear',
-                  icon: Icons.edit_location_alt_rounded,
-                  accentColor: const Color(0xFFF59E0B),
-                ),
-                _buildMetricCard(
-                  title: 'Approved Today',
-                  value: viewModel.approvedTodayCount.toString(),
-                  subtitle: viewModel.approvedTodaySubtitle,
-                  icon: Icons.check_circle_rounded,
-                  accentColor: const Color(0xFF10B981),
-                ),
-                _buildMetricCard(
-                  title: 'Avg. Review Time',
-                  value: viewModel.averageReviewTime,
-                  subtitle: viewModel.averageReviewTimeSubtitle,
-                  icon: Icons.timer_outlined,
-                  accentColor: const Color(0xFF3B82F6),
-                ),
-              ]
-            : [
-                _buildMetricCard(
-                  title: 'Pending Profiles',
-                  value: viewModel.pendingNewProfilesCount.toString(),
-                  subtitle: viewModel.pendingNewProfilesCount > 0
-                      ? 'Requires verification'
-                      : 'All applications clear',
-                  icon: Icons.verified_user_rounded,
-                  accentColor: const Color(0xFF10B981),
-                ),
-                _buildMetricCard(
-                  title: 'Approved Today',
-                  value: viewModel.approvedTodayCount.toString(),
-                  subtitle: viewModel.approvedTodaySubtitle,
-                  icon: Icons.check_circle_rounded,
-                  accentColor: const Color(0xFF10B981),
-                ),
-                _buildMetricCard(
-                  title: 'Avg. Review Time',
-                  value: viewModel.averageReviewTime,
-                  subtitle: viewModel.averageReviewTimeSubtitle,
-                  icon: Icons.timer_outlined,
-                  accentColor: const Color(0xFF3B82F6),
-                ),
-              ];
+        ? [
+            _buildMetricCard(
+              title: 'Pending Relocations',
+              value: viewModel.pendingRelocationCount.toString(),
+              subtitle: viewModel.pendingRelocationCount > 0
+                  ? 'Requires admin review'
+                  : 'All relocations clear',
+              icon: Icons.edit_location_alt_rounded,
+              accentColor: const Color(0xFFF59E0B),
+            ),
+            _buildMetricCard(
+              title: 'Approved Today',
+              value: viewModel.approvedTodayCount.toString(),
+              subtitle: viewModel.approvedTodaySubtitle,
+              icon: Icons.check_circle_rounded,
+              accentColor: const Color(0xFF10B981),
+            ),
+            _buildMetricCard(
+              title: 'Avg. Review Time',
+              value: viewModel.averageReviewTime,
+              subtitle: viewModel.averageReviewTimeSubtitle,
+              icon: Icons.timer_outlined,
+              accentColor: const Color(0xFF3B82F6),
+            ),
+          ]
+        : [
+            _buildMetricCard(
+              title: 'Pending Profiles',
+              value: viewModel.pendingNewProfilesCount.toString(),
+              subtitle: viewModel.pendingNewProfilesCount > 0
+                  ? 'Requires verification'
+                  : 'All applications clear',
+              icon: Icons.verified_user_rounded,
+              accentColor: const Color(0xFF10B981),
+            ),
+            _buildMetricCard(
+              title: 'Approved Today',
+              value: viewModel.approvedTodayCount.toString(),
+              subtitle: viewModel.approvedTodaySubtitle,
+              icon: Icons.check_circle_rounded,
+              accentColor: const Color(0xFF10B981),
+            ),
+            _buildMetricCard(
+              title: 'Avg. Review Time',
+              value: viewModel.averageReviewTime,
+              subtitle: viewModel.averageReviewTimeSubtitle,
+              icon: Icons.timer_outlined,
+              accentColor: const Color(0xFF3B82F6),
+            ),
+          ];
 
     if (isCompact) {
       return Column(
         children: cards
-            .map((c) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: c,
-                ))
+            .map(
+              (c) =>
+                  Padding(padding: const EdgeInsets.only(bottom: 12), child: c),
+            )
             .toList(),
       );
     }
 
     return Row(
       children: cards
-          .map((c) => Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                  child: c,
-                ),
-              ))
+          .map(
+            (c) => Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: c,
+              ),
+            ),
+          )
           .toList(),
     );
   }
@@ -735,7 +881,11 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
     );
   }
 
-  Widget _buildFilterControlsRow(BuildContext context, ModerationViewModel viewModel, {bool isRelocation = false}) {
+  Widget _buildFilterControlsRow(
+    BuildContext context,
+    ModerationViewModel viewModel, {
+    bool isRelocation = false,
+  }) {
     final isMobile = MediaQuery.of(context).size.width < 768;
 
     final searchInput = SizedBox(
@@ -750,7 +900,11 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
             fontSize: 13,
             color: const Color(0xFF94A3B8),
           ),
-          prefixIcon: const Icon(Icons.search_rounded, size: 20, color: Color(0xFF64748B)),
+          prefixIcon: const Icon(
+            Icons.search_rounded,
+            size: 20,
+            color: Color(0xFF64748B),
+          ),
           filled: true,
           fillColor: const Color(0xFFF8FAFC),
           contentPadding: const EdgeInsets.symmetric(horizontal: 16),
@@ -781,12 +935,19 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
       child: Row(
         mainAxisSize: isMobile ? MainAxisSize.max : MainAxisSize.min,
         children: [
-          const Icon(Icons.filter_list_rounded, size: 18, color: Color(0xFF64748B)),
+          const Icon(
+            Icons.filter_list_rounded,
+            size: 18,
+            color: Color(0xFF64748B),
+          ),
           const SizedBox(width: 8),
           DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               value: viewModel.selectedCategory,
-              icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B)),
+              icon: const Icon(
+                Icons.keyboard_arrow_down_rounded,
+                color: Color(0xFF64748B),
+              ),
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
@@ -796,10 +957,7 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
                 if (val != null) viewModel.setSelectedCategory(val);
               },
               items: viewModel.categories.map((cat) {
-                return DropdownMenuItem<String>(
-                  value: cat,
-                  child: Text(cat),
-                );
+                return DropdownMenuItem<String>(value: cat, child: Text(cat));
               }).toList(),
             ),
           ),
@@ -833,8 +991,10 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
     );
   }
 
-
-  Widget _buildUserFilterControlsRow(BuildContext context, ModerationViewModel viewModel) {
+  Widget _buildUserFilterControlsRow(
+    BuildContext context,
+    ModerationViewModel viewModel,
+  ) {
     final isMobile = MediaQuery.of(context).size.width < 768;
 
     final searchInput = SizedBox(
@@ -847,7 +1007,11 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
             fontSize: 13,
             color: const Color(0xFF94A3B8),
           ),
-          prefixIcon: const Icon(Icons.search_rounded, size: 20, color: Color(0xFF64748B)),
+          prefixIcon: const Icon(
+            Icons.search_rounded,
+            size: 20,
+            color: Color(0xFF64748B),
+          ),
           filled: true,
           fillColor: const Color(0xFFF8FAFC),
           contentPadding: const EdgeInsets.symmetric(horizontal: 16),
@@ -883,7 +1047,10 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
           DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               value: viewModel.userRoleFilter,
-              icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B)),
+              icon: const Icon(
+                Icons.keyboard_arrow_down_rounded,
+                color: Color(0xFF64748B),
+              ),
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
@@ -893,10 +1060,7 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
                 if (val != null) viewModel.setUserRoleFilter(val);
               },
               items: viewModel.userRoles.map((role) {
-                return DropdownMenuItem<String>(
-                  value: role,
-                  child: Text(role),
-                );
+                return DropdownMenuItem<String>(value: role, child: Text(role));
               }).toList(),
             ),
           ),
@@ -915,12 +1079,19 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
       child: Row(
         mainAxisSize: isMobile ? MainAxisSize.max : MainAxisSize.min,
         children: [
-          const Icon(Icons.verified_user_outlined, size: 18, color: Color(0xFF64748B)),
+          const Icon(
+            Icons.verified_user_outlined,
+            size: 18,
+            color: Color(0xFF64748B),
+          ),
           const SizedBox(width: 8),
           DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               value: viewModel.userStatusFilter,
-              icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B)),
+              icon: const Icon(
+                Icons.keyboard_arrow_down_rounded,
+                color: Color(0xFF64748B),
+              ),
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
@@ -957,10 +1128,7 @@ class _AdminModerationDashboardViewState extends State<AdminModerationDashboardV
                 Wrap(
                   spacing: 12,
                   runSpacing: 12,
-                  children: [
-                    roleDropdown,
-                    statusDropdown,
-                  ],
+                  children: [roleDropdown, statusDropdown],
                 ),
               ],
             )
