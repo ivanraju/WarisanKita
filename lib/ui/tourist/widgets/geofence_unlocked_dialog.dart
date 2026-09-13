@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
 
 class GeofenceUnlockedDialog extends StatelessWidget {
   final String artisanName;
@@ -17,6 +19,8 @@ class GeofenceUnlockedDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final langVM = context.watch<LanguageViewModel>();
+
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
       backgroundColor: Colors.white,
@@ -34,7 +38,7 @@ class GeofenceUnlockedDialog extends StatelessWidget {
                     width: 90,
                     height: 90,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFD54F).withOpacity(0.3),
+                      color: const Color(0xFFFFD54F).withValues(alpha: 0.3),
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -69,11 +73,11 @@ class GeofenceUnlockedDialog extends StatelessWidget {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF004D40).withOpacity(0.1),
+                  color: const Color(0xFF004D40).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '🎉 You discovered a hidden workshop!',
+                  langVM.translate('🎉 You discovered a hidden workshop!'),
                   style: GoogleFonts.plusJakartaSans(
                     color: const Color(0xFF004D40),
                     fontSize: 12,
@@ -98,7 +102,7 @@ class GeofenceUnlockedDialog extends StatelessWidget {
               const SizedBox(height: 6),
 
               Text(
-                'You stepped within the historic $craftCategory workshop zone in Melaka! Earned +150 Heritage XP.',
+                '${langVM.translate('You stepped within the historic')} $craftCategory ${langVM.translate('workshop zone in Melaka! Earned +150 Heritage XP.')}',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 13,
@@ -130,7 +134,7 @@ class GeofenceUnlockedDialog extends StatelessWidget {
                         ),
                       ),
                       child: Text(
-                        'View Profile',
+                        langVM.translate('View Profile'),
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
@@ -154,7 +158,7 @@ class GeofenceUnlockedDialog extends StatelessWidget {
                         ),
                       ),
                       child: Text(
-                        'Claim Badge',
+                        langVM.translate('Claim Badge'),
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,

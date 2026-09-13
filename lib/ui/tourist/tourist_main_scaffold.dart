@@ -103,6 +103,7 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold>
                 (user.studioName != null && user.studioName!.trim().isNotEmpty)
                 ? user.studioName!.trim()
                 : 'your studio';
+            final langVM = dialogContext.read<LanguageViewModel>();
             return AlertDialog(
               backgroundColor: isDark ? const Color(0xFF0D2825) : Colors.white,
               shape: RoundedRectangleBorder(
@@ -130,7 +131,7 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold>
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Application Update',
+                    langVM.translate('Application Update'),
                     textAlign: TextAlign.center,
                     style: GoogleFonts.dmSerifDisplay(
                       fontSize: 22,
@@ -152,9 +153,9 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold>
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: const Color(0xFFEF4444)),
                     ),
-                    child: const Text(
-                      'REQUIRES REVISION',
-                      style: TextStyle(
+                    child: Text(
+                      langVM.translate('REQUIRES REVISION'),
+                      style: const TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w900,
                         color: Color(0xFFEF4444),
@@ -167,7 +168,7 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'Your Master Artisan application for "$studioName" was reviewed by Kraftangan Malaysia. Some documents or details require revision before your studio can be approved.',
+                    '${langVM.translate('Your Master Artisan application for')} "$studioName" ${langVM.translate('was reviewed by Kraftangan Malaysia. Some documents or details require revision before your studio can be approved.')}',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 13,
@@ -204,7 +205,7 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold>
                               ),
                               const SizedBox(width: 6),
                               Text(
-                                'OFFICIAL FEEDBACK',
+                                langVM.translate('OFFICIAL FEEDBACK'),
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w900,
@@ -250,7 +251,7 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold>
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
                         child: Text(
-                          'Later',
+                          langVM.translate('Later'),
                           style: TextStyle(
                             color: isDark ? Colors.white60 : Colors.grey[600],
                             fontWeight: FontWeight.bold,
@@ -295,9 +296,9 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold>
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        child: const Text(
-                          'Review & Re-apply',
-                          style: TextStyle(
+                        child: Text(
+                          langVM.translate('Review & Re-apply'),
+                          style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 12,
                           ),
@@ -410,7 +411,7 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold>
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              'Artisan Application Not Approved',
+                              langVM.translate('Artisan Application Not Approved'),
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
@@ -423,7 +424,9 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold>
                               (user.rejectionReason != null &&
                                       user.rejectionReason!.trim().isNotEmpty)
                                   ? user.rejectionReason!.trim()
-                                  : 'Kraftangan review required document updates.',
+                                  : langVM.translate(
+                                      'Kraftangan review required document updates.',
+                                    ),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.plusJakartaSans(
@@ -463,7 +466,7 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold>
                           ),
                         ),
                         child: Text(
-                          'Review',
+                          langVM.translate('Review'),
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
@@ -479,7 +482,7 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold>
                               ? const Color(0xFFFCA5A5)
                               : const Color(0xFF991B1B),
                         ),
-                        tooltip: 'Dismiss message',
+                        tooltip: langVM.translate('Dismiss message'),
                         visualDensity: VisualDensity.compact,
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(

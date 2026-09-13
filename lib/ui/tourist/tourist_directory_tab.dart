@@ -343,7 +343,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'Select Region / State:',
+                            langVM.translate('Select Region / State:'),
                             style: GoogleFonts.plusJakartaSans(
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
@@ -405,7 +405,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'Select Craft Specialization:',
+                            langVM.translate('Select Craft Specialization:'),
                             style: GoogleFonts.plusJakartaSans(
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
@@ -1140,7 +1140,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
-                                      'MALAYSIA CULTURAL RADAR',
+                                      langVM.translate('MALAYSIA CULTURAL RADAR'),
                                       style: GoogleFonts.plusJakartaSans(
                                         fontSize: 9,
                                         fontWeight: FontWeight.w900,
@@ -1180,7 +1180,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                               color: Colors.white,
                               size: 20,
                             ),
-                            tooltip: 'Translate Page Live',
+                            tooltip: langVM.translate('Translate Page Live'),
                             onPressed: () {
                               showDialog(
                                 context: context,
@@ -1208,17 +1208,19 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                               color: Colors.white,
                               size: 20,
                             ),
-                            tooltip: 'Refresh Directory',
+                            tooltip: langVM.translate('Refresh Directory'),
                             onPressed: () {
                               context
                                   .read<DirectoryViewModel>()
                                   .fetchArtisans();
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
+                                SnackBar(
                                   content: Text(
-                                    'Refreshing artisan directory from Supabase...',
+                                    langVM.translate(
+                                      'Refreshing artisan directory from Supabase...',
+                                    ),
                                   ),
-                                  duration: Duration(seconds: 1),
+                                  duration: const Duration(seconds: 1),
                                   behavior: SnackBarBehavior.floating,
                                 ),
                               );
@@ -1385,7 +1387,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                                 const SizedBox(width: 4),
                                 Flexible(
                                   child: Text(
-                                    '${filtered.length} matching result${filtered.length == 1 ? '' : 's'}',
+                                    '${filtered.length} ${langVM.translate(filtered.length == 1 ? 'matching result' : 'matching results')}',
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: GoogleFonts.plusJakartaSans(
@@ -1594,7 +1596,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                     runSpacing: 4,
                     children: [
                       Text(
-                        'Preferences Matching:',
+                        langVM.translate('Preferences Matching:'),
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 11,
                           color: isDark ? Colors.white60 : Colors.grey[600],
@@ -1603,8 +1605,8 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                       FilterChip(
                         label: Text(
                           _hasPreferences
-                              ? '⚡ Personalized (Active)'
-                              : 'Off (Show All)',
+                              ? '⚡ ${langVM.translate('Personalized (Active)')}'
+                              : langVM.translate('Off (Show All)'),
                         ),
                         selected: _hasPreferences,
                         onSelected: (val) =>
@@ -1700,7 +1702,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                                         ? const Color(0xFFFFD54F)
                                         : const Color(0xFF004D40),
                                   ),
-                                  tooltip: 'Update Quiz Preferences',
+                                  tooltip: langVM.translate('Update Quiz Preferences'),
                                   onPressed: () {
                                     showDialog(
                                       context: context,
@@ -2206,7 +2208,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                     size: 14,
                   ),
                   const SizedBox(width: 4),
-                  Text(
+                    Text(
                     (artisan['premiseType'] as String?)?.toLowerCase().contains(
                                   'village',
                                 ) ==
@@ -2219,8 +2221,8 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                                     ?.toLowerCase()
                                     .contains('kediaman') ==
                                 true
-                        ? 'VILLAGE CRAFTER'
-                        : 'VERIFIED MASTER',
+                        ? langVM.translate('VILLAGE CRAFTER')
+                        : langVM.translate('VERIFIED MASTER'),
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 9,
                       fontWeight: FontWeight.w900,
@@ -2234,7 +2236,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
             topTrailing: questPotentialXp != null && questPotentialXp > 0
                 ? Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
+                       horizontal: 10,
                       vertical: 5,
                     ),
                     decoration: BoxDecoration(
@@ -2296,7 +2298,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                         const SizedBox(width: 4),
                         Flexible(
                           child: Text(
-                            '${artisan['craft'] ?? artisan['category']} Studio',
+                            '${artisan['craft'] ?? artisan['category']} ${langVM.translate('Studio')}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: GoogleFonts.plusJakartaSans(
@@ -2320,7 +2322,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
-                    '${artisan['experienceYears']} Heritage Master',
+                    '${artisan['experienceYears']} ${langVM.translate('Heritage Master')}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.plusJakartaSans(

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:warisan_kita/domain/models/nearby_artisan.dart';
 import 'package:warisan_kita/domain/models/workshop_quest_journey.dart';
+import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
 
 class ArtisanMatchCard extends StatelessWidget {
   final NearbyArtisan artisan;
@@ -21,6 +23,9 @@ class ArtisanMatchCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final langVM = Provider.of<LanguageViewModel?>(context);
+    String tr(String text) => langVM?.translate(text) ?? text;
+
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final journey = artisan.journey;
@@ -88,7 +93,7 @@ class ArtisanMatchCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          'SELECTED WORKSHOP',
+                          tr('SELECTED WORKSHOP'),
                           style: GoogleFonts.plusJakartaSans(
                             color: Colors.white,
                             fontSize: 10,
@@ -147,7 +152,6 @@ class ArtisanMatchCard extends StatelessWidget {
                           ),
                         ],
                       ),
-
                       const SizedBox(width: 14),
 
                       // Artisan Information & Action Buttons Row
@@ -174,7 +178,7 @@ class ArtisanMatchCard extends StatelessWidget {
                                       borderRadius: BorderRadius.circular(10),
                                     ),
                                     child: Text(
-                                      artisan.craftCategory,
+                                      tr(artisan.craftCategory),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: GoogleFonts.plusJakartaSans(
@@ -212,7 +216,7 @@ class ArtisanMatchCard extends StatelessWidget {
                                       ),
                                       const SizedBox(width: 3),
                                       Text(
-                                        'VERIFIED',
+                                        tr('VERIFIED'),
                                         style: GoogleFonts.plusJakartaSans(
                                           fontSize: 9,
                                           fontWeight: FontWeight.w900,

@@ -14,6 +14,7 @@ import 'package:warisan_kita/viewmodels/gamification_viewmodel.dart';
 import 'package:warisan_kita/ui/gamification/active_quest_conflict_dialog.dart';
 import 'package:warisan_kita/ui/gamification/qr_scanner_view.dart';
 import 'package:warisan_kita/ui/gamification/workshop_quest_navigation.dart';
+import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
 
 class QuestDetailView extends StatefulWidget {
   final Quest quest;
@@ -91,6 +92,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
   Widget build(BuildContext context) {
     final gamificationVM = context.watch<GamificationViewModel>();
     final mapViewModel = context.watch<MapViewModel>();
+    final langVM = context.watch<LanguageViewModel>();
     final tasks = gamificationVM.heritageTasks;
     final distance = mapViewModel.getDistanceToWorkshop(workshop);
     final isWorkshopOpen = _isWorkshopCurrentlyOpen(mapViewModel);
@@ -107,7 +109,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
           onPressed: () => Navigator.maybePop(context),
         ),
         title: Text(
-          'Cultural Quest',
+          langVM.translate('Cultural Quest'),
           style: GoogleFonts.dmSerifDisplay(fontSize: 23),
         ),
         backgroundColor: _isDark
@@ -140,13 +142,13 @@ class _QuestDetailViewState extends State<QuestDetailView>
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 14, 20, 40),
           children: [
-            _buildQuestHeader(gamificationVM),
+            _buildQuestHeader(gamificationVM, langVM),
             const SizedBox(height: 16),
-            _buildLocationSection(distance),
+            _buildLocationSection(distance, langVM),
             const SizedBox(height: 16),
-            _buildActivitiesSection(tasks, gamificationVM),
+            _buildActivitiesSection(tasks, gamificationVM, langVM),
             const SizedBox(height: 16),
-            _buildStampPreview(gamificationVM),
+            _buildStampPreview(gamificationVM, langVM),
           ],
         ),
       ),
@@ -155,6 +157,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
         gamificationVM,
         distance,
         isWorkshopOpen: isWorkshopOpen,
+        langVM: langVM,
       ),
     );
   }
@@ -211,18 +214,21 @@ class _QuestDetailViewState extends State<QuestDetailView>
 
       await context.read<MapViewModel>().loadJourneyData();
       if (!mounted) return;
+      final langVM = context.read<LanguageViewModel>();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
-            'Quest stopped because the workshop closed. Your progress was '
-            'saved, and you can now start another workshop quest.',
-            style: TextStyle(
+            langVM.translate(
+              'Quest stopped because the workshop closed. Your progress was '
+              'saved, and you can now start another workshop quest.',
+            ),
+            style: const TextStyle(
               color: Color(0xFFFFF8E1),
               fontWeight: FontWeight.w600,
             ),
           ),
           behavior: SnackBarBehavior.floating,
-          backgroundColor: Color(0xFF00695C),
+          backgroundColor: const Color(0xFF00695C),
         ),
       );
     });
@@ -232,6 +238,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
     if (!mounted || _isShowingWorkshopClosedDialog) return;
     _isShowingWorkshopClosedDialog = true;
     try {
+      final langVM = context.read<LanguageViewModel>();
       await showDialog<void>(
         context: context,
         barrierDismissible: false,
@@ -243,7 +250,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
           ),
           icon: Icon(Icons.storefront_rounded, color: _warningText, size: 34),
           title: Text(
-            'Workshop Currently Closed',
+            langVM.translate('Workshop Currently Closed'),
             textAlign: TextAlign.center,
             style: GoogleFonts.dmSerifDisplay(
               color: _primaryText,
@@ -251,10 +258,12 @@ class _QuestDetailViewState extends State<QuestDetailView>
             ),
           ),
           content: Text(
-            'This workshop is not accepting educational walk-ins or live '
-            'demonstrations right now. Any active quest here is stopped '
-            'automatically with its progress saved, allowing you to start a '
-            'quest at another open workshop.',
+            langVM.translate(
+              'This workshop is not accepting educational walk-ins or live '
+              'demonstrations right now. Any active quest here is stopped '
+              'automatically with its progress saved, allowing you to start a '
+              'quest at another open workshop.',
+            ),
             textAlign: TextAlign.center,
             style: GoogleFonts.plusJakartaSans(
               color: _secondaryText,
@@ -270,7 +279,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
                 backgroundColor: const Color(0xFF00695C),
                 foregroundColor: Colors.white,
               ),
-              child: const Text('Close'),
+              child: Text(langVM.translate('Close')),
             ),
           ],
         ),
@@ -332,18 +341,21 @@ class _QuestDetailViewState extends State<QuestDetailView>
           await viewModel.handleQuestProximityChanged(false);
           if (!mounted || viewModel.questProgressStatus != 'STOPPED') return;
           unawaited(context.read<MapViewModel>().loadJourneyData());
+          final langVM = context.read<LanguageViewModel>();
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               content: Text(
-                'Quest stopped because you left the workshop area. '
-                'Your progress has been saved.',
-                style: TextStyle(
+                langVM.translate(
+                  'Quest stopped because you left the workshop area. '
+                  'Your progress has been saved.',
+                ),
+                style: const TextStyle(
                   color: Color(0xFFFFF8E1),
                   fontWeight: FontWeight.w600,
                 ),
               ),
               behavior: SnackBarBehavior.floating,
-              backgroundColor: Color(0xFF00695C),
+              backgroundColor: const Color(0xFF00695C),
             ),
           );
         }
@@ -376,7 +388,10 @@ class _QuestDetailViewState extends State<QuestDetailView>
     });
   }
 
-  Widget _buildQuestHeader(GamificationViewModel viewModel) {
+  Widget _buildQuestHeader(
+    GamificationViewModel viewModel,
+    LanguageViewModel langVM,
+  ) {
     final requiredTasks = viewModel.effectiveRequiredHeritageTasks;
     final completedRequired = viewModel.completedEffectiveRequiredTaskCount;
     final isPermanentlyCompleted = viewModel.isQuestPermanentlyCompleted;
@@ -384,7 +399,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
         ? (isPermanentlyCompleted ? 1.0 : 0.0)
         : (completedRequired / requiredTasks.length).clamp(0.0, 1.0);
     final requiredLabel =
-        '$completedRequired / ${requiredTasks.length} Required';
+        '$completedRequired / ${requiredTasks.length} ${langVM.translate('Required')}';
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -418,7 +433,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
             children: [
               Expanded(
                 child: Text(
-                  '${viewModel.totalPotentialXp} Potential XP',
+                  '${viewModel.totalPotentialXp} ${langVM.translate('Potential XP')}',
                   style: GoogleFonts.plusJakartaSans(
                     color: const Color(0xFFFFD54F),
                     fontSize: 12,
@@ -444,7 +459,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
           ),
           const SizedBox(height: 9),
           Semantics(
-            label: 'Required quest progress: $requiredLabel',
+            label: '${langVM.translate('Required quest progress')}: $requiredLabel',
             value: '${(progress * 100).round()} percent',
             child: ClipRRect(
               borderRadius: BorderRadius.circular(999),
@@ -461,7 +476,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
     );
   }
 
-  Widget _buildLocationSection(double? distance) {
+  Widget _buildLocationSection(double? distance, LanguageViewModel langVM) {
     final isWithinRange =
         distance != null && distance <= quest.geofenceRadiusMeters;
     final stateColor = distance == null
@@ -475,13 +490,13 @@ class _QuestDetailViewState extends State<QuestDetailView>
         ? Icons.check_circle_rounded
         : Icons.warning_amber_rounded;
     final stateLabel = distance == null
-        ? 'Location required to confirm the quest zone'
+        ? langVM.translate('Location required to confirm the quest zone')
         : isWithinRange
-        ? 'Within quest zone'
-        : 'Outside quest zone';
+        ? langVM.translate('Within quest zone')
+        : langVM.translate('Outside quest zone');
 
     return _buildSectionCard(
-      title: 'Quest Location',
+      title: langVM.translate('Quest Location'),
       icon: Icons.location_on_rounded,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -519,7 +534,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
           ),
           const SizedBox(height: 13),
           Text(
-            'Quest starts within ${quest.geofenceRadiusMeters} m',
+            '${langVM.translate('Quest starts within')} ${quest.geofenceRadiusMeters} m',
             style: GoogleFonts.plusJakartaSans(
               color: _primaryText,
               fontSize: 11,
@@ -529,8 +544,8 @@ class _QuestDetailViewState extends State<QuestDetailView>
           const SizedBox(height: 5),
           Text(
             distance == null
-                ? 'Live distance unavailable'
-                : 'You are ${distance.toStringAsFixed(0)} m away',
+                ? langVM.translate('Live distance unavailable')
+                : '${langVM.translate('You are')} ${distance.toStringAsFixed(0)} m ${langVM.translate('away')}',
             style: GoogleFonts.plusJakartaSans(
               color: _secondaryText,
               fontSize: 11,
@@ -561,6 +576,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
   Widget _buildActivitiesSection(
     List<HeritageTask> tasks,
     GamificationViewModel viewModel,
+    LanguageViewModel langVM,
   ) {
     final indexedTasks = tasks.indexed.toList(growable: false);
     final journeyTasks = indexedTasks
@@ -570,11 +586,13 @@ class _QuestDetailViewState extends State<QuestDetailView>
         .where((entry) => viewModel.isBonusTask(entry.$2))
         .toList(growable: false);
     return _buildSectionCard(
-      title: 'Heritage Quest',
+      title: langVM.translate('Heritage Quest'), // title: 'Heritage Quest'
       icon: Icons.auto_awesome_rounded,
       child: tasks.isEmpty
           ? Text(
-              'No heritage activities have been published for this quest.',
+              langVM.translate(
+                'No heritage activities have been published for this quest.',
+              ),
               style: GoogleFonts.plusJakartaSans(
                 color: _secondaryText,
                 fontSize: 13,
@@ -588,6 +606,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
                     journeyTasks[index].$1 + 1,
                     journeyTasks[index].$2,
                     viewModel,
+                    langVM,
                   ),
                   if (index != journeyTasks.length - 1)
                     Divider(height: 24, color: _cardBorder),
@@ -596,7 +615,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
                   if (journeyTasks.isNotEmpty)
                     Divider(height: 32, color: _cardBorder),
                   Text(
-                    'BONUS ACTIVITIES',
+                    langVM.translate('BONUS ACTIVITIES'),
                     style: GoogleFonts.plusJakartaSans(
                       color: const Color(0xFFD97706),
                       fontSize: 10,
@@ -606,7 +625,9 @@ class _QuestDetailViewState extends State<QuestDetailView>
                   ),
                   const SizedBox(height: 5),
                   Text(
-                    'Optional additions that do not change your original quest progress.',
+                    langVM.translate(
+                      'Optional additions that do not change your original quest progress.',
+                    ),
                     style: GoogleFonts.plusJakartaSans(
                       color: _secondaryText,
                       fontSize: 10,
@@ -619,6 +640,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
                       bonusTasks[index].$1 + 1,
                       bonusTasks[index].$2,
                       viewModel,
+                      langVM,
                       isBonus: true,
                     ),
                     if (index != bonusTasks.length - 1)
@@ -633,7 +655,8 @@ class _QuestDetailViewState extends State<QuestDetailView>
   Widget _buildTaskRow(
     int number,
     HeritageTask task,
-    GamificationViewModel viewModel, {
+    GamificationViewModel viewModel,
+    LanguageViewModel langVM, {
     bool isBonus = false,
   }) {
     final badgeColor = isBonus
@@ -646,6 +669,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
     final taskState = _taskDisplayState(
       task,
       viewModel,
+      langVM,
       isCompleted: isCompleted,
       isBonus: isBonus,
     );
@@ -708,10 +732,10 @@ class _QuestDetailViewState extends State<QuestDetailView>
                     ),
                     child: Text(
                       isBonus
-                          ? 'BONUS ACTIVITY'
+                          ? langVM.translate('BONUS ACTIVITY')
                           : task.isRequired
-                          ? 'REQUIRED'
-                          : 'OPTIONAL',
+                          ? langVM.translate('REQUIRED')
+                          : langVM.translate('OPTIONAL'),
                       style: GoogleFonts.plusJakartaSans(
                         color: badgeColor,
                         fontSize: 9,
@@ -734,7 +758,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
               if (isBonus) ...[
                 const SizedBox(height: 6),
                 Text(
-                  'Added after you began this quest',
+                  langVM.translate('Added after you began this quest'),
                   style: GoogleFonts.plusJakartaSans(
                     color: _isDark
                         ? const Color(0xFFFFD98A)
@@ -761,14 +785,14 @@ class _QuestDetailViewState extends State<QuestDetailView>
                 Text(
                   viewModel.displayedDwellSeconds >=
                           GamificationViewModel.dwellRequiredSeconds
-                      ? '15 minutes complete • Saving completion'
+                      ? langVM.translate('15 minutes complete • Saving completion')
                       : viewModel.isInsideQuestGeofence
                       ? viewModel.isDwellTracking
-                            ? 'Inside quest area • Timer running'
+                            ? langVM.translate('Inside quest area • Timer running')
                             : viewModel.canResumeDwellTracking
-                            ? 'Inside quest area • Tap Start Quest to continue'
-                            : 'Inside quest area • Timer paused'
-                      : 'Outside quest area • Timer paused',
+                            ? langVM.translate('Inside quest area • Tap Start Quest to continue')
+                            : langVM.translate('Inside quest area • Timer paused')
+                      : langVM.translate('Outside quest area • Timer paused'),
                   style: GoogleFonts.plusJakartaSans(
                     color: viewModel.isInsideQuestGeofence
                         ? (_isDark
@@ -791,8 +815,8 @@ class _QuestDetailViewState extends State<QuestDetailView>
                         isQrEligible && viewModel.isInsideQuestGeofence;
                     final label =
                         isQrEligible && !viewModel.isInsideQuestGeofence
-                        ? 'Move Within Quest Zone'
-                        : viewModel.qrVerificationLabel(task);
+                        ? langVM.translate('Move Within Quest Zone')
+                        : langVM.translate(viewModel.qrVerificationLabel(task));
                     return SizedBox(
                       width: double.infinity,
                       child: OutlinedButton.icon(
@@ -861,33 +885,34 @@ class _QuestDetailViewState extends State<QuestDetailView>
 
   (String, Color) _taskDisplayState(
     HeritageTask task,
-    GamificationViewModel viewModel, {
+    GamificationViewModel viewModel,
+    LanguageViewModel langVM, {
     required bool isCompleted,
     required bool isBonus,
   }) {
-    if (isCompleted) return ('COMPLETED', _successText);
+    if (isCompleted) return (langVM.translate('COMPLETED'), _successText);
     if (viewModel.requiresJourneyResume) {
-      return ('PAUSED', _warningText);
+      return (langVM.translate('PAUSED'), _warningText);
     }
-    if (isBonus) return ('BONUS', _xpText);
+    if (isBonus) return (langVM.translate('BONUS'), _xpText);
 
     final inProgress =
         viewModel.questProgressStatus?.toUpperCase() == 'IN_PROGRESS';
-    if (!inProgress) return ('AVAILABLE', _successText);
+    if (!inProgress) return (langVM.translate('AVAILABLE'), _successText);
 
     if (viewModel.isStayFifteenMinutesTask(task)) {
       if (!viewModel.isInsideQuestGeofence) {
-        return ('WAITING FOR ARRIVAL', _warningText);
+        return (langVM.translate('WAITING FOR ARRIVAL'), _warningText);
       }
       if (viewModel.isDwellTracking) {
-        return ('IN PROGRESS', _successText);
+        return (langVM.translate('IN PROGRESS'), _successText);
       }
-      return ('PAUSED', _warningText);
+      return (langVM.translate('PAUSED'), _warningText);
     }
     if (task.isSystemTask) {
-      return ('WAITING FOR ARRIVAL', _warningText);
+      return (langVM.translate('WAITING FOR ARRIVAL'), _warningText);
     }
-    return ('QR REQUIRED', _successText);
+    return (langVM.translate('QR REQUIRED'), _successText);
   }
 
   String _formatDuration(int totalSeconds) {
@@ -908,7 +933,9 @@ class _QuestDetailViewState extends State<QuestDetailView>
         SnackBar(
           content: Text(
             verifiedLocation.message ??
-                'Move within the quest zone before scanning.',
+                context.read<LanguageViewModel>().translate(
+                  'Move within the quest zone before scanning.',
+                ),
           ),
           behavior: SnackBarBehavior.floating,
           backgroundColor: const Color(0xFFB42318),
@@ -946,6 +973,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
   }
 
   Future<void> _showQuestCompletionDialog() {
+    final langVM = context.read<LanguageViewModel>();
     return showDialog<void>(
       context: context,
       barrierDismissible: false,
@@ -979,7 +1007,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
             ),
             const SizedBox(height: 18),
             Text(
-              'Congratulations!',
+              langVM.translate('Congratulations!'),
               textAlign: TextAlign.center,
               style: GoogleFonts.dmSerifDisplay(
                 color: _isDark
@@ -990,7 +1018,9 @@ class _QuestDetailViewState extends State<QuestDetailView>
             ),
             const SizedBox(height: 8),
             Text(
-              'You completed every required activity for this heritage quest.',
+              langVM.translate(
+                'You completed every required activity for this heritage quest.',
+              ),
               textAlign: TextAlign.center,
               style: GoogleFonts.plusJakartaSans(
                 color: _isDark
@@ -1014,7 +1044,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
               child: Column(
                 children: [
                   Text(
-                    'BADGE AWARDED',
+                    langVM.translate('BADGE AWARDED'),
                     style: TextStyle(
                       color: _isDark
                           ? const Color(0xFF6EE7B7)
@@ -1047,7 +1077,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
                   Navigator.of(dialogContext).pop();
                 },
                 icon: const Icon(Icons.workspace_premium_rounded),
-                label: const Text('Close'),
+                label: Text(langVM.translate('Close')),
                 style: FilledButton.styleFrom(
                   backgroundColor: _isDark
                       ? const Color(0xFF087F5B)
@@ -1063,7 +1093,10 @@ class _QuestDetailViewState extends State<QuestDetailView>
     );
   }
 
-  Widget _buildStampPreview(GamificationViewModel viewModel) {
+  Widget _buildStampPreview(
+    GamificationViewModel viewModel,
+    LanguageViewModel langVM,
+  ) {
     final isEarned = viewModel.isQuestBadgeEarned;
     final stamp = ClipRRect(
       borderRadius: BorderRadius.circular(16),
@@ -1081,7 +1114,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
     );
 
     return _buildSectionCard(
-      title: 'Quest Reward',
+      title: langVM.translate('Quest Reward'),
       icon: Icons.workspace_premium_rounded,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1135,7 +1168,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
                     ),
                     const SizedBox(height: 5),
                     Text(
-                      '${workshop.name} passport stamp',
+                      '${workshop.name} ${langVM.translate('passport stamp')}',
                       style: GoogleFonts.plusJakartaSans(
                         color: _secondaryText,
                         fontSize: 10,
@@ -1148,7 +1181,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
           ),
           const SizedBox(height: 15),
           Text(
-            'Total Quest XP: ${viewModel.totalPotentialXp} XP',
+            '${langVM.translate('Total Quest XP:')} ${viewModel.totalPotentialXp} XP',
             style: GoogleFonts.plusJakartaSans(
               color: _xpText,
               fontSize: 12,
@@ -1168,8 +1201,8 @@ class _QuestDetailViewState extends State<QuestDetailView>
               Expanded(
                 child: Text(
                   isEarned
-                      ? 'UNLOCKED · ADDED TO PASSPORT'
-                      : 'Complete all required activities to unlock',
+                      ? langVM.translate('UNLOCKED · ADDED TO PASSPORT')
+                      : langVM.translate('Complete all required activities to unlock'),
                   style: GoogleFonts.plusJakartaSans(
                     color: isEarned ? _successText : _secondaryText,
                     fontSize: 10,
@@ -1201,6 +1234,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
     GamificationViewModel viewModel,
     double? distance, {
     required bool isWorkshopOpen,
+    required LanguageViewModel langVM,
   }) {
     final status = viewModel.questProgressStatus?.toUpperCase();
     final isCompleted =
@@ -1249,8 +1283,10 @@ class _QuestDetailViewState extends State<QuestDetailView>
           children: [
             if (!isWorkshopOpen && !isCompleted) ...[
               Text(
-                'This workshop is currently closed. Quest participation is '
-                'unavailable, and any active progress is stopped and saved.',
+                langVM.translate(
+                  'This workshop is currently closed. Quest participation is '
+                  'unavailable, and any active progress is stopped and saved.',
+                ),
                 textAlign: TextAlign.center,
                 style: GoogleFonts.plusJakartaSans(
                   color: _warningText,
@@ -1376,26 +1412,26 @@ class _QuestDetailViewState extends State<QuestDetailView>
                       ),
                 label: Text(
                   viewModel.isStartingQuest
-                      ? 'Starting Quest...'
+                      ? langVM.translate('Starting Quest...')
                       : viewModel.isStoppingQuest
-                      ? 'Stopping Quest...'
+                      ? langVM.translate('Stopping Quest...')
                       : isCompleted
-                      ? 'Quest Completed'
+                      ? langVM.translate('Quest Completed')
                       : !isWorkshopOpen
-                      ? 'Workshop Closed'
+                      ? langVM.translate('Workshop Closed')
                       : isBlockedByAnotherQuest
-                      ? 'Another Quest Active'
+                      ? langVM.translate('Another Quest Active')
                       : canResume
-                      ? 'Resume Quest'
+                      ? langVM.translate('Resume Quest')
                       : canStop
-                      ? 'Stop Quest'
+                      ? langVM.translate('Stop Quest')
                       : isOutOfRange
-                      ? 'Return to Quest Area'
+                      ? langVM.translate('Return to Quest Area')
                       : isOutsideBeforeStart
-                      ? 'Move Within Quest Zone'
+                      ? langVM.translate('Move Within Quest Zone')
                       : isInProgress
-                      ? 'Quest In Progress'
-                      : 'Start Quest',
+                      ? langVM.translate('Quest In Progress')
+                      : langVM.translate('Start Quest'),
                   style: GoogleFonts.plusJakartaSans(
                     color: Colors.white,
                     fontWeight: FontWeight.w800,
@@ -1410,7 +1446,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
                     ? null
                     : () => _confirmStopQuest(context, viewModel),
                 icon: const Icon(Icons.stop_circle_outlined, size: 18),
-                label: const Text('Stop Quest'),
+                label: Text(langVM.translate('Stop Quest')),
                 style: TextButton.styleFrom(
                   foregroundColor: _isDark
                       ? const Color(0xFFF87171)
@@ -1428,20 +1464,23 @@ class _QuestDetailViewState extends State<QuestDetailView>
     BuildContext context,
     GamificationViewModel viewModel,
   ) async {
+    final langVM = context.read<LanguageViewModel>();
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
-          'Stop this quest?',
+          langVM.translate('Stop this quest?'),
           style: GoogleFonts.dmSerifDisplay(
             color: _isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
             fontSize: 20,
           ),
         ),
         content: Text(
-          'Your completed activities, XP, and timer progress will be saved. '
-          'You can start another workshop quest after stopping.',
+          langVM.translate(
+            'Your completed activities, XP, and timer progress will be saved. '
+            'You can start another workshop quest after stopping.',
+          ),
           style: GoogleFonts.plusJakartaSans(
             color: _isDark ? Colors.white70 : const Color(0xFF475569),
             fontSize: 13,
@@ -1452,7 +1491,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
             child: Text(
-              'Keep Quest Active',
+              langVM.translate('Keep Quest Active'),
               style: TextStyle(
                 color: _isDark ? Colors.white70 : const Color(0xFF004D40),
               ),
@@ -1466,7 +1505,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
                   : const Color(0xFFDC2626),
               foregroundColor: Colors.white,
             ),
-            child: const Text('Stop Quest'),
+            child: Text(langVM.translate('Stop Quest')),
           ),
         ],
       ),
@@ -1476,16 +1515,16 @@ class _QuestDetailViewState extends State<QuestDetailView>
     if (!context.mounted || !stopped) return;
     unawaited(context.read<MapViewModel>().loadJourneyData());
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
+      SnackBar(
         content: Text(
-          'Quest stopped. Your progress has been saved.',
-          style: TextStyle(
+          langVM.translate('Quest stopped. Your progress has been saved.'),
+          style: const TextStyle(
             color: Color(0xFFFFF8E1),
             fontWeight: FontWeight.w600,
           ),
         ),
         behavior: SnackBarBehavior.floating,
-        backgroundColor: Color(0xFF00695C),
+        backgroundColor: const Color(0xFF00695C),
       ),
     );
   }
@@ -1503,10 +1542,11 @@ class _QuestDetailViewState extends State<QuestDetailView>
           radiusMeters: quest.geofenceRadiusMeters.toDouble(),
         );
     if (!context.mounted) return;
+    final langVM = context.read<LanguageViewModel>();
     if (!location.isValid) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(location.message ?? 'Unable to verify your location.'),
+          content: Text(location.message ?? langVM.translate('Unable to verify your location.')),
           behavior: SnackBarBehavior.floating,
           backgroundColor: const Color(0xFFB42318),
         ),
@@ -1518,16 +1558,16 @@ class _QuestDetailViewState extends State<QuestDetailView>
     );
     if (!context.mounted || !resumed) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
+      SnackBar(
         content: Text(
-          'Quest started. The workshop timer is running.',
-          style: TextStyle(
+          langVM.translate('Quest started. The workshop timer is running.'),
+          style: const TextStyle(
             color: Color(0xFFFFF8E1),
             fontWeight: FontWeight.w600,
           ),
         ),
         behavior: SnackBarBehavior.floating,
-        backgroundColor: Color(0xFF00695C),
+        backgroundColor: const Color(0xFF00695C),
       ),
     );
   }
@@ -1548,10 +1588,11 @@ class _QuestDetailViewState extends State<QuestDetailView>
       radiusMeters: quest.geofenceRadiusMeters.toDouble(),
     );
     if (!context.mounted) return;
+    final langVM = context.read<LanguageViewModel>();
     if (!location.isValid) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(location.message ?? 'Unable to verify your location.'),
+          content: Text(location.message ?? langVM.translate('Unable to verify your location.')),
           behavior: SnackBarBehavior.floating,
           backgroundColor: const Color(0xFFB42318),
         ),
@@ -1566,16 +1607,16 @@ class _QuestDetailViewState extends State<QuestDetailView>
     if (!context.mounted) return;
     if (started) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
-            'Quest started. Your progress has been saved.',
-            style: TextStyle(
+            langVM.translate('Quest started. Your progress has been saved.'),
+            style: const TextStyle(
               color: Color(0xFFFFF8E1),
               fontWeight: FontWeight.w600,
             ),
           ),
           behavior: SnackBarBehavior.floating,
-          backgroundColor: Color(0xFF00695C),
+          backgroundColor: const Color(0xFF00695C),
         ),
       );
     } else if (!viewModel.canStartQuest(quest.id)) {
@@ -1597,13 +1638,16 @@ class _QuestDetailViewState extends State<QuestDetailView>
       return false;
     } catch (error) {
       if (!context.mounted) return false;
+      final langVM = context.read<LanguageViewModel>();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
-            'Unable to confirm workshop availability. Please try again.',
+            langVM.translate(
+              'Unable to confirm workshop availability. Please try again.',
+            ),
           ),
           behavior: SnackBarBehavior.floating,
-          backgroundColor: Color(0xFFB42318),
+          backgroundColor: const Color(0xFFB42318),
         ),
       );
       return false;
@@ -1632,9 +1676,10 @@ class _QuestDetailViewState extends State<QuestDetailView>
       }
     }
     if (activeWorkshop == null) {
+      final langVM = context.read<LanguageViewModel>();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('The active workshop could not be opened right now.'),
+        SnackBar(
+          content: Text(langVM.translate('The active workshop could not be opened right now.')),
           behavior: SnackBarBehavior.floating,
         ),
       );
