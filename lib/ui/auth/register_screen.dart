@@ -7,6 +7,7 @@ import 'package:warisan_kita/domain/validators/profile_validator.dart';
 import 'package:warisan_kita/ui/auth/email_verification_screen.dart';
 import 'package:warisan_kita/ui/auth/widgets/password_strength_meter.dart';
 import 'package:warisan_kita/ui/core/widgets/heritage_background.dart';
+import 'package:warisan_kita/data/services/connectivity_service.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -165,6 +166,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _handleRegister() async {
+    final connectivity = context.read<ConnectivityService?>();
+    if (connectivity != null && connectivity.isOffline) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.wifi_off_rounded, color: Colors.white, size: 20),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text('Cannot register while offline. Please connect to the internet.'),
+              ),
+            ],
+          ),
+          backgroundColor: Color(0xFFC2410C),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) return;
 
     _emailDebounce?.cancel();

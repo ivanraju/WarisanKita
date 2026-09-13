@@ -8,6 +8,7 @@ import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 import 'package:warisan_kita/ui/artisan/artisan_application_pending_screen.dart';
 import 'package:warisan_kita/ui/auth/email_verification_screen.dart';
 import 'package:warisan_kita/ui/auth/forgot_password_screen.dart';
+import 'package:warisan_kita/data/services/connectivity_service.dart';
 import 'package:warisan_kita/ui/core/widgets/heritage_background.dart';
 import 'package:warisan_kita/ui/widgets/heritage_logo.dart';
 
@@ -260,6 +261,26 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
+    final connectivity = context.read<ConnectivityService?>();
+    if (connectivity != null && connectivity.isOffline) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.wifi_off_rounded, color: Colors.white, size: 20),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text('Cannot sign in while offline. Please connect to the internet.'),
+              ),
+            ],
+          ),
+          backgroundColor: Color(0xFFC2410C),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) return;
 
     final email = _emailController.text.trim();
