@@ -140,7 +140,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           )
                         : BorderSide.none,
                   ),
-                  borderRadius: BorderRadius.circular(16),
+                  clipBehavior: Clip.antiAlias,
                   child: InkWell(
                     borderRadius: BorderRadius.circular(16),
                     onTap: () {
