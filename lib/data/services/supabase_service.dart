@@ -9854,7 +9854,7 @@ class SupabaseService {
       final response = await client
           .from('artisan_profiles')
           .select(
-            'id, studio_name, craft_category, address, state, latitude, longitude, '
+            'id, studio_name, craft_category, address, state, latitude, longitude, tags, '
             'artisan_documents(file_url, file_name, doc_type)',
           )
           .eq('status', 'APPROVED')
@@ -9866,6 +9866,35 @@ class SupabaseService {
       debugPrint('Supabase fetchWorkshopLocations error: $e');
       return [];
     }
+  }
+
+  Future<bool> fetchWorkshopLiveStatus(String workshopId) async {
+    final client = _client;
+    if (client == null) {
+      throw StateError('Supabase is not initialized.');
+    }
+
+    final normalizedWorkshopId = workshopId.trim();
+    if (normalizedWorkshopId.isEmpty) {
+      throw ArgumentError.value(workshopId, 'workshopId');
+    }
+
+    final row = await client
+        .from('artisan_profiles')
+        .select('status, tags')
+        .eq('id', normalizedWorkshopId)
+        .maybeSingle();
+    if (row == null) {
+      throw StateError('Workshop availability could not be found.');
+    }
+
+    final status = row['status']?.toString().trim().toUpperCase();
+    if (status != 'APPROVED') return false;
+
+    final tags = (row['tags'] as List? ?? const <Object>[])
+        .map((tag) => tag.toString())
+        .toSet();
+    return !tags.contains('__LIVE_DEMO_CLOSED__');
   }
 
   Stream<List<Map<String, dynamic>>> watchWorkshopLocations() {
@@ -9912,7 +9941,7 @@ class SupabaseService {
               // Listen only to the non-sensitive fields needed to detect when
               // a workshop enters or leaves the APPROVED catalogue. The full
               // approved workshop list is fetched separately after each event.
-              select: const ['id', 'status'],
+              select: const ['id', 'status', 'tags'],
               callback: (_) => unawaited(refreshApprovedWorkshops()),
             )
             .subscribe((status, error) {

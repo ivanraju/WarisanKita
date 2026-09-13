@@ -45,7 +45,7 @@ class NearbyArtisan {
     String? imageUrl,
     double rating = 4.9,
     int reviewCount = 12,
-    bool isOpenNow = true,
+    bool? isOpenNow,
     WorkshopQuestJourney? journey,
   }) {
     // Format distance: < 1000m -> "350 m", >= 1000m -> "2.4 km"
@@ -71,7 +71,7 @@ class NearbyArtisan {
       reviewCount: reviewCount,
       latitude: workshop.latitude,
       longitude: workshop.longitude,
-      isOpenNow: isOpenNow,
+      isOpenNow: isOpenNow ?? workshop.isLiveOpen,
       locationName: workshop.locationName,
       workshop: workshop,
       journey: journey,

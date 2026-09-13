@@ -7,6 +7,7 @@ class WorkshopLocation {
   final double latitude;
   final double longitude;
   final String primaryImageUrl;
+  final bool isLiveOpen;
 
   const WorkshopLocation({
     required this.id,
@@ -17,7 +18,22 @@ class WorkshopLocation {
     required this.latitude,
     required this.longitude,
     this.primaryImageUrl = '',
+    this.isLiveOpen = true,
   });
 
   String get locationName => '$address, $state';
+
+  WorkshopLocation copyWith({bool? isLiveOpen}) {
+    return WorkshopLocation(
+      id: id,
+      name: name,
+      craftCategory: craftCategory,
+      address: address,
+      state: state,
+      latitude: latitude,
+      longitude: longitude,
+      primaryImageUrl: primaryImageUrl,
+      isLiveOpen: isLiveOpen ?? this.isLiveOpen,
+    );
+  }
 }

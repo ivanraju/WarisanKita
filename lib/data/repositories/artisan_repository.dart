@@ -48,11 +48,18 @@ class ArtisanRepository {
     return _service.watchWorkshopLocations().map(_mapWorkshopLocations);
   }
 
+  Future<bool> getWorkshopLiveStatus(String workshopId) {
+    return _service.fetchWorkshopLiveStatus(workshopId);
+  }
+
   List<WorkshopLocation> _mapWorkshopLocations(
     List<Map<String, dynamic>> data,
   ) {
     return data.map((row) {
       final id = row['id'] as String;
+      final tags = (row['tags'] as List? ?? const <Object>[])
+          .map((tag) => tag.toString())
+          .toSet();
       final hasDocumentPayload = row.containsKey('artisan_documents');
       final resolvedImageUrl = hasDocumentPayload
           ? _firstSavedWorkshopImage(row['artisan_documents'])
@@ -75,6 +82,7 @@ class ArtisanRepository {
         latitude: (row['latitude'] as num).toDouble(),
         longitude: (row['longitude'] as num).toDouble(),
         primaryImageUrl: resolvedImageUrl ?? _workshopImageCache[id] ?? '',
+        isLiveOpen: !tags.contains('__LIVE_DEMO_CLOSED__'),
       );
     }).toList();
   }

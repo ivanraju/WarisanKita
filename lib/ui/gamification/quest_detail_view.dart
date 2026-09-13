@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+import 'package:warisan_kita/data/repositories/artisan_repository.dart';
 import 'package:warisan_kita/domain/models/heritage_task.dart';
 import 'package:warisan_kita/domain/models/quest.dart';
 import 'package:warisan_kita/domain/models/workshop_location.dart';
@@ -36,6 +37,9 @@ class _QuestDetailViewState extends State<QuestDetailView>
   bool? _lastReportedInside;
   String? _lastReportedStatus;
   bool _isShowingCompletionDialog = false;
+  bool _workshopClosedDialogScheduled = false;
+  bool _hasShownWorkshopClosedDialog = false;
+  bool _isShowingWorkshopClosedDialog = false;
   Timer? _exitConfirmationTimer;
 
   @override
@@ -86,8 +90,10 @@ class _QuestDetailViewState extends State<QuestDetailView>
     final mapViewModel = context.watch<MapViewModel>();
     final tasks = gamificationVM.heritageTasks;
     final distance = mapViewModel.getDistanceToWorkshop(workshop);
+    final isWorkshopOpen = _isWorkshopCurrentlyOpen(mapViewModel);
     _reportProximityAfterBuild(gamificationVM, distance);
     _scheduleQuestCompletionDialog(gamificationVM);
+    _scheduleWorkshopClosedDialog(isWorkshopOpen);
 
     return Scaffold(
       backgroundColor: _pageBackground,
@@ -140,8 +146,87 @@ class _QuestDetailViewState extends State<QuestDetailView>
           ],
         ),
       ),
-      bottomNavigationBar: _buildStartBar(context, gamificationVM, distance),
+      bottomNavigationBar: _buildStartBar(
+        context,
+        gamificationVM,
+        distance,
+        isWorkshopOpen: isWorkshopOpen,
+      ),
     );
+  }
+
+  bool _isWorkshopCurrentlyOpen(MapViewModel mapViewModel) {
+    for (final candidate in mapViewModel.workshops) {
+      if (candidate.id == workshop.id) return candidate.isLiveOpen;
+    }
+    return workshop.isLiveOpen;
+  }
+
+  void _scheduleWorkshopClosedDialog(bool isWorkshopOpen) {
+    if (isWorkshopOpen ||
+        _hasShownWorkshopClosedDialog ||
+        _workshopClosedDialogScheduled) {
+      return;
+    }
+
+    _workshopClosedDialogScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      _workshopClosedDialogScheduled = false;
+      if (!mounted || !(ModalRoute.of(context)?.isCurrent ?? false)) return;
+      _hasShownWorkshopClosedDialog = true;
+      await _showWorkshopClosedDialog();
+    });
+  }
+
+  Future<void> _showWorkshopClosedDialog() async {
+    if (!mounted || _isShowingWorkshopClosedDialog) return;
+    _isShowingWorkshopClosedDialog = true;
+    try {
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => AlertDialog(
+          backgroundColor: _cardSurface,
+          shape: RoundedRectangleBorder(
+            side: BorderSide(color: _cardBorder),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          icon: Icon(Icons.storefront_rounded, color: _warningText, size: 34),
+          title: Text(
+            'Workshop Currently Closed',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.dmSerifDisplay(
+              color: _primaryText,
+              fontSize: 22,
+            ),
+          ),
+          content: Text(
+            'This workshop is not accepting educational walk-ins or live '
+            'demonstrations right now. You may view the quest, but it cannot '
+            'be started until the artisan reopens the workshop.',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.plusJakartaSans(
+              color: _secondaryText,
+              fontSize: 13,
+              height: 1.5,
+            ),
+          ),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF00695C),
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      _isShowingWorkshopClosedDialog = false;
+    }
   }
 
   bool get _isDark => Theme.of(context).brightness == Brightness.dark;
@@ -1012,8 +1097,9 @@ class _QuestDetailViewState extends State<QuestDetailView>
   Widget _buildStartBar(
     BuildContext context,
     GamificationViewModel viewModel,
-    double? distance,
-  ) {
+    double? distance, {
+    required bool isWorkshopOpen,
+  }) {
     final status = viewModel.questProgressStatus?.toUpperCase();
     final isCompleted =
         status == 'COMPLETED' || viewModel.areAllHeritageTasksCompleted;
@@ -1032,8 +1118,9 @@ class _QuestDetailViewState extends State<QuestDetailView>
         !isCompleted &&
         distance != null &&
         distance > quest.geofenceRadiusMeters;
-    final canResume = viewModel.canResumeDwellTracking;
+    final canResume = isWorkshopOpen && viewModel.canResumeDwellTracking;
     final canStart =
+        isWorkshopOpen &&
         viewModel.heritageTasks.isNotEmpty &&
         !isCompleted &&
         !isInProgress &&
@@ -1057,6 +1144,20 @@ class _QuestDetailViewState extends State<QuestDetailView>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (!isWorkshopOpen && !isCompleted) ...[
+              Text(
+                'This workshop is currently closed. Quest participation will '
+                'be available when the artisan reopens it.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.plusJakartaSans(
+                  color: _warningText,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
             if (viewModel.startQuestError != null) ...[
               Text(
                 viewModel.startQuestError!,
@@ -1128,6 +1229,8 @@ class _QuestDetailViewState extends State<QuestDetailView>
                       ? (_isDark
                             ? const Color(0xFF991B1B)
                             : const Color(0xFFDC2626))
+                      : !isWorkshopOpen && !canStop && !isCompleted
+                      ? const Color(0xFF64748B)
                       : isOutOfRange || isOutsideBeforeStart
                       ? const Color(0xFFB45309)
                       : isCompleted || isInProgress
@@ -1155,12 +1258,14 @@ class _QuestDetailViewState extends State<QuestDetailView>
                     : Icon(
                         isCompleted
                             ? Icons.workspace_premium_rounded
-                            : isOutOfRange || isOutsideBeforeStart
-                            ? Icons.location_off_rounded
                             : canResume
                             ? Icons.play_arrow_rounded
                             : canStop
                             ? Icons.stop_circle_outlined
+                            : !isWorkshopOpen
+                            ? Icons.storefront_rounded
+                            : isOutOfRange || isOutsideBeforeStart
+                            ? Icons.location_off_rounded
                             : Icons.play_arrow_rounded,
                         color: Colors.white,
                       ),
@@ -1173,12 +1278,14 @@ class _QuestDetailViewState extends State<QuestDetailView>
                       ? 'Quest Completed'
                       : isBlockedByAnotherQuest
                       ? 'Another Quest Active'
-                      : isOutOfRange
-                      ? 'Return to Quest Area'
                       : canResume
                       ? 'Resume Quest'
                       : canStop
                       ? 'Stop Quest'
+                      : !isWorkshopOpen
+                      ? 'Workshop Closed'
+                      : isOutOfRange
+                      ? 'Return to Quest Area'
                       : isOutsideBeforeStart
                       ? 'Move Within Quest Zone'
                       : isInProgress
@@ -1282,6 +1389,8 @@ class _QuestDetailViewState extends State<QuestDetailView>
     BuildContext context,
     GamificationViewModel viewModel,
   ) async {
+    if (!await _confirmWorkshopAvailable(context)) return;
+    if (!context.mounted) return;
     final location = await context
         .read<MapViewModel>()
         .validateFreshQuestLocation(
@@ -1326,6 +1435,8 @@ class _QuestDetailViewState extends State<QuestDetailView>
       await _showActiveQuestConflict(context, viewModel);
       return;
     }
+    if (!await _confirmWorkshopAvailable(context)) return;
+    if (!context.mounted) return;
     final mapViewModel = context.read<MapViewModel>();
     final location = await mapViewModel.validateFreshQuestLocation(
       workshop: workshop,
@@ -1364,6 +1475,33 @@ class _QuestDetailViewState extends State<QuestDetailView>
       );
     } else if (!viewModel.canStartQuest(quest.id)) {
       await _showActiveQuestConflict(context, viewModel);
+    }
+  }
+
+  Future<bool> _confirmWorkshopAvailable(BuildContext context) async {
+    try {
+      final isOpen = await context
+          .read<ArtisanRepository>()
+          .getWorkshopLiveStatus(workshop.id);
+      if (!context.mounted) return false;
+      if (isOpen) return true;
+
+      unawaited(context.read<MapViewModel>().loadWorkshops());
+      _hasShownWorkshopClosedDialog = true;
+      await _showWorkshopClosedDialog();
+      return false;
+    } catch (error) {
+      if (!context.mounted) return false;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Unable to confirm workshop availability. Please try again.',
+          ),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Color(0xFFB42318),
+        ),
+      );
+      return false;
     }
   }
 
