@@ -177,6 +177,7 @@ class AuthViewModel extends ChangeNotifier {
 
   String? _relocationResolutionNotice;
   String? get relocationResolutionNotice => _relocationResolutionNotice;
+  bool _selfWithdrawnRelocation = false;
 
   void clearRelocationResolutionNotice() {
     _relocationResolutionNotice = null;
@@ -209,11 +210,22 @@ class AuthViewModel extends ChangeNotifier {
             _currentUser!.email.toLowerCase() != user.email.toLowerCase()) {
           return _currentUser;
         }
-        if (_currentUser?.hasPendingRelocation == true &&
+        if (_selfWithdrawnRelocation) {
+          _selfWithdrawnRelocation = false;
+        } else if (_currentUser?.hasPendingRelocation == true &&
             !user.hasPendingRelocation) {
-          if (user.address == _currentUser?.pendingRelocationAddress) {
+          final pendingAddr =
+              _currentUser?.pendingRelocationAddress?.trim().toLowerCase();
+          final currentAddr = user.address?.trim().toLowerCase();
+          final prevAddr = previousUser?.address?.trim().toLowerCase();
+          if (pendingAddr != null &&
+              currentAddr != null &&
+              pendingAddr == currentAddr &&
+              (prevAddr == null || prevAddr != currentAddr)) {
             _relocationResolutionNotice = 'APPROVED';
-          } else {
+          } else if (pendingAddr != null &&
+              currentAddr != null &&
+              currentAddr == prevAddr) {
             _relocationResolutionNotice = 'REJECTED';
           }
         }
@@ -402,6 +414,8 @@ class AuthViewModel extends ChangeNotifier {
     final email = _currentUser?.email ?? '';
     if (email.isEmpty) return;
     _isLoading = true;
+    _relocationResolutionNotice = null;
+    _selfWithdrawnRelocation = true;
     notifyListeners();
     try {
       await _repository.cancelRelocationRequest(email: email);

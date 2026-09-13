@@ -504,7 +504,88 @@ class _AdminModerationDashboardViewState
                                                 reason,
                                               ),
                                         )
-                                      else
+                                      else ...[
+                                        if (viewModel.pendingRelocationCount > 0) ...[
+                                          Container(
+                                            margin: const EdgeInsets.only(bottom: 16),
+                                            padding: const EdgeInsets.all(16),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFFEF3C7),
+                                              borderRadius: BorderRadius.circular(12),
+                                              border: Border.all(
+                                                color: const Color(0xFFF59E0B)
+                                                    .withValues(alpha: 0.5),
+                                              ),
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                Container(
+                                                  padding: const EdgeInsets.all(10),
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(0xFFF59E0B)
+                                                        .withValues(alpha: 0.2),
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                  child: const Icon(
+                                                    Icons.edit_location_alt_rounded,
+                                                    color: Color(0xFFB45309),
+                                                    size: 22,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 14),
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment.start,
+                                                    children: [
+                                                      Text(
+                                                        '${viewModel.pendingRelocationCount} Premise Relocation Request(s) Awaiting Review',
+                                                        style: GoogleFonts.plusJakartaSans(
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          color: const Color(0xFF92400E),
+                                                          fontSize: 14,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: 2),
+                                                      Text(
+                                                        'Accredited master artisans have submitted workshop premise relocation requests requiring administrative verification.',
+                                                        style: GoogleFonts.plusJakartaSans(
+                                                          color: const Color(0xFFB45309),
+                                                          fontSize: 12,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 12),
+                                                FilledButton.icon(
+                                                  onPressed: () => viewModel
+                                                      .setActiveTab('Workshop Relocations'),
+                                                  icon: const Icon(
+                                                    Icons.arrow_forward_rounded,
+                                                    size: 16,
+                                                  ),
+                                                  label: const Text('Review Relocations'),
+                                                  style: FilledButton.styleFrom(
+                                                    backgroundColor:
+                                                        const Color(0xFFD97706),
+                                                    foregroundColor: Colors.white,
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                      horizontal: 16,
+                                                      vertical: 12,
+                                                    ),
+                                                    shape: RoundedRectangleBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(10),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
                                         PendingArtisansTable(
                                           artisans:
                                               viewModel.filteredPendingProfiles,
@@ -517,6 +598,7 @@ class _AdminModerationDashboardViewState
                                                 reason,
                                               ),
                                         ),
+                                      ],
                                     ],
                                   ),
                                 ),

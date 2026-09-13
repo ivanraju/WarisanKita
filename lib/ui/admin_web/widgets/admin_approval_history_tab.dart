@@ -269,98 +269,110 @@ class _AdminApprovalHistoryTabState extends State<AdminApprovalHistoryTab> {
                         ],
                       ),
                     )
+                  else if (isMobile)
+                    _buildMobileHistoryList(context, records)
                   else
-                    Scrollbar(
-                      controller: _horizontalScrollController,
-                      thumbVisibility: true,
-                      child: SingleChildScrollView(
-                        controller: _horizontalScrollController,
-                        scrollDirection: Axis.horizontal,
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(minWidth: 980),
-                          child: DataTable(
-                            horizontalMargin: 24,
-                            columnSpacing: 24,
-                            headingRowHeight: 48,
-                            dataRowMinHeight: 68,
-                            dataRowMaxHeight: 76,
-                            headingRowColor: WidgetStateProperty.all(
-                              const Color(0xFFF8FAFC),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        return Scrollbar(
+                          controller: _horizontalScrollController,
+                          thumbVisibility: true,
+                          trackVisibility: true,
+                          child: SingleChildScrollView(
+                            controller: _horizontalScrollController,
+                            scrollDirection: Axis.horizontal,
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                minWidth: constraints.maxWidth > 900
+                                    ? constraints.maxWidth
+                                    : 900.0,
+                              ),
+                              child: DataTable(
+                                horizontalMargin: 16,
+                                columnSpacing: 14,
+                                headingRowHeight: 48,
+                                dataRowMinHeight: 64,
+                                dataRowMaxHeight: 74,
+                                showCheckboxColumn: false,
+                                headingRowColor: WidgetStateProperty.all(
+                                  const Color(0xFFF8FAFC),
+                                ),
+                                columns: [
+                                  DataColumn(
+                                    label: Text(
+                                      'MASTER ARTISAN / STUDIO',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: const Color(0xFF64748B),
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ),
+                                  DataColumn(
+                                    label: Text(
+                                      'APPROVAL TYPE',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: const Color(0xFF64748B),
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ),
+                                  DataColumn(
+                                    label: Text(
+                                      'APPROVAL DETAILS & PREMISE',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: const Color(0xFF64748B),
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ),
+                                  DataColumn(
+                                    label: Text(
+                                      'DATE & TIME',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: const Color(0xFF64748B),
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ),
+                                  DataColumn(
+                                    label: Text(
+                                      'MODERATOR',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: const Color(0xFF64748B),
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ),
+                                  DataColumn(
+                                    label: Text(
+                                      'ACTIONS',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: const Color(0xFF64748B),
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                                rows: records.map((record) {
+                                  return _buildDataRow(context, record);
+                                }).toList(),
+                              ),
                             ),
-                            columns: [
-                              DataColumn(
-                                label: Text(
-                                  'MASTER ARTISAN / STUDIO',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: const Color(0xFF64748B),
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ),
-                              DataColumn(
-                                label: Text(
-                                  'APPROVAL TYPE',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: const Color(0xFF64748B),
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ),
-                              DataColumn(
-                                label: Text(
-                                  'APPROVAL DETAILS & PREMISE',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: const Color(0xFF64748B),
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ),
-                              DataColumn(
-                                label: Text(
-                                  'DATE & TIME',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: const Color(0xFF64748B),
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ),
-                              DataColumn(
-                                label: Text(
-                                  'MODERATOR',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: const Color(0xFF64748B),
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ),
-                              DataColumn(
-                                label: Text(
-                                  'ACTIONS',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: const Color(0xFF64748B),
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ),
-                            ],
-                            rows: records.map((record) {
-                              return _buildDataRow(context, record);
-                            }).toList(),
                           ),
-                        ),
-                      ),
+                        );
+                      },
                     ),
                 ],
               ),
@@ -632,6 +644,197 @@ class _AdminApprovalHistoryTabState extends State<AdminApprovalHistoryTab> {
     );
   }
 
+  Widget _buildMobileHistoryList(
+    BuildContext context,
+    List<ApprovalHistoryRecord> records,
+  ) {
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(16),
+      itemCount: records.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (ctx, index) {
+        final record = records[index];
+        final isRelocation = record.isRelocation;
+        final isRejected = record.status.toUpperCase() == 'REJECTED';
+        final isSuspended = record.status.toUpperCase() == 'SUSPENDED';
+        final isModeration = record.isAccountModeration;
+
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.02),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: isRejected || isSuspended
+                            ? [const Color(0xFFDC2626), const Color(0xFF991B1B)]
+                            : isModeration
+                                ? [const Color(0xFF475569), const Color(0xFF334155)]
+                                : isRelocation
+                                    ? [const Color(0xFFD97706), const Color(0xFFB45309)]
+                                    : [const Color(0xFF004D40), const Color(0xFF00796B)],
+                      ),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        record.targetName.isNotEmpty
+                            ? record.targetName.substring(0, 1).toUpperCase()
+                            : 'A',
+                        style: GoogleFonts.plusJakartaSans(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          record.targetName,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF0F172A),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${record.craftCategory} • ${record.state}',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11,
+                            color: const Color(0xFF64748B),
+                          ),
+                        ),
+                        Text(
+                          record.targetEmail,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11,
+                            color: const Color(0xFF94A3B8),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isRejected || isSuspended
+                          ? const Color(0xFFFEE2E2)
+                          : isModeration
+                              ? const Color(0xFFF1F5F9)
+                              : isRelocation
+                                  ? const Color(0xFFFEF3C7)
+                                  : const Color(0xFFD1FAE5),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      isRejected
+                          ? 'Rejected'
+                          : isSuspended
+                              ? 'Suspended'
+                              : record.approvalType,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: isRejected || isSuspended
+                            ? const Color(0xFFDC2626)
+                            : isModeration
+                                ? const Color(0xFF475569)
+                                : isRelocation
+                                    ? const Color(0xFFB45309)
+                                    : const Color(0xFF047857),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text(
+                record.title,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF1E293B),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                record.details,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 11.5,
+                  color: const Color(0xFF64748B),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  const Icon(Icons.calendar_today_rounded, size: 12, color: Color(0xFF94A3B8)),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${record.formattedDate} ${record.formattedTime}',
+                    style: GoogleFonts.plusJakartaSans(fontSize: 11, color: const Color(0xFF64748B)),
+                  ),
+                  const Spacer(),
+                  Text(
+                    'By ${record.approvedBy}',
+                    style: GoogleFonts.plusJakartaSans(fontSize: 11, color: const Color(0xFF64748B)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => _showAuditDetailsModal(context, record),
+                  icon: const Icon(Icons.visibility_rounded, size: 15),
+                  label: const Text('View Audit Record'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF004D40),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    textStyle: GoogleFonts.plusJakartaSans(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   DataRow _buildDataRow(BuildContext context, ApprovalHistoryRecord record) {
     final isRelocation = record.isRelocation;
     final isRejected = record.status.toUpperCase() == 'REJECTED';
@@ -639,150 +842,152 @@ class _AdminApprovalHistoryTabState extends State<AdminApprovalHistoryTab> {
     final isModeration = record.isAccountModeration;
 
     return DataRow(
+      onSelectChanged: (_) => _showAuditDetailsModal(context, record),
       cells: [
         // Artisan / Studio
         DataCell(
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: isRejected || isSuspended
-                        ? [const Color(0xFFDC2626), const Color(0xFF991B1B)]
-                        : isModeration
-                            ? [const Color(0xFF475569), const Color(0xFF334155)]
-                            : isRelocation
-                                ? [const Color(0xFFD97706), const Color(0xFFB45309)]
-                                : [const Color(0xFF004D40), const Color(0xFF00796B)],
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 190),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: isRejected || isSuspended
+                          ? [const Color(0xFFDC2626), const Color(0xFF991B1B)]
+                          : isModeration
+                              ? [const Color(0xFF475569), const Color(0xFF334155)]
+                              : isRelocation
+                                  ? [const Color(0xFFD97706), const Color(0xFFB45309)]
+                                  : [const Color(0xFF004D40), const Color(0xFF00796B)],
+                    ),
+                    shape: BoxShape.circle,
                   ),
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Text(
-                    record.targetName.isNotEmpty
-                        ? record.targetName.substring(0, 1).toUpperCase()
-                        : 'A',
-                    style: GoogleFonts.plusJakartaSans(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
+                  child: Center(
+                    child: Text(
+                      record.targetName.isNotEmpty
+                          ? record.targetName.substring(0, 1).toUpperCase()
+                          : 'A',
+                      style: GoogleFonts.plusJakartaSans(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    record.targetName,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF0F172A),
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          record.craftCategory,
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF475569),
-                          ),
+                      Text(
+                        record.targetName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF0F172A),
                         ),
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 5,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                record.craftCategory,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF475569),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              '• ${record.state}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 10.5,
+                                color: const Color(0xFF94A3B8),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                       Text(
-                        '• ${record.state}',
+                        record.targetEmail,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.plusJakartaSans(
-                          fontSize: 11,
-                          color: const Color(0xFF94A3B8),
+                          fontSize: 10.5,
+                          color: const Color(0xFF64748B),
                         ),
                       ),
                     ],
                   ),
-                  Text(
-                    record.targetEmail,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 11,
-                      color: const Color(0xFF64748B),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
         ),
 
         // Approval Type
         DataCell(
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: isRejected || isSuspended
-                  ? const Color(0xFFFEE2E2)
-                  : isModeration
-                      ? const Color(0xFFF1F5F9)
-                      : isRelocation
-                          ? const Color(0xFFFEF3C7)
-                          : const Color(0xFFD1FAE5),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 160),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
                 color: isRejected || isSuspended
-                    ? const Color(0xFFEF4444).withValues(alpha: 0.3)
+                    ? const Color(0xFFFEE2E2)
                     : isModeration
-                        ? const Color(0xFF64748B).withValues(alpha: 0.3)
+                        ? const Color(0xFFF1F5F9)
                         : isRelocation
-                            ? const Color(0xFFF59E0B).withValues(alpha: 0.3)
-                            : const Color(0xFF10B981).withValues(alpha: 0.3),
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  isRejected || isSuspended
-                      ? (isSuspended ? Icons.block_rounded : Icons.cancel_rounded)
-                      : isModeration
-                          ? Icons.gavel_rounded
-                          : isRelocation
-                              ? Icons.swap_horiz_rounded
-                              : Icons.verified_rounded,
-                  size: 14,
+                            ? const Color(0xFFFEF3C7)
+                            : const Color(0xFFD1FAE5),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
                   color: isRejected || isSuspended
-                      ? const Color(0xFFDC2626)
+                      ? const Color(0xFFEF4444).withValues(alpha: 0.3)
                       : isModeration
-                          ? const Color(0xFF475569)
+                          ? const Color(0xFF64748B).withValues(alpha: 0.3)
                           : isRelocation
-                              ? const Color(0xFFB45309)
-                              : const Color(0xFF047857),
+                              ? const Color(0xFFF59E0B).withValues(alpha: 0.3)
+                              : const Color(0xFF10B981).withValues(alpha: 0.3),
                 ),
-                const SizedBox(width: 6),
-                Text(
-                  isRejected
-                      ? 'Rejected (${record.approvalType})'
-                      : isSuspended
-                          ? 'Suspended (${record.approvalType})'
-                          : record.approvalType,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.bold,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isRejected || isSuspended
+                        ? (isSuspended ? Icons.block_rounded : Icons.cancel_rounded)
+                        : isModeration
+                            ? Icons.gavel_rounded
+                            : isRelocation
+                                ? Icons.swap_horiz_rounded
+                                : Icons.verified_rounded,
+                    size: 13,
                     color: isRejected || isSuspended
                         ? const Color(0xFFDC2626)
                         : isModeration
@@ -791,8 +996,31 @@ class _AdminApprovalHistoryTabState extends State<AdminApprovalHistoryTab> {
                                 ? const Color(0xFFB45309)
                                 : const Color(0xFF047857),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 5),
+                  Flexible(
+                    child: Text(
+                      isRejected
+                          ? 'Rejected (${record.approvalType})'
+                          : isSuspended
+                              ? 'Suspended (${record.approvalType})'
+                              : record.approvalType,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: isRejected || isSuspended
+                            ? const Color(0xFFDC2626)
+                            : isModeration
+                                ? const Color(0xFF475569)
+                                : isRelocation
+                                    ? const Color(0xFFB45309)
+                                    : const Color(0xFF047857),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -800,7 +1028,7 @@ class _AdminApprovalHistoryTabState extends State<AdminApprovalHistoryTab> {
         // Approval Details
         DataCell(
           ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 280),
+            constraints: const BoxConstraints(maxWidth: 200),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
@@ -831,16 +1059,20 @@ class _AdminApprovalHistoryTabState extends State<AdminApprovalHistoryTab> {
                     children: [
                       const Icon(
                         Icons.attach_file_rounded,
-                        size: 12,
+                        size: 11,
                         color: Color(0xFF0F766E),
                       ),
                       const SizedBox(width: 3),
-                      Text(
-                        '${record.allDocuments.length} document${record.allDocuments.length == 1 ? '' : 's'} attached',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF0F766E),
+                      Flexible(
+                        child: Text(
+                          '${record.allDocuments.length} doc${record.allDocuments.length == 1 ? '' : 's'}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF0F766E),
+                          ),
                         ),
                       ),
                     ],
@@ -853,92 +1085,109 @@ class _AdminApprovalHistoryTabState extends State<AdminApprovalHistoryTab> {
 
         // Date & Time
         DataCell(
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.calendar_today_rounded,
-                    size: 12,
-                    color: Color(0xFF64748B),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    record.formattedDate,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF0F172A),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 105),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.calendar_today_rounded,
+                      size: 11,
+                      color: Color(0xFF64748B),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 2),
-              Text(
-                record.formattedTime,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 11,
-                  color: const Color(0xFF94A3B8),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        record.formattedDate,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF0F172A),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 2),
+                Text(
+                  record.formattedTime,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 10.5,
+                    color: const Color(0xFF94A3B8),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
 
         // Moderator
         DataCell(
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: isRejected
-                      ? const Color(0xFFFEE2E2)
-                      : const Color(0xFFDCFCE7),
-                  shape: BoxShape.circle,
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 105),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: isRejected
+                        ? const Color(0xFFFEE2E2)
+                        : const Color(0xFFDCFCE7),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    isRejected ? Icons.gavel_rounded : Icons.shield_rounded,
+                    size: 11,
+                    color: isRejected
+                        ? const Color(0xFFDC2626)
+                        : const Color(0xFF16A34A),
+                  ),
                 ),
-                child: Icon(
-                  isRejected ? Icons.gavel_rounded : Icons.shield_rounded,
-                  size: 12,
-                  color: isRejected
-                      ? const Color(0xFFDC2626)
-                      : const Color(0xFF16A34A),
+                const SizedBox(width: 5),
+                Flexible(
+                  child: Text(
+                    record.approvedBy,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF334155),
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                record.approvedBy,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF334155),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
 
         // Action Button
         DataCell(
-          ElevatedButton.icon(
-            onPressed: () => _showAuditDetailsModal(context, record),
-            icon: const Icon(Icons.visibility_rounded, size: 14),
-            label: const Text('Audit Record'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF004D40),
-              foregroundColor: Colors.white,
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              textStyle: GoogleFonts.plusJakartaSans(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w600,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: ElevatedButton.icon(
+              onPressed: () => _showAuditDetailsModal(context, record),
+              icon: const Icon(Icons.visibility_rounded, size: 14),
+              label: const Text('Audit Record'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF004D40),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                textStyle: GoogleFonts.plusJakartaSans(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
             ),
           ),
