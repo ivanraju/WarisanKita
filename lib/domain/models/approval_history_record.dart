@@ -351,7 +351,7 @@ class ApprovalHistoryRecord {
       'relocation_cert_file_name': relocationCertFileName,
       'relocation_cert_file_url': relocationCertFileUrl,
       'documents': documents,
-      'approved_at': approvedAt.toIso8601String(),
+      'approved_at': approvedAt.toUtc().toIso8601String(),
       'approved_by': approvedBy,
       'status': status,
     };
@@ -410,8 +410,9 @@ class ApprovalHistoryRecord {
               map['relocation_cert_file_url'])
           ?.toString(),
       documents: parsedDocs,
-      approvedAt: DateTime.tryParse(rawApprovedAt?.toString() ?? '') ??
-          DateTime.now(),
+      approvedAt: (DateTime.tryParse(rawApprovedAt?.toString() ?? '') ??
+              DateTime.now())
+          .toLocal(),
       approvedBy: (map['approvedBy'] ?? map['approved_by'])?.toString() ??
           'Admin Moderator',
       status: map['status']?.toString() ?? 'APPROVED',

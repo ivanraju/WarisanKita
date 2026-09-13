@@ -169,19 +169,19 @@ class ModerationViewModel extends ChangeNotifier {
         }
       }
 
+      // Preserve any records already in memory in _approvalHistory (e.g. freshly approved in this session)
+      for (final mem in _approvalHistory) {
+        if (!loaded.any((r) => r.id == mem.id)) {
+          loaded.add(mem);
+        }
+      }
+
       // Merge remote records from Supabase public.approval_history table if available
       try {
         final remoteLogs = await _repository.getApprovalHistory();
         for (final raw in remoteLogs) {
           final record = ApprovalHistoryRecord.fromMap(raw);
-          final exists = loaded.any((r) =>
-              r.id == record.id ||
-              (r.targetEmail.toLowerCase() ==
-                      record.targetEmail.toLowerCase() &&
-                  r.approvalType == record.approvalType &&
-                  r.status == record.status &&
-                  r.approvedAt.difference(record.approvedAt).inMinutes.abs() <
-                      5));
+          final exists = loaded.any((r) => r.id == record.id);
           if (!exists) {
             loaded.add(record);
           }
@@ -862,6 +862,8 @@ class ModerationViewModel extends ChangeNotifier {
       _applicationTypeFilter = 'Relocations';
     } else if (tab == 'Pending Approvals') {
       _applicationTypeFilter = 'All';
+    } else if (tab == 'Approval History') {
+      loadApprovalHistory();
     }
     notifyListeners();
   }
@@ -1683,7 +1685,7 @@ class ModerationViewModel extends ChangeNotifier {
           );
         }
         await _persistApprovalCount();
-        _recordApprovalHistory(
+        await _recordApprovalHistory(
           title: 'Workshop Premise Relocation Approved',
           targetName: artisan.name,
           targetEmail: artisan.email,
@@ -1825,7 +1827,7 @@ class ModerationViewModel extends ChangeNotifier {
         ),
       );
 
-      _recordApprovalHistory(
+      await _recordApprovalHistory(
         title: isUpgrade
             ? 'Tourist Upgraded to Master Artisan'
             : 'Master Artisan Profile Approved',
