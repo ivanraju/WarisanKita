@@ -595,7 +595,7 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
           ..._staticReportedPosts,
         ];
         if (!_showHistory) {
-          DateTime? latestReportTime(Map<String, dynamic> item) {
+          DateTime? firstReportTime(Map<String, dynamic> item) {
             final reports = List<Map<String, dynamic>>.from(item['reports'] ?? const []);
             final dates = reports
                 .map((report) => DateTime.tryParse(report['created_at']?.toString() ?? ''))
@@ -603,11 +603,11 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                 .toList();
             if (dates.isEmpty) return null;
             dates.sort();
-            return dates.last;
+            return dates.first;
           }
           allReported.sort((a, b) {
-            final aDate = latestReportTime(a);
-            final bDate = latestReportTime(b);
+            final aDate = firstReportTime(a);
+            final bDate = firstReportTime(b);
             if (aDate == null && bDate == null) return 0;
             if (aDate == null) return 1;
             if (bDate == null) return -1;

@@ -7538,6 +7538,10 @@ class SupabaseService {
   }
 
   Future<void> deleteReply(String threadId, String replyId) async {
+    // The post description is represented in the UI as a synthetic first
+    // reply (${threadId}_content), rather than a row in forum_replies.  It
+    // therefore cannot be removed through the reply RPC/table operations.
+    final isPostDescription = replyId == '${threadId}_content';
     final tIdx = _forumStore.indexWhere((t) => t.id == threadId);
     if (tIdx != -1) {
       final t = _forumStore[tIdx];
@@ -7559,6 +7563,13 @@ class SupabaseService {
     final client = _client;
     if (client != null) {
       try {
+        if (isPostDescription) {
+          await client
+              .from('forum_posts')
+              .update({'content': ''})
+              .eq('id', threadId);
+          return;
+        }
         // 1. Try RPC admin_delete_forum_content first (handles all constraints with SECURITY DEFINER)
         bool rpcSuccess = false;
         try {
