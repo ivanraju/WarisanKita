@@ -644,10 +644,18 @@ class _QuestDetailViewState extends State<QuestDetailView>
                       foregroundColor: _isDark
                           ? const Color(0xFF6EE7B7)
                           : const Color(0xFF005B4F),
+                      disabledForegroundColor: _isDark
+                          ? const Color(0xFF86EFAC).withValues(alpha: 0.75)
+                          : const Color(0xFF64748B),
                       side: BorderSide(
-                        color: _isDark
-                            ? const Color(0xFF3FAE91)
-                            : const Color(0xFF005B4F),
+                        color: viewModel.canVerifyTaskWithQr(task)
+                            ? (_isDark
+                                ? const Color(0xFF3FAE91)
+                                : const Color(0xFF005B4F))
+                            : (_isDark
+                                ? const Color(0xFF6EE7B7).withValues(alpha: 0.5)
+                                : const Color(0xFFCBD5E1)),
+                        width: 1.2,
                       ),
                       textStyle: GoogleFonts.plusJakartaSans(
                         fontSize: 11,
@@ -1065,9 +1073,16 @@ class _QuestDetailViewState extends State<QuestDetailView>
                     ? () => _startQuest(context, viewModel)
                     : null,
                 style: FilledButton.styleFrom(
-                  backgroundColor: canResume
+                  backgroundColor: canStop
+                      ? (_isDark
+                          ? const Color(0xFFB91C1C)
+                          : const Color(0xFFDC2626))
+                      : canResume
                       ? const Color(0xFF087F5B)
-                      : const Color(0xFF004D40),
+                      : (_isDark
+                          ? const Color(0xFF00695C)
+                          : const Color(0xFF004D40)),
+                  foregroundColor: Colors.white,
                   disabledBackgroundColor: isOutOfRange || isOutsideBeforeStart
                       ? const Color(0xFFB45309)
                       : isCompleted || isInProgress
@@ -1102,6 +1117,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
                             : canStop
                             ? Icons.stop_circle_outlined
                             : Icons.play_arrow_rounded,
+                        color: Colors.white,
                       ),
                 label: Text(
                   viewModel.isStartingQuest
@@ -1124,6 +1140,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
                       ? 'Quest In Progress'
                       : 'Start Quest',
                   style: GoogleFonts.plusJakartaSans(
+                    color: Colors.white,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -1137,6 +1154,11 @@ class _QuestDetailViewState extends State<QuestDetailView>
                     : () => _confirmStopQuest(context, viewModel),
                 icon: const Icon(Icons.stop_circle_outlined, size: 18),
                 label: const Text('Stop Quest'),
+                style: TextButton.styleFrom(
+                  foregroundColor: _isDark
+                      ? const Color(0xFFF87171)
+                      : const Color(0xFFDC2626),
+                ),
               ),
             ],
           ],
@@ -1152,18 +1174,39 @@ class _QuestDetailViewState extends State<QuestDetailView>
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Stop this quest?'),
-        content: const Text(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          'Stop this quest?',
+          style: GoogleFonts.dmSerifDisplay(
+            color: _isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+            fontSize: 20,
+          ),
+        ),
+        content: Text(
           'Your completed activities, XP, and timer progress will be saved. '
           'You can start another workshop quest after stopping.',
+          style: GoogleFonts.plusJakartaSans(
+            color: _isDark ? Colors.white70 : const Color(0xFF475569),
+            fontSize: 13,
+            height: 1.5,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Keep Quest Active'),
+            child: Text(
+              'Keep Quest Active',
+              style: TextStyle(
+                color: _isDark ? Colors.white70 : const Color(0xFF004D40),
+              ),
+            ),
           ),
           FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Stop Quest'),
           ),
         ],
