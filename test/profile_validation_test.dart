@@ -2362,6 +2362,100 @@ void main() {
         expect(find.text('Studio Workshop Photos (Optional)'), findsOneWidget);
       });
     });
+
+    group('Craft Experience Annual Auto-Increment & Locked Field Tests', () {
+      test('UserModel auto-increments craft experience annually from baseline year', () {
+        // Artisan with 15 years experience set in 2026
+        const user2026 = UserModel(
+          id: 'u_exp_1',
+          email: 'exp@artisan.my',
+          displayName: 'Master Craftsman',
+          role: 'Artisan',
+          experience: '15 Years',
+          tags: ['exp_base_year:2026'],
+        );
+
+        expect(user2026.baseExperienceYears, 15);
+        expect(user2026.experienceBaseYear, 2026);
+        expect(user2026.effectiveExperienceYearsAt(2026), 15);
+        expect(user2026.effectiveExperienceYearsAt(2027), 16);
+        expect(user2026.effectiveExperienceYearsAt(2028), 17);
+        expect(user2026.effectiveExperienceYearsAt(2036), 25);
+
+        // Joined date fallback when explicit tag is absent
+        const userJoined = UserModel(
+          id: 'u_exp_2',
+          email: 'exp2@artisan.my',
+          role: 'Artisan',
+          experience: '15',
+          joinedDate: '12 Jan 2026',
+        );
+        expect(userJoined.experienceBaseYear, 2026);
+        expect(userJoined.effectiveExperienceYearsAt(2027), 16);
+        expect(userJoined.effectiveExperienceNumber, isNotEmpty);
+      });
+
+      testWidgets('ProfileBuilderTab renders years of craft experience as locked / readOnly with lock icon', (tester) async {
+        final service = SupabaseService();
+        final userRepo = UserRepository(service: service);
+        final authVM = AuthViewModel(repository: userRepo);
+        final moderationVM = ModerationViewModel(repository: userRepo);
+
+        authVM.setCurrentUserForTesting(
+          const UserModel(
+            id: 'locked_exp_uid',
+            email: 'locked_exp@artisan.my',
+            role: 'Artisan',
+            roles: ['Artisan'],
+            status: 'ACTIVE',
+            experience: '15 Years',
+            studioName: 'Locked Exp Studio',
+            craftCategory: 'Wood Carving',
+          ),
+        );
+
+        await tester.pumpWidget(
+          MultiProvider(
+            providers: [
+              ChangeNotifierProvider<AuthViewModel>.value(value: authVM),
+              ChangeNotifierProvider<ModerationViewModel>.value(value: moderationVM),
+              Provider<SupabaseService>.value(value: service),
+            ],
+            child: const MaterialApp(
+              home: Scaffold(
+                body: ProfileBuilderTab(),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        while (tester.takeException() != null) {}
+
+        // Scroll to experience field
+        await tester.scrollUntilVisible(
+          find.text('Years of Craft Experience'),
+          300.0,
+          scrollable: find.byType(Scrollable).first,
+        );
+        await tester.pump();
+
+        final expFinder = find.widgetWithText(TextFormField, 'Years of Craft Experience');
+        expect(expFinder, findsOneWidget);
+
+        final textFieldFinder = find.descendant(
+          of: expFinder,
+          matching: find.byType(TextField),
+        );
+        expect(textFieldFinder, findsOneWidget);
+        final textField = tester.widget<TextField>(textFieldFinder);
+        expect(textField.readOnly, isTrue);
+
+        expect(
+          find.byTooltip('Experience is verified and automatically increments each year (Locked)'),
+          findsOneWidget,
+        );
+      });
+    });
 }
 
 

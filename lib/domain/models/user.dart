@@ -101,6 +101,69 @@ class UserModel {
   bool get hasPendingRelocation =>
       pendingRelocationAddress != null && pendingRelocationAddress!.trim().isNotEmpty;
 
+  /// Extracts the base integer years from [experience].
+  int? get baseExperienceYears {
+    if (experience == null || experience!.trim().isEmpty) return null;
+    final match = RegExp(r'\d+').firstMatch(experience!);
+    if (match != null) {
+      return int.tryParse(match.group(0)!);
+    }
+    return null;
+  }
+
+  /// Extracts or infers the baseline year from which [experience] was originally recorded.
+  int get experienceBaseYear {
+    for (final t in tags) {
+      if (t.startsWith('exp_base_year:')) {
+        final y = int.tryParse(t.substring('exp_base_year:'.length));
+        if (y != null && y > 1900 && y <= DateTime.now().year + 1) {
+          return y;
+        }
+      }
+    }
+    if (joinedDate.isNotEmpty) {
+      final match = RegExp(r'\b(20\d\d)\b').firstMatch(joinedDate);
+      if (match != null) {
+        final y = int.tryParse(match.group(1)!);
+        if (y != null) return y;
+      }
+    }
+    return 2026;
+  }
+
+  /// Dynamically computes years of craft experience auto-incremented annually for a given target [year].
+  int? effectiveExperienceYearsAt(int year) {
+    final base = baseExperienceYears;
+    if (base == null) return null;
+    final elapsed = year - experienceBaseYear;
+    if (elapsed > 0) {
+      return base + elapsed;
+    }
+    return base;
+  }
+
+  /// Dynamically computes years of craft experience auto-incremented annually for the current year.
+  int? get effectiveExperienceYears => effectiveExperienceYearsAt(DateTime.now().year);
+
+  /// Display string for years of experience (e.g. "16 Years").
+  String? get effectiveExperience {
+    final yrs = effectiveExperienceYears;
+    if (yrs != null) {
+      return '$yrs Year${yrs == 1 ? '' : 's'}';
+    }
+    return experience;
+  }
+
+  /// Numeric string representation of effective experience for controllers (e.g. "16").
+  String get effectiveExperienceNumber {
+    final yrs = effectiveExperienceYears;
+    if (yrs != null) {
+      return '$yrs';
+    }
+    if (experience == null) return '';
+    return experience!.replaceAll(RegExp(r'[^0-9]'), '');
+  }
+
   bool get isDualRole {
     final status = artisanStatus?.toUpperCase();
     if (status == 'CLOSED' ||

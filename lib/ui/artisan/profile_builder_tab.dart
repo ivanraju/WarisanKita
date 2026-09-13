@@ -118,10 +118,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     final currentCraft = _craftCategoryController.text.trim();
     if (currentCraft != initialCraft) return true;
 
-    // 4. Experience
-    final initialExpDigits = _extractExperienceNumber(user.experience);
-    final currentExpDigits = _experienceController.text.trim();
-    if (currentExpDigits != initialExpDigits) return true;
+    // 4. Experience (locked and auto-incremented, not an editable user change)
 
     // 5. Bio
     final initialBio = (user.bio ?? '').trim();
@@ -211,7 +208,9 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
       _selectedWorkshopPin = _resolveStateCenter(user.state);
     }
     _experienceController = TextEditingController(
-      text: _extractExperienceNumber(user?.experience),
+      text: user != null && user.effectiveExperienceNumber.isNotEmpty
+          ? user.effectiveExperienceNumber
+          : _extractExperienceNumber(user?.experience),
     );
     final initialPhone = user?.phone ?? '';
     _initialPhone = initialPhone;
@@ -236,7 +235,9 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     if (user == null) return;
 
     if (force || _experienceController.text.isEmpty) {
-      if (!_isDefaultOrEmptyExperience(user.experience)) {
+      if (user.effectiveExperienceNumber.isNotEmpty) {
+        _experienceController.text = user.effectiveExperienceNumber;
+      } else if (!_isDefaultOrEmptyExperience(user.experience)) {
         _experienceController.text = _extractExperienceNumber(user.experience);
       } else if (force) {
         _experienceController.text = '';
@@ -533,7 +534,9 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
 
     if (confirmed == true && mounted) {
       final authVM = context.read<AuthViewModel>();
+      authVM.clearRelocationResolutionNotice();
       await authVM.cancelRelocationRequest();
+      authVM.clearRelocationResolutionNotice();
       if (mounted) {
         setState(() {});
         final verifiedPin = _selectedWorkshopPin ??
@@ -933,6 +936,25 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                              ScaffoldMessenger.of(dialogContentCtx).showSnackBar(
                                const SnackBar(
                                  content: Text('Please select the proposed new workshop location on the map.'),
+                                 backgroundColor: Color(0xFFEF4444),
+                                 behavior: SnackBarBehavior.floating,
+                               ),
+                             );
+                             return;
+                           }
+                           if (currentUser.address != null &&
+                               proposedAddress!.trim().toLowerCase() ==
+                                   currentUser.address!.trim().toLowerCase()) {
+                             setDialogState(() {
+                               dialogErrorMessage =
+                                   'Proposed relocation address cannot be the same as your current verified workshop address.';
+                             });
+                             ScaffoldMessenger.of(dialogContentCtx).hideCurrentSnackBar();
+                             ScaffoldMessenger.of(dialogContentCtx).showSnackBar(
+                               const SnackBar(
+                                 content: Text(
+                                   'Proposed relocation address cannot be the same as your current verified workshop address.',
+                                 ),
                                  backgroundColor: Color(0xFFEF4444),
                                  behavior: SnackBarBehavior.floating,
                                ),
@@ -2190,24 +2212,30 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
             
             const SizedBox(height: 24),
 
-            // Experience Input
+            // Experience Input (Locked & Automatically Incremented Annually)
             TextFormField(
               controller: _experienceController,
-              keyboardType: TextInputType.number,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(2),
-              ],
-              autovalidateMode: AutovalidateMode.onUserInteraction,
-              validator: (v) => ProfileValidator.validateExperience(v, isRequired: false),
-              style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
+              readOnly: true,
+              style: TextStyle(
+                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                fontWeight: FontWeight.w600,
+              ),
               decoration: _inputDecoration(
                 isDark,
+                readOnly: true,
                 labelText: 'Years of Craft Experience',
-                hintText: 'e.g. 15',
                 suffixText: 'Years',
                 prefixIcon: Icons.workspace_premium_outlined,
-                helperText: 'Enter your years of craft heritage experience in numbers (e.g. 15)',
+                suffixIcon: Tooltip(
+                  message: 'Experience is verified and automatically increments each year (Locked)',
+                  child: Icon(
+                    Icons.lock_outline_rounded,
+                    size: 20,
+                    color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                  ),
+                ),
+                helperText: 'Verified craft experience (automatically increments annually)',
+                helperColor: isDark ? const Color(0xFF34D399) : const Color(0xFF059669),
               ),
             ),
 
