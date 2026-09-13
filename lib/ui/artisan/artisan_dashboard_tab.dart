@@ -97,367 +97,364 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
           SliverAppBar(
             backgroundColor: Colors.transparent,
             elevation: 0,
-          title: Text(
-            'Master Artisan Command Center',
-            style: GoogleFonts.dmSerifDisplay(
-              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
-              fontSize: 24,
-            ),
-          ),
-          actions: [
-            IconButton(
-              icon: Icon(
-                Icons.settings_outlined,
+            title: Text(
+              'Master Artisan Command Center',
+              style: GoogleFonts.dmSerifDisplay(
                 color: isDark
                     ? const Color(0xFFFFD54F)
                     : const Color(0xFF004D40),
+                fontSize: 24,
               ),
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const ArtisanSettingsScreen(),
-                  ),
-                );
-              },
             ),
-          ],
-        ),
-
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 20.0,
-              vertical: 8.0,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 🏛️ MASTER HERITAGE GUILD & ACCREDITATION HEADER CARD
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: isDark
-                          ? [const Color(0xFF0D2825), const Color(0xFF061A18)]
-                          : [const Color(0xFF0A192F), const Color(0xFF004D40)],
+            actions: [
+              IconButton(
+                icon: Icon(
+                  Icons.settings_outlined,
+                  color: isDark
+                      ? const Color(0xFFFFD54F)
+                      : const Color(0xFF004D40),
+                ),
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const ArtisanSettingsScreen(),
                     ),
-                    borderRadius: BorderRadius.circular(28),
-                    border: isDark
-                        ? Border.all(color: const Color(0xFF1E3A34))
-                        : null,
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF004D40).withValues(alpha: 0.3),
-                        blurRadius: 20,
-                        offset: const Offset(0, 10),
+                  );
+                },
+              ),
+            ],
+          ),
+
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 20.0,
+                vertical: 8.0,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 🏛️ MASTER HERITAGE GUILD & ACCREDITATION HEADER CARD
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: isDark
+                            ? [const Color(0xFF0D2825), const Color(0xFF061A18)]
+                            : [
+                                const Color(0xFF0A192F),
+                                const Color(0xFF004D40),
+                              ],
                       ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Row(
-                              children: [
-                                Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    Container(
-                                      width: 60,
-                                      height: 60,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                          color: const Color(0xFFFFD54F),
-                                          width: 2,
-                                        ),
-                                      ),
-                                    ),
-                                    CircleAvatar(
-                                      radius: 27,
-                                      backgroundColor: const Color(0xFFFFD54F),
-                                      child: Text(
-                                        initials,
-                                        style: GoogleFonts.dmSerifDisplay(
-                                          color: const Color(0xFF004D40),
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 20,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                      borderRadius: BorderRadius.circular(28),
+                      border: isDark
+                          ? Border.all(color: const Color(0xFF1E3A34))
+                          : null,
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF004D40).withValues(alpha: 0.3),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Stack(
+                                    alignment: Alignment.center,
                                     children: [
-                                      Text(
-                                        studioName,
-                                        softWrap: true,
-                                        style: GoogleFonts.dmSerifDisplay(
-                                          color: Colors.white,
-                                          fontSize: 22,
+                                      Container(
+                                        width: 60,
+                                        height: 60,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: const Color(0xFFFFD54F),
+                                            width: 2,
+                                          ),
                                         ),
                                       ),
-                                      Text(
-                                        '@$handle • $craft',
-                                        softWrap: true,
-                                        style: GoogleFonts.plusJakartaSans(
-                                          color: const Color(0xFFFFD54F),
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
+                                      CircleAvatar(
+                                        radius: 27,
+                                        backgroundColor: const Color(
+                                          0xFFFFD54F,
+                                        ),
+                                        child: Text(
+                                          initials,
+                                          style: GoogleFonts.dmSerifDisplay(
+                                            color: const Color(0xFF004D40),
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 20,
+                                          ),
                                         ),
                                       ),
                                     ],
                                   ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 18),
-
-                      // Accreditation Badges Strip
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 6,
-                        children: [
-                          _buildHeaderBadge(
-                            '🏆 Kraftangan Certified Master',
-                            const Color(0xFFFFD54F),
-                            const Color(0xFF004D40),
-                          ),
-                          _buildHeaderBadge(
-                            '📜 License #KFG-2024-889',
-                            Colors.white24,
-                            Colors.white,
-                          ),
-                          _buildHeaderBadge(
-                            '🏛️ UNESCO Living Heritage Nominee',
-                            Colors.white24,
-                            Colors.white,
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 18),
-                      const Divider(color: Colors.white24),
-                      const SizedBox(height: 12),
-
-                      // Studio Live Availability Toggle Row
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Studio Live Cultural Status:',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 11,
-                                    color: Colors.white70,
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          studioName,
+                                          softWrap: true,
+                                          style: GoogleFonts.dmSerifDisplay(
+                                            color: Colors.white,
+                                            fontSize: 22,
+                                          ),
+                                        ),
+                                        Text(
+                                          '@$handle • $craft',
+                                          softWrap: true,
+                                          style: GoogleFonts.plusJakartaSans(
+                                            color: const Color(0xFFFFD54F),
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                                Text(
-                                  isStudioOpen
-                                      ? '🟢 OPEN FOR EDUCATIONAL DEMOS'
-                                      : '🔴 LIVE DEMOS PAUSED (CLOSED TO VISITORS)',
-                                  softWrap: true,
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: isStudioOpen
-                                        ? const Color(0xFF34D399)
-                                        : const Color(0xFFFCA5A5),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Switch(
-                            value: isStudioOpen,
-                            onChanged: _toggleStudioStatus,
-                            activeThumbColor: const Color(0xFFFFD54F),
-                            activeTrackColor: const Color(0xFF10B981),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                // ⚡ MASTER STUDIO MANAGEMENT ACTIONS
-                Text(
-                  'Studio Management Portal',
-                  style: GoogleFonts.dmSerifDisplay(
-                    fontSize: 20,
-                    color: isDark
-                        ? const Color(0xFFFFD54F)
-                        : const Color(0xFF004D40),
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildQuickActionButton(
-                        context,
-                        icon: Icons.stars_rounded,
-                        label: 'Manage Quests',
-                        color: const Color(0xFFD97706),
-                        isDark: isDark,
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  const ArtisanTaskManagementScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _buildQuickActionButton(
-                        context,
-                        icon: Icons.history_edu_rounded,
-                        label: 'Craft Portfolio',
-                        color: isDark
-                            ? const Color(0xFF34D399)
-                            : const Color(0xFF004D40),
-                        isDark: isDark,
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const ProfileBuilderTab(),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _buildQuickActionButton(
-                        context,
-                        icon: Icons.forum_rounded,
-                        label: 'Live Forum',
-                        color: const Color(0xFF0284C7),
-                        isDark: isDark,
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const LiveForumTab(),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 28),
-
-                Text(
-                  'Heritage Preservation Metrics',
-                  style: GoogleFonts.dmSerifDisplay(
-                    fontSize: 22,
-                    color: isDark
-                        ? const Color(0xFFFFD54F)
-                        : const Color(0xFF004D40),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Verified workshop arrivals and quest achievements',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 11,
-                    color: isDark ? Colors.white60 : Colors.grey[600],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _buildHeritageAnalytics(gamificationVM),
-                const SizedBox(height: 16),
-                // 📜 INFORMATIONAL HERITAGE PRESERVATION CARD
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? const Color(0xFF0D2825)
-                        : const Color(0xFFF0FDF4),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: isDark
-                          ? const Color(0xFF1E3A34)
-                          : const Color(0xFF86EFAC),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.verified_user_rounded,
-                        color: isDark
-                            ? const Color(0xFF34D399)
-                            : const Color(0xFF166534),
-                        size: 26,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'National Heritage Accreditation Verified:',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w900,
-                                color: isDark
-                                    ? const Color(0xFF34D399)
-                                    : const Color(0xFF14532D),
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Your studio is recognized as an official Cultural Preservation Site by Kraftangan Malaysia. All completed quests contribute directly to national craft heritage documentation.',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 11,
-                                color: isDark
-                                    ? Colors.white70
-                                    : const Color(0xFF166534),
-                                height: 1.3,
+                                ],
                               ),
                             ),
                           ],
                         ),
+
+                        const SizedBox(height: 18),
+
+                        // Accreditation Badges Strip
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 6,
+                          children: [
+                            _buildHeaderBadge(
+                              '🏆 Kraftangan Certified Master',
+                              const Color(0xFFFFD54F),
+                              const Color(0xFF004D40),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 18),
+                        const Divider(color: Colors.white24),
+                        const SizedBox(height: 12),
+
+                        // Studio Live Availability Toggle Row
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Studio Live Cultural Status:',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 11,
+                                      color: Colors.white70,
+                                    ),
+                                  ),
+                                  Text(
+                                    isStudioOpen
+                                        ? '🟢 OPEN FOR EDUCATIONAL DEMOS'
+                                        : '🔴 LIVE DEMOS PAUSED (CLOSED TO VISITORS)',
+                                    softWrap: true,
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: isStudioOpen
+                                          ? const Color(0xFF34D399)
+                                          : const Color(0xFFFCA5A5),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Switch(
+                              value: isStudioOpen,
+                              onChanged: _toggleStudioStatus,
+                              activeThumbColor: const Color(0xFFFFD54F),
+                              activeTrackColor: const Color(0xFF10B981),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // ⚡ MASTER STUDIO MANAGEMENT ACTIONS
+                  Text(
+                    'Studio Management Portal',
+                    style: GoogleFonts.dmSerifDisplay(
+                      fontSize: 20,
+                      color: isDark
+                          ? const Color(0xFFFFD54F)
+                          : const Color(0xFF004D40),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildQuickActionButton(
+                          context,
+                          icon: Icons.stars_rounded,
+                          label: 'Manage Quests',
+                          color: const Color(0xFFD97706),
+                          isDark: isDark,
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const ArtisanTaskManagementScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _buildQuickActionButton(
+                          context,
+                          icon: Icons.history_edu_rounded,
+                          label: 'Craft Portfolio',
+                          color: isDark
+                              ? const Color(0xFF34D399)
+                              : const Color(0xFF004D40),
+                          isDark: isDark,
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const ProfileBuilderTab(),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _buildQuickActionButton(
+                          context,
+                          icon: Icons.forum_rounded,
+                          label: 'Live Forum',
+                          color: const Color(0xFF0284C7),
+                          isDark: isDark,
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const LiveForumTab(),
+                              ),
+                            );
+                          },
+                        ),
                       ),
                     ],
                   ),
-                ),
 
-                const SizedBox(height: 24),
-              ],
+                  const SizedBox(height: 28),
+
+                  Text(
+                    'Heritage Preservation Metrics',
+                    style: GoogleFonts.dmSerifDisplay(
+                      fontSize: 22,
+                      color: isDark
+                          ? const Color(0xFFFFD54F)
+                          : const Color(0xFF004D40),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Verified workshop arrivals and quest achievements',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      color: isDark ? Colors.white60 : Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildHeritageAnalytics(gamificationVM),
+                  const SizedBox(height: 16),
+                  // 📜 INFORMATIONAL HERITAGE PRESERVATION CARD
+                  Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? const Color(0xFF0D2825)
+                          : const Color(0xFFF0FDF4),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isDark
+                            ? const Color(0xFF1E3A34)
+                            : const Color(0xFF86EFAC),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.verified_user_rounded,
+                          color: isDark
+                              ? const Color(0xFF34D399)
+                              : const Color(0xFF166534),
+                          size: 26,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'National Heritage Accreditation Verified:',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w900,
+                                  color: isDark
+                                      ? const Color(0xFF34D399)
+                                      : const Color(0xFF14532D),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Your studio is recognized as an official Cultural Preservation Site by Kraftangan Malaysia. All completed quests contribute directly to national craft heritage documentation.',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11,
+                                  color: isDark
+                                      ? Colors.white70
+                                      : const Color(0xFF166534),
+                                  height: 1.3,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+                ],
+              ),
             ),
           ),
-        ),
 
-        const SliverToBoxAdapter(child: SizedBox(height: 40)),
-      ],
-    ),
-  );
-}
+          const SliverToBoxAdapter(child: SizedBox(height: 40)),
+        ],
+      ),
+    );
+  }
 
   Widget _buildHeaderBadge(String text, Color bg, Color textCol) {
     return Container(

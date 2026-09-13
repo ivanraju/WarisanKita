@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:warisan_kita/data/repositories/artisan_repository.dart';
 import 'package:warisan_kita/data/repositories/gamification_repository.dart';
 import 'package:warisan_kita/domain/models/quest.dart';
 import 'package:warisan_kita/domain/models/workshop_location.dart';
@@ -16,9 +17,12 @@ Future<void> openWorkshopQuest(
 ) async {
   final navigator = Navigator.of(context);
   final viewModel = context.read<GamificationViewModel>();
+  final artisanRepository = context.read<ArtisanRepository>();
   final browsingViewModel = GamificationViewModel(
     repository: context.read<GamificationRepository>(),
   );
+  var resolvedWorkshop = workshop;
+  String? availabilityError;
   final loadingRoute = DialogRoute<void>(
     context: context,
     barrierDismissible: false,
@@ -30,14 +34,28 @@ Future<void> openWorkshopQuest(
 
   unawaited(navigator.push(loadingRoute));
   try {
-    await viewModel.loadActiveQuestState();
-    await browsingViewModel.loadQuestsForArtisan(workshop.id);
+    late bool isLiveOpen;
+    await Future.wait<void>([
+      viewModel.loadActiveQuestState(),
+      browsingViewModel.loadQuestsForArtisan(workshop.id),
+      artisanRepository.getWorkshopLiveStatus(workshop.id).then((value) {
+        isLiveOpen = value;
+      }),
+    ]);
+    resolvedWorkshop = workshop.copyWith(isLiveOpen: isLiveOpen);
+  } catch (error) {
+    availabilityError =
+        'Unable to confirm whether this workshop is open. Please try again.';
   } finally {
     if (loadingRoute.isActive) navigator.removeRoute(loadingRoute);
   }
 
   try {
     if (!context.mounted) return;
+    if (availabilityError != null) {
+      await _showQuestUnavailable(context, availabilityError);
+      return;
+    }
     if (browsingViewModel.error != null) {
       await _showQuestUnavailable(context, browsingViewModel.error!);
       return;
@@ -58,11 +76,11 @@ Future<void> openWorkshopQuest(
           builder: (_) => ChangeNotifierProvider<GamificationViewModel>.value(
             value: browsingViewModel,
             child: QuestView(
-              workshop: workshop,
+              workshop: resolvedWorkshop,
               questsAlreadyLoaded: true,
               onQuestSelected: (selectorContext, quest) => _openSelectedQuest(
                 selectorContext,
-                workshop,
+                resolvedWorkshop,
                 quest,
                 viewModel,
               ),
@@ -74,7 +92,12 @@ Future<void> openWorkshopQuest(
       return;
     }
 
-    await _openSelectedQuest(context, workshop, quests.single, viewModel);
+    await _openSelectedQuest(
+      context,
+      resolvedWorkshop,
+      quests.single,
+      viewModel,
+    );
   } finally {
     browsingViewModel.dispose();
   }

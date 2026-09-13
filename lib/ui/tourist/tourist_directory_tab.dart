@@ -220,6 +220,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
       state: artisan['state']?.toString().trim() ?? '',
       latitude: latitude,
       longitude: longitude,
+      isLiveOpen: artisan['isLiveOpen'] as bool? ?? true,
     );
   }
 
@@ -621,8 +622,9 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
         tagList,
       );
 
-      final artisanState =
-          (artisan['state']?.toString() ?? '').toLowerCase().trim();
+      final artisanState = (artisan['state']?.toString() ?? '')
+          .toLowerCase()
+          .trim();
       final targetState = _selectedState.toLowerCase().trim();
       final address = (artisan['address']?.toString() ?? '').toLowerCase();
       final matchesState =
@@ -1089,976 +1091,991 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
             floating: true,
             pinned: true,
             backgroundColor: Colors.transparent,
-          elevation: 0,
-          expandedHeight: 126.0,
-          flexibleSpace: FlexibleSpaceBar(
-            background: Container(
-              padding: const EdgeInsets.fromLTRB(20, 42, 20, 10),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF004D40), Color(0xFF00251A)],
+            elevation: 0,
+            expandedHeight: 126.0,
+            flexibleSpace: FlexibleSpaceBar(
+              background: Container(
+                padding: const EdgeInsets.fromLTRB(20, 42, 20, 10),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF004D40), Color(0xFF00251A)],
+                  ),
                 ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 3,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(
-                                  0xFFFFD54F,
-                                ).withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: const Color(0xFFFFD54F),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(
+                                    0xFFFFD54F,
+                                  ).withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: const Color(0xFFFFD54F),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.location_on_rounded,
+                                      color: Color(0xFFFFD54F),
+                                      size: 12,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'MALAYSIA CULTURAL RADAR',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w900,
+                                        color: const Color(0xFFFFD54F),
+                                        letterSpacing: 1.1,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.location_on_rounded,
-                                    color: Color(0xFFFFD54F),
-                                    size: 12,
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            langVM.translate('Explore Living Heritage'),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.dmSerifDisplay(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: IconButton(
+                            icon: const Icon(
+                              Icons.g_translate_rounded,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                            tooltip: 'Translate Page Live',
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (_) => TranslationLanguageDialog(
+                                  currentLanguage: langVM.currentLanguageCode,
+                                  onLanguageChanged: (code, name) {
+                                    context
+                                        .read<LanguageViewModel>()
+                                        .setLanguage(code, name);
+                                  },
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: IconButton(
+                            icon: const Icon(
+                              Icons.refresh_rounded,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                            tooltip: 'Refresh Directory',
+                            onPressed: () {
+                              context
+                                  .read<DirectoryViewModel>()
+                                  .fetchArtisans();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Refreshing artisan directory from Supabase...',
                                   ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'MALAYSIA CULTURAL RADAR',
+                                  duration: Duration(seconds: 1),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 20.0,
+                vertical: 16.0,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Klook Style Glassmorphic Search Bar
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(
+                                  alpha: isDark ? 0.3 : 0.05,
+                                ),
+                                blurRadius: 16,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: TextField(
+                            controller: _searchController,
+                            style: TextStyle(
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
+                            onChanged: (_) => setState(() {}),
+                            decoration: InputDecoration(
+                              hintText: langVM.translate(
+                                'Search master artisans, state, or craft...',
+                              ),
+                              hintStyle: GoogleFonts.plusJakartaSans(
+                                fontSize: 13,
+                                color: isDark
+                                    ? Colors.white38
+                                    : Colors.grey[400],
+                              ),
+                              prefixIcon: Icon(
+                                Icons.search_rounded,
+                                color: isDark
+                                    ? const Color(0xFFFFD54F)
+                                    : const Color(0xFF004D40),
+                              ),
+                              suffixIcon: _searchController.text.isNotEmpty
+                                  ? IconButton(
+                                      icon: const Icon(
+                                        Icons.close_rounded,
+                                        size: 18,
+                                        color: Color(0xFF64748B),
+                                      ),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        setState(() {});
+                                      },
+                                    )
+                                  : null,
+                              filled: true,
+                              fillColor: isDark
+                                  ? const Color(0xFF0D2825)
+                                  : Colors.white,
+                              contentPadding: const EdgeInsets.symmetric(
+                                vertical: 14,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(20),
+                                borderSide: isDark
+                                    ? const BorderSide(color: Color(0xFF1E3A34))
+                                    : BorderSide.none,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(20),
+                                borderSide: isDark
+                                    ? const BorderSide(color: Color(0xFF1E3A34))
+                                    : BorderSide.none,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Container(
+                        height: 50,
+                        width: 50,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF004D40), Color(0xFF00251A)],
+                          ),
+                          borderRadius: BorderRadius.circular(18),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(
+                                0xFF004D40,
+                              ).withValues(alpha: 0.3),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: IconButton(
+                          icon: const Icon(
+                            Icons.tune_rounded,
+                            color: Colors.white,
+                          ),
+                          onPressed: () => _showFilterBottomSheet(langVM),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  if (_isFilterActive) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Flexible(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? const Color(
+                                      0xFF78350F,
+                                    ).withValues(alpha: 0.4)
+                                  : const Color(0xFFFEF3C7),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isDark
+                                    ? const Color(
+                                        0xFFD97706,
+                                      ).withValues(alpha: 0.5)
+                                    : const Color(0xFFFDE68A),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.filter_list_rounded,
+                                  size: 14,
+                                  color: isDark
+                                      ? const Color(0xFFFDE68A)
+                                      : const Color(0xFF92400E),
+                                ),
+                                const SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
+                                    '${filtered.length} matching result${filtered.length == 1 ? '' : 's'}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                     style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.w900,
-                                      color: const Color(0xFFFFD54F),
-                                      letterSpacing: 1.1,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark
+                                          ? const Color(0xFFFDE68A)
+                                          : const Color(0xFF92400E),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        TextButton.icon(
+                          onPressed: _clearFilters,
+                          icon: const Icon(
+                            Icons.refresh_rounded,
+                            size: 14,
+                            color: Color(0xFFDC2626),
+                          ),
+                          label: Text(
+                            langVM.translate('Clear Filters'),
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFFDC2626),
+                            ),
+                          ),
+                          style: TextButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+
+                  const SizedBox(height: 16),
+
+                  // Klook Style Quick Category Chips Carousel
+                  SizedBox(
+                    height: 42,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: craftFilters.length,
+                      itemBuilder: (context, index) {
+                        final catItem = craftFilters[index];
+                        final name = langVM.translate(catItem.englishName);
+                        final icon = catItem.icon;
+                        final isSelected = _selectedCategoryKey == catItem.key;
+
+                        return GestureDetector(
+                          onTap: () => setState(
+                            () => _selectedCategoryKey = catItem.key,
+                          ),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            margin: const EdgeInsets.only(right: 10),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? const Color(0xFF004D40)
+                                  : (isDark
+                                        ? const Color(0xFF0D2825)
+                                        : Colors.white),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: isSelected
+                                    ? const Color(0xFF004D40)
+                                    : (isDark
+                                          ? const Color(0xFF1E3A34)
+                                          : const Color(0xFFE2E8F0)),
+                                width: 1.5,
+                              ),
+                              boxShadow: isSelected
+                                  ? [
+                                      BoxShadow(
+                                        color: const Color(
+                                          0xFF004D40,
+                                        ).withValues(alpha: 0.25),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ]
+                                  : null,
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  icon,
+                                  size: 16,
+                                  color: isSelected
+                                      ? const Color(0xFFFFD54F)
+                                      : (isDark
+                                            ? const Color(0xFFFFD54F)
+                                            : const Color(0xFF004D40)),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  name,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: isSelected
+                                        ? Colors.white
+                                        : (isDark
+                                              ? Colors.white70
+                                              : const Color(0xFF334155)),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Region / State Filter Chips Row
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.map_rounded,
+                        color: isDark
+                            ? const Color(0xFFFFD54F)
+                            : const Color(0xFFD97706),
+                        size: 14,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          langVM.translate('Filter by Region / State:'),
+                          softWrap: true,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: isDark
+                                ? const Color(0xFFFFD54F)
+                                : const Color(0xFFD97706),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  SizedBox(
+                    height: 34,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _malaysianStates.length,
+                      itemBuilder: (context, index) {
+                        final st = _malaysianStates[index];
+                        final isSelected = _selectedState == st;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 6.0),
+                          child: ChoiceChip(
+                            label: Text(
+                              st == 'All States'
+                                  ? langVM.translate('All States')
+                                  : st,
+                            ),
+                            selected: isSelected,
+                            onSelected: (selected) {
+                              if (selected) setState(() => _selectedState = st);
+                            },
+                            selectedColor: const Color(0xFFD97706),
+                            backgroundColor: isDark
+                                ? const Color(0xFF0D2825)
+                                : Colors.white,
+                            side: isDark
+                                ? const BorderSide(color: Color(0xFF1E3A34))
+                                : null,
+                            labelStyle: GoogleFonts.plusJakartaSans(
+                              color: isSelected
+                                  ? Colors.white
+                                  : (isDark
+                                        ? Colors.white70
+                                        : const Color(0xFF475569)),
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Recommended Preferences Section Banner
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      Text(
+                        'Preferences Matching:',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          color: isDark ? Colors.white60 : Colors.grey[600],
+                        ),
+                      ),
+                      FilterChip(
+                        label: Text(
+                          _hasPreferences
+                              ? '⚡ Personalized (Active)'
+                              : 'Off (Show All)',
+                        ),
+                        selected: _hasPreferences,
+                        onSelected: (val) =>
+                            setState(() => _hasPreferences = val),
+                        selectedColor: isDark
+                            ? const Color(0xFF0369A1).withValues(alpha: 0.3)
+                            : const Color(0xFFE0F2FE),
+                        backgroundColor: isDark
+                            ? const Color(0xFF0D2825)
+                            : null,
+                        side: isDark
+                            ? const BorderSide(color: Color(0xFF1E3A34))
+                            : null,
+                        labelStyle: TextStyle(
+                          color: _hasPreferences
+                              ? (isDark
+                                    ? const Color(0xFF7DD3FC)
+                                    : const Color(0xFF0369A1))
+                              : (isDark ? Colors.white60 : Colors.grey[700]),
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  if (_hasPreferences) ...[
+                    const SizedBox(height: 12),
+                    if (matchmakerVM.isQuizCompleted &&
+                        recommendedArtisans.isNotEmpty) ...[
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? const Color(0xFF0D2825)
+                              : const Color(0xFFF0FDF4),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: isDark
+                                ? const Color(0xFF1E3A34)
+                                : const Color(0xFF86EFAC),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.auto_awesome_rounded,
+                                  color: isDark
+                                      ? const Color(0xFF34D399)
+                                      : const Color(0xFF15803D),
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        recommendationHeaderTitle,
+                                        softWrap: true,
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          color: isDark
+                                              ? const Color(0xFF34D399)
+                                              : const Color(0xFF15803D),
+                                        ),
+                                      ),
+                                      if (recommendationSubtitle != null) ...[
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          recommendationSubtitle,
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 10,
+                                            color: isDark
+                                                ? Colors.white60
+                                                : const Color(0xFF166534),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: Icon(
+                                    Icons.tune_rounded,
+                                    size: 18,
+                                    color: isDark
+                                        ? const Color(0xFFFFD54F)
+                                        : const Color(0xFF004D40),
+                                  ),
+                                  tooltip: 'Update Quiz Preferences',
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (_) => CraftMatchmakerQuizWizard(
+                                        onCompleted: (_) => setState(() {}),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              height: 98,
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: recommendedArtisans.length,
+                                itemBuilder: (context, index) {
+                                  return _buildRecommendationCard(
+                                    context: context,
+                                    artisan: recommendedArtisans[index],
+                                    langVM: langVM,
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ] else if (matchmakerVM.isQuizCompleted &&
+                        recommendedArtisans.isEmpty) ...[
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? const Color(0xFF0D2825)
+                              : const Color(0xFFFFFBEB),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: isDark
+                                ? const Color(0xFF1E3A34)
+                                : const Color(0xFFFDE68A),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? const Color(0xFF1E3A34)
+                                    : const Color(0xFFFEF3C7),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                Icons.info_outline_rounded,
+                                color: isDark
+                                    ? const Color(0xFFFFD54F)
+                                    : const Color(0xFFD97706),
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    langVM.translate(
+                                      'No artisans match your quiz choices',
+                                    ),
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark
+                                          ? const Color(0xFFFFD54F)
+                                          : const Color(0xFFB45309),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '${langVM.translate("No artisans currently match your quiz choice for")} "${matchmakerVM.material ?? "Craft"}". ${langVM.translate("Tap below to retake the quiz or browse all crafts.")}',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 10,
+                                      color: isDark
+                                          ? Colors.white60
+                                          : const Color(0xFF92400E),
                                     ),
                                   ),
                                 ],
                               ),
                             ),
+                            const SizedBox(width: 8),
+                            OutlinedButton(
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (_) => CraftMatchmakerQuizWizard(
+                                    onCompleted: (_) => setState(() {}),
+                                  ),
+                                );
+                              },
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(
+                                  color: isDark
+                                      ? const Color(0xFFFFD54F)
+                                      : const Color(0xFFD97706),
+                                ),
+                                foregroundColor: isDark
+                                    ? const Color(0xFFFFD54F)
+                                    : const Color(0xFFD97706),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 6,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              child: Text(
+                                langVM.translate('Retake Quiz'),
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
                           ],
                         ),
-                        const SizedBox(height: 6),
-                        Text(
-                          langVM.translate('Explore Living Heritage'),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.dmSerifDisplay(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Row(
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.15),
-                          shape: BoxShape.circle,
-                        ),
-                        child: IconButton(
-                          icon: const Icon(
-                            Icons.g_translate_rounded,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                          tooltip: 'Translate Page Live',
-                          onPressed: () {
-                            showDialog(
-                              context: context,
-                              builder: (_) => TranslationLanguageDialog(
-                                currentLanguage: langVM.currentLanguageCode,
-                                onLanguageChanged: (code, name) {
-                                  context.read<LanguageViewModel>().setLanguage(
-                                    code,
-                                    name,
-                                  );
-                                },
-                              ),
-                            );
-                          },
-                        ),
                       ),
-                      const SizedBox(width: 8),
+                    ] else ...[
                       Container(
+                        padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.15),
-                          shape: BoxShape.circle,
-                        ),
-                        child: IconButton(
-                          icon: const Icon(
-                            Icons.refresh_rounded,
-                            color: Colors.white,
-                            size: 20,
+                          color: isDark
+                              ? const Color(0xFF0D2825)
+                              : const Color(0xFFF0FDF4),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: isDark
+                                ? const Color(0xFF1E3A34)
+                                : const Color(0xFF86EFAC),
                           ),
-                          tooltip: 'Refresh Directory',
-                          onPressed: () {
-                            context.read<DirectoryViewModel>().fetchArtisans();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Refreshing artisan directory from Supabase...',
-                                ),
-                                duration: Duration(seconds: 1),
-                                behavior: SnackBarBehavior.floating,
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? const Color(0xFF1E3A34)
+                                    : const Color(0xFFDCFCE7),
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                            );
-                          },
+                              child: Icon(
+                                Icons.auto_awesome_rounded,
+                                color: isDark
+                                    ? const Color(0xFFFFD54F)
+                                    : const Color(0xFF15803D),
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    langVM.translate(
+                                      'Take the Craft Matchmaker Quiz',
+                                    ),
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark
+                                          ? const Color(0xFFFFD54F)
+                                          : const Color(0xFF15803D),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    langVM.translate(
+                                      'Answer 4 quick questions to get suggested artisans based on what you choose!',
+                                    ),
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 10,
+                                      color: isDark
+                                          ? Colors.white70
+                                          : const Color(0xFF166534),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            FilledButton(
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (_) => CraftMatchmakerQuizWizard(
+                                    onCompleted: (_) => setState(() {}),
+                                  ),
+                                );
+                              },
+                              style: FilledButton.styleFrom(
+                                backgroundColor: isDark
+                                    ? const Color(0xFFFFD54F)
+                                    : const Color(0xFF004D40),
+                                foregroundColor: isDark
+                                    ? const Color(0xFF041412)
+                                    : Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              child: Text(
+                                langVM.translate('START QUIZ'),
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
-                  ),
+                  ],
+
+                  const SizedBox(height: 16),
                 ],
               ),
             ),
           ),
-        ),
 
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 20.0,
-              vertical: 16.0,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Klook Style Glassmorphic Search Bar
-                Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(
-                                alpha: isDark ? 0.3 : 0.05,
-                              ),
-                              blurRadius: 16,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: TextField(
-                          controller: _searchController,
-                          style: TextStyle(
-                            color: isDark ? Colors.white : Colors.black87,
-                          ),
-                          onChanged: (_) => setState(() {}),
-                          decoration: InputDecoration(
-                            hintText: langVM.translate(
-                              'Search master artisans, state, or craft...',
-                            ),
-                            hintStyle: GoogleFonts.plusJakartaSans(
-                              fontSize: 13,
-                              color: isDark ? Colors.white38 : Colors.grey[400],
-                            ),
-                            prefixIcon: Icon(
-                              Icons.search_rounded,
-                              color: isDark
-                                  ? const Color(0xFFFFD54F)
-                                  : const Color(0xFF004D40),
-                            ),
-                            suffixIcon: _searchController.text.isNotEmpty
-                                ? IconButton(
-                                    icon: const Icon(
-                                      Icons.close_rounded,
-                                      size: 18,
-                                      color: Color(0xFF64748B),
-                                    ),
-                                    onPressed: () {
-                                      _searchController.clear();
-                                      setState(() {});
-                                    },
-                                  )
-                                : null,
-                            filled: true,
-                            fillColor: isDark
-                                ? const Color(0xFF0D2825)
-                                : Colors.white,
-                            contentPadding: const EdgeInsets.symmetric(
-                              vertical: 14,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(20),
-                              borderSide: isDark
-                                  ? const BorderSide(color: Color(0xFF1E3A34))
-                                  : BorderSide.none,
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(20),
-                              borderSide: isDark
-                                  ? const BorderSide(color: Color(0xFF1E3A34))
-                                  : BorderSide.none,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Container(
-                      height: 50,
-                      width: 50,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF004D40), Color(0xFF00251A)],
-                        ),
-                        borderRadius: BorderRadius.circular(18),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(
-                              0xFF004D40,
-                            ).withValues(alpha: 0.3),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: IconButton(
-                        icon: const Icon(
-                          Icons.tune_rounded,
-                          color: Colors.white,
-                        ),
-                        onPressed: () => _showFilterBottomSheet(langVM),
-                      ),
-                    ),
-                  ],
+          // Trip.com Inspired Experience Cards Grid / List or Empty State Fallback UI
+          if (dirVM.isLoading && filtered.isEmpty)
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+                child: ShimmerDirectoryLoading(),
+              ),
+            )
+          else if (filtered.isEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20.0,
+                  vertical: 12.0,
                 ),
-
-                if (_isFilterActive) ...[
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Flexible(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? const Color(0xFF78350F).withValues(alpha: 0.4)
-                                : const Color(0xFFFEF3C7),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: isDark
-                                  ? const Color(
-                                      0xFFD97706,
-                                    ).withValues(alpha: 0.5)
-                                  : const Color(0xFFFDE68A),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.filter_list_rounded,
-                                size: 14,
-                                color: isDark
-                                    ? const Color(0xFFFDE68A)
-                                    : const Color(0xFF92400E),
-                              ),
-                              const SizedBox(width: 4),
-                              Flexible(
-                                child: Text(
-                                  '${filtered.length} matching result${filtered.length == 1 ? '' : 's'}',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: isDark
-                                        ? const Color(0xFFFDE68A)
-                                        : const Color(0xFF92400E),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      TextButton.icon(
-                        onPressed: _clearFilters,
-                        icon: const Icon(
-                          Icons.refresh_rounded,
-                          size: 14,
-                          color: Color(0xFFDC2626),
-                        ),
-                        label: Text(
-                          langVM.translate('Clear Filters'),
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFFDC2626),
-                          ),
-                        ),
-                        style: TextButton.styleFrom(
-                          visualDensity: VisualDensity.compact,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                        ),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24.0,
+                    vertical: 36.0,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF0D2825) : Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: isDark
+                          ? const Color(0xFF1E3A34)
+                          : const Color(0xFFE2E8F0),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: isDark
+                            ? Colors.black.withValues(alpha: 0.3)
+                            : const Color(0xFF004D40).withValues(alpha: 0.05),
+                        blurRadius: 16,
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
-                ],
-
-                const SizedBox(height: 16),
-
-                // Klook Style Quick Category Chips Carousel
-                SizedBox(
-                  height: 42,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: craftFilters.length,
-                    itemBuilder: (context, index) {
-                      final catItem = craftFilters[index];
-                      final name = langVM.translate(catItem.englishName);
-                      final icon = catItem.icon;
-                      final isSelected = _selectedCategoryKey == catItem.key;
-
-                      return GestureDetector(
-                        onTap: () =>
-                            setState(() => _selectedCategoryKey = catItem.key),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          margin: const EdgeInsets.only(right: 10),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? const Color(0xFF004D40)
-                                : (isDark
-                                      ? const Color(0xFF0D2825)
-                                      : Colors.white),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: isSelected
-                                  ? const Color(0xFF004D40)
-                                  : (isDark
-                                        ? const Color(0xFF1E3A34)
-                                        : const Color(0xFFE2E8F0)),
-                              width: 1.5,
-                            ),
-                            boxShadow: isSelected
-                                ? [
-                                    BoxShadow(
-                                      color: const Color(
-                                        0xFF004D40,
-                                      ).withValues(alpha: 0.25),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ]
-                                : null,
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                icon,
-                                size: 16,
-                                color: isSelected
-                                    ? const Color(0xFFFFD54F)
-                                    : (isDark
-                                          ? const Color(0xFFFFD54F)
-                                          : const Color(0xFF004D40)),
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                name,
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: isSelected
-                                      ? Colors.white
-                                      : (isDark
-                                            ? Colors.white70
-                                            : const Color(0xFF334155)),
-                                ),
-                              ),
-                            ],
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? const Color(0xFFFFD54F).withValues(alpha: 0.15)
+                              : const Color(0xFFFFFBEB),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isDark
+                                ? const Color(
+                                    0xFFFFD54F,
+                                  ).withValues(alpha: 0.35)
+                                : const Color(0xFFFDE68A),
                           ),
                         ),
-                      );
-                    },
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // Region / State Filter Chips Row
-                Row(
-                  children: [
-                    Icon(
-                      Icons.map_rounded,
-                      color: isDark
-                          ? const Color(0xFFFFD54F)
-                          : const Color(0xFFD97706),
-                      size: 14,
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        langVM.translate('Filter by Region / State:'),
-                        softWrap: true,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
+                        child: Icon(
+                          Icons.search_off_rounded,
+                          size: 44,
                           color: isDark
                               ? const Color(0xFFFFD54F)
                               : const Color(0xFFD97706),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-
-                SizedBox(
-                  height: 34,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: _malaysianStates.length,
-                    itemBuilder: (context, index) {
-                      final st = _malaysianStates[index];
-                      final isSelected = _selectedState == st;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 6.0),
-                        child: ChoiceChip(
-                          label: Text(
-                            st == 'All States'
-                                ? langVM.translate('All States')
-                                : st,
-                          ),
-                          selected: isSelected,
-                          onSelected: (selected) {
-                            if (selected) setState(() => _selectedState = st);
-                          },
-                          selectedColor: const Color(0xFFD97706),
-                          backgroundColor: isDark
-                              ? const Color(0xFF0D2825)
-                              : Colors.white,
-                          side: isDark
-                              ? const BorderSide(color: Color(0xFF1E3A34))
-                              : null,
-                          labelStyle: GoogleFonts.plusJakartaSans(
-                            color: isSelected
-                                ? Colors.white
-                                : (isDark
-                                      ? Colors.white70
-                                      : const Color(0xFF475569)),
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          visualDensity: VisualDensity.compact,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // Recommended Preferences Section Banner
-                Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: 8,
-                  runSpacing: 4,
-                  children: [
-                    Text(
-                      'Preferences Matching:',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 11,
-                        color: isDark ? Colors.white60 : Colors.grey[600],
-                      ),
-                    ),
-                    FilterChip(
-                      label: Text(
-                        _hasPreferences
-                            ? '⚡ Personalized (Active)'
-                            : 'Off (Show All)',
-                      ),
-                      selected: _hasPreferences,
-                      onSelected: (val) =>
-                          setState(() => _hasPreferences = val),
-                      selectedColor: isDark
-                          ? const Color(0xFF0369A1).withValues(alpha: 0.3)
-                          : const Color(0xFFE0F2FE),
-                      backgroundColor: isDark ? const Color(0xFF0D2825) : null,
-                      side: isDark
-                          ? const BorderSide(color: Color(0xFF1E3A34))
-                          : null,
-                      labelStyle: TextStyle(
-                        color: _hasPreferences
-                            ? (isDark
-                                  ? const Color(0xFF7DD3FC)
-                                  : const Color(0xFF0369A1))
-                            : (isDark ? Colors.white60 : Colors.grey[700]),
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-
-                if (_hasPreferences) ...[
-                  const SizedBox(height: 12),
-                  if (matchmakerVM.isQuizCompleted &&
-                      recommendedArtisans.isNotEmpty) ...[
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? const Color(0xFF0D2825)
-                            : const Color(0xFFF0FDF4),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: isDark
-                              ? const Color(0xFF1E3A34)
-                              : const Color(0xFF86EFAC),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.auto_awesome_rounded,
-                                color: isDark
-                                    ? const Color(0xFF34D399)
-                                    : const Color(0xFF15803D),
-                                size: 16,
-                              ),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      recommendationHeaderTitle,
-                                      softWrap: true,
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                        color: isDark
-                                            ? const Color(0xFF34D399)
-                                            : const Color(0xFF15803D),
-                                      ),
-                                    ),
-                                    if (recommendationSubtitle != null) ...[
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        recommendationSubtitle,
-                                        style: GoogleFonts.plusJakartaSans(
-                                          fontSize: 10,
-                                          color: isDark
-                                              ? Colors.white60
-                                              : const Color(0xFF166534),
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                              IconButton(
-                                icon: Icon(
-                                  Icons.tune_rounded,
-                                  size: 18,
-                                  color: isDark
-                                      ? const Color(0xFFFFD54F)
-                                      : const Color(0xFF004D40),
-                                ),
-                                tooltip: 'Update Quiz Preferences',
-                                onPressed: () {
-                                  showDialog(
-                                    context: context,
-                                    builder: (_) => CraftMatchmakerQuizWizard(
-                                      onCompleted: (_) => setState(() {}),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          SizedBox(
-                            height: 98,
-                            child: ListView.builder(
-                              scrollDirection: Axis.horizontal,
-                              itemCount: recommendedArtisans.length,
-                              itemBuilder: (context, index) {
-                                return _buildRecommendationCard(
-                                  context: context,
-                                  artisan: recommendedArtisans[index],
-                                  langVM: langVM,
-                                );
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ] else if (matchmakerVM.isQuizCompleted &&
-                      recommendedArtisans.isEmpty) ...[
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? const Color(0xFF0D2825)
-                            : const Color(0xFFFFFBEB),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: isDark
-                              ? const Color(0xFF1E3A34)
-                              : const Color(0xFFFDE68A),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: isDark
-                                  ? const Color(0xFF1E3A34)
-                                  : const Color(0xFFFEF3C7),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(
-                              Icons.info_outline_rounded,
-                              color: isDark
-                                  ? const Color(0xFFFFD54F)
-                                  : const Color(0xFFD97706),
-                              size: 20,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  langVM.translate(
-                                    'No artisans match your quiz choices',
-                                  ),
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: isDark
-                                        ? const Color(0xFFFFD54F)
-                                        : const Color(0xFFB45309),
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  '${langVM.translate("No artisans currently match your quiz choice for")} "${matchmakerVM.material ?? "Craft"}". ${langVM.translate("Tap below to retake the quiz or browse all crafts.")}',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 10,
-                                    color: isDark
-                                        ? Colors.white60
-                                        : const Color(0xFF92400E),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          OutlinedButton(
-                            onPressed: () {
-                              showDialog(
-                                context: context,
-                                builder: (_) => CraftMatchmakerQuizWizard(
-                                  onCompleted: (_) => setState(() {}),
-                                ),
-                              );
-                            },
-                            style: OutlinedButton.styleFrom(
-                              side: BorderSide(
-                                color: isDark
-                                    ? const Color(0xFFFFD54F)
-                                    : const Color(0xFFD97706),
-                              ),
-                              foregroundColor: isDark
-                                  ? const Color(0xFFFFD54F)
-                                  : const Color(0xFFD97706),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 6,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                            child: Text(
-                              langVM.translate('Retake Quiz'),
-                              style: const TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ] else ...[
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? const Color(0xFF0D2825)
-                            : const Color(0xFFF0FDF4),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: isDark
-                              ? const Color(0xFF1E3A34)
-                              : const Color(0xFF86EFAC),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: isDark
-                                  ? const Color(0xFF1E3A34)
-                                  : const Color(0xFFDCFCE7),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(
-                              Icons.auto_awesome_rounded,
-                              color: isDark
-                                  ? const Color(0xFFFFD54F)
-                                  : const Color(0xFF15803D),
-                              size: 20,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  langVM.translate(
-                                    'Take the Craft Matchmaker Quiz',
-                                  ),
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: isDark
-                                        ? const Color(0xFFFFD54F)
-                                        : const Color(0xFF15803D),
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  langVM.translate(
-                                    'Answer 4 quick questions to get suggested artisans based on what you choose!',
-                                  ),
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 10,
-                                    color: isDark
-                                        ? Colors.white70
-                                        : const Color(0xFF166534),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          FilledButton(
-                            onPressed: () {
-                              showDialog(
-                                context: context,
-                                builder: (_) => CraftMatchmakerQuizWizard(
-                                  onCompleted: (_) => setState(() {}),
-                                ),
-                              );
-                            },
-                            style: FilledButton.styleFrom(
-                              backgroundColor: isDark
-                                  ? const Color(0xFFFFD54F)
-                                  : const Color(0xFF004D40),
-                              foregroundColor: isDark
-                                  ? const Color(0xFF041412)
-                                  : Colors.white,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                            child: Text(
-                              langVM.translate('START QUIZ'),
-                              style: const TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
-
-                const SizedBox(height: 16),
-              ],
-            ),
-          ),
-        ),
-
-        // Trip.com Inspired Experience Cards Grid / List or Empty State Fallback UI
-        if (dirVM.isLoading && filtered.isEmpty)
-          const SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
-              child: ShimmerDirectoryLoading(),
-            ),
-          )
-        else if (filtered.isEmpty)
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 20.0,
-                vertical: 12.0,
-              ),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24.0,
-                  vertical: 36.0,
-                ),
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF0D2825) : Colors.white,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: isDark
-                        ? const Color(0xFF1E3A34)
-                        : const Color(0xFFE2E8F0),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: isDark
-                          ? Colors.black.withValues(alpha: 0.3)
-                          : const Color(0xFF004D40).withValues(alpha: 0.05),
-                      blurRadius: 16,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? const Color(0xFFFFD54F).withValues(alpha: 0.15)
-                            : const Color(0xFFFFFBEB),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: isDark
-                              ? const Color(0xFFFFD54F).withValues(alpha: 0.35)
-                              : const Color(0xFFFDE68A),
-                        ),
-                      ),
-                      child: Icon(
-                        Icons.search_off_rounded,
-                        size: 44,
-                        color: isDark
-                            ? const Color(0xFFFFD54F)
-                            : const Color(0xFFD97706),
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    Text(
-                      langVM.translate('No Results Found'),
-                      style: GoogleFonts.dmSerifDisplay(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : const Color(0xFF1E293B),
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      langVM.translate(
-                        'No master craftsmen match your active search filters or query. Try adjusting your search keyword or clearing filters.',
-                      ),
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 13,
-                        color: isDark ? Colors.white70 : const Color(0xFF64748B),
-                        height: 1.5,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 20),
-                    FilledButton.icon(
-                      onPressed: _clearFilters,
-                      icon: const Icon(Icons.refresh_rounded, size: 18),
-                      label: Text(
-                        langVM.translate('Clear Filters'),
-                        style: GoogleFonts.plusJakartaSans(
+                      const SizedBox(height: 18),
+                      Text(
+                        langVM.translate('No Results Found'),
+                        style: GoogleFonts.dmSerifDisplay(
+                          fontSize: 22,
                           fontWeight: FontWeight.bold,
+                          color: isDark
+                              ? Colors.white
+                              : const Color(0xFF1E293B),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        langVM.translate(
+                          'No master craftsmen match your active search filters or query. Try adjusting your search keyword or clearing filters.',
+                        ),
+                        style: GoogleFonts.plusJakartaSans(
                           fontSize: 13,
+                          color: isDark
+                              ? Colors.white70
+                              : const Color(0xFF64748B),
+                          height: 1.5,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 20),
+                      FilledButton.icon(
+                        onPressed: _clearFilters,
+                        icon: const Icon(Icons.refresh_rounded, size: 18),
+                        label: Text(
+                          langVM.translate('Clear Filters'),
+                          style: GoogleFonts.plusJakartaSans(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: isDark
+                              ? const Color(0xFF00695C)
+                              : const Color(0xFF004D40),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 14,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                         ),
                       ),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: isDark
-                            ? const Color(0xFF00695C)
-                            : const Color(0xFF004D40),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 14,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
+            )
+          else
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  final artisan = filtered[index];
+                  return _buildArtisanCard(context, artisan, langVM);
+                }, childCount: filtered.length),
+              ),
             ),
-          )
-        else
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0),
-            sliver: SliverList(
-              delegate: SliverChildBuilderDelegate((context, index) {
-                final artisan = filtered[index];
-                return _buildArtisanCard(context, artisan, langVM);
-              }, childCount: filtered.length),
-            ),
-          ),
 
-        const SliverToBoxAdapter(child: SizedBox(height: 100)),
-      ],
-    ),
-  );
-}
+          const SliverToBoxAdapter(child: SizedBox(height: 100)),
+        ],
+      ),
+    );
+  }
 
   Widget _buildArtisanCard(
     BuildContext context,
@@ -2074,7 +2091,9 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
         : <String>[];
     // Strictly exclude any crafting proof photos or verification certificates from rotating portfolio
     final cleanImagesList = rawImagesList.where((img) {
-      if (craftingPhoto != null && craftingPhoto.isNotEmpty && img == craftingPhoto) {
+      if (craftingPhoto != null &&
+          craftingPhoto.isNotEmpty &&
+          img == craftingPhoto) {
         return false;
       }
       final lower = img.toLowerCase();
@@ -2086,7 +2105,8 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
       return true;
     }).toList();
 
-    String defaultImage = artisan['image']?.toString() ??
+    String defaultImage =
+        artisan['image']?.toString() ??
         'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&auto=format&fit=crop&q=80';
     if (craftingPhoto != null &&
         craftingPhoto.isNotEmpty &&
@@ -2168,9 +2188,18 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    (artisan['premiseType'] as String?)?.toLowerCase().contains('village') == true ||
-                            (artisan['premiseType'] as String?)?.toLowerCase().contains('desa') == true ||
-                            (artisan['premiseType'] as String?)?.toLowerCase().contains('kediaman') == true
+                    (artisan['premiseType'] as String?)?.toLowerCase().contains(
+                                  'village',
+                                ) ==
+                                true ||
+                            (artisan['premiseType'] as String?)
+                                    ?.toLowerCase()
+                                    .contains('desa') ==
+                                true ||
+                            (artisan['premiseType'] as String?)
+                                    ?.toLowerCase()
+                                    .contains('kediaman') ==
+                                true
                         ? Icons.cottage_outlined
                         : Icons.verified_rounded,
                     color: const Color(0xFFFFD54F),
@@ -2178,9 +2207,18 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    (artisan['premiseType'] as String?)?.toLowerCase().contains('village') == true ||
-                            (artisan['premiseType'] as String?)?.toLowerCase().contains('desa') == true ||
-                            (artisan['premiseType'] as String?)?.toLowerCase().contains('kediaman') == true
+                    (artisan['premiseType'] as String?)?.toLowerCase().contains(
+                                  'village',
+                                ) ==
+                                true ||
+                            (artisan['premiseType'] as String?)
+                                    ?.toLowerCase()
+                                    .contains('desa') ==
+                                true ||
+                            (artisan['premiseType'] as String?)
+                                    ?.toLowerCase()
+                                    .contains('kediaman') ==
+                                true
                         ? 'VILLAGE CRAFTER'
                         : 'VERIFIED MASTER',
                     style: GoogleFonts.plusJakartaSans(
@@ -2195,40 +2233,43 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
             ),
             topTrailing: questPotentialXp != null && questPotentialXp > 0
                 ? Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFFF7043), Color(0xFFF4511E)],
-                ),
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFFFF7043).withValues(alpha: 0.4),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.local_fire_department_rounded,
-                    color: Colors.white,
-                    size: 14,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '+$questPotentialXp XP',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
                     ),
-                  ),
-                ],
-              ),
-            )
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFFF7043), Color(0xFFF4511E)],
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFFF7043).withValues(alpha: 0.4),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.local_fire_department_rounded,
+                          color: Colors.white,
+                          size: 14,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '+$questPotentialXp XP',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
                 : null,
             bottomContent: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,

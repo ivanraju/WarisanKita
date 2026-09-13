@@ -93,8 +93,14 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
     return _questProgressStatus?.toUpperCase() == 'IN_PROGRESS' &&
         _isInsideQuestGeofence &&
         _requiresManualResume &&
+        _hasIncompleteDwellTask &&
         !_timerRestorationFailed &&
         !_isDwellTracking;
+  }
+
+  bool get _hasIncompleteDwellTask {
+    final dwellTask = _stayFifteenMinutesTask;
+    return dwellTask != null && !isTaskCompleted(dwellTask);
   }
 
   Quest? _artisanQuest;
@@ -455,11 +461,13 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
 
       await _restorePersistedDwellAsPaused();
       _syncDisplayedDwellProgress();
-      // A persisted journey is restored in a paused state. Location updates may
-      // make Resume available, but never restart activity tracking by themselves.
+      // Only an unfinished dwell task needs an explicit resume after persisted
+      // state is restored. Completed dwell time must not lock the remaining QR
+      // activities merely because the tourist navigated away and returned.
       _requiresManualResume =
           _questProgressStatus?.toUpperCase() == 'IN_PROGRESS' &&
-          !isQuestPermanentlyCompleted;
+          !isQuestPermanentlyCompleted &&
+          _hasIncompleteDwellTask;
     } catch (error, stackTrace) {
       if (requestId != _loadRequestId) {
         return;
@@ -650,10 +658,11 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
     final canCompleteJourneyTask =
         _questProgressStatus?.toUpperCase() == 'IN_PROGRESS' &&
         !isQuestPermanentlyCompleted;
-    final canCompleteBonusTask =
-        isQuestPermanentlyCompleted && isBonusTask(task);
+    final canCompleteAfterBadge =
+        isQuestPermanentlyCompleted &&
+        (!task.isRequired || isBonusTask(task));
     if (_requiresManualResume ||
-        (!canCompleteJourneyTask && !canCompleteBonusTask) ||
+        (!canCompleteJourneyTask && !canCompleteAfterBadge) ||
         isTaskCompleted(task)) {
       return false;
     }
@@ -668,9 +677,10 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
     final canCompleteJourneyTask =
         _questProgressStatus?.toUpperCase() == 'IN_PROGRESS' &&
         !isQuestPermanentlyCompleted;
-    final canCompleteBonusTask =
-        isQuestPermanentlyCompleted && isBonusTask(task);
-    if (!canCompleteJourneyTask && !canCompleteBonusTask) {
+    final canCompleteAfterBadge =
+        isQuestPermanentlyCompleted &&
+        (!task.isRequired || isBonusTask(task));
+    if (!canCompleteJourneyTask && !canCompleteAfterBadge) {
       return 'Start Quest to Scan';
     }
     if (_requiresManualResume) return 'Start Quest to Scan';

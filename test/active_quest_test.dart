@@ -184,7 +184,7 @@ void main() {
     });
 
     test(
-      'restored journey stays paused until the tourist explicitly resumes',
+      'restored journey with completed dwell does not require resume',
       () async {
         final qrTask = HeritageTask(
           id: 'qr-task',
@@ -220,20 +220,38 @@ void main() {
         await viewModel.selectQuest(_quest('quest-1'));
         await viewModel.handleQuestProximityChanged(true);
 
+        expect(viewModel.requiresJourneyResume, isFalse);
+        expect(viewModel.canResumeDwellTracking, isFalse);
+        expect(viewModel.canVerifyTaskWithQr(qrTask), isTrue);
+        expect(viewModel.qrVerificationLabel(qrTask), 'Scan Workshop QR');
+        expect(repository.timedStartCalls, 0);
+      },
+    );
+
+    test(
+      'restored journey with unfinished dwell still requires resume',
+      () async {
+        final repository = _QuestFlowRepository(
+          initialActiveState: _stateFor('quest-1'),
+          startResult: _successfulStart(QuestStartDisposition.resumed),
+          progressRows: [
+            _progress('arrival', completed: true),
+            _progress(
+              'dwell',
+              progressSeconds: 120,
+              trackingStartedAt: DateTime.now().toUtc(),
+            ),
+          ],
+        );
+        final viewModel = GamificationViewModel(repository: repository);
+        addTearDown(viewModel.dispose);
+
+        await viewModel.selectQuest(_quest('quest-1'));
+        await viewModel.handleQuestProximityChanged(true);
+
         expect(viewModel.requiresJourneyResume, isTrue);
         expect(viewModel.canResumeDwellTracking, isTrue);
-        expect(viewModel.canVerifyTaskWithQr(qrTask), isFalse);
-        expect(viewModel.qrVerificationLabel(qrTask), 'Start Quest to Scan');
-
-        expect(
-          await viewModel.resumeSelectedQuest(
-            verifiedLocation: _validLocation(),
-          ),
-          isTrue,
-        );
-        expect(viewModel.requiresJourneyResume, isFalse);
-        expect(viewModel.canVerifyTaskWithQr(qrTask), isTrue);
-        expect(repository.timedStartCalls, 0);
+        expect(repository.restoreCalls, 1);
       },
     );
 

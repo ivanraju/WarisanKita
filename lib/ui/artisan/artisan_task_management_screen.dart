@@ -35,7 +35,7 @@ class _LegacyArtisanTaskManagementScreenState
       'workshop': 'Pak Mat Pottery Studio (Melaka)',
       'status': 'APPROVED',
       'isDefault': true,
-      'description': 'Arrive within 75m of workshop studio coordinates.',
+      'description': 'Arrive within 50m of workshop studio coordinates.',
     },
     {
       'id': 'gt_def2',
