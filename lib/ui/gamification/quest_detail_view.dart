@@ -161,6 +161,18 @@ class _QuestDetailViewState extends State<QuestDetailView>
   Color get _cardBorder =>
       _isDark ? const Color(0xFF28483F) : const Color(0xFFE7DDCB);
 
+  Color get _successText =>
+      _isDark ? const Color(0xFF6EE7B7) : const Color(0xFF087F5B);
+
+  Color get _warningText =>
+      _isDark ? const Color(0xFFFFD98A) : const Color(0xFFB45309);
+
+  Color get _xpText =>
+      _isDark ? const Color(0xFFFFD166) : const Color(0xFFD97706);
+
+  Color get _dangerText =>
+      _isDark ? const Color(0xFFFF9B93) : const Color(0xFFB42318);
+
   void _reportProximityAfterBuild(
     GamificationViewModel viewModel,
     double? distance,
@@ -319,8 +331,8 @@ class _QuestDetailViewState extends State<QuestDetailView>
     final stateColor = distance == null
         ? _secondaryText
         : isWithinRange
-        ? const Color(0xFF087F5B)
-        : const Color(0xFFB45309);
+        ? _successText
+        : _warningText;
     final stateIcon = distance == null
         ? Icons.location_searching_rounded
         : isWithinRange
@@ -575,7 +587,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
                   Text(
                     '+${task.xpReward} XP',
                     style: GoogleFonts.plusJakartaSans(
-                      color: const Color(0xFFD97706),
+                      color: _xpText,
                       fontSize: 11,
                       fontWeight: FontWeight.w900,
                     ),
@@ -604,7 +616,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
                 Text(
                   '${_formatDuration(viewModel.displayedDwellSeconds)} / 15:00',
                   style: GoogleFonts.plusJakartaSans(
-                    color: const Color(0xFF004D40),
+                    color: _successText,
                     fontSize: 15,
                     fontWeight: FontWeight.w900,
                   ),
@@ -654,11 +666,13 @@ class _QuestDetailViewState extends State<QuestDetailView>
                       side: BorderSide(
                         color: viewModel.canVerifyTaskWithQr(task)
                             ? (_isDark
-                                ? const Color(0xFF3FAE91)
-                                : const Color(0xFF005B4F))
+                                  ? const Color(0xFF3FAE91)
+                                  : const Color(0xFF005B4F))
                             : (_isDark
-                                ? const Color(0xFF6EE7B7).withValues(alpha: 0.5)
-                                : const Color(0xFFCBD5E1)),
+                                  ? const Color(
+                                      0xFF6EE7B7,
+                                    ).withValues(alpha: 0.5)
+                                  : const Color(0xFFCBD5E1)),
                         width: 1.2,
                       ),
                       textStyle: GoogleFonts.plusJakartaSans(
@@ -680,7 +694,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color.withValues(alpha: _isDark ? 0.16 : 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
@@ -701,29 +715,29 @@ class _QuestDetailViewState extends State<QuestDetailView>
     required bool isCompleted,
     required bool isBonus,
   }) {
-    if (isCompleted) return ('COMPLETED', const Color(0xFF087F5B));
+    if (isCompleted) return ('COMPLETED', _successText);
     if (viewModel.requiresJourneyResume) {
-      return ('PAUSED', const Color(0xFFB45309));
+      return ('PAUSED', _warningText);
     }
-    if (isBonus) return ('BONUS', const Color(0xFFD97706));
+    if (isBonus) return ('BONUS', _xpText);
 
     final inProgress =
         viewModel.questProgressStatus?.toUpperCase() == 'IN_PROGRESS';
-    if (!inProgress) return ('AVAILABLE', const Color(0xFF00695C));
+    if (!inProgress) return ('AVAILABLE', _successText);
 
     if (viewModel.isStayFifteenMinutesTask(task)) {
       if (!viewModel.isInsideQuestGeofence) {
-        return ('WAITING FOR ARRIVAL', const Color(0xFFB45309));
+        return ('WAITING FOR ARRIVAL', _warningText);
       }
       if (viewModel.isDwellTracking) {
-        return ('IN PROGRESS', const Color(0xFF00695C));
+        return ('IN PROGRESS', _successText);
       }
-      return ('PAUSED', const Color(0xFFB45309));
+      return ('PAUSED', _warningText);
     }
     if (task.isSystemTask) {
-      return ('WAITING FOR ARRIVAL', const Color(0xFFB45309));
+      return ('WAITING FOR ARRIVAL', _warningText);
     }
-    return ('QR REQUIRED', const Color(0xFF00695C));
+    return ('QR REQUIRED', _successText);
   }
 
   String _formatDuration(int totalSeconds) {
@@ -930,7 +944,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
           Text(
             'Total Quest XP: ${viewModel.totalPotentialXp} XP',
             style: GoogleFonts.plusJakartaSans(
-              color: const Color(0xFFD97706),
+              color: _xpText,
               fontSize: 12,
               fontWeight: FontWeight.w900,
             ),
@@ -941,7 +955,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
             children: [
               Icon(
                 isEarned ? Icons.verified_rounded : Icons.lock_outline_rounded,
-                color: isEarned ? const Color(0xFF087F5B) : _secondaryText,
+                color: isEarned ? _successText : _secondaryText,
                 size: 17,
               ),
               const SizedBox(width: 7),
@@ -951,7 +965,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
                       ? 'UNLOCKED · ADDED TO PASSPORT'
                       : 'Complete all required activities to unlock',
                   style: GoogleFonts.plusJakartaSans(
-                    color: isEarned ? const Color(0xFF087F5B) : _secondaryText,
+                    color: isEarned ? _successText : _secondaryText,
                     fontSize: 10,
                     fontWeight: FontWeight.w900,
                     height: 1.4,
@@ -1029,7 +1043,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
                 viewModel.startQuestError!,
                 textAlign: TextAlign.center,
                 style: GoogleFonts.plusJakartaSans(
-                  color: const Color(0xFFB42318),
+                  color: _dangerText,
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                 ),
@@ -1056,7 +1070,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
                 viewModel.activeQuestWarning!,
                 textAlign: TextAlign.center,
                 style: GoogleFonts.plusJakartaSans(
-                  color: const Color(0xFFB42318),
+                  color: _dangerText,
                   fontSize: 10,
                   fontWeight: FontWeight.w700,
                   height: 1.4,
@@ -1079,15 +1093,23 @@ class _QuestDetailViewState extends State<QuestDetailView>
                 style: FilledButton.styleFrom(
                   backgroundColor: canStop
                       ? (_isDark
-                          ? const Color(0xFFB91C1C)
-                          : const Color(0xFFDC2626))
+                            ? const Color(0xFF991B1B)
+                            : const Color(0xFFDC2626))
                       : canResume
                       ? const Color(0xFF087F5B)
                       : (_isDark
-                          ? const Color(0xFF00695C)
-                          : const Color(0xFF004D40)),
+                            ? const Color(0xFF00695C)
+                            : const Color(0xFF004D40)),
                   foregroundColor: Colors.white,
-                  disabledBackgroundColor: isOutOfRange || isOutsideBeforeStart
+                  disabledBackgroundColor: viewModel.isStartingQuest
+                      ? (_isDark
+                            ? const Color(0xFF0F766E)
+                            : const Color(0xFF004D40))
+                      : viewModel.isStoppingQuest
+                      ? (_isDark
+                            ? const Color(0xFF991B1B)
+                            : const Color(0xFFDC2626))
+                      : isOutOfRange || isOutsideBeforeStart
                       ? const Color(0xFFB45309)
                       : isCompleted || isInProgress
                       ? const Color(0xFF087F5B)
@@ -1208,7 +1230,9 @@ class _QuestDetailViewState extends State<QuestDetailView>
           FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFDC2626),
+              backgroundColor: _isDark
+                  ? const Color(0xFF991B1B)
+                  : const Color(0xFFDC2626),
               foregroundColor: Colors.white,
             ),
             child: const Text('Stop Quest'),

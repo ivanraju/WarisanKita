@@ -10,6 +10,7 @@ import 'package:warisan_kita/ui/tourist/tourist_directory_tab.dart';
 import 'package:warisan_kita/ui/tourist/tourist_profile_tab.dart';
 import 'package:warisan_kita/ui/artisan/artisan_application_pending_screen.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
+import 'package:warisan_kita/viewmodels/directory_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/gamification_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/map_viewmodel.dart';
@@ -22,7 +23,8 @@ class TouristMainScaffold extends StatefulWidget {
   State<TouristMainScaffold> createState() => _TouristMainScaffoldState();
 }
 
-class _TouristMainScaffoldState extends State<TouristMainScaffold> {
+class _TouristMainScaffoldState extends State<TouristMainScaffold>
+    with WidgetsBindingObserver {
   int _currentIndex = 0;
   Timer? _statusPollTimer;
   bool _journeyRestoreScheduled = false;
@@ -33,6 +35,7 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (mounted) {
         await context.read<AuthViewModel>().refreshCurrentUser();
@@ -55,6 +58,19 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
         }
       });
     }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed || !mounted) return;
+    unawaited(_refreshPublicWorkshops());
+  }
+
+  Future<void> _refreshPublicWorkshops() async {
+    await Future.wait([
+      context.read<MapViewModel>().refreshWorkshops(),
+      context.read<DirectoryViewModel>().fetchArtisans(),
+    ]);
   }
 
   Future<void> _checkRejectionBannerDismissed() async {
@@ -301,6 +317,7 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _statusPollTimer?.cancel();
     super.dispose();
   }

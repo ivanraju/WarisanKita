@@ -113,6 +113,7 @@ class MapViewModel extends ChangeNotifier {
   StreamSubscription<UserLocation>? _locationSubscription;
   StreamSubscription<double>? _headingSubscription;
   StreamSubscription<List<WorkshopLocation>>? _workshopSubscription;
+  Timer? _workshopUpdateDebounce;
   double? _compassHeading;
 
   // ============================================================
@@ -125,7 +126,9 @@ class MapViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _workshops = await _artisanRepository.getWorkshopLocations();
+      final refreshedWorkshops = await _artisanRepository
+          .getWorkshopLocations();
+      _workshops = refreshedWorkshops;
       _reconcileSelectedWorkshop();
 
       debugPrint('Loaded workshops: ${_workshops.length}');
@@ -135,9 +138,6 @@ class MapViewModel extends ChangeNotifier {
     } catch (e) {
       debugPrint('MapViewModel loadWorkshops error: $e');
       _workshopError = 'Studio information is temporarily unavailable.';
-      _workshops = [];
-      _nearbyArtisans = [];
-      _otherArtisans = [];
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -166,10 +166,14 @@ class MapViewModel extends ChangeNotifier {
     _workshopSubscription?.cancel();
     _workshopSubscription = _artisanRepository.watchWorkshopLocations().listen(
       (workshops) {
-        _workshops = workshops;
-        _reconcileSelectedWorkshop();
-        _updateArtisanDistances();
-        notifyListeners();
+        _workshopUpdateDebounce?.cancel();
+        _workshopUpdateDebounce = Timer(const Duration(milliseconds: 400), () {
+          _workshops = workshops;
+          _workshopError = null;
+          _reconcileSelectedWorkshop();
+          _updateArtisanDistances();
+          notifyListeners();
+        });
       },
       onError: (Object error, StackTrace stackTrace) {
         debugPrint('Workshop realtime subscription error: $error');
@@ -556,6 +560,7 @@ class MapViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
+    _workshopUpdateDebounce?.cancel();
     _locationSubscription?.cancel();
     _headingSubscription?.cancel();
     _workshopSubscription?.cancel();
