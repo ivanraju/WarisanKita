@@ -5069,6 +5069,34 @@ class SupabaseService {
                 .from('artisan_profiles')
                 .update(profileUpdatePayload)
                 .eq('user_id', userRow['id']);
+          } else if (resolvedArtisanStatus == 'APPROVED') {
+            // Self-heal: insert missing profile row for newly approved artisan
+            final cached = _userStore[cleanEmail];
+            try {
+              await client.from('artisan_profiles').insert({
+                'user_id': userRow['id'],
+                'status': 'APPROVED',
+                'studio_name': cached?['studioName'] ??
+                    cached?['studio_name'] ??
+                    'Master Artisan Studio',
+                'craft_category': cached?['craftCategory'] ??
+                    cached?['craft_category'] ??
+                    'Heritage Craft',
+                'bio': cached?['bio'] ??
+                    'Master artisan dedicated to traditional Malaysian craft.',
+                'address': cached?['address'] ?? 'Malaysia',
+                'state': cached?['state'] ?? 'Melaka',
+                if (cached?['ssmNumber'] != null ||
+                    cached?['ssm_number'] != null)
+                  'ssm_number': cached?['ssmNumber'] ??
+                      cached?['ssm_number'],
+                'verified_at': DateTime.now().toIso8601String(),
+                'created_at': DateTime.now().toIso8601String(),
+                'updated_at': DateTime.now().toIso8601String(),
+              });
+            } catch (insErr) {
+              debugPrint('Direct artisan_profiles insert on approval error: $insErr');
+            }
           }
 
           // System tasks were verified before changing approval state. Keep
@@ -5554,6 +5582,52 @@ class SupabaseService {
             mapped[i] = current;
             break;
           }
+        }
+      }
+      if (mapped.isEmpty) {
+        try {
+          final approvedUsers = await client
+              .from('users')
+              .select(
+                'id, full_name, email, phone_number, avatar_url, role, status, artisan_status',
+              )
+              .or('role.eq.Artisan,artisan_status.eq.APPROVED')
+              .eq('status', 'ACTIVE');
+          for (final u in approvedUsers) {
+            final uid = u['id']?.toString();
+            if (uid == null) continue;
+            final cached = _userStore[u['email']?.toString().toLowerCase()];
+            final photoList = (cached?['workshop_photos'] as List?)
+                    ?.map((e) => e.toString())
+                    .toList() ??
+                <String>[];
+            mapped.add(
+              ArtisanModel(
+                id: uid,
+                name: (cached?['studioName'] ??
+                        cached?['studio_name'] ??
+                        u['full_name'] ??
+                        'Master Artisan')
+                    .toString(),
+                craftType: (cached?['craftCategory'] ??
+                        cached?['craft_category'] ??
+                        'Heritage Craft')
+                    .toString(),
+                state: (cached?['state'] ?? 'Melaka').toString(),
+                description: (cached?['bio'] ??
+                        'Master artisan dedicated to traditional Malaysian craft.')
+                    .toString(),
+                imageUrl: u['avatar_url']?.toString() ?? '',
+                phone: (u['phone_number'] ?? cached?['phone'])?.toString(),
+                address: cached?['address']?.toString(),
+                ssmNumber: (cached?['ssmNumber'] ?? cached?['ssm_number'])?.toString(),
+                images: photoList,
+                isLiveOpen: true,
+              ),
+            );
+          }
+        } catch (fallbackErr) {
+          debugPrint('fetchArtisans fallback from users table note: $fallbackErr');
         }
       }
       debugPrint('Mapped artisans count: ${mapped.length}');
