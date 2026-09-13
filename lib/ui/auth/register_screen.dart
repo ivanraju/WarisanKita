@@ -693,17 +693,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         labelStyle: TextStyle(
                           color: isDark ? Colors.white70 : const Color(0xFF475569),
                         ),
-                        hintText: 'At least 8 characters',
+                        hintText: 'Must be at least 8 characters',
                         hintStyle: TextStyle(
                           color: isDark ? Colors.white38 : Colors.grey[400],
                         ),
                         prefixIcon: Icon(
-                          Icons.lock_outline_rounded,
+                          Icons.key_rounded,
                           color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
                         ),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                            _obscurePassword ? Icons.visibility_off : Icons.visibility,
                             color: isDark ? Colors.white60 : Colors.grey[600],
                           ),
                           onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
@@ -731,14 +731,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           return 'Please enter a password';
                         }
                         if (v.trim().length < 8) {
-                          return 'Password must be greater than 7 characters';
+                          return 'Password must be at least 8 characters';
+                        }
+                        final cleanUsername = _usernameController.text.trim().replaceAll('@', '').toLowerCase();
+                        if (cleanUsername.length >= 3 && v.trim().toLowerCase() == cleanUsername) {
+                          return 'Password is too similar to your username';
                         }
                         return null;
                       },
                     ),
 
                     // Interactive Password Strength Meter & Live Checklist
-                    PasswordStrengthMeter(password: _passwordController.text),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: PasswordStrengthMeter(password: _passwordController.text),
+                    ),
 
                     const SizedBox(height: 16),
 
@@ -765,7 +772,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                            _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
                             color: isDark ? Colors.white60 : Colors.grey[600],
                           ),
                           onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
