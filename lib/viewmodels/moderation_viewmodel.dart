@@ -203,14 +203,14 @@ class ModerationViewModel extends ChangeNotifier {
             approvedDate =
                 DateTime.tryParse(artisan.verifiedDate) ??
                 _parseSubmissionDate(artisan.verifiedDate) ??
-                DateTime(2026, 1, 15);
+                DateTime.now();
           } catch (_) {
-            approvedDate = DateTime(2026, 1, 15);
+            approvedDate = DateTime.now();
           }
 
           loaded.add(
             ApprovalHistoryRecord(
-              id: 'hist_${artisan.id}',
+              id: 'audit_artisan_${artisan.id}',
               title: 'Master Artisan Profile Approved',
               targetName: artisan.name,
               targetEmail: artisan.email,
@@ -230,6 +230,47 @@ class ModerationViewModel extends ChangeNotifier {
         }
       }
 
+      // Merge registered users with APPROVED artisan status so fresh sessions/devices see all approved artisans from Supabase
+      for (final user in _registeredUsers) {
+        if (user.artisanStatus?.toUpperCase() == 'APPROVED' ||
+            (user.role.toLowerCase().contains('artisan') &&
+                user.status.toUpperCase() == 'ACTIVE')) {
+          final alreadyLogged = loaded.any(
+            (r) =>
+                r.targetEmail.toLowerCase() == user.email.toLowerCase() &&
+                !r.isRelocation &&
+                r.status == 'APPROVED',
+          );
+          if (!alreadyLogged) {
+            final approvedDate =
+                DateTime.tryParse(user.joinedDate) ?? DateTime.now();
+            loaded.add(
+              ApprovalHistoryRecord(
+                id: 'audit_user_${user.id}',
+                title: 'Master Artisan Profile Approved',
+                targetName: user.displayName ??
+                    user.studioName ??
+                    user.username ??
+                    user.email,
+                targetEmail: user.email,
+                approvalType: 'Artisan Profile',
+                craftCategory: user.craftCategory ?? 'Handicraft & Heritage',
+                state: user.state ?? 'Malaysia',
+                details:
+                    'SSM License: ${user.ssmNumber ?? 'Verified'} • Experience: ${user.experience ?? 'Verified'}',
+                newPremise:
+                    '${user.displayName ?? user.studioName ?? 'Artisan'} Studio (${user.state ?? 'Malaysia'})',
+                ssmNumber: user.ssmNumber,
+                documents: user.artisanDocuments,
+                approvedAt: approvedDate,
+                approvedBy: 'Admin Moderator',
+                status: 'APPROVED',
+              ),
+            );
+          }
+        }
+      }
+
       // Merge rejected users so historical rejection decisions are visible even on fresh sessions
       for (final user in _registeredUsers) {
         if (user.artisanStatus?.toUpperCase() == 'REJECTED') {
@@ -239,9 +280,11 @@ class ModerationViewModel extends ChangeNotifier {
                 r.status == 'REJECTED',
           );
           if (!alreadyLogged) {
+            final rejectedDate =
+                DateTime.tryParse(user.joinedDate) ?? DateTime.now();
             loaded.add(
               ApprovalHistoryRecord(
-                id: 'hist_rej_${user.id}',
+                id: 'audit_rej_${user.id}',
                 title: 'Artisan Profile Application Rejected',
                 targetName: user.displayName ??
                     user.studioName ??
@@ -257,7 +300,7 @@ class ModerationViewModel extends ChangeNotifier {
                     : 'Application rejected by Moderator.',
                 ssmNumber: user.ssmNumber,
                 documents: user.artisanDocuments,
-                approvedAt: DateTime.now(),
+                approvedAt: rejectedDate,
                 approvedBy: 'Admin Moderator',
                 status: 'REJECTED',
               ),
@@ -266,27 +309,30 @@ class ModerationViewModel extends ChangeNotifier {
         }
       }
 
-      // Prune obsolete auto-synthesized records for users that are no longer active artisans and not rejected
-      loaded.removeWhere((r) {
-        if (!r.id.startsWith('hist_')) return false;
-        if (r.isRelocation) return false;
-        if (r.status == 'REJECTED') {
-          return !_registeredUsers.any(
-            (u) =>
-                u.email.toLowerCase() == r.targetEmail.toLowerCase() &&
-                u.artisanStatus?.toUpperCase() == 'REJECTED',
+      // Only prune obsolete temporary synthetic placeholders (id starting with 'synth_')
+      // Never prune real recorded audit history records (starting with 'audit_' or 'hist_')
+      if (_activeArtisanMasters.isNotEmpty || _registeredUsers.isNotEmpty) {
+        loaded.removeWhere((r) {
+          if (!r.id.startsWith('synth_')) return false;
+          if (r.isRelocation) return false;
+          if (r.status == 'REJECTED') {
+            return !_registeredUsers.any(
+              (u) =>
+                  u.email.toLowerCase() == r.targetEmail.toLowerCase() &&
+                  u.artisanStatus?.toUpperCase() == 'REJECTED',
+            );
+          }
+          return !_activeArtisanMasters.any(
+            (a) => a.email.toLowerCase() == r.targetEmail.toLowerCase(),
           );
-        }
-        return !_activeArtisanMasters.any(
-          (a) => a.email.toLowerCase() == r.targetEmail.toLowerCase(),
-        );
-      });
+        });
+      }
 
       loaded.sort((a, b) => b.approvedAt.compareTo(a.approvedAt));
       _approvalHistory.clear();
       _approvalHistory.addAll(loaded);
 
-      // Persist reconciled records to local storage to clean up stale cached data
+      // Persist reconciled records to local storage to keep data intact across page reloads
       try {
         final listMap = loaded.map((r) => r.toMap()).toList();
         await prefs.setString(_approvalHistoryKey, jsonEncode(listMap));
@@ -322,7 +368,7 @@ class ModerationViewModel extends ChangeNotifier {
   }) async {
     try {
       final newRecord = ApprovalHistoryRecord(
-        id: 'hist_${DateTime.now().millisecondsSinceEpoch}',
+        id: 'audit_${DateTime.now().millisecondsSinceEpoch}',
         title: title,
         targetName: targetName,
         targetEmail: targetEmail,
@@ -1488,6 +1534,9 @@ class ModerationViewModel extends ChangeNotifier {
           photos: artisan.photos,
           relocationCertFileName: artisan.relocationCertFileName,
           relocationCertFileUrl: artisan.relocationCertFileUrl,
+          documents: (userIdx != -1 && userIdx < _registeredUsers.length)
+              ? _registeredUsers[userIdx].artisanDocuments
+              : const [],
         );
         notifyListeners();
         return true;
@@ -1622,6 +1671,14 @@ class ModerationViewModel extends ChangeNotifier {
         certFileName: artisan.certFileName,
         certFileUrl: artisan.certFileUrl,
         photos: artisan.photos,
+        documents: () {
+          final uIdx = _registeredUsers.indexWhere(
+            (u) => u.email.toLowerCase() == artisan.email.toLowerCase(),
+          );
+          return (uIdx != -1 && uIdx < _registeredUsers.length)
+              ? _registeredUsers[uIdx].artisanDocuments
+              : const <Map<String, dynamic>>[];
+        }(),
       );
 
       notifyListeners();
@@ -1805,6 +1862,9 @@ class ModerationViewModel extends ChangeNotifier {
           relocationCertFileName: artisan.relocationCertFileName,
           relocationCertFileUrl: artisan.relocationCertFileUrl,
           status: 'REJECTED',
+          documents: (userIdx != -1 && userIdx < _registeredUsers.length)
+              ? _registeredUsers[userIdx].artisanDocuments
+              : const <Map<String, dynamic>>[],
         );
         notifyListeners();
         return;
@@ -1886,6 +1946,9 @@ class ModerationViewModel extends ChangeNotifier {
         certFileUrl: artisan.certFileUrl,
         photos: artisan.photos,
         status: 'REJECTED',
+        documents: (userIdx != -1 && userIdx < _registeredUsers.length)
+            ? _registeredUsers[userIdx].artisanDocuments
+            : const <Map<String, dynamic>>[],
       );
 
       notifyListeners();

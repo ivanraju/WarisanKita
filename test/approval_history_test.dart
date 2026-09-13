@@ -432,5 +432,71 @@ void main() {
       expect(latest.ssmFileUrl, 'https://storage.warisankita.my/docs/blurry_ssm.jpg');
       expect(latest.details, contains('SSM document is illegible'));
     });
+
+    test('approval history persists across reload even before fetchActiveArtisans/fetchAllUsers complete', () async {
+      // Step 1: Initialize ViewModel and approve an artisan
+      final vm1 = ModerationViewModel(repository: repository);
+      await vm1.refreshAllData();
+
+      final profile = const PendingArtisanProfile(
+        id: 'p_persist_reload_1',
+        name: 'Reload Persistence Test Master',
+        craftCategory: 'Woodcraft',
+        state: 'Perak',
+        dateSubmitted: 'Today',
+        imageUrl: 'https://example.com/wood.jpg',
+        email: 'persist.reload@warisankita.my',
+        experience: '15 Years',
+        phone: '+60 12-3456789',
+        ssmNumber: 'SSM-RELOAD-12345',
+      );
+      vm1.addPendingArtisan(profile);
+      final success = await vm1.approveArtisan('p_persist_reload_1');
+      expect(success, isTrue);
+      expect(vm1.approvalHistory.any((r) => r.targetEmail == 'persist.reload@warisankita.my'), isTrue);
+
+      // Step 2: Simulate page reload (F5) - a new ModerationViewModel instance is created.
+      // On browser reload, SharedPreferences is already populated from Step 1,
+      // but activeArtisans and registeredUsers are still empty until network fetches finish.
+      final vmReload = ModerationViewModel(repository: repository);
+      await vmReload.loadApprovalHistory();
+
+      // Ensure the history was NOT wiped out by pruning while activeArtisans was empty!
+      expect(
+        vmReload.approvalHistory.any((r) => r.targetEmail == 'persist.reload@warisankita.my'),
+        isTrue,
+        reason: 'Approval history must survive page reload when active artisans have not loaded yet',
+      );
+    });
+
+    test('loadApprovalHistory reconciles approved artisans from registered users on fresh device', () async {
+      // Simulate a fresh device: clear SharedPreferences
+      SharedPreferences.setMockInitialValues({});
+
+      final vmFresh = ModerationViewModel(repository: repository);
+      // Simulate fetchAllUsers returning an approved artisan
+      vmFresh.addUserForTesting(
+        const UserModel(
+          id: 'u_approved_reconcile',
+          email: 'reconciled.artisan@warisankita.my',
+          displayName: 'Reconciled Artisan Master',
+          role: 'Artisan',
+          status: 'ACTIVE',
+          artisanStatus: 'APPROVED',
+          craftCategory: 'Batik Craft',
+          state: 'Kelantan',
+          joinedDate: '2026-01-15T10:00:00.000Z',
+        ),
+      );
+
+      await vmFresh.loadApprovalHistory();
+
+      expect(
+        vmFresh.approvalHistory.any((r) => r.targetEmail == 'reconciled.artisan@warisankita.my'),
+        isTrue,
+        reason: 'Approved users in Supabase should be reconciled into approval history even on a fresh device',
+      );
+    });
   });
 }
+

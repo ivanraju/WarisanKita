@@ -4054,6 +4054,8 @@ class SupabaseService {
               profileUpdatePayload['rejection_reason'] = rejectionReason;
             } else if (resolvedArtisanStatus == 'APPROVED') {
               profileUpdatePayload['rejection_reason'] = null;
+              profileUpdatePayload['verified_at'] =
+                  DateTime.now().toIso8601String();
             }
             await client
                 .from('artisan_profiles')
