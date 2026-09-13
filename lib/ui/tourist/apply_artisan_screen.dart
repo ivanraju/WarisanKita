@@ -13,6 +13,7 @@ import 'package:warisan_kita/domain/models/user.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import 'widgets/workshop_map_picker.dart';
 import 'package:warisan_kita/viewmodels/moderation_viewmodel.dart';
+import 'package:warisan_kita/data/services/google_map_service.dart';
 import 'package:warisan_kita/ui/artisan/artisan_application_pending_screen.dart';
 import 'package:warisan_kita/ui/core/widgets/heritage_background.dart';
 
@@ -1935,6 +1936,7 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
               Positioned.fill(
                 child: IgnorePointer(
                   child: GoogleMap(
+                    style: isDark ? GoogleMapService.darkHeritageMapStyle : null,
                     initialCameraPosition: CameraPosition(
                       target: _selectedStateCenter,
                       zoom: 12,
