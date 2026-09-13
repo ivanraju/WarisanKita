@@ -6585,7 +6585,26 @@ class SupabaseService {
       }
     }
 
-    return groupedReports.values.toList();
+    final queue = groupedReports.values.toList();
+    queue.sort((a, b) {
+      DateTime? firstReport(Map<String, dynamic> item) {
+        final reports = List<Map<String, dynamic>>.from(item['reports'] ?? const []);
+        final dates = reports
+            .map((report) => DateTime.tryParse(report['created_at']?.toString() ?? ''))
+            .whereType<DateTime>()
+            .toList();
+        if (dates.isEmpty) return null;
+        dates.sort();
+        return dates.first;
+      }
+      final aDate = firstReport(a);
+      final bDate = firstReport(b);
+      if (aDate == null && bDate == null) return 0;
+      if (aDate == null) return 1;
+      if (bDate == null) return -1;
+      return bDate.compareTo(aDate);
+    });
+    return queue;
   }
 
   static const String _keyDismissedNotices = 'wk_dismissed_moderation_notices';

@@ -354,17 +354,26 @@ class _LiveForumTabState extends State<LiveForumTab> {
     }
   }
 
-  final List<String> _communities = [
+  static const List<String> _communities = [
     'All',
     'c/BatikCraft',
     'c/PotterySayong',
     'c/SongketWeaving',
     'c/WoodCarving',
+    'c/MetalworkPewter',
+    'c/RattanBambooCraft',
     'c/TravelQnA',
   ];
 
   final List<String> _sortOptions = ['Hot', 'New', 'Top', 'Verified Q&A'];
   final TextEditingController _messageController = TextEditingController();
+  bool _isSendingReply = false;
+
+  String _communityLabel(String value) {
+    if (value == 'c/MetalworkPewter') return 'Metalwork & Pewter';
+    if (value == 'c/RattanBambooCraft') return 'Rattan & Bamboo Craft';
+    return value.replaceFirst(RegExp(r'^c/'), '');
+  }
 
   @override
   void initState() {
@@ -417,6 +426,25 @@ class _LiveForumTabState extends State<LiveForumTab> {
   }
 
   Future<void> _sendMessage(BuildContext context) async {
+    if (_isSendingReply || _replyingIsQuarantined ||
+        _messageController.text.trim().isEmpty || _activeThread == null) {
+      return;
+    }
+    setState(() => _isSendingReply = true);
+    try {
+      await _sendMessageOnce(context);
+    } finally {
+      if (mounted) setState(() => _isSendingReply = false);
+    }
+  }
+
+  void _showQuarantineError() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('This content is under review and cannot be replied to or edited.')),
+    );
+  }
+
+  Future<void> _sendMessageOnce(BuildContext context) async {
     if (_replyingIsQuarantined) return;
     final text = _messageController.text.trim();
     if (text.isEmpty || _activeThread == null) return;
@@ -677,6 +705,8 @@ class _LiveForumTabState extends State<LiveForumTab> {
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 initialValue: selectedReason,
+                isExpanded: true,
+                itemHeight: 64,
                 decoration: InputDecoration(
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -689,19 +719,19 @@ class _LiveForumTabState extends State<LiveForumTab> {
                 items: const [
                   DropdownMenuItem(
                     value: 'Inappropriate Content',
-                    child: Text('Inappropriate / Offensive Content'),
+                    child: Text('Inappropriate / Offensive Content', maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14)),
                   ),
                   DropdownMenuItem(
                     value: 'Misinformation',
-                    child: Text('Misinformation / Fake Heritage Claim'),
+                    child: Text('Misinformation / Fake Heritage Claim', maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14)),
                   ),
                   DropdownMenuItem(
                     value: 'Spam/Off-topic',
-                    child: Text('Spam or Off-topic Advertisement'),
+                    child: Text('Spam or Off-topic Advertisement', maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14)),
                   ),
                   DropdownMenuItem(
                     value: 'Harassment',
-                    child: Text('Harassment or Abusive Language'),
+                    child: Text('Harassment or Abusive Language', maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14)),
                   ),
                 ],
                 onChanged: (val) {
@@ -857,6 +887,8 @@ class _LiveForumTabState extends State<LiveForumTab> {
 
               DropdownButtonFormField<String>(
                 initialValue: selectedReason,
+                isExpanded: true,
+                itemHeight: 64,
                 decoration: InputDecoration(
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -869,19 +901,19 @@ class _LiveForumTabState extends State<LiveForumTab> {
                 items: const [
                   DropdownMenuItem(
                     value: 'Inappropriate Content',
-                    child: Text('Inappropriate / Offensive Content'),
+                    child: Text('Inappropriate / Offensive Content', maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14)),
                   ),
                   DropdownMenuItem(
                     value: 'Misinformation',
-                    child: Text('Misinformation / Fake Heritage Claim'),
+                    child: Text('Misinformation / Fake Heritage Claim', maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14)),
                   ),
                   DropdownMenuItem(
                     value: 'Spam/Off-topic',
-                    child: Text('Spam or Off-topic Advertisement'),
+                    child: Text('Spam or Off-topic Advertisement', maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14)),
                   ),
                   DropdownMenuItem(
                     value: 'Harassment',
-                    child: Text('Harassment or Abusive Language'),
+                    child: Text('Harassment or Abusive Language', maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14)),
                   ),
                 ],
                 onChanged: (val) {
@@ -1424,6 +1456,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
     final titleController = TextEditingController();
     final bodyController = TextEditingController();
     bool showRequiredErrors = false;
+    bool isPosting = false;
     String selectedCommunity = 'c/BatikCraft';
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -1519,7 +1552,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                         return DropdownMenuItem(
                           value: c,
                           child: Text(
-                            c,
+                            _communityLabel(c),
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 13,
                               fontWeight: FontWeight.bold,
@@ -1630,12 +1663,16 @@ class _LiveForumTabState extends State<LiveForumTab> {
                       width: double.infinity,
                       height: 50,
                       child: FilledButton.icon(
-                        onPressed: () async {
+                        onPressed: isPosting ? null : () async {
+                          if (isPosting) return;
                           final title = titleController.text.trim();
                           final body = bodyController.text.trim();
 
                           setModalState(() => showRequiredErrors = true);
                           if (title.isEmpty || body.isEmpty) return;
+
+                          setModalState(() => isPosting = true);
+                          try {
 
                           final authVM = context.read<AuthViewModel>();
                           final user = authVM.currentUser;
@@ -1737,6 +1774,11 @@ class _LiveForumTabState extends State<LiveForumTab> {
                               duration: const Duration(seconds: 4),
                             ),
                           );
+                          } finally {
+                            if (modalContext.mounted) {
+                              setModalState(() => isPosting = false);
+                            }
+                          }
                         },
                         style: FilledButton.styleFrom(
                           backgroundColor: isDark
@@ -1747,9 +1789,12 @@ class _LiveForumTabState extends State<LiveForumTab> {
                             borderRadius: BorderRadius.circular(16),
                           ),
                         ),
-                        icon: const Icon(Icons.send_rounded, size: 18, color: Color(0xFFFFD54F)),
+                        icon: isPosting
+                            ? const SizedBox(width: 18, height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFFFD54F)))
+                            : const Icon(Icons.send_rounded, size: 18, color: Color(0xFFFFD54F)),
                         label: Text(
-                          'Post Question to Community',
+                          isPosting ? 'Posting...' : 'Post Question to Community',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
@@ -2400,7 +2445,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                       padding: const EdgeInsets.only(right: 8),
                       child: FilterChip(
                         selected: isSelected,
-                        label: Text(c),
+                        label: Text(_communityLabel(c)),
                         labelStyle: GoogleFonts.plusJakartaSans(
                           fontSize: 12,
                           fontWeight: isSelected
@@ -2740,7 +2785,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
-                              thread['community'].toString(),
+                              _communityLabel(thread['community'].toString()),
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
@@ -2951,8 +2996,13 @@ class _LiveForumTabState extends State<LiveForumTab> {
                                   Material(
                                     color: Colors.transparent,
                                     child: InkWell(
-                                      onTap: () =>
-                                          _showEditThreadDialog(thread),
+                                      onTap: () {
+                                        if (thread['isReported'] == true) {
+                                          _showQuarantineError();
+                                          return;
+                                        }
+                                        _showEditThreadDialog(thread);
+                                      },
                                       borderRadius: BorderRadius.circular(14),
                                       child: SizedBox(
                                         width: 24,
@@ -3065,7 +3115,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        _activeThread!['community'].toString(),
+                        _communityLabel(_activeThread!['community'].toString()),
                         softWrap: true,
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 11,
@@ -3373,7 +3423,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                     Expanded(
                       child: TextField(
                         controller: _messageController,
-                        enabled: !_replyingIsQuarantined,
+                        enabled: !_replyingIsQuarantined && !_isSendingReply,
                         maxLines: 4,
                         minLines: 1,
                         textInputAction: TextInputAction.send,
@@ -3434,7 +3484,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                     SizedBox(
                       height: 42,
                       child: FilledButton.icon(
-                        onPressed: _replyingIsQuarantined
+                        onPressed: _replyingIsQuarantined || _isSendingReply
                             ? null : () => _sendMessage(context),
                         style: FilledButton.styleFrom(
                           backgroundColor: isDark
@@ -3446,13 +3496,12 @@ class _LiveForumTabState extends State<LiveForumTab> {
                             borderRadius: BorderRadius.circular(16),
                           ),
                         ),
-                        icon: const Icon(
-                          Icons.send_rounded,
-                          size: 15,
-                          color: Color(0xFFFFD54F),
-                        ),
+                        icon: _isSendingReply
+                            ? const SizedBox(width: 15, height: 15,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFFFD54F)))
+                            : const Icon(Icons.send_rounded, size: 15, color: Color(0xFFFFD54F)),
                         label: Text(
-                          'Reply',
+                          _isSendingReply ? 'Sending...' : 'Reply',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
@@ -3901,8 +3950,11 @@ class _LiveForumTabState extends State<LiveForumTab> {
                     : 'Reply to ${msg['displayName'] ?? msg['sender']}',
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
-                onPressed: msg['isReported'] == true || _activeThread?['isReported'] == true
-                    ? null : () {
+                onPressed: () {
+                  if (msg['isReported'] == true || _activeThread?['isReported'] == true) {
+                    _showQuarantineError();
+                    return;
+                  }
                   setState(() {
                     _replyingToReplyId = msg['id'].toString();
                     _replyingToName = (msg['displayName'] ?? msg['sender'])
@@ -3926,10 +3978,13 @@ class _LiveForumTabState extends State<LiveForumTab> {
                   tooltip: 'Edit Answer',
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
-                  onPressed: () => _showEditMessageDialog(
-                    msg['id'].toString(),
-                    msg['text'].toString(),
-                  ),
+                  onPressed: () {
+                    if (msg['isReported'] == true || _activeThread?['isReported'] == true) {
+                      _showQuarantineError();
+                      return;
+                    }
+                    _showEditMessageDialog(msg['id'].toString(), msg['text'].toString());
+                  },
                 ),
 
                 const SizedBox(width: 12),
