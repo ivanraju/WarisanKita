@@ -46,7 +46,11 @@ class ArtisanModel {
   bool get isVillageWorkshop =>
       premiseType?.toLowerCase().contains('village') == true ||
       premiseType?.toLowerCase().contains('desa') == true ||
-      premiseType?.toLowerCase().contains('kediaman') == true;
+      premiseType?.toLowerCase().contains('kediaman') == true ||
+      premiseType?.toLowerCase().contains('home') == true ||
+      ssmNumber == 'VILLAGE_EXEMPT' ||
+      (ssmNumber != null && ssmNumber!.toLowerCase().contains('exempt')) ||
+      (ssmNumber != null && ssmNumber!.toLowerCase().contains('village'));
 
   String get premiseTypeDisplay =>
       isVillageWorkshop ? 'Home / Village Workshop' : 'Commercial Studio';
@@ -182,11 +186,17 @@ class ArtisanModel {
                     : null))
             ?.toString();
 
-    final String? premiseType =
+    final String? rawPremiseType =
         (map['premise_type'] ??
                 map['premiseType'] ??
                 (map['users'] != null ? map['users']['premise_type'] : null))
             ?.toString();
+
+    final String? premiseType = (rawPremiseType != null && rawPremiseType.isNotEmpty)
+        ? rawPremiseType
+        : ((ssm == 'VILLAGE_EXEMPT' || (ssm != null && ssm.toLowerCase().contains('exempt')))
+            ? 'Home / Village Workshop (Bengkel Kediaman / Desa)'
+            : null);
 
     List<Map<String, dynamic>> docsList = [];
     if (map['artisan_documents'] != null) {

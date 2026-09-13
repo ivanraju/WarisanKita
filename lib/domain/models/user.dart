@@ -89,7 +89,8 @@ class UserModel {
               premiseType!.contains('Home') ||
               premiseType!.contains('Kediaman'))) ||
       ssmNumber == 'VILLAGE_EXEMPT' ||
-      (ssmNumber != null && ssmNumber!.toLowerCase().contains('village'));
+      (ssmNumber != null && ssmNumber!.toLowerCase().contains('village')) ||
+      (ssmNumber != null && ssmNumber!.toLowerCase().contains('exempt'));
 
   String get premiseTypeDisplay =>
       isVillageWorkshop ? 'Home / Village Workshop' : 'Commercial Studio';
@@ -215,6 +216,48 @@ class UserModel {
         if (url.isNotEmpty) return url;
       }
     }
+    return null;
+  }
+
+  String? get craftingPhotoUrl {
+    for (final d in artisanDocuments) {
+      final type = d['doc_type']?.toString();
+      if (type == 'CRAFTING_PHOTO' ||
+          type == 'VILLAGE_CRAFTING_PHOTO' ||
+          type == 'STUDIO_PHOTO') {
+        final url = d['file_url']?.toString();
+        if (url != null && url.isNotEmpty) return url;
+      }
+    }
+    for (final t in tags) {
+      if (t.startsWith('doc_crafting_photo_url:')) {
+        final url = t.substring('doc_crafting_photo_url:'.length);
+        if (url.isNotEmpty) return url;
+      }
+    }
+    return null;
+  }
+
+  String? get craftingPhotoName {
+    for (final d in artisanDocuments) {
+      final type = d['doc_type']?.toString();
+      if (type == 'CRAFTING_PHOTO' ||
+          type == 'VILLAGE_CRAFTING_PHOTO' ||
+          type == 'STUDIO_PHOTO') {
+        final name = d['file_name']?.toString();
+        if (name != null && name.isNotEmpty) return name;
+        final url = d['file_url']?.toString();
+        if (url != null && url.isNotEmpty) return url.split('/').last;
+      }
+    }
+    for (final t in tags) {
+      if (t.startsWith('doc_crafting_photo_name:')) {
+        final name = t.substring('doc_crafting_photo_name:'.length);
+        if (name.isNotEmpty) return name;
+      }
+    }
+    final url = craftingPhotoUrl;
+    if (url != null && url.isNotEmpty) return url.split('/').last;
     return null;
   }
 
