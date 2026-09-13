@@ -4667,6 +4667,82 @@ class SupabaseService {
     return '$userId:$replyId';
   }
 
+  // Optional vote metadata: failure must never suppress loaded Forum content.
+  bool _isForumUuid(String value) => RegExp(
+    r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$',
+  ).hasMatch(value);
+
+  Future<Map<String, List<int>>> _forumVoteCounts(
+    String table,
+    String targetColumn,
+    List<String> ids,
+  ) async {
+    try {
+      return await (() async {
+        final counts = <String, List<int>>{};
+        final validIds = ids.where(_isForumUuid).toList();
+        for (var start = 0; start < validIds.length; start += 100) {
+          final batch = validIds.skip(start).take(100).toList();
+          var offset = 0;
+          while (true) {
+            final result = await _client!
+                .from(table)
+                .select('$targetColumn, vote')
+                .inFilter(targetColumn, batch)
+                .order(targetColumn)
+                .order('user_id')
+                .range(offset, offset + 499)
+                .count(CountOption.exact);
+            for (final row in result.data) {
+              final count = counts.putIfAbsent(
+                row[targetColumn].toString(), () => [0, 0],
+              );
+              if (row['vote'] == 1) count[0]++;
+              if (row['vote'] == -1) count[1]++;
+            }
+            offset += result.data.length;
+            if (result.data.isEmpty || offset >= result.count) break;
+          }
+        }
+        return counts;
+      })().timeout(const Duration(seconds: 8));
+    } catch (error) {
+      debugPrint('Forum vote counts unavailable for $table: $error');
+      return {};
+    }
+  }
+
+  Future<void> _attachForumVoteCounts(List<ForumThread> threads) async {
+    try {
+      final counts = await Future.wait([
+        _forumVoteCounts(
+          'forum_post_votes', 'post_id',
+          threads.map((t) => t.id).toList(),
+        ),
+        _forumVoteCounts(
+          'forum_reply_votes', 'reply_id',
+          // The model's post-body placeholder is not a persisted reply UUID.
+          threads.expand((t) => t.replies.where(
+            (r) => r.id != '${t.id}_content',
+          )).map((r) => r.id).toList(),
+        ),
+      ]);
+      for (var i = 0; i < threads.length; i++) {
+        final thread = threads[i];
+        threads[i] = thread.copyWith(
+          upvoteCount: counts[0][thread.id]?[0] ?? 0,
+          downvoteCount: counts[0][thread.id]?[1] ?? 0,
+          replies: thread.replies.map((reply) => reply.copyWith(
+            upvoteCount: counts[1][reply.id]?[0] ?? 0,
+            downvoteCount: counts[1][reply.id]?[1] ?? 0,
+          )).toList(),
+        );
+      }
+    } catch (error) {
+      debugPrint('Forum vote metadata unavailable: $error');
+    }
+  }
+
   Future<List<ForumThread>> fetchThreads() async {
     await Future.delayed(const Duration(milliseconds: 300));
     // Load persisted admin-deleted post IDs (survive app restart)
@@ -4829,6 +4905,7 @@ class SupabaseService {
           }
         }
 
+        await _attachForumVoteCounts(remote);
         _forumStore.clear();
         _forumStore.addAll(remote);
         _forumStore.removeWhere((t) => _deletedPostIds.contains(t.id));
@@ -5719,6 +5796,10 @@ class SupabaseService {
     _sessionThreadVotes[voteKey] = newVote;
     _forumStore[index] = currentThread.copyWith(
       upvotes: newUpvotes,
+      upvoteCount: (currentThread.upvoteCount - (currentVote == 1 ? 1 : 0) +
+              (newVote == 1 ? 1 : 0)).clamp(0, 1 << 53).toInt(),
+      downvoteCount: (currentThread.downvoteCount - (currentVote == -1 ? 1 : 0) +
+              (newVote == -1 ? 1 : 0)).clamp(0, 1 << 53).toInt(),
       userVote: newVote,
     );
 
@@ -5828,6 +5909,10 @@ class SupabaseService {
     );
     updatedReplies[rIdx] = currentReply.copyWith(
       upvotes: newUpvotes,
+      upvoteCount: (currentReply.upvoteCount - (currentVote == 1 ? 1 : 0) +
+              (newVote == 1 ? 1 : 0)).clamp(0, 1 << 53).toInt(),
+      downvoteCount: (currentReply.downvoteCount - (currentVote == -1 ? 1 : 0) +
+              (newVote == -1 ? 1 : 0)).clamp(0, 1 << 53).toInt(),
       userVote: newVote,
     );
     _forumStore[tIdx] = thread.copyWith(replies: updatedReplies);
