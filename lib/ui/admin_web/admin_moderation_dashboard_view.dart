@@ -504,91 +504,10 @@ class _AdminModerationDashboardViewState
                                                 reason,
                                               ),
                                         )
-                                      else ...[
-                                        if (viewModel.pendingRelocationCount > 0) ...[
-                                          Container(
-                                            margin: const EdgeInsets.only(bottom: 16),
-                                            padding: const EdgeInsets.all(16),
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFFFEF3C7),
-                                              borderRadius: BorderRadius.circular(12),
-                                              border: Border.all(
-                                                color: const Color(0xFFF59E0B)
-                                                    .withValues(alpha: 0.5),
-                                              ),
-                                            ),
-                                            child: Row(
-                                              children: [
-                                                Container(
-                                                  padding: const EdgeInsets.all(10),
-                                                  decoration: BoxDecoration(
-                                                    color: const Color(0xFFF59E0B)
-                                                        .withValues(alpha: 0.2),
-                                                    shape: BoxShape.circle,
-                                                  ),
-                                                  child: const Icon(
-                                                    Icons.edit_location_alt_rounded,
-                                                    color: Color(0xFFB45309),
-                                                    size: 22,
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 14),
-                                                Expanded(
-                                                  child: Column(
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment.start,
-                                                    children: [
-                                                      Text(
-                                                        '${viewModel.pendingRelocationCount} Premise Relocation Request(s) Awaiting Review',
-                                                        style: GoogleFonts.plusJakartaSans(
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                          color: const Color(0xFF92400E),
-                                                          fontSize: 14,
-                                                        ),
-                                                      ),
-                                                      const SizedBox(height: 2),
-                                                      Text(
-                                                        'Accredited master artisans have submitted workshop premise relocation requests requiring administrative verification.',
-                                                        style: GoogleFonts.plusJakartaSans(
-                                                          color: const Color(0xFFB45309),
-                                                          fontSize: 12,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 12),
-                                                FilledButton.icon(
-                                                  onPressed: () => viewModel
-                                                      .setActiveTab('Workshop Relocations'),
-                                                  icon: const Icon(
-                                                    Icons.arrow_forward_rounded,
-                                                    size: 16,
-                                                  ),
-                                                  label: const Text('Review Relocations'),
-                                                  style: FilledButton.styleFrom(
-                                                    backgroundColor:
-                                                        const Color(0xFFD97706),
-                                                    foregroundColor: Colors.white,
-                                                    padding:
-                                                        const EdgeInsets.symmetric(
-                                                      horizontal: 16,
-                                                      vertical: 12,
-                                                    ),
-                                                    shape: RoundedRectangleBorder(
-                                                      borderRadius:
-                                                          BorderRadius.circular(10),
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
+                                      else
                                         PendingArtisansTable(
                                           artisans:
-                                              viewModel.filteredArtisans,
+                                              viewModel.filteredPendingProfiles,
                                           onApprove: (artisan) =>
                                               _handleApprove(context, artisan),
                                           onReject: (artisan, reason) =>
@@ -598,7 +517,6 @@ class _AdminModerationDashboardViewState
                                                 reason,
                                               ),
                                         ),
-                                      ],
                                     ],
                                   ),
                                 ),
@@ -846,23 +764,12 @@ class _AdminModerationDashboardViewState
         : [
             _buildMetricCard(
               title: 'Pending Applications',
-              value: viewModel.totalPendingCount.toString(),
-              subtitle: viewModel.pendingRelocationCount > 0
-                  ? '${viewModel.pendingNewProfilesCount} new • ${viewModel.pendingRelocationCount} relocations'
-                  : (viewModel.totalPendingCount > 0
-                      ? 'Requires verification'
-                      : 'All applications clear'),
+              value: viewModel.pendingNewProfilesCount.toString(),
+              subtitle: viewModel.pendingNewProfilesCount > 0
+                  ? 'Requires verification'
+                  : 'All applications clear',
               icon: Icons.verified_user_rounded,
               accentColor: const Color(0xFF10B981),
-            ),
-            _buildMetricCard(
-              title: 'Workshop Relocations',
-              value: viewModel.pendingRelocationCount.toString(),
-              subtitle: viewModel.pendingRelocationCount > 0
-                  ? 'Requires premise review'
-                  : 'All relocations clear',
-              icon: Icons.edit_location_alt_rounded,
-              accentColor: const Color(0xFFF59E0B),
             ),
             _buildMetricCard(
               title: 'Approved Today',
@@ -1058,38 +965,6 @@ class _AdminModerationDashboardViewState
       ),
     );
 
-    final typeFilterChips = !isRelocation
-        ? SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildTypeFilterChip(
-                  label: 'All Applications',
-                  count: viewModel.totalPendingCount,
-                  isSelected: viewModel.applicationTypeFilter == 'All',
-                  onTap: () => viewModel.setApplicationTypeFilter('All'),
-                ),
-                const SizedBox(width: 8),
-                _buildTypeFilterChip(
-                  label: 'New Profiles',
-                  count: viewModel.pendingNewProfilesCount,
-                  isSelected: viewModel.applicationTypeFilter == 'New Profiles',
-                  onTap: () => viewModel.setApplicationTypeFilter('New Profiles'),
-                ),
-                const SizedBox(width: 8),
-                _buildTypeFilterChip(
-                  label: 'Workshop Relocations',
-                  count: viewModel.pendingRelocationCount,
-                  isSelected: viewModel.applicationTypeFilter == 'Relocations',
-                  onTap: () => viewModel.setApplicationTypeFilter('Relocations'),
-                  highlightBadge: viewModel.pendingRelocationCount > 0,
-                ),
-              ],
-            ),
-          )
-        : null;
-
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1104,100 +979,15 @@ class _AdminModerationDashboardViewState
                 searchInput,
                 const SizedBox(height: 12),
                 categoryDropdown,
-                if (typeFilterChips != null) ...[
-                  const SizedBox(height: 12),
-                  typeFilterChips,
-                ],
               ],
             )
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          : Row(
               children: [
-                Row(
-                  children: [
-                    Expanded(child: searchInput),
-                    const SizedBox(width: 16),
-                    categoryDropdown,
-                  ],
-                ),
-                if (typeFilterChips != null) ...[
-                  const SizedBox(height: 14),
-                  typeFilterChips,
-                ],
+                Expanded(child: searchInput),
+                const SizedBox(width: 16),
+                categoryDropdown,
               ],
             ),
-    );
-  }
-
-  Widget _buildTypeFilterChip({
-    required String label,
-    required int count,
-    required bool isSelected,
-    required VoidCallback onTap,
-    bool highlightBadge = false,
-  }) {
-    final activeColor = highlightBadge && isSelected
-        ? const Color(0xFFD97706)
-        : const Color(0xFF10B981);
-    final badgeBg = isSelected
-        ? Colors.white.withValues(alpha: 0.25)
-        : (highlightBadge && count > 0
-            ? const Color(0xFFFEF3C7)
-            : const Color(0xFFE2E8F0));
-    final badgeTextColor = isSelected
-        ? Colors.white
-        : (highlightBadge && count > 0
-            ? const Color(0xFFB45309)
-            : const Color(0xFF475569));
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-        decoration: BoxDecoration(
-          color: isSelected ? activeColor : const Color(0xFFF1F5F9),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected
-                ? activeColor
-                : (highlightBadge && count > 0
-                    ? const Color(0xFFFCD34D)
-                    : const Color(0xFFE2E8F0)),
-            width: 1.2,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              label,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                color: isSelected ? Colors.white : const Color(0xFF334155),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-              decoration: BoxDecoration(
-                color: badgeBg,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                count.toString(),
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: badgeTextColor,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
