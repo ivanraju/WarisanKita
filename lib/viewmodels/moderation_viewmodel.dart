@@ -89,6 +89,7 @@ class ModerationViewModel extends ChangeNotifier {
     'Artisan Profiles',
     'Premise Relocations',
     'Rejected Applications',
+    'Account Moderations',
   ];
 
   void setHistorySearchQuery(String query) {
@@ -116,9 +117,10 @@ class ModerationViewModel extends ChangeNotifier {
           (record.newPremise?.toLowerCase().contains(_historySearchQuery.toLowerCase()) ?? false);
 
       final matchesType = _historyTypeFilter == 'All Types' ||
-          (_historyTypeFilter == 'Artisan Profiles' && !record.isRelocation && record.status != 'REJECTED') ||
+          (_historyTypeFilter == 'Artisan Profiles' && !record.isRelocation && !record.isAccountModeration && record.status != 'REJECTED') ||
           (_historyTypeFilter == 'Premise Relocations' && record.isRelocation && record.status != 'REJECTED') ||
-          (_historyTypeFilter == 'Rejected Applications' && record.status == 'REJECTED');
+          (_historyTypeFilter == 'Rejected Applications' && record.status == 'REJECTED') ||
+          (_historyTypeFilter == 'Account Moderations' && record.isAccountModeration);
 
       return matchesSearch && matchesType;
     }).toList();
@@ -126,11 +128,13 @@ class ModerationViewModel extends ChangeNotifier {
 
   int get totalApprovalHistoryCount => _approvalHistory.length;
   int get profileApprovalCount =>
-      _approvalHistory.where((r) => !r.isRelocation && r.status != 'REJECTED').length;
+      _approvalHistory.where((r) => !r.isRelocation && !r.isAccountModeration && r.status != 'REJECTED').length;
   int get relocationApprovalCount =>
       _approvalHistory.where((r) => r.isRelocation && r.status != 'REJECTED').length;
   int get rejectionHistoryCount =>
       _approvalHistory.where((r) => r.status == 'REJECTED').length;
+  int get accountModerationHistoryCount =>
+      _approvalHistory.where((r) => r.isAccountModeration).length;
   int get todayApprovalHistoryCount {
     final now = DateTime.now();
     return _approvalHistory.where((r) {
@@ -163,6 +167,27 @@ class ModerationViewModel extends ChangeNotifier {
         } catch (e) {
           debugPrint('Error parsing saved approval history: $e');
         }
+      }
+
+      // Merge remote records from Supabase public.approval_history table if available
+      try {
+        final remoteLogs = await _repository.getApprovalHistory();
+        for (final raw in remoteLogs) {
+          final record = ApprovalHistoryRecord.fromMap(raw);
+          final exists = loaded.any((r) =>
+              r.id == record.id ||
+              (r.targetEmail.toLowerCase() ==
+                      record.targetEmail.toLowerCase() &&
+                  r.approvalType == record.approvalType &&
+                  r.status == record.status &&
+                  r.approvedAt.difference(record.approvedAt).inMinutes.abs() <
+                      5));
+          if (!exists) {
+            loaded.add(record);
+          }
+        }
+      } catch (e) {
+        debugPrint('Remote approval history fetch note: $e');
       }
 
       // Merge verified active masters so historical records are visible and kept up to date
@@ -399,6 +424,13 @@ class ModerationViewModel extends ChangeNotifier {
       final listMap = _approvalHistory.map((r) => r.toMap()).toList();
       await prefs.setString(_approvalHistoryKey, jsonEncode(listMap));
       notifyListeners();
+
+      // Persist to Supabase database table asynchronously
+      try {
+        await _repository.saveApprovalHistory(newRecord.toDbMap());
+      } catch (e) {
+        debugPrint('Persist approval history to Supabase note: $e');
+      }
     } catch (e) {
       debugPrint('Failed to save approval history record: $e');
     }
@@ -1769,6 +1801,19 @@ class ModerationViewModel extends ChangeNotifier {
         );
       }
 
+      await _recordApprovalHistory(
+        title: 'Master Artisan Studio Suspended',
+        targetName: artisan.name,
+        targetEmail: artisan.email,
+        approvalType: 'Studio Moderation',
+        craftCategory: artisan.category,
+        state: artisan.state,
+        details:
+            'Studio listing suspended by Moderator. User account remains active.',
+        ssmNumber: artisan.licenseNo,
+        status: 'SUSPENDED',
+      );
+
       notifyListeners();
     }
   }
@@ -1799,6 +1844,18 @@ class ModerationViewModel extends ChangeNotifier {
           artisanStatus: 'APPROVED',
         );
       }
+
+      await _recordApprovalHistory(
+        title: 'Master Artisan Studio Reactivated',
+        targetName: artisan.name,
+        targetEmail: artisan.email,
+        approvalType: 'Studio Moderation',
+        craftCategory: artisan.category,
+        state: artisan.state,
+        details: 'Studio listing reactivated by Moderator.',
+        ssmNumber: artisan.licenseNo,
+        status: 'APPROVED',
+      );
 
       notifyListeners();
     }
@@ -2040,6 +2097,24 @@ class ModerationViewModel extends ChangeNotifier {
         suspensionReason: trimmedReason,
       );
 
+      await _recordApprovalHistory(
+        title: 'User Account Suspended',
+        targetName: user.displayName ??
+            user.studioName ??
+            user.username ??
+            user.email,
+        targetEmail: user.email,
+        approvalType: 'Account Moderation',
+        craftCategory: user.craftCategory ?? 'General Account',
+        state: user.state ?? 'Malaysia',
+        details: (trimmedReason != null)
+            ? 'Suspended by Moderator: "$trimmedReason"'
+            : 'Account suspended by Moderator.',
+        ssmNumber: user.ssmNumber,
+        documents: user.artisanDocuments,
+        status: 'SUSPENDED',
+      );
+
       notifyListeners();
     }
   }
@@ -2070,6 +2145,22 @@ class ModerationViewModel extends ChangeNotifier {
         newStatus: 'ACTIVE',
         newRole: user.role,
         suspensionReason: null,
+      );
+
+      await _recordApprovalHistory(
+        title: 'User Account Reactivated',
+        targetName: user.displayName ??
+            user.studioName ??
+            user.username ??
+            user.email,
+        targetEmail: user.email,
+        approvalType: 'Account Moderation',
+        craftCategory: user.craftCategory ?? 'General Account',
+        state: user.state ?? 'Malaysia',
+        details: 'Account reactivated by Moderator.',
+        ssmNumber: user.ssmNumber,
+        documents: user.artisanDocuments,
+        status: 'ACTIVE',
       );
 
       notifyListeners();

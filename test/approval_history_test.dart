@@ -125,6 +125,40 @@ void main() {
       expect(restored.photos, record.photos);
       expect(restored.allDocuments.length, 5);
     });
+
+    test('correctly converts toDbMap with snake_case and reconstructs from snake_case map', () {
+      final now = DateTime(2026, 9, 13, 12, 0);
+      final record = ApprovalHistoryRecord(
+        id: 'audit_db_test',
+        title: 'Master Artisan Profile Approved',
+        targetName: 'Kuala Kangsar Pottery',
+        targetEmail: 'kk.pottery@warisankita.my',
+        approvalType: 'Artisan Profile',
+        craftCategory: 'Clay & Ceramics',
+        state: 'Perak',
+        details: 'Approved SSM details',
+        ssmNumber: 'SSM-12345',
+        ssmFileName: 'pottery_ssm.pdf',
+        ssmFileUrl: 'https://storage.warisankita.my/docs/pottery_ssm.pdf',
+        approvedAt: now,
+      );
+
+      final dbMap = record.toDbMap();
+      expect(dbMap['target_name'], 'Kuala Kangsar Pottery');
+      expect(dbMap['target_email'], 'kk.pottery@warisankita.my');
+      expect(dbMap['approval_type'], 'Artisan Profile');
+      expect(dbMap['craft_category'], 'Clay & Ceramics');
+      expect(dbMap['ssm_file_name'], 'pottery_ssm.pdf');
+      expect(dbMap['ssm_file_url'], 'https://storage.warisankita.my/docs/pottery_ssm.pdf');
+
+      final reconstructed = ApprovalHistoryRecord.fromMap(dbMap);
+      expect(reconstructed.id, 'audit_db_test');
+      expect(reconstructed.targetName, 'Kuala Kangsar Pottery');
+      expect(reconstructed.targetEmail, 'kk.pottery@warisankita.my');
+      expect(reconstructed.approvalType, 'Artisan Profile');
+      expect(reconstructed.craftCategory, 'Clay & Ceramics');
+      expect(reconstructed.ssmFileName, 'pottery_ssm.pdf');
+    });
   });
 
   group('ModerationViewModel Approval History Integration Tests', () {
@@ -497,6 +531,118 @@ void main() {
         reason: 'Approved users in Supabase should be reconciled into approval history even on a fresh device',
       );
     });
+
+    test('suspendUser and reactivateUser record Account Moderation history entries', () async {
+      final vm = ModerationViewModel(repository: repository);
+      await vm.refreshAllData();
+
+      final user = const UserModel(
+        id: 'u_suspension_target',
+        email: 'bad.actor@warisankita.my',
+        displayName: 'Suspended Account User',
+        role: 'Tourist',
+        status: 'ACTIVE',
+      );
+      vm.addUserForTesting(user);
+
+      await vm.suspendUser('u_suspension_target', reason: 'Spamming forum reports');
+
+      expect(
+        vm.approvalHistory.any(
+          (r) =>
+              r.targetEmail == 'bad.actor@warisankita.my' &&
+              r.status == 'SUSPENDED' &&
+              r.isAccountModeration &&
+              r.details.contains('Spamming forum reports'),
+        ),
+        isTrue,
+      );
+
+      // Now reactivate
+      await vm.reactivateUser('u_suspension_target');
+
+      expect(
+        vm.approvalHistory.any(
+          (r) =>
+              r.targetEmail == 'bad.actor@warisankita.my' &&
+              r.status == 'ACTIVE' &&
+              r.isAccountModeration &&
+              r.title == 'User Account Reactivated',
+        ),
+        isTrue,
+      );
+    });
+
+    test('suspendActiveArtisan and reactivateActiveArtisan record Studio Moderation history entries', () async {
+      final vm = ModerationViewModel(repository: repository);
+      await vm.refreshAllData();
+
+      // Seed an active artisan master directly into vm
+      final profile = const PendingArtisanProfile(
+        id: 'p_studio_mod_target',
+        name: 'Heritage Pewter Forge',
+        craftCategory: 'Pewter Craft',
+        state: 'Selangor',
+        dateSubmitted: 'Today',
+        imageUrl: 'https://example.com/forge.jpg',
+        email: 'forge.mod@warisankita.my',
+        experience: '10 Years',
+        phone: '+60 12-9988776',
+        ssmNumber: 'SSM-MOD-101',
+      );
+      vm.addPendingArtisan(profile);
+      await vm.approveArtisan('p_studio_mod_target');
+
+      // Suspend studio
+      await vm.suspendActiveArtisan('p_studio_mod_target');
+
+      expect(
+        vm.approvalHistory.any(
+          (r) =>
+              r.targetEmail == 'forge.mod@warisankita.my' &&
+              r.status == 'SUSPENDED' &&
+              r.approvalType == 'Studio Moderation',
+        ),
+        isTrue,
+      );
+
+      // Reactivate studio
+      await vm.reactivateActiveArtisan('p_studio_mod_target');
+
+      expect(
+        vm.approvalHistory.any(
+          (r) =>
+              r.targetEmail == 'forge.mod@warisankita.my' &&
+              r.status == 'APPROVED' &&
+              r.approvalType == 'Studio Moderation',
+        ),
+        isTrue,
+      );
+    });
+
+    test('Account Moderations filter isolates account and studio moderation entries', () async {
+      final vm = ModerationViewModel(repository: repository);
+      await vm.refreshAllData();
+
+      final user = const UserModel(
+        id: 'u_mod_filter_test',
+        email: 'mod.filter@warisankita.my',
+        displayName: 'Moderation Filter Test',
+        role: 'Tourist',
+        status: 'ACTIVE',
+      );
+      vm.addUserForTesting(user);
+
+      await vm.suspendUser('u_mod_filter_test', reason: 'Violation of community guidelines');
+
+      vm.setHistoryTypeFilter('Account Moderations');
+      final filtered = vm.filteredApprovalHistory;
+
+      expect(filtered.isNotEmpty, isTrue);
+      expect(filtered.every((r) => r.isAccountModeration), isTrue);
+      expect(filtered.any((r) => r.targetEmail == 'mod.filter@warisankita.my'), isTrue);
+    });
   });
 }
+
 

@@ -291,4 +291,10 @@ class UserRepository {
     username: username,
     password: password,
   );
+
+  Future<bool> saveApprovalHistory(Map<String, dynamic> recordDbMap) =>
+      _service.saveApprovalHistoryRecord(recordDbMap);
+
+  Future<List<Map<String, dynamic>>> getApprovalHistory() =>
+      _service.fetchApprovalHistoryRecords();
 }

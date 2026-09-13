@@ -4100,6 +4100,42 @@ class SupabaseService {
     }
   }
 
+  Future<bool> saveApprovalHistoryRecord(
+    Map<String, dynamic> recordDbMap,
+  ) async {
+    final client = _client;
+    if (client == null) return false;
+    try {
+      await client.from('approval_history').insert(recordDbMap);
+      return true;
+    } catch (e) {
+      debugPrint(
+        'saveApprovalHistoryRecord note (table may not exist yet or offline): $e',
+      );
+      return false;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> fetchApprovalHistoryRecords() async {
+    final client = _client;
+    if (client == null) return [];
+    try {
+      final res = await client
+          .from('approval_history')
+          .select()
+          .order('approved_at', ascending: false);
+      if (res is List) {
+        return res
+            .map((item) => Map<String, dynamic>.from(item as Map))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      debugPrint('fetchApprovalHistoryRecords note: $e');
+      return [];
+    }
+  }
+
   Future<void> changePassword({
     required String currentPassword,
     required String newPassword,

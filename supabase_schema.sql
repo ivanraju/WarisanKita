@@ -1294,5 +1294,48 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 GRANT EXECUTE ON FUNCTION public.admin_update_user_status(text, text, text, text, text, text, text) TO anon, authenticated, service_role;
 
+-- ==============================================================================
+-- 10. Admin Audit Logs & Approval History Table
+-- ==============================================================================
 
+CREATE TABLE IF NOT EXISTS public.approval_history (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    target_name TEXT NOT NULL,
+    target_email TEXT NOT NULL,
+    approval_type TEXT NOT NULL, -- 'Artisan Profile', 'Premise Relocation', 'Account Moderation', 'Studio Moderation'
+    craft_category TEXT NOT NULL DEFAULT 'Handicraft & Heritage',
+    state TEXT NOT NULL DEFAULT 'Malaysia',
+    details TEXT NOT NULL DEFAULT '',
+    previous_premise TEXT,
+    new_premise TEXT,
+    ssm_number TEXT,
+    ssm_file_name TEXT,
+    ssm_file_url TEXT,
+    cert_file_name TEXT,
+    cert_file_url TEXT,
+    photos TEXT[] DEFAULT ARRAY[]::TEXT[],
+    relocation_cert_file_name TEXT,
+    relocation_cert_file_url TEXT,
+    documents JSONB DEFAULT '[]'::JSONB,
+    status TEXT NOT NULL DEFAULT 'APPROVED', -- 'APPROVED', 'REJECTED', 'SUSPENDED', 'ACTIVE'
+    approved_by TEXT DEFAULT 'Admin Moderator',
+    approved_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
 
+-- Enable Row Level Security (RLS)
+ALTER TABLE public.approval_history ENABLE ROW LEVEL SECURITY;
+
+-- Allow read/write access for authenticated & anonymous users (Admin moderation)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies WHERE tablename = 'approval_history' AND policyname = 'Allow all access on approval_history'
+    ) THEN
+        CREATE POLICY "Allow all access on approval_history" 
+        ON public.approval_history FOR ALL 
+        USING (true) 
+        WITH CHECK (true);
+    END IF;
+END $$;
