@@ -97,13 +97,17 @@ class _ArtisanDashboardTabState extends State<ArtisanDashboardTab> {
           SliverAppBar(
             backgroundColor: Colors.transparent,
             elevation: 0,
-            title: Text(
-              'Master Artisan Command Center',
-              style: GoogleFonts.dmSerifDisplay(
-                color: isDark
-                    ? const Color(0xFFFFD54F)
-                    : const Color(0xFF004D40),
-                fontSize: 24,
+            title: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Master Artisan Command Dashboard',
+                style: GoogleFonts.dmSerifDisplay(
+                  color: isDark
+                      ? const Color(0xFFFFD54F)
+                      : const Color(0xFF004D40),
+                  fontSize: 21,
+                ),
               ),
             ),
             actions: [

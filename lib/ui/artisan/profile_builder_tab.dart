@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../tourist/widgets/workshop_map_picker.dart';
@@ -1111,7 +1110,9 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                               );
                             }
 
-                            Navigator.pop(dialogCtx);
+                            if (dialogCtx.mounted) {
+                              Navigator.pop(dialogCtx);
+                            }
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(isUpdating
@@ -1280,22 +1281,24 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
         }
       }
 
-      try {
-        final moderationVM = context.read<ModerationViewModel>();
-        final email = authVM.currentUser?.email;
-        if (email != null) {
-          moderationVM.updateUserProfileInState(
-            email: email,
-            username: username,
-            studioName: studio,
-            craftCategory: craft,
-            state: state,
-            phone: phone,
-            bio: bio,
-            experience: experience,
-          );
-        }
-      } catch (_) {}
+      if (mounted) {
+        try {
+          final moderationVM = context.read<ModerationViewModel>();
+          final email = authVM.currentUser?.email;
+          if (email != null) {
+            moderationVM.updateUserProfileInState(
+              email: email,
+              username: username,
+              studioName: studio,
+              craftCategory: craft,
+              state: state,
+              phone: phone,
+              bio: bio,
+              experience: experience,
+            );
+          }
+        } catch (_) {}
+      }
 
       if (!mounted) return;
 
@@ -1459,7 +1462,9 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     Widget? suffixIcon,
     String? helperText,
     Color? helperColor,
+    int? helperMaxLines,
     String? errorText,
+    int? errorMaxLines,
     Color? fillColor,
     bool readOnly = false,
   }) {
@@ -1479,6 +1484,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
         fontWeight: FontWeight.w600,
       ),
       helperText: helperText,
+      helperMaxLines: helperMaxLines ?? 4,
       helperStyle: TextStyle(
         color: helperColor ?? (isDark ? Colors.white54 : Colors.grey[600]),
         fontSize: 11,
@@ -1491,7 +1497,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
           : null,
       suffixIcon: suffixIcon,
       errorText: errorText,
-      errorMaxLines: 2,
+      errorMaxLines: errorMaxLines ?? 4,
       filled: true,
       fillColor: fillColor ??
           (readOnly
@@ -2307,6 +2313,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                   color: isDark ? Colors.white70 : const Color(0xFF475569),
                 ),
                 alignLabelWithHint: true,
+                errorMaxLines: 4,
                 suffixIcon: IconButton(
                   icon: Icon(
                     Icons.keyboard_hide_rounded,

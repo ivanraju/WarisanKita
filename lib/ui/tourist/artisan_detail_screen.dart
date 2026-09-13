@@ -236,46 +236,6 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ),
-            actions: [
-              CircleAvatar(
-                backgroundColor: Colors.black.withValues(alpha: 0.4),
-                child: IconButton(
-                  icon: const Icon(Icons.share_rounded, color: Colors.white),
-                  tooltip: tr('Share Artisan Profile'),
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Row(
-                          children: [
-                            const Icon(
-                              Icons.check_circle_rounded,
-                              color: Color(0xFFFFD54F),
-                              size: 18,
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                '🔗 Link copied: https://warisankita.my/artisan/${Uri.encodeComponent(widget.artisanName)}',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        backgroundColor: const Color(0xFF004D40),
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(width: 12),
-            ],
             flexibleSpace: FlexibleSpaceBar(
               background: Stack(
                 fit: StackFit.expand,
