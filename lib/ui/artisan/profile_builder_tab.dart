@@ -989,9 +989,18 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
 
                           setDialogState(() => isUploadingCert = true);
                           final supabaseService = context.read<SupabaseService>();
+                          String? profileId = currentUser.artisanProfileId;
+                          if (profileId == null || profileId.trim().isEmpty) {
+                            try {
+                              profileId = await supabaseService.ensureArtisanProfileId(
+                                currentUser.id,
+                                email: currentUser.email,
+                              );
+                            } catch (_) {}
+                          }
+
                           if (attachedCertFile != null) {
                             try {
-                              String? profileId = currentUser.artisanProfileId;
                               if (profileId != null && profileId.isNotEmpty) {
                                 final uploadRes = await supabaseService.uploadArtisanDocument(
                                   profileId,
@@ -1007,7 +1016,8 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                               } else {
                                 certFileName = attachedCertFile!.name;
                               }
-                            } catch (_) {
+                            } catch (e) {
+                              debugPrint('Error uploading relocation cert: $e');
                               certFileName = attachedCertFile!.name;
                             }
                           }
@@ -1023,16 +1033,33 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                           final reason = reasonController.text.trim().isNotEmpty
                               ? reasonController.text.trim()
                               : 'Premise relocation to $effectiveProposedAddress';
-                          await authVM.submitRelocationRequest(
-                            address: effectiveProposedAddress,
-                            state: effectiveProposedState,
-                            latitude: proposedPin!.latitude,
-                            longitude: proposedPin!.longitude,
-                            reason: reason,
-                            certUrl: certFileUrl,
-                            certName: certFileName,
-                            artisanProfileId: currentUser.artisanProfileId,
-                          );
+
+                          try {
+                            await authVM.submitRelocationRequest(
+                              address: effectiveProposedAddress,
+                              state: effectiveProposedState,
+                              latitude: proposedPin!.latitude,
+                              longitude: proposedPin!.longitude,
+                              reason: reason,
+                              certUrl: certFileUrl,
+                              certName: certFileName,
+                              artisanProfileId: profileId ?? currentUser.artisanProfileId,
+                            );
+                          } catch (submitErr) {
+                            if (dialogCtx.mounted) {
+                              setDialogState(() => isUploadingCert = false);
+                            }
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Failed to submit relocation request: $submitErr'),
+                                  backgroundColor: const Color(0xFFEF4444),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                            return;
+                          }
 
                           if (mounted) {
                             try {
