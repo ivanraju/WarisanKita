@@ -762,7 +762,12 @@ class _QuestDetailViewState extends State<QuestDetailView>
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        backgroundColor: _isDark ? _cardSurface : null,
+        surfaceTintColor: _isDark ? Colors.transparent : null,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(28),
+          side: _isDark ? BorderSide(color: _cardBorder) : BorderSide.none,
+        ),
         contentPadding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -789,7 +794,9 @@ class _QuestDetailViewState extends State<QuestDetailView>
               'Congratulations!',
               textAlign: TextAlign.center,
               style: GoogleFonts.dmSerifDisplay(
-                color: const Color(0xFF004D40),
+                color: _isDark
+                    ? const Color(0xFFFFD54F)
+                    : const Color(0xFF004D40),
                 fontSize: 28,
               ),
             ),
@@ -798,7 +805,9 @@ class _QuestDetailViewState extends State<QuestDetailView>
               'You completed every required activity for this heritage quest.',
               textAlign: TextAlign.center,
               style: GoogleFonts.plusJakartaSans(
-                color: const Color(0xFF475569),
+                color: _isDark
+                    ? const Color(0xFFB8C9C4)
+                    : const Color(0xFF475569),
                 fontSize: 13,
                 height: 1.45,
               ),
@@ -808,15 +817,20 @@ class _QuestDetailViewState extends State<QuestDetailView>
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
-                color: const Color(0xFFE8F5F1),
+                color: _isDark
+                    ? const Color(0xFF153B35)
+                    : const Color(0xFFE8F5F1),
                 borderRadius: BorderRadius.circular(14),
+                border: _isDark ? Border.all(color: _cardBorder) : null,
               ),
               child: Column(
                 children: [
-                  const Text(
+                  Text(
                     'BADGE AWARDED',
                     style: TextStyle(
-                      color: Color(0xFF087F5B),
+                      color: _isDark
+                          ? const Color(0xFF6EE7B7)
+                          : const Color(0xFF087F5B),
                       fontSize: 10,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 1.1,
@@ -827,7 +841,9 @@ class _QuestDetailViewState extends State<QuestDetailView>
                     quest.stampTitle,
                     textAlign: TextAlign.center,
                     style: GoogleFonts.plusJakartaSans(
-                      color: const Color(0xFF004D40),
+                      color: _isDark
+                          ? const Color(0xFFFFF8E1)
+                          : const Color(0xFF004D40),
                       fontSize: 13,
                       fontWeight: FontWeight.w800,
                     ),
@@ -846,7 +862,10 @@ class _QuestDetailViewState extends State<QuestDetailView>
                 icon: const Icon(Icons.workspace_premium_rounded),
                 label: const Text('Collect Badge & Return'),
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF005B4F),
+                  backgroundColor: _isDark
+                      ? const Color(0xFF087F5B)
+                      : const Color(0xFF005B4F),
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 13),
                 ),
               ),

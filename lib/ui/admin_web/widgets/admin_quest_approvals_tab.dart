@@ -35,23 +35,76 @@ class _AdminQuestApprovalsTabState extends State<AdminQuestApprovalsTab> {
   Widget build(BuildContext context) {
     final viewModel = context.watch<GamificationModerationViewModel>();
     final isMobile = MediaQuery.of(context).size.width < 720;
+    final requests = _visibleRequests(viewModel);
+    final contentPadding = isMobile ? 16.0 : 32.0;
 
-    return Padding(
-      padding: EdgeInsets.all(isMobile ? 16 : 32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildHeader(viewModel, isMobile),
-          const SizedBox(height: 20),
-          _buildStatistics(viewModel),
-          const SizedBox(height: 20),
-          _buildToolbar(viewModel),
-          const SizedBox(height: 20),
-          if (viewModel.error != null) ...[
-            _buildError(viewModel),
-            const SizedBox(height: 14),
-          ],
-          Expanded(child: _buildBody(viewModel, isMobile)),
+    return RefreshIndicator(
+      onRefresh: viewModel.loadRequests,
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(
+              contentPadding,
+              contentPadding,
+              contentPadding,
+              16,
+            ),
+            sliver: SliverToBoxAdapter(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeader(viewModel, isMobile),
+                  const SizedBox(height: 16),
+                  _buildStatistics(viewModel),
+                  const SizedBox(height: 16),
+                  _buildToolbar(viewModel),
+                  if (viewModel.error != null) ...[
+                    const SizedBox(height: 14),
+                    _buildError(viewModel),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          if (viewModel.isLoading && viewModel.requests.isEmpty)
+            const SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(
+                child: CircularProgressIndicator(color: Color(0xFF00695C)),
+              ),
+            )
+          else if (requests.isEmpty)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: _buildEmptyState(
+                hasPendingRequests: viewModel.requests.isNotEmpty,
+              ),
+            )
+          else
+            SliverPadding(
+              padding: EdgeInsets.fromLTRB(
+                contentPadding,
+                0,
+                contentPadding,
+                contentPadding,
+              ),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  if (index.isOdd) {
+                    return const SizedBox(height: 12);
+                  }
+
+                  final request = requests[index ~/ 2];
+                  return switch (request.type) {
+                    GamificationModerationRequestType.newTask =>
+                      _buildNewTaskCard(viewModel, request, isMobile),
+                    GamificationModerationRequestType.taskChange =>
+                      _buildTaskChangeCard(viewModel, request, isMobile),
+                  };
+                }, childCount: requests.length * 2 - 1),
+              ),
+            ),
         ],
       ),
     );
@@ -179,7 +232,7 @@ class _AdminQuestApprovalsTabState extends State<AdminQuestApprovalsTab> {
             for (final item in items)
               SizedBox(
                 width: cardWidth,
-                height: 142,
+                height: 112,
                 child: _statisticsCard(
                   title: item.title,
                   count: item.count,
@@ -202,7 +255,7 @@ class _AdminQuestApprovalsTabState extends State<AdminQuestApprovalsTab> {
     required Color color,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -219,16 +272,16 @@ class _AdminQuestApprovalsTabState extends State<AdminQuestApprovalsTab> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 42,
-            height: 42,
+            width: 38,
+            height: 38,
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             alignment: Alignment.center,
-            child: Icon(icon, color: color, size: 22),
+            child: Icon(icon, color: color, size: 20),
           ),
-          const SizedBox(width: 13),
+          const SizedBox(width: 11),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -243,17 +296,17 @@ class _AdminQuestApprovalsTabState extends State<AdminQuestApprovalsTab> {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 2),
                 Text(
                   '$count',
                   style: GoogleFonts.plusJakartaSans(
                     color: const Color(0xFF0F172A),
-                    fontSize: 28,
+                    fontSize: 25,
                     height: 1.1,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                const Spacer(),
+                const SizedBox(height: 4),
                 Text(
                   description,
                   maxLines: 2,
@@ -403,23 +456,22 @@ class _AdminQuestApprovalsTabState extends State<AdminQuestApprovalsTab> {
     );
   }
 
-  Widget _buildBody(GamificationModerationViewModel viewModel, bool isMobile) {
-    if (viewModel.isLoading && viewModel.requests.isEmpty) {
-      return const Center(
-        child: CircularProgressIndicator(color: Color(0xFF00695C)),
-      );
-    }
-
+  List<GamificationModerationRequest> _visibleRequests(
+    GamificationModerationViewModel viewModel,
+  ) {
     final selectedTypeRequests = viewModel.filteredRequests;
     final query = _searchQuery.trim().toLowerCase();
-    final requests = query.isEmpty
+    return query.isEmpty
         ? selectedTypeRequests
         : selectedTypeRequests
               .where((request) => _matchesSearch(request, query))
               .toList(growable: false);
-    if (requests.isEmpty) {
-      final hasPendingRequests = viewModel.requests.isNotEmpty;
-      return Center(
+  }
+
+  Widget _buildEmptyState({required bool hasPendingRequests}) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -456,27 +508,6 @@ class _AdminQuestApprovalsTabState extends State<AdminQuestApprovalsTab> {
             ),
           ],
         ),
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: viewModel.loadRequests,
-      child: ListView.separated(
-        physics: const AlwaysScrollableScrollPhysics(),
-        itemCount: requests.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 16),
-        itemBuilder: (context, index) {
-          final request = requests[index];
-          return switch (request.type) {
-            GamificationModerationRequestType.newTask => _buildNewTaskCard(
-              viewModel,
-              request,
-              isMobile,
-            ),
-            GamificationModerationRequestType.taskChange =>
-              _buildTaskChangeCard(viewModel, request, isMobile),
-          };
-        },
       ),
     );
   }
@@ -537,7 +568,7 @@ class _AdminQuestApprovalsTabState extends State<AdminQuestApprovalsTab> {
       request: request,
       body: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
         decoration: BoxDecoration(
           color: const Color(0xFFF8FAFC),
           borderRadius: BorderRadius.circular(12),
@@ -627,10 +658,10 @@ class _AdminQuestApprovalsTabState extends State<AdminQuestApprovalsTab> {
     required Widget actions,
   }) {
     return Container(
-      padding: EdgeInsets.all(isMobile ? 17 : 24),
+      padding: EdgeInsets.all(isMobile ? 16 : 18),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
@@ -644,36 +675,41 @@ class _AdminQuestApprovalsTabState extends State<AdminQuestApprovalsTab> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           header,
-          const SizedBox(height: 15),
+          const SizedBox(height: 10),
           Text(
             title,
             style: GoogleFonts.dmSerifDisplay(
-              fontSize: isMobile ? 20 : 23,
+              fontSize: isMobile ? 20 : 22,
               color: const Color(0xFF0F172A),
             ),
           ),
-          const SizedBox(height: 5),
-          Text(
-            'Artisan: ${request.artisanName}',
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF475569),
-            ),
+          const SizedBox(height: 4),
+          Wrap(
+            spacing: 14,
+            runSpacing: 3,
+            children: [
+              Text(
+                'Artisan: ${request.artisanName}',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF475569),
+                ),
+              ),
+              Text(
+                'Submitted: ${_formatSubmitted(request.submittedAt)}',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 11,
+                  color: const Color(0xFF64748B),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 2),
-          Text(
-            'Submitted: ${_formatSubmitted(request.submittedAt)}',
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 11,
-              color: const Color(0xFF64748B),
-            ),
-          ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 12),
           body,
-          const SizedBox(height: 18),
+          const SizedBox(height: 12),
           const Divider(height: 1),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
           Align(alignment: Alignment.centerRight, child: actions),
         ],
       ),
@@ -683,7 +719,7 @@ class _AdminQuestApprovalsTabState extends State<AdminQuestApprovalsTab> {
   Widget _changesPanel(List<Widget> changes) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(14),
@@ -701,7 +737,7 @@ class _AdminQuestApprovalsTabState extends State<AdminQuestApprovalsTab> {
               letterSpacing: 1.1,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 9),
           if (changes.isEmpty)
             Text(
               'No changed fields were detected.',
@@ -719,7 +755,7 @@ class _AdminQuestApprovalsTabState extends State<AdminQuestApprovalsTab> {
 
   Widget _comparisonRow(String label, String current, String requested) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -731,7 +767,7 @@ class _AdminQuestApprovalsTabState extends State<AdminQuestApprovalsTab> {
               fontWeight: FontWeight.w800,
             ),
           ),
-          const SizedBox(height: 7),
+          const SizedBox(height: 5),
           _valueRow('Current', current, const Color(0xFF64748B)),
           const SizedBox(height: 5),
           _valueRow('Requested', requested, const Color(0xFF047857)),
@@ -775,7 +811,7 @@ class _AdminQuestApprovalsTabState extends State<AdminQuestApprovalsTab> {
   Widget _deleteWarning(String taskTitle) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(15),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: const Color(0xFFFEF2F2),
         borderRadius: BorderRadius.circular(14),
@@ -829,7 +865,7 @@ class _AdminQuestApprovalsTabState extends State<AdminQuestApprovalsTab> {
           style: OutlinedButton.styleFrom(
             foregroundColor: const Color(0xFFB91C1C),
             side: const BorderSide(color: Color(0xFFFCA5A5)),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           ),
           icon: const Icon(Icons.close_rounded, size: 17),
           label: Text(rejectLabel),
@@ -840,7 +876,7 @@ class _AdminQuestApprovalsTabState extends State<AdminQuestApprovalsTab> {
               : () => _approveRequest(viewModel, request),
           style: FilledButton.styleFrom(
             backgroundColor: const Color(0xFF047857),
-            padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 13),
+            padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 10),
           ),
           icon: isReviewing
               ? const SizedBox.square(
