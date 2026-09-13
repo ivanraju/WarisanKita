@@ -981,72 +981,85 @@ class _LiveForumTabState extends State<LiveForumTab> {
     final threadId = _activeThread!['id'].toString();
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            const Icon(Icons.delete_forever_rounded, color: Color(0xFFEF4444)),
-            const SizedBox(width: 10),
-            Expanded(
+      builder: (dialogContext) {
+        final isDark = Theme.of(dialogContext).brightness == Brightness.dark;
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              const Icon(Icons.delete_forever_rounded, color: Color(0xFFEF4444)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Delete Answer / Reply',
+                  softWrap: true,
+                  style: GoogleFonts.dmSerifDisplay(
+                    fontSize: 18,
+                    color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            'Are you sure you want to delete this response? This action cannot be undone.',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 13,
+              height: 1.5,
+              color: isDark ? Colors.white70 : const Color(0xFF475569),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
               child: Text(
-                'Delete Answer / Reply',
-                softWrap: true,
-                style: GoogleFonts.dmSerifDisplay(
-                  fontSize: 18,
-                  color: const Color(0xFF004D40),
+                'CANCEL',
+                style: TextStyle(
+                  color: isDark ? Colors.white70 : const Color(0xFF004D40),
                 ),
               ),
             ),
-          ],
-        ),
-        content: Text(
-          'Are you sure you want to delete this response? This action cannot be undone.',
-          style: GoogleFonts.plusJakartaSans(fontSize: 13, height: 1.5),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('CANCEL'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              Navigator.pop(dialogContext);
-              setState(() {
-                if (_activeThread != null &&
-                    _activeThread!['messages'] is List) {
-                  final List msgs = List.from(_activeThread!['messages']);
-                  msgs.removeWhere(
-                    (m) =>
-                        m is Map &&
-                        (m['id']?.toString() == replyId ||
-                            m['parentReplyId']?.toString() == replyId),
-                  );
-                  _activeThread!['messages'] = msgs;
-                  _activeThread!['replies'] = msgs.length;
-                  _activeThread!['replyCount'] = msgs.length;
-                }
-              });
-              await context.read<ForumViewModel>().deleteReply(
-                threadId,
-                replyId,
-              );
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('🗑️ Response deleted successfully.'),
-                    backgroundColor: Color(0xFFEF4444),
-                    behavior: SnackBarBehavior.floating,
-                  ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFEF4444),
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () async {
+                Navigator.pop(dialogContext);
+                setState(() {
+                  if (_activeThread != null &&
+                      _activeThread!['messages'] is List) {
+                    final List msgs = List.from(_activeThread!['messages']);
+                    msgs.removeWhere(
+                      (m) =>
+                          m is Map &&
+                          (m['id']?.toString() == replyId ||
+                              m['parentReplyId']?.toString() == replyId),
+                    );
+                    _activeThread!['messages'] = msgs;
+                    _activeThread!['replies'] = msgs.length;
+                    _activeThread!['replyCount'] = msgs.length;
+                  }
+                });
+                await context.read<ForumViewModel>().deleteReply(
+                  threadId,
+                  replyId,
                 );
-              }
-            },
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFEF4444),
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('🗑️ Response deleted successfully.'),
+                      backgroundColor: Color(0xFFEF4444),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
+              child: const Text('DELETE ANSWER'),
             ),
-            child: const Text('DELETE ANSWER'),
-          ),
-        ],
-      ),
+          ],
+        );
+      },
     );
   }
 
@@ -1054,57 +1067,70 @@ class _LiveForumTabState extends State<LiveForumTab> {
     final threadId = thread['id'].toString();
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            const Icon(Icons.delete_forever_rounded, color: Color(0xFFEF4444)),
-            const SizedBox(width: 10),
-            Expanded(
+      builder: (dialogContext) {
+        final isDark = Theme.of(dialogContext).brightness == Brightness.dark;
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              const Icon(Icons.delete_forever_rounded, color: Color(0xFFEF4444)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Delete Question / Post',
+                  softWrap: true,
+                  style: GoogleFonts.dmSerifDisplay(
+                    fontSize: 18,
+                    color: isDark
+                        ? const Color(0xFFFFD54F)
+                        : const Color(0xFF004D40),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            'Are you sure you want to delete your post "${thread['title']}"? All community answers will be permanently removed.',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 13,
+              height: 1.5,
+              color: isDark ? Colors.white70 : const Color(0xFF475569),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
               child: Text(
-                'Delete Question / Post',
-                softWrap: true,
-                style: GoogleFonts.dmSerifDisplay(
-                  fontSize: 18,
-                  color: Theme.of(dialogContext).brightness == Brightness.dark
-                      ? const Color(0xFFFFD54F)
-                      : const Color(0xFF004D40),
+                'CANCEL',
+                style: TextStyle(
+                  color: isDark ? Colors.white70 : const Color(0xFF004D40),
                 ),
               ),
             ),
-          ],
-        ),
-        content: Text(
-          'Are you sure you want to delete your post "${thread['title']}"? All community answers will be permanently removed.',
-          style: GoogleFonts.plusJakartaSans(fontSize: 13, height: 1.5),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('CANCEL'),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-              context.read<ForumViewModel>().deleteThread(threadId);
-              if (_activeThread?['id'] == threadId) {
-                setState(() => _activeThread = null);
-              }
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('🗑️ Post deleted successfully.'),
-                  backgroundColor: Color(0xFFEF4444),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFEF4444),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFEF4444),
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                context.read<ForumViewModel>().deleteThread(threadId);
+                if (_activeThread?['id'] == threadId) {
+                  setState(() => _activeThread = null);
+                }
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('🗑️ Post deleted successfully.'),
+                    backgroundColor: Color(0xFFEF4444),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              },
+              child: const Text('DELETE POST'),
             ),
-            child: const Text('DELETE POST'),
-          ),
-        ],
-      ),
+          ],
+        );
+      },
     );
   }
 
@@ -1115,101 +1141,136 @@ class _LiveForumTabState extends State<LiveForumTab> {
 
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Row(
-          children: [
-            Icon(
-              Icons.edit_rounded,
-              color: Theme.of(dialogContext).brightness == Brightness.dark
-                  ? const Color(0xFFFFD54F)
-                  : const Color(0xFF004D40),
+      builder: (dialogContext) {
+        final isDark = Theme.of(dialogContext).brightness == Brightness.dark;
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: Row(
+            children: [
+              Icon(
+                Icons.edit_rounded,
+                color: isDark
+                    ? const Color(0xFFFFD54F)
+                    : const Color(0xFF004D40),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Edit Response',
+                  softWrap: true,
+                  style: GoogleFonts.dmSerifDisplay(
+                    fontSize: 20,
+                    color: isDark
+                        ? const Color(0xFFFFD54F)
+                        : const Color(0xFF004D40),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: TextField(
+            controller: editController,
+            maxLines: 4,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 13,
+              color: isDark ? Colors.white : Colors.black87,
             ),
-            const SizedBox(width: 10),
-            Expanded(
+            decoration: InputDecoration(
+              labelText: 'Your Answer / Response',
+              labelStyle: GoogleFonts.plusJakartaSans(
+                color: isDark ? Colors.white70 : const Color(0xFF475569),
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(
+                  color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFE2E8F0),
+                ),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(
+                  color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFE2E8F0),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(
+                  color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                  width: 1.5,
+                ),
+              ),
+              filled: true,
+              fillColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
               child: Text(
-                'Edit Response',
-                softWrap: true,
-                style: GoogleFonts.dmSerifDisplay(
-                  fontSize: 20,
-                  color: Theme.of(dialogContext).brightness == Brightness.dark
-                      ? const Color(0xFFFFD54F)
-                      : const Color(0xFF004D40),
+                'CANCEL',
+                style: TextStyle(
+                  color: isDark ? Colors.white70 : const Color(0xFF004D40),
                 ),
               ),
             ),
-          ],
-        ),
-        content: TextField(
-          controller: editController,
-          maxLines: 4,
-          decoration: InputDecoration(
-            labelText: 'Your Answer / Response',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-            filled: true,
-            fillColor: const Color(0xFFF8F9FA),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('CANCEL'),
-          ),
-          FilledButton.icon(
-            onPressed: () async {
-              final newText = editController.text.trim();
-              if (newText.isEmpty) return;
+            FilledButton.icon(
+              onPressed: () async {
+                final newText = editController.text.trim();
+                if (newText.isEmpty) return;
 
-              final forumVM = context.read<ForumViewModel>();
+                final forumVM = context.read<ForumViewModel>();
 
-              final result = await forumVM.editReply(
-                threadId,
-                replyId,
-                newText,
-              );
+                final result = await forumVM.editReply(
+                  threadId,
+                  replyId,
+                  newText,
+                );
 
-              if (!mounted) return;
+                if (!mounted) return;
 
-              if (result.isBlocked) {
+                if (result.isBlocked) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('🚫 Edit Blocked: ${result.blockReason}'),
+                      backgroundColor: const Color(0xFFEF4444),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                  return;
+                }
+
+                if (!dialogContext.mounted) return;
+
+                Navigator.pop(dialogContext);
+
+                if (!mounted) return;
+
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('🚫 Edit Blocked: ${result.blockReason}'),
-                    backgroundColor: const Color(0xFFEF4444),
+                    content: Text(
+                      result.isAutoFlagged
+                          ? '⚠️ Answer updated and flagged for moderator review (${result.flagReason}).'
+                          : '✏️ Answer updated successfully.',
+                    ),
+                    backgroundColor: result.isAutoFlagged
+                        ? const Color(0xFFD97706)
+                        : const Color(0xFF004D40),
                     behavior: SnackBarBehavior.floating,
                   ),
                 );
-                return;
-              }
-
-              if (!dialogContext.mounted) return;
-
-              Navigator.pop(dialogContext);
-
-              if (!mounted) return;
-
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    result.isAutoFlagged
-                        ? '⚠️ Answer updated and flagged for moderator review (${result.flagReason}).'
-                        : '✏️ Answer updated successfully.',
-                  ),
-                  backgroundColor: result.isAutoFlagged
-                      ? const Color(0xFFD97706)
-                      : const Color(0xFF004D40),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF004D40),
-              foregroundColor: Colors.white,
+              },
+              style: FilledButton.styleFrom(
+                backgroundColor: isDark
+                    ? const Color(0xFF00695C)
+                    : const Color(0xFF004D40),
+                foregroundColor: Colors.white,
+              ),
+              icon: const Icon(Icons.check_rounded, size: 16, color: Color(0xFFFFD54F)),
+              label: const Text('SAVE CHANGES', style: TextStyle(color: Colors.white)),
             ),
-            icon: const Icon(Icons.check_rounded, size: 16, color: Color(0xFFFFD54F)),
-            label: const Text('SAVE CHANGES', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
+          ],
+        );
+      },
     );
   }
 
@@ -1221,97 +1282,132 @@ class _LiveForumTabState extends State<LiveForumTab> {
 
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Row(
-          children: [
-            Icon(
-              Icons.edit_rounded,
-              color: Theme.of(dialogContext).brightness == Brightness.dark
-                  ? const Color(0xFFFFD54F)
-                  : const Color(0xFF004D40),
+      builder: (dialogContext) {
+        final isDark = Theme.of(dialogContext).brightness == Brightness.dark;
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: Row(
+            children: [
+              Icon(
+                Icons.edit_rounded,
+                color: isDark
+                    ? const Color(0xFFFFD54F)
+                    : const Color(0xFF004D40),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Edit Question / Post Title',
+                  softWrap: true,
+                  style: GoogleFonts.dmSerifDisplay(
+                    fontSize: 18,
+                    color: isDark
+                        ? const Color(0xFFFFD54F)
+                        : const Color(0xFF004D40),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: TextField(
+            controller: editTitleController,
+            maxLines: 2,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 13,
+              color: isDark ? Colors.white : Colors.black87,
             ),
-            const SizedBox(width: 10),
-            Expanded(
+            decoration: InputDecoration(
+              labelText: 'Question Title',
+              labelStyle: GoogleFonts.plusJakartaSans(
+                color: isDark ? Colors.white70 : const Color(0xFF475569),
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(
+                  color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFE2E8F0),
+                ),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(
+                  color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFE2E8F0),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(
+                  color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                  width: 1.5,
+                ),
+              ),
+              filled: true,
+              fillColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
               child: Text(
-                'Edit Question / Post Title',
-                softWrap: true,
-                style: GoogleFonts.dmSerifDisplay(
-                  fontSize: 18,
-                  color: Theme.of(dialogContext).brightness == Brightness.dark
-                      ? const Color(0xFFFFD54F)
-                      : const Color(0xFF004D40),
+                'CANCEL',
+                style: TextStyle(
+                  color: isDark ? Colors.white70 : const Color(0xFF004D40),
                 ),
               ),
             ),
-          ],
-        ),
-        content: TextField(
-          controller: editTitleController,
-          maxLines: 2,
-          decoration: InputDecoration(
-            labelText: 'Question Title',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-            filled: true,
-            fillColor: const Color(0xFFF8F9FA),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('CANCEL'),
-          ),
-          FilledButton.icon(
-            onPressed: () async {
-              final newTitle = editTitleController.text.trim();
-              if (newTitle.isEmpty) return;
+            FilledButton.icon(
+              onPressed: () async {
+                final newTitle = editTitleController.text.trim();
+                if (newTitle.isEmpty) return;
 
-              final forumVM = context.read<ForumViewModel>();
+                final forumVM = context.read<ForumViewModel>();
 
-              final result = await forumVM.editThread(threadId, newTitle);
+                final result = await forumVM.editThread(threadId, newTitle);
 
-              if (!mounted) return;
+                if (!mounted) return;
 
-              if (result.isBlocked) {
+                if (result.isBlocked) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('🚫 Edit Blocked: ${result.blockReason}'),
+                      backgroundColor: const Color(0xFFEF4444),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                  return;
+                }
+
+                if (!dialogContext.mounted) return;
+
+                Navigator.pop(dialogContext);
+
+                if (!mounted) return;
+
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('🚫 Edit Blocked: ${result.blockReason}'),
-                    backgroundColor: const Color(0xFFEF4444),
+                    content: Text(
+                      result.isAutoFlagged
+                          ? '⚠️ Title updated and flagged for moderator review (${result.flagReason}).'
+                          : '✏️ Post title updated.',
+                    ),
+                    backgroundColor: result.isAutoFlagged
+                        ? const Color(0xFFD97706)
+                        : const Color(0xFF004D40),
                     behavior: SnackBarBehavior.floating,
                   ),
                 );
-                return;
-              }
-
-              if (!dialogContext.mounted) return;
-
-              Navigator.pop(dialogContext);
-
-              if (!mounted) return;
-
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    result.isAutoFlagged
-                        ? '⚠️ Title updated and flagged for moderator review (${result.flagReason}).'
-                        : '✏️ Post title updated.',
-                  ),
-                  backgroundColor: result.isAutoFlagged
-                      ? const Color(0xFFD97706)
-                      : const Color(0xFF004D40),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF004D40),
-              foregroundColor: Colors.white,
+              },
+              style: FilledButton.styleFrom(
+                backgroundColor: isDark
+                    ? const Color(0xFF00695C)
+                    : const Color(0xFF004D40),
+                foregroundColor: Colors.white,
+              ),
+              icon: const Icon(Icons.check_rounded, size: 16, color: Color(0xFFFFD54F)),
+              label: const Text('SAVE CHANGES', style: TextStyle(color: Colors.white)),
             ),
-            icon: const Icon(Icons.check_rounded, size: 16, color: Color(0xFFFFD54F)),
-            label: const Text('SAVE CHANGES', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
+          ],
+        );
+      },
     );
   }
 
@@ -3321,10 +3417,10 @@ class _LiveForumTabState extends State<LiveForumTab> {
                         onPressed: () => _sendMessage(context),
                         style: FilledButton.styleFrom(
                           backgroundColor: isDark
-                              ? const Color(0xFF1E3A34)
+                              ? const Color(0xFF00695C)
                               : const Color(0xFF004D40),
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),

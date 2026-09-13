@@ -54,9 +54,23 @@ class ThemeViewModel extends ChangeNotifier {
         hintStyle: TextStyle(color: Colors.grey[400]),
         prefixIconColor: const Color(0xFF004D40),
         suffixIconColor: const Color(0xFF004D40),
+        errorMaxLines: 3,
+        errorStyle: const TextStyle(
+          fontSize: 12,
+          height: 1.25,
+          color: Color(0xFFDC2626),
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1.2),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Color(0xFFDC2626), width: 1.8),
         ),
       ),
       snackBarTheme: SnackBarThemeData(
@@ -97,6 +111,12 @@ class ThemeViewModel extends ChangeNotifier {
         hintStyle: const TextStyle(color: Colors.white38),
         prefixIconColor: const Color(0xFFFFD54F),
         suffixIconColor: const Color(0xFFFFD54F),
+        errorMaxLines: 3,
+        errorStyle: const TextStyle(
+          fontSize: 12,
+          height: 1.25,
+          color: Color(0xFFFCA5A5),
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: Color(0xFF1E3A34)),
@@ -108,6 +128,14 @@ class ThemeViewModel extends ChangeNotifier {
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: Color(0xFFFFD54F), width: 1.8),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1.2),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1.8),
         ),
       ),
       dialogTheme: const DialogThemeData(

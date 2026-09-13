@@ -1258,7 +1258,10 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                   child: FilledButton.icon(
                     onPressed: widget.onViewQuest,
                     style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF004D40),
+                      backgroundColor: isDark
+                          ? const Color(0xFF00695C)
+                          : const Color(0xFF004D40),
+                      foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
@@ -1272,6 +1275,7 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                     label: Text(
                       tr('VIEW QUEST'),
                       style: GoogleFonts.plusJakartaSans(
+                        color: Colors.white,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 0.5,
                       ),

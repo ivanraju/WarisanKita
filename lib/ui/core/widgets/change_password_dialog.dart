@@ -158,8 +158,13 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: isDark
+            ? const BorderSide(color: Color(0xFF1E3A34), width: 1)
+            : BorderSide.none,
+      ),
+      backgroundColor: isDark ? const Color(0xFF0D2825) : Colors.white,
       insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 440),
@@ -175,12 +180,14 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF004D40).withOpacity(0.1),
+                      color: isDark
+                          ? const Color(0xFFFFD54F).withValues(alpha: 0.15)
+                          : const Color(0xFF004D40).withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.lock_reset_rounded,
-                      color: Color(0xFF004D40),
+                      color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
                       size: 26,
                     ),
                   ),
@@ -208,7 +215,11 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close_rounded, size: 20),
+                    icon: Icon(
+                      Icons.close_rounded,
+                      size: 20,
+                      color: isDark ? Colors.white70 : Colors.black54,
+                    ),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
@@ -221,9 +232,13 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFEF2F2),
+                    color: isDark
+                        ? const Color(0xFF7F1D1D).withValues(alpha: 0.3)
+                        : const Color(0xFFFEF2F2),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFFCA5A5)),
+                    border: Border.all(
+                      color: isDark ? const Color(0xFFB91C1C) : const Color(0xFFFCA5A5),
+                    ),
                   ),
                   child: Row(
                     children: [
@@ -235,7 +250,7 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
-                            color: const Color(0xFFEF4444),
+                            color: isDark ? const Color(0xFFFCA5A5) : const Color(0xFFEF4444),
                           ),
                         ),
                       ),
@@ -249,15 +264,43 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
               TextField(
                 controller: _currentPasswordController,
                 obscureText: _obscureCurrent,
+                style: GoogleFonts.plusJakartaSans(
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  fontSize: 14,
+                ),
                 decoration: InputDecoration(
                   labelText: 'Current Password',
+                  labelStyle: TextStyle(
+                    color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                  ),
                   errorText: _currentError,
-                  prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
+                  prefixIcon: Icon(
+                    Icons.lock_outline_rounded,
+                    size: 20,
+                    color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                  ),
                   suffixIcon: IconButton(
-                    icon: Icon(_obscureCurrent ? Icons.visibility_off : Icons.visibility, size: 20),
+                    icon: Icon(
+                      _obscureCurrent ? Icons.visibility_off : Icons.visibility,
+                      size: 20,
+                      color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                    ),
                     onPressed: () => setState(() => _obscureCurrent = !_obscureCurrent),
                   ),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(
+                      color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFCBD5E1),
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(
+                      color: isDark ? const Color(0xFF34D399) : const Color(0xFF004D40),
+                      width: 1.5,
+                    ),
+                  ),
                 ),
               ),
 
@@ -267,16 +310,47 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
               TextField(
                 controller: _newPasswordController,
                 obscureText: _obscureNew,
+                style: GoogleFonts.plusJakartaSans(
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  fontSize: 14,
+                ),
                 decoration: InputDecoration(
                   labelText: 'New Password',
+                  labelStyle: TextStyle(
+                    color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                  ),
                   hintText: 'Must be at least 8 characters',
+                  hintStyle: TextStyle(
+                    color: isDark ? Colors.white38 : const Color(0xFF94A3B8),
+                  ),
                   errorText: _newError,
-                  prefixIcon: const Icon(Icons.key_rounded, size: 20),
+                  prefixIcon: Icon(
+                    Icons.key_rounded,
+                    size: 20,
+                    color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                  ),
                   suffixIcon: IconButton(
-                    icon: Icon(_obscureNew ? Icons.visibility_off : Icons.visibility, size: 20),
+                    icon: Icon(
+                      _obscureNew ? Icons.visibility_off : Icons.visibility,
+                      size: 20,
+                      color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                    ),
                     onPressed: () => setState(() => _obscureNew = !_obscureNew),
                   ),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(
+                      color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFCBD5E1),
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(
+                      color: isDark ? const Color(0xFF34D399) : const Color(0xFF004D40),
+                      width: 1.5,
+                    ),
+                  ),
                 ),
               ),
 
@@ -292,15 +366,43 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
               TextField(
                 controller: _confirmPasswordController,
                 obscureText: _obscureConfirm,
+                style: GoogleFonts.plusJakartaSans(
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  fontSize: 14,
+                ),
                 decoration: InputDecoration(
                   labelText: 'Confirm New Password',
+                  labelStyle: TextStyle(
+                    color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                  ),
                   errorText: _confirmError,
-                  prefixIcon: const Icon(Icons.lock_reset_outlined, size: 20),
+                  prefixIcon: Icon(
+                    Icons.lock_reset_outlined,
+                    size: 20,
+                    color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                  ),
                   suffixIcon: IconButton(
-                    icon: Icon(_obscureConfirm ? Icons.visibility_off : Icons.visibility, size: 20),
+                    icon: Icon(
+                      _obscureConfirm ? Icons.visibility_off : Icons.visibility,
+                      size: 20,
+                      color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                    ),
                     onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
                   ),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(
+                      color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFCBD5E1),
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(
+                      color: isDark ? const Color(0xFF34D399) : const Color(0xFF004D40),
+                      width: 1.5,
+                    ),
+                  ),
                 ),
               ),
 
@@ -319,13 +421,17 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
                       ),
                     );
                   },
-                  icon: const Icon(Icons.mail_outline_rounded, size: 16),
+                  icon: Icon(
+                    Icons.mail_outline_rounded,
+                    size: 16,
+                    color: isDark ? const Color(0xFF34D399) : const Color(0xFF004D40),
+                  ),
                   label: Text(
                     'Forgot current password? Reset via email',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: const Color(0xFF004D40),
+                      color: isDark ? const Color(0xFF34D399) : const Color(0xFF004D40),
                     ),
                   ),
                   style: TextButton.styleFrom(
@@ -343,16 +449,23 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
                 children: [
                   TextButton(
                     onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+                    style: TextButton.styleFrom(
+                      foregroundColor: isDark ? Colors.white70 : const Color(0xFF64748B),
+                    ),
                     child: Text(
                       'Cancel',
-                      style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
+                      style: GoogleFonts.plusJakartaSans(
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 10),
                   FilledButton(
                     onPressed: _isLoading ? null : _handleChangePassword,
                     style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF004D40),
+                      backgroundColor: isDark ? const Color(0xFF00695C) : const Color(0xFF004D40),
+                      foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
@@ -367,6 +480,7 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
                             style: GoogleFonts.plusJakartaSans(
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
+                              color: Colors.white,
                             ),
                           ),
                   ),
