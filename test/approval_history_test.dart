@@ -758,6 +758,78 @@ void main() {
       expect(authVM.relocationResolutionNotice, isNull);
     });
 
+    test('ModerationViewModel applicationTypeFilter and filteredRelocations visibility tests', () async {
+      final vm = ModerationViewModel(repository: repository);
+      await vm.refreshAllData();
+
+      const newProfile = PendingArtisanProfile(
+        id: 'pending_new_1',
+        name: 'New Woodcarver',
+        craftCategory: 'Wood Carving',
+        state: 'Kelantan',
+        dateSubmitted: 'Today',
+        imageUrl: '',
+        email: 'new.carver@warisankita.my',
+        experience: '5 Years',
+        phone: '+60 12-111 2222',
+        isRelocationRequest: false,
+      );
+
+      const relocProfile = PendingArtisanProfile(
+        id: 'reloc_artisan_2',
+        name: 'Master Batik Relocation',
+        craftCategory: 'Batik Weaving',
+        state: 'Terengganu',
+        dateSubmitted: 'Today',
+        imageUrl: '',
+        email: 'master.batik@warisankita.my',
+        experience: '20 Years',
+        phone: '+60 13-999 8888',
+        isRelocationRequest: true,
+        currentAddress: 'Old Beach Rd, KT',
+        proposedAddress: 'New Heritage Alley, KT',
+        proposedState: 'Terengganu',
+      );
+
+      vm.addPendingArtisan(newProfile);
+      vm.addRelocationRequest(relocProfile);
+
+      // Verify counts
+      expect(vm.totalPendingCount >= 2, isTrue);
+      expect(vm.pendingRelocationCount >= 1, isTrue);
+      expect(vm.pendingNewProfilesCount >= 1, isTrue);
+
+      // 'All' filter includes both
+      vm.setApplicationTypeFilter('All');
+      expect(vm.filteredArtisans.any((a) => a.id == 'pending_new_1'), isTrue);
+      expect(vm.filteredArtisans.any((a) => a.id == 'reloc_artisan_2'), isTrue);
+
+      // 'New Profiles' filter includes only new profiles
+      vm.setApplicationTypeFilter('New Profiles');
+      expect(vm.filteredArtisans.any((a) => a.id == 'pending_new_1'), isTrue);
+      expect(vm.filteredArtisans.any((a) => a.id == 'reloc_artisan_2'), isFalse);
+
+      // 'Relocations' filter includes only relocations
+      vm.setApplicationTypeFilter('Relocations');
+      expect(vm.filteredArtisans.any((a) => a.id == 'pending_new_1'), isFalse);
+      expect(vm.filteredArtisans.any((a) => a.id == 'reloc_artisan_2'), isTrue);
+
+      // filteredRelocations always isolates relocation requests
+      expect(vm.filteredRelocations.any((a) => a.id == 'reloc_artisan_2'), isTrue);
+      expect(vm.filteredRelocations.any((a) => a.id == 'pending_new_1'), isFalse);
+
+      // Category matching is case-insensitive and trimmed
+      vm.setSelectedCategory('Batik Weaving');
+      expect(vm.filteredRelocations.any((a) => a.id == 'reloc_artisan_2'), isTrue);
+
+      // Tab switching syncs applicationTypeFilter
+      vm.setActiveTab('Workshop Relocations');
+      expect(vm.applicationTypeFilter, 'Relocations');
+
+      vm.setActiveTab('Pending Approvals');
+      expect(vm.applicationTypeFilter, 'All');
+    });
+
     testWidgets('AdminApprovalHistoryTab displays Audit Record button clearly and without overflow', (tester) async {
       tester.view.physicalSize = const Size(1280, 800);
       tester.view.devicePixelRatio = 1.0;

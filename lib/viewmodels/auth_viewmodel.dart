@@ -373,6 +373,7 @@ class AuthViewModel extends ChangeNotifier {
     required String reason,
     String? certUrl,
     String? certName,
+    String? artisanProfileId,
   }) async {
     final email = _currentUser?.email ?? '';
     if (email.isEmpty) return;
@@ -388,6 +389,7 @@ class AuthViewModel extends ChangeNotifier {
         reason: reason,
         certUrl: certUrl,
         certName: certName,
+        artisanProfileId: artisanProfileId ?? _currentUser?.artisanProfileId,
       );
       if (_currentUser != null) {
         _currentUser = _currentUser!.copyWith(
