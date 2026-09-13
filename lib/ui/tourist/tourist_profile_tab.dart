@@ -750,8 +750,12 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                         ),
                       ),
 
-                      if (authVM.currentUser?.isArtisanStudioSuspended ==
-                          true) ...[
+                      if (authVM.currentUser?.isArtisanStudioSuspended == true &&
+                          (authVM.currentUser?.role == 'Artisan' ||
+                           authVM.currentUser?.role == 'Master Artisan' ||
+                           authVM.currentUser?.roles.contains('Artisan') == true ||
+                           authVM.currentUser?.roles.contains('Master Artisan') == true ||
+                           authVM.currentUser?.isDualRole == true)) ...[
                         const SizedBox(height: 18),
                         Container(
                           padding: const EdgeInsets.all(16),
@@ -802,15 +806,15 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                             ],
                           ),
                         ),
-                      ] else if (authVM.currentUser?.isApprovedArtisan ==
-                              true ||
-                          (authVM.currentUser?.artisanStatus?.toUpperCase() ==
-                                  'APPROVED' &&
-                              authVM.currentUser?.isArtisanStudioSuspended !=
-                                  true &&
-                              authVM.currentUser?.artisanStatus
-                                      ?.toUpperCase() !=
-                                  'CLOSED')) ...[
+                      ] else if ((authVM.currentUser?.isApprovedArtisan == true ||
+                              (authVM.currentUser?.artisanStatus?.toUpperCase() == 'APPROVED' &&
+                               authVM.currentUser?.isArtisanStudioSuspended != true &&
+                               authVM.currentUser?.artisanStatus?.toUpperCase() != 'CLOSED')) &&
+                          (authVM.currentUser?.role == 'Artisan' ||
+                           authVM.currentUser?.role == 'Master Artisan' ||
+                           authVM.currentUser?.roles.contains('Artisan') == true ||
+                           authVM.currentUser?.roles.contains('Master Artisan') == true ||
+                           authVM.currentUser?.isDualRole == true)) ...[
                         const SizedBox(height: 18),
                         Container(
                           padding: const EdgeInsets.all(16),

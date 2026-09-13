@@ -1380,7 +1380,11 @@ BEGIN
     IF upper(p_status) = 'CLOSED' THEN
         v_artisan_status := 'CLOSED';
     ELSIF upper(p_status) IN ('ACTIVE', 'APPROVED') THEN
-        v_artisan_status := 'APPROVED';
+        IF COALESCE(p_role, (SELECT role FROM public.users WHERE id = v_user_id)) = 'Tourist' THEN
+            v_artisan_status := NULL;
+        ELSE
+            v_artisan_status := 'APPROVED';
+        END IF;
     ELSIF upper(p_status) = 'REJECTED' THEN
         v_artisan_status := 'REJECTED';
     ELSE
@@ -1439,42 +1443,44 @@ BEGIN
     FROM public.artisan_profiles
     WHERE user_id = v_user_id;
 
-    INSERT INTO public.artisan_profiles (
-        user_id,
-        status,
-        studio_name,
-        craft_category,
-        ssm_number,
-        rejection_reason,
-        bio,
-        address,
-        state,
-        created_at,
-        updated_at
-    ) VALUES (
-        v_user_id,
-        v_artisan_status,
-        COALESCE(p_studio_name, v_existing_studio, 'Artisan Studio'),
-        COALESCE(p_craft_category, v_existing_craft, 'Traditional Craft'),
-        p_ssm_number,
-        CASE WHEN v_artisan_status = 'REJECTED' THEN p_rejection_reason ELSE NULL END,
-        'Master artisan dedicated to traditional Malaysian craft.',
-        COALESCE(v_existing_address, 'Malaysia'),
-        COALESCE(v_existing_state, 'Malaysia'),
-        now(),
-        now()
-    )
-    ON CONFLICT (user_id) DO UPDATE SET
-        status = EXCLUDED.status,
-        studio_name = COALESCE(EXCLUDED.studio_name, artisan_profiles.studio_name),
-        craft_category = COALESCE(EXCLUDED.craft_category, artisan_profiles.craft_category),
-        ssm_number = COALESCE(EXCLUDED.ssm_number, artisan_profiles.ssm_number),
-        rejection_reason = CASE 
-            WHEN EXCLUDED.status = 'REJECTED' THEN COALESCE(EXCLUDED.rejection_reason, artisan_profiles.rejection_reason)
-            WHEN EXCLUDED.status = 'APPROVED' THEN NULL
-            ELSE artisan_profiles.rejection_reason
-        END,
-        updated_at = now();
+    IF v_artisan_status IS NOT NULL AND COALESCE(p_role, (SELECT role FROM public.users WHERE id = v_user_id)) != 'Tourist' THEN
+        INSERT INTO public.artisan_profiles (
+            user_id,
+            status,
+            studio_name,
+            craft_category,
+            ssm_number,
+            rejection_reason,
+            bio,
+            address,
+            state,
+            created_at,
+            updated_at
+        ) VALUES (
+            v_user_id,
+            v_artisan_status,
+            COALESCE(p_studio_name, v_existing_studio, 'Artisan Studio'),
+            COALESCE(p_craft_category, v_existing_craft, 'Traditional Craft'),
+            p_ssm_number,
+            CASE WHEN v_artisan_status = 'REJECTED' THEN p_rejection_reason ELSE NULL END,
+            'Master artisan dedicated to traditional Malaysian craft.',
+            COALESCE(v_existing_address, 'Malaysia'),
+            COALESCE(v_existing_state, 'Malaysia'),
+            now(),
+            now()
+        )
+        ON CONFLICT (user_id) DO UPDATE SET
+            status = EXCLUDED.status,
+            studio_name = COALESCE(EXCLUDED.studio_name, artisan_profiles.studio_name),
+            craft_category = COALESCE(EXCLUDED.craft_category, artisan_profiles.craft_category),
+            ssm_number = COALESCE(EXCLUDED.ssm_number, artisan_profiles.ssm_number),
+            rejection_reason = CASE 
+                WHEN EXCLUDED.status = 'REJECTED' THEN COALESCE(EXCLUDED.rejection_reason, artisan_profiles.rejection_reason)
+                WHEN EXCLUDED.status = 'APPROVED' THEN NULL
+                ELSE artisan_profiles.rejection_reason
+            END,
+            updated_at = now();
+    END IF;
 
     RETURN jsonb_build_object(
         'success', true, 
