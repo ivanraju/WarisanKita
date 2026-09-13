@@ -6012,7 +6012,7 @@ class SupabaseService {
           authUid ??
           userStoreUid ??
           '00000000-0000-4000-8000-000000000001';
-      final String postContent = thread.replies.isNotEmpty
+      final String postContent = thread.replies.isNotEmpty && !thread.replies.first.isReported
           ? thread.replies.first.text
           : thread.title;
       final String tagValue = thread.community.replaceAll('c/', '');
@@ -6059,6 +6059,7 @@ class SupabaseService {
             'upvotes': reply.upvotes,
             'author_role_at_creation': reply.authorRoleAtCreation,
             'is_verified_answer': reply.isVerifiedAnswer,
+            'is_reported': reply.isReported,
             'is_edited': reply.isEdited,
           });
         } catch (re) {
@@ -6074,6 +6075,7 @@ class SupabaseService {
                 'upvotes': reply.upvotes,
                 'author_role_at_creation': reply.authorRoleAtCreation,
                 'is_verified_answer': reply.isVerifiedAnswer,
+                'is_reported': reply.isReported,
                 'is_edited': reply.isEdited,
               });
             } catch (_) {}

@@ -27,7 +27,7 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
     }
 
     try {
-      final dateTime = DateTime.parse(raw).toLocal();
+      final dateTime = DateTime.parse(raw).toUtc().add(const Duration(hours: 8));
 
       final day = dateTime.day.toString().padLeft(2, '0');
       final month = dateTime.month.toString().padLeft(2, '0');
@@ -316,8 +316,7 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                 final report = reports[index];
 
                 final reporterId =
-                    report['reporter_id']?.toString() ??
-                        'Unknown';
+                    report['reporter_id']?.toString().trim() ?? '';
 
                 final reason =
                     report['reason']?.toString() ??
@@ -329,7 +328,8 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                 final createdAt =
                 _formatDateTime(report['created_at']);
 
-                final isAutomated = reporterId.isEmpty || reporterId == 'null';
+                final isAutomated = reporterId.isEmpty || reporterId == 'null' ||
+                    reporterId.toLowerCase() == 'system';
                 final reporterName = isAutomated
                     ? 'Automated Safety System'
                     : (report['reporterUsername']?.toString() ?? 'Unknown User');
@@ -353,7 +353,7 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                       Text('Content author username: $author'),
                       Text('Content author ID: $authorId'),
                       Text('Current visibility: $visibility'),
-                      Text('$pendingManual / 3 reporters'),
+                      if (!isAutomated) Text('$pendingManual / 3 reporters'),
                       const Divider(),
                     ],
                     Text('This Report', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold)),
@@ -400,11 +400,13 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                     const Divider(),
                     Text('Reporter Information', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold)),
                     Text('Reporter username: $reporterName'),
+                    if (!isAutomated) ...[
                     Text('User ID: $fullReporterId'),
                     Text('Total forum reports: ${report['reporterTotalCount'] ?? 'Unknown'}'),
                     Text('Pending reports: ${report['reporterPendingCount'] ?? 'Unknown'}'),
                     Text('Dismissed reports: ${report['reporterDismissedCount'] ?? 'Unknown'}'),
                     Text('Actioned reports: ${report['reporterActionedCount'] ?? 'Unknown'}'),
+                    ],
                   ],
                 );
               },
@@ -582,8 +584,7 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
 
           'timestamp':
           foundReply?.timestamp ??
-              latestReport?['created_at']?.toString() ??
-              'Recent',
+              'Publication time unavailable',
 
           'isDynamic': true,
         });
@@ -838,6 +839,15 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                         final auditReports = List<Map<String, dynamic>>.from(
                           record['report_rows'] ?? const [],
                         );
+                        final hasAutomatedReport = (record['is_moderation_action'] == true
+                            ? auditReports.where((report) =>
+                                report['target_id'] == record['target_id'] &&
+                                report['target_type'] == record['target_type'])
+                            : [record]).any((report) {
+                          final id = report['reporter_id']?.toString().trim() ?? '';
+                          return report['is_moderation_action'] != true &&
+                              (id.isEmpty || id == 'null' || id.toLowerCase() == 'system');
+                        });
 
                         // Only grouped canonical actions establish a complete
                         // count. Legacy rows retain their own reporter audit.
@@ -1046,7 +1056,16 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                                 const SizedBox(height: 12),
                               ],
 
-                              if (isModeration || (reportsInvolved ?? 0) > 1) ...[
+                              if (hasAutomatedReport) ...[
+                                Text(
+                                  'Report source: Automated Safety System',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 12,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                              ] else if (isModeration || (reportsInvolved ?? 0) > 1) ...[
                                 Text(
                                   reportsInvolved == null
                                       ? 'Reports involved: Unknown (举报人数无法确认)'
