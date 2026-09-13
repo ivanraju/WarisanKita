@@ -8946,6 +8946,7 @@ class SupabaseService {
         taskCreatedAt != null &&
         participantStartedAt != null &&
         taskCreatedAt.isAfter(participantStartedAt);
+    final isOptionalTask = task['is_required'] != true;
     final hasStamp =
         progressStatus == 'COMPLETED' ||
         await client
@@ -8958,9 +8959,10 @@ class SupabaseService {
     final isPermanentlyCompleted = progressStatus == 'COMPLETED' || hasStamp;
     final canCompleteJourneyTask =
         progressStatus == 'IN_PROGRESS' && !isPermanentlyCompleted;
-    final canCompleteBonusTask =
-        isPermanentlyCompleted && isBonusForParticipant;
-    if (!canCompleteJourneyTask && !canCompleteBonusTask) {
+    final canCompleteAfterBadge =
+        isPermanentlyCompleted &&
+        (isOptionalTask || isBonusForParticipant);
+    if (!canCompleteJourneyTask && !canCompleteAfterBadge) {
       throw StateError('Start this quest before scanning the workshop QR.');
     }
 
@@ -8977,7 +8979,8 @@ class SupabaseService {
       );
       if (activeSnapshot.rows.isNotEmpty) {
         throw StateError(
-          'Complete your active quest before attempting bonus activities.',
+          'Complete your active quest before attempting optional or bonus '
+          'activities.',
         );
       }
     }
@@ -9010,7 +9013,9 @@ class SupabaseService {
     }
     final task = await client
         .from('heritage_tasks')
-        .select('id, quest_id, is_system_task, sort_order, created_at')
+        .select(
+          'id, quest_id, is_system_task, is_required, sort_order, created_at',
+        )
         .eq('id', taskId)
         .eq('quest_id', questId)
         .eq('status', 'APPROVED')

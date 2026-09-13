@@ -658,10 +658,11 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
     final canCompleteJourneyTask =
         _questProgressStatus?.toUpperCase() == 'IN_PROGRESS' &&
         !isQuestPermanentlyCompleted;
-    final canCompleteBonusTask =
-        isQuestPermanentlyCompleted && isBonusTask(task);
+    final canCompleteAfterBadge =
+        isQuestPermanentlyCompleted &&
+        (!task.isRequired || isBonusTask(task));
     if (_requiresManualResume ||
-        (!canCompleteJourneyTask && !canCompleteBonusTask) ||
+        (!canCompleteJourneyTask && !canCompleteAfterBadge) ||
         isTaskCompleted(task)) {
       return false;
     }
@@ -676,9 +677,10 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
     final canCompleteJourneyTask =
         _questProgressStatus?.toUpperCase() == 'IN_PROGRESS' &&
         !isQuestPermanentlyCompleted;
-    final canCompleteBonusTask =
-        isQuestPermanentlyCompleted && isBonusTask(task);
-    if (!canCompleteJourneyTask && !canCompleteBonusTask) {
+    final canCompleteAfterBadge =
+        isQuestPermanentlyCompleted &&
+        (!task.isRequired || isBonusTask(task));
+    if (!canCompleteJourneyTask && !canCompleteAfterBadge) {
       return 'Start Quest to Scan';
     }
     if (_requiresManualResume) return 'Start Quest to Scan';

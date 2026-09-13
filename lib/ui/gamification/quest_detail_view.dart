@@ -40,6 +40,8 @@ class _QuestDetailViewState extends State<QuestDetailView>
   bool _workshopClosedDialogScheduled = false;
   bool _hasShownWorkshopClosedDialog = false;
   bool _isShowingWorkshopClosedDialog = false;
+  bool _workshopClosureStopScheduled = false;
+  bool _hasStoppedForWorkshopClosure = false;
   Timer? _exitConfirmationTimer;
 
   @override
@@ -94,6 +96,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
     _reportProximityAfterBuild(gamificationVM, distance);
     _scheduleQuestCompletionDialog(gamificationVM);
     _scheduleWorkshopClosedDialog(isWorkshopOpen);
+    _stopActiveQuestForWorkshopClosure(isWorkshopOpen, gamificationVM);
 
     return Scaffold(
       backgroundColor: _pageBackground,
@@ -178,6 +181,52 @@ class _QuestDetailViewState extends State<QuestDetailView>
     });
   }
 
+  void _stopActiveQuestForWorkshopClosure(
+    bool isWorkshopOpen,
+    GamificationViewModel viewModel,
+  ) {
+    if (isWorkshopOpen) {
+      _hasStoppedForWorkshopClosure = false;
+      return;
+    }
+    if (_hasStoppedForWorkshopClosure ||
+        _workshopClosureStopScheduled ||
+        viewModel.questProgressStatus?.toUpperCase() != 'IN_PROGRESS') {
+      return;
+    }
+
+    _workshopClosureStopScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      _workshopClosureStopScheduled = false;
+      if (!mounted ||
+          _isWorkshopCurrentlyOpen(context.read<MapViewModel>()) ||
+          viewModel.questProgressStatus?.toUpperCase() != 'IN_PROGRESS') {
+        return;
+      }
+
+      _hasStoppedForWorkshopClosure = true;
+      final stopped = await viewModel.stopSelectedQuest();
+      if (!mounted || !stopped) return;
+
+      await context.read<MapViewModel>().loadJourneyData();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Quest stopped because the workshop closed. Your progress was '
+            'saved, and you can now start another workshop quest.',
+            style: TextStyle(
+              color: Color(0xFFFFF8E1),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Color(0xFF00695C),
+        ),
+      );
+    });
+  }
+
   Future<void> _showWorkshopClosedDialog() async {
     if (!mounted || _isShowingWorkshopClosedDialog) return;
     _isShowingWorkshopClosedDialog = true;
@@ -202,8 +251,9 @@ class _QuestDetailViewState extends State<QuestDetailView>
           ),
           content: Text(
             'This workshop is not accepting educational walk-ins or live '
-            'demonstrations right now. You may view the quest, but it cannot '
-            'be started until the artisan reopens the workshop.',
+            'demonstrations right now. Any active quest here is stopped '
+            'automatically with its progress saved, allowing you to start a '
+            'quest at another open workshop.',
             textAlign: TextAlign.center,
             style: GoogleFonts.plusJakartaSans(
               color: _secondaryText,
@@ -942,10 +992,9 @@ class _QuestDetailViewState extends State<QuestDetailView>
               child: FilledButton.icon(
                 onPressed: () {
                   Navigator.of(dialogContext).pop();
-                  Navigator.maybePop(context);
                 },
                 icon: const Icon(Icons.workspace_premium_rounded),
-                label: const Text('Collect Badge & Return'),
+                label: const Text('Close'),
                 style: FilledButton.styleFrom(
                   backgroundColor: _isDark
                       ? const Color(0xFF087F5B)
@@ -1128,6 +1177,7 @@ class _QuestDetailViewState extends State<QuestDetailView>
         !isOutsideBeforeStart &&
         !viewModel.isStartingQuest;
     final canStop =
+        isWorkshopOpen &&
         isInProgress &&
         !isCompleted &&
         !isOutOfRange &&
@@ -1146,8 +1196,8 @@ class _QuestDetailViewState extends State<QuestDetailView>
           children: [
             if (!isWorkshopOpen && !isCompleted) ...[
               Text(
-                'This workshop is currently closed. Quest participation will '
-                'be available when the artisan reopens it.',
+                'This workshop is currently closed. Quest participation is '
+                'unavailable, and any active progress is stopped and saved.',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.plusJakartaSans(
                   color: _warningText,
@@ -1201,7 +1251,9 @@ class _QuestDetailViewState extends State<QuestDetailView>
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
-                onPressed: isBlockedByAnotherQuest
+                onPressed: !isWorkshopOpen && !isCompleted
+                    ? null
+                    : isBlockedByAnotherQuest
                     ? () => _showActiveQuestConflict(context, viewModel)
                     : canResume
                     ? () => _resumeQuest(context, viewModel)
@@ -1258,12 +1310,12 @@ class _QuestDetailViewState extends State<QuestDetailView>
                     : Icon(
                         isCompleted
                             ? Icons.workspace_premium_rounded
+                            : !isWorkshopOpen
+                            ? Icons.storefront_rounded
                             : canResume
                             ? Icons.play_arrow_rounded
                             : canStop
                             ? Icons.stop_circle_outlined
-                            : !isWorkshopOpen
-                            ? Icons.storefront_rounded
                             : isOutOfRange || isOutsideBeforeStart
                             ? Icons.location_off_rounded
                             : Icons.play_arrow_rounded,
@@ -1276,14 +1328,14 @@ class _QuestDetailViewState extends State<QuestDetailView>
                       ? 'Stopping Quest...'
                       : isCompleted
                       ? 'Quest Completed'
+                      : !isWorkshopOpen
+                      ? 'Workshop Closed'
                       : isBlockedByAnotherQuest
                       ? 'Another Quest Active'
                       : canResume
                       ? 'Resume Quest'
                       : canStop
                       ? 'Stop Quest'
-                      : !isWorkshopOpen
-                      ? 'Workshop Closed'
                       : isOutOfRange
                       ? 'Return to Quest Area'
                       : isOutsideBeforeStart
