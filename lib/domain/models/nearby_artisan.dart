@@ -66,7 +66,7 @@ class NearbyArtisan {
       distance: formattedDistance,
       distanceMeters: distanceMeters,
       walkingTime: estimatedWalkingTime,
-      imageUrl: imageUrl ?? '',
+      imageUrl: imageUrl ?? workshop.primaryImageUrl,
       rating: rating,
       reviewCount: reviewCount,
       latitude: workshop.latitude,

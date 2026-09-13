@@ -6,6 +6,7 @@ class WorkshopLocation {
   final String state;
   final double latitude;
   final double longitude;
+  final String primaryImageUrl;
 
   const WorkshopLocation({
     required this.id,
@@ -15,6 +16,7 @@ class WorkshopLocation {
     required this.state,
     required this.latitude,
     required this.longitude,
+    this.primaryImageUrl = '',
   });
 
   String get locationName => '$address, $state';

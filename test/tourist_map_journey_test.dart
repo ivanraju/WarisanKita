@@ -108,6 +108,53 @@ Future<void> _waitFor(bool Function() predicate) async {
 
 void main() {
   group('Tourist map journey data', () {
+    test('uses the first saved workshop picture and preserves it', () async {
+      final service = _MapRefreshService();
+      service.workshopRows = [
+        {
+          ..._MapRefreshService._workshopRow('studio-a', 'Photos'),
+          'artisan_documents': [
+            {
+              'doc_type': 'PORTFOLIO_IMAGE',
+              'file_name': '200_second.webp',
+              'file_url': 'https://example.com/second.webp',
+            },
+            {
+              'doc_type': 'BUSINESS_LICENSE',
+              'file_name': '050_private.pdf',
+              'file_url': 'https://example.com/private.pdf',
+            },
+            {
+              'doc_type': 'STUDIO_PHOTO',
+              'file_name': '100_first.webp',
+              'file_url': 'https://example.com/first.webp',
+            },
+          ],
+        },
+      ];
+      final repository = ArtisanRepository(service: service);
+
+      final initialWorkshop = (await repository.getWorkshopLocations()).single;
+      expect(initialWorkshop.primaryImageUrl, 'https://example.com/first.webp');
+      expect(
+        NearbyArtisan.fromWorkshop(
+          workshop: initialWorkshop,
+          distanceMeters: 10,
+        ).imageUrl,
+        'https://example.com/first.webp',
+      );
+
+      service.workshopRows = [
+        _MapRefreshService._workshopRow('studio-a', 'Updated'),
+      ];
+      final realtimeStyleWorkshop =
+          (await repository.getWorkshopLocations()).single;
+      expect(
+        realtimeStyleWorkshop.primaryImageUrl,
+        'https://example.com/first.webp',
+      );
+    });
+
     test('map menu is removed and only the independent refresh remains', () {
       final viewSource = File(
         'lib/ui/matchmaker/tourist_matchmaker_view.dart',
