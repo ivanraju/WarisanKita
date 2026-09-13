@@ -222,14 +222,20 @@ class AuthViewModel extends ChangeNotifier {
               _currentUser?.pendingRelocationAddress?.trim().toLowerCase();
           final currentAddr = user.address?.trim().toLowerCase();
           final prevAddr = previousUser?.address?.trim().toLowerCase();
-          if (pendingAddr != null &&
+
+          final bool addressChanged = (currentAddr != null &&
+                  prevAddr != null &&
+                  currentAddr != prevAddr) ||
+              (currentAddr != null && prevAddr == null);
+          final bool matchesProposed = pendingAddr != null &&
               currentAddr != null &&
-              pendingAddr == currentAddr &&
-              (prevAddr == null || prevAddr != currentAddr)) {
+              (pendingAddr == currentAddr ||
+                  currentAddr.contains(pendingAddr) ||
+                  pendingAddr.contains(currentAddr));
+
+          if (addressChanged || matchesProposed) {
             _relocationResolutionNotice = 'APPROVED';
-          } else if (pendingAddr != null &&
-              currentAddr != null &&
-              currentAddr == prevAddr) {
+          } else {
             _relocationResolutionNotice = 'REJECTED';
           }
         }

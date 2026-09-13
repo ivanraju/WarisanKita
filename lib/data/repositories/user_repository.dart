@@ -230,6 +230,7 @@ class UserRepository {
     String? newState,
     double? newLat,
     double? newLng,
+    String? artisanProfileId,
   }) {
     return _service.approveRelocationRequest(
       email: email,
@@ -237,6 +238,7 @@ class UserRepository {
       proposedState: newState,
       proposedLat: newLat,
       proposedLng: newLng,
+      artisanProfileId: artisanProfileId,
     );
   }
 

@@ -103,15 +103,76 @@ class ApprovalHistoryRecord {
       approvalType == 'Studio Moderation' ||
       status == 'SUSPENDED';
 
-  bool get hasDocuments =>
-      (ssmFileUrl != null && ssmFileUrl!.trim().isNotEmpty) ||
-      (certFileUrl != null && certFileUrl!.trim().isNotEmpty) ||
-      (relocationCertFileUrl != null && relocationCertFileUrl!.trim().isNotEmpty) ||
-      photos.isNotEmpty ||
-      documents.isNotEmpty;
+  bool get hasDocuments {
+    if (isRelocation) {
+      if (relocationCertFileUrl != null &&
+          relocationCertFileUrl!.trim().isNotEmpty) {
+        return true;
+      }
+      return documents.any((d) {
+        final t = (d['type'] ?? d['doc_type'] ?? d['docType'] ?? '')
+            .toString()
+            .toUpperCase();
+        return t.contains('RELOCATION');
+      });
+    }
+    return (ssmFileUrl != null && ssmFileUrl!.trim().isNotEmpty) ||
+        (certFileUrl != null && certFileUrl!.trim().isNotEmpty) ||
+        (relocationCertFileUrl != null &&
+            relocationCertFileUrl!.trim().isNotEmpty) ||
+        photos.isNotEmpty ||
+        documents.isNotEmpty;
+  }
 
   List<Map<String, dynamic>> get allDocuments {
     final List<Map<String, dynamic>> list = [];
+
+    // For Premise Relocation, exclusively show only the relocation proof/permit
+    if (isRelocation) {
+      if (relocationCertFileUrl != null &&
+          relocationCertFileUrl!.trim().isNotEmpty) {
+        final cleanUrl = relocationCertFileUrl!.trim();
+        final docName = relocationCertFileName ??
+            'Proof of Premise Relocation / Council Permit';
+        list.add({
+          'name': docName,
+          'file_name': docName,
+          'url': cleanUrl,
+          'file_url': cleanUrl,
+          'type': 'relocation_certificate',
+          'doc_type': 'RELOCATION_CERT',
+        });
+      }
+      for (final doc in documents) {
+        final rawType = (doc['type'] ?? doc['doc_type'] ?? doc['docType'] ?? '')
+            .toString()
+            .toUpperCase();
+        if (rawType.contains('RELOCATION') || rawType == 'RELOCATION_CERT') {
+          final rawName =
+              doc['name'] ?? doc['file_name'] ?? doc['fileName'] ?? doc['title'];
+          final rawUrl =
+              doc['url'] ?? doc['file_url'] ?? doc['fileUrl'] ?? doc['link'];
+          final url = (rawUrl?.toString() ?? '').trim();
+          final name = (rawName?.toString() ?? '').trim();
+          if (url.isNotEmpty && !list.any((d) => d['url'] == url)) {
+            list.add({
+              'name': name.isNotEmpty
+                  ? name
+                  : 'Proof of Premise Relocation / Council Permit',
+              'file_name': name.isNotEmpty
+                  ? name
+                  : 'Proof of Premise Relocation / Council Permit',
+              'url': url,
+              'file_url': url,
+              'type': 'relocation_certificate',
+              'doc_type': 'RELOCATION_CERT',
+            });
+          }
+        }
+      }
+      return list;
+    }
+
     if (documents.isNotEmpty) {
       for (final doc in documents) {
         final rawName = doc['name'] ?? doc['file_name'] ?? doc['fileName'] ?? doc['title'];
