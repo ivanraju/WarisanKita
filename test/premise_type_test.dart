@@ -98,6 +98,31 @@ void main() {
       expect(user.ssmFileName, equals('weaving_process.jpg'));
       expect(user.ssmFileUrl, equals('https://supabase.co/storage/weaving_process.jpg'));
     });
+
+    test('Resolves crafting proof photo and certificates from tags when artisan_documents is empty', () {
+      final user = UserModel.fromMap({
+        'id': 'u-tag-test',
+        'email': 'crafter@village.com',
+        'role': 'Tourist',
+        'artisan_status': 'PENDING_APPROVAL',
+        'tags': [
+          'premise:Home / Village Workshop (Bengkel Kediaman / Desa)',
+          'doc_crafting_photo_url:https://supabase.co/storage/crafting_proof.jpg',
+          'doc_crafting_photo_name:crafting_proof.jpg',
+          'doc_kraftangan_cert_url:https://supabase.co/storage/kraftangan_master.pdf',
+          'doc_kraftangan_cert_name:kraftangan_master.pdf',
+          'doc_studio_photo:https://supabase.co/storage/studio_1.jpg',
+        ],
+      });
+
+      expect(user.isVillageWorkshop, isTrue);
+      expect(user.ssmFileUrl, equals('https://supabase.co/storage/crafting_proof.jpg'));
+      expect(user.ssmFileName, equals('crafting_proof.jpg'));
+      expect(user.certFileUrl, equals('https://supabase.co/storage/kraftangan_master.pdf'));
+      expect(user.certFileName, equals('kraftangan_master.pdf'));
+      expect(user.photos, contains('https://supabase.co/storage/studio_1.jpg'));
+      expect(user.artisanDocuments.length, equals(3));
+    });
   });
 
   group('ActiveArtisanMaster Premise Type Tests', () {

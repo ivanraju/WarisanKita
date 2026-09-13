@@ -2641,15 +2641,16 @@ class SupabaseService {
                         : null);
 
               // Extract documents if they exist
+              final apTags = ap['tags'] is List ? List<String>.from(ap['tags']) : <String>[];
+              List<String> photos = [];
+              String? ssmFileName;
+              String? ssmFileUrl;
+              String? certFileName;
+              String? certFileUrl;
+              String? avatarUrl;
+
               if (ap['artisan_documents'] is List) {
                 final docs = ap['artisan_documents'] as List;
-                List<String> photos = [];
-                String? ssmFileName;
-                String? ssmFileUrl;
-                String? certFileName;
-                String? certFileUrl;
-                String? avatarUrl;
-
                 for (var d in docs) {
                   final doc = d as Map;
                   final type = doc['doc_type']?.toString();
@@ -2670,45 +2671,109 @@ class SupabaseService {
                     if (url != null) avatarUrl = url;
                   }
                 }
+              }
 
-                if (photos.isNotEmpty) rowMap['photos'] = photos;
-                if (ssmFileName != null) rowMap['ssm_file_name'] = ssmFileName;
-                if (ssmFileUrl != null) rowMap['ssm_file_url'] = ssmFileUrl;
-                if (certFileName != null)
-                  rowMap['cert_file_name'] = certFileName;
-                if (certFileUrl != null) rowMap['cert_file_url'] = certFileUrl;
-
-                // fallback the avatar if users.avatar_url is empty
-                if ((rowMap['avatar_url'] == null ||
-                        rowMap['avatar_url'].toString().isEmpty) &&
-                    avatarUrl != null) {
-                  rowMap['imageUrl'] = avatarUrl;
-                }
-
-                // Resolve premise_type
-                final apTags = ap['tags'] is List ? List<String>.from(ap['tags']) : <String>[];
-                String? pType = ap['premise_type']?.toString() ?? rowMap['premise_type']?.toString();
-                if (pType == null) {
-                  for (final t in apTags) {
-                    if (t.startsWith('premise:')) {
-                      pType = t.substring('premise:'.length);
-                      break;
-                    }
+              // Fallback to tags if documents table query was restricted or empty
+              if (ssmFileUrl == null) {
+                for (final t in apTags) {
+                  if (t.startsWith('doc_crafting_photo_url:')) {
+                    ssmFileUrl = t.substring('doc_crafting_photo_url:'.length);
+                    break;
+                  } else if (t.startsWith('doc_ssm_cert_url:')) {
+                    ssmFileUrl = t.substring('doc_ssm_cert_url:'.length);
+                    break;
                   }
                 }
-                if (pType == null) {
-                  final hasVillageDoc = docs.any((d) =>
-                      d is Map &&
-                      (d['doc_type'] == 'CRAFTING_PHOTO' ||
-                          d['doc_type'] == 'VILLAGE_HEAD_ENDORSEMENT'));
-                  if (hasVillageDoc || ap['ssm_number'] == 'VILLAGE_EXEMPT') {
-                    pType = 'Home / Village Workshop (Bengkel Kediaman / Desa)';
+              }
+              if (ssmFileName == null) {
+                for (final t in apTags) {
+                  if (t.startsWith('doc_crafting_photo_name:')) {
+                    ssmFileName = t.substring('doc_crafting_photo_name:'.length);
+                    break;
+                  } else if (t.startsWith('doc_ssm_cert_name:')) {
+                    ssmFileName = t.substring('doc_ssm_cert_name:'.length);
+                    break;
                   }
                 }
-                if (pType != null) {
-                  rowMap['premise_type'] = pType;
-                  rowMap['premiseType'] = pType;
+              }
+              if (ssmFileName == null && ssmFileUrl != null) {
+                ssmFileName = ssmFileUrl.split('/').last;
+              }
+              if (certFileUrl == null) {
+                for (final t in apTags) {
+                  if (t.startsWith('doc_kraftangan_cert_url:')) {
+                    certFileUrl = t.substring('doc_kraftangan_cert_url:'.length);
+                    break;
+                  }
                 }
+              }
+              if (certFileName == null) {
+                for (final t in apTags) {
+                  if (t.startsWith('doc_kraftangan_cert_name:')) {
+                    certFileName = t.substring('doc_kraftangan_cert_name:'.length);
+                    break;
+                  }
+                }
+              }
+              if (certFileName == null && certFileUrl != null) {
+                certFileName = certFileUrl.split('/').last;
+              }
+              for (final t in apTags) {
+                if (t.startsWith('doc_studio_photo:')) {
+                  final pUrl = t.substring('doc_studio_photo:'.length);
+                  if (pUrl.isNotEmpty && !photos.contains(pUrl)) {
+                    photos.add(pUrl);
+                  }
+                }
+              }
+
+              if (photos.isNotEmpty) rowMap['photos'] = photos;
+              if (ssmFileName != null) rowMap['ssm_file_name'] = ssmFileName;
+              if (ssmFileUrl != null) rowMap['ssm_file_url'] = ssmFileUrl;
+              if (certFileName != null)
+                rowMap['cert_file_name'] = certFileName;
+              if (certFileUrl != null) rowMap['cert_file_url'] = certFileUrl;
+
+              // fallback the avatar if users.avatar_url is empty
+              if ((rowMap['avatar_url'] == null ||
+                      rowMap['avatar_url'].toString().isEmpty) &&
+                  avatarUrl != null) {
+                rowMap['imageUrl'] = avatarUrl;
+              }
+
+              // Resolve premise_type
+              String? pType = ap['premise_type']?.toString() ?? rowMap['premise_type']?.toString();
+              if (pType == null) {
+                for (final t in apTags) {
+                  if (t.startsWith('premise:')) {
+                    pType = t.substring('premise:'.length);
+                    break;
+                  }
+                }
+              }
+              if (pType == null) {
+                final docsList = (ap['artisan_documents'] is List) ? ap['artisan_documents'] as List : const [];
+                final hasVillageDoc = docsList.any((d) =>
+                    d is Map &&
+                    (d['doc_type'] == 'CRAFTING_PHOTO' ||
+                        d['doc_type'] == 'VILLAGE_HEAD_ENDORSEMENT')) ||
+                    apTags.any((t) => t.startsWith('doc_crafting_photo_'));
+                if (hasVillageDoc || ap['ssm_number'] == 'VILLAGE_EXEMPT') {
+                  pType = 'Home / Village Workshop (Bengkel Kediaman / Desa)';
+                }
+              }
+              if (pType != null) {
+                rowMap['premise_type'] = pType;
+                rowMap['premiseType'] = pType;
+              }
+
+              if (rowMap['ssm_file_url'] == null &&
+                  photos.isNotEmpty &&
+                  (pType?.contains('Home') == true ||
+                   pType?.contains('Village') == true ||
+                   ap['ssm_number'] == 'VILLAGE_EXEMPT')) {
+                rowMap['ssm_file_url'] = photos.first;
+                rowMap['ssm_file_name'] ??= photos.first.split('/').last;
               }
             }
             results.add(rowMap);
@@ -2824,6 +2889,75 @@ class SupabaseService {
                   }
                 }
               }
+
+              // Fallback to pTags if documents table was empty or restricted
+              if (combined['ssm_file_url'] == null) {
+                for (final t in pTags) {
+                  if (t.startsWith('doc_crafting_photo_url:')) {
+                    combined['ssm_file_url'] = t.substring('doc_crafting_photo_url:'.length);
+                    break;
+                  } else if (t.startsWith('doc_ssm_cert_url:')) {
+                    combined['ssm_file_url'] = t.substring('doc_ssm_cert_url:'.length);
+                    break;
+                  }
+                }
+              }
+              if (combined['ssm_file_name'] == null) {
+                for (final t in pTags) {
+                  if (t.startsWith('doc_crafting_photo_name:')) {
+                    combined['ssm_file_name'] = t.substring('doc_crafting_photo_name:'.length);
+                    break;
+                  } else if (t.startsWith('doc_ssm_cert_name:')) {
+                    combined['ssm_file_name'] = t.substring('doc_ssm_cert_name:'.length);
+                    break;
+                  }
+                }
+              }
+              if (combined['ssm_file_name'] == null && combined['ssm_file_url'] != null) {
+                combined['ssm_file_name'] = combined['ssm_file_url'].toString().split('/').last;
+              }
+              if (combined['cert_file_url'] == null) {
+                for (final t in pTags) {
+                  if (t.startsWith('doc_kraftangan_cert_url:')) {
+                    combined['cert_file_url'] = t.substring('doc_kraftangan_cert_url:'.length);
+                    break;
+                  }
+                }
+              }
+              if (combined['cert_file_name'] == null) {
+                for (final t in pTags) {
+                  if (t.startsWith('doc_kraftangan_cert_name:')) {
+                    combined['cert_file_name'] = t.substring('doc_kraftangan_cert_name:'.length);
+                    break;
+                  }
+                }
+              }
+              if (combined['cert_file_name'] == null && combined['cert_file_url'] != null) {
+                combined['cert_file_name'] = combined['cert_file_url'].toString().split('/').last;
+              }
+              for (final t in pTags) {
+                if (t.startsWith('doc_studio_photo:')) {
+                  final pUrl = t.substring('doc_studio_photo:'.length);
+                  final curPhotos = (combined['photos'] is List) ? List<String>.from(combined['photos'] as List) : <String>[];
+                  if (pUrl.isNotEmpty && !curPhotos.contains(pUrl)) {
+                    curPhotos.add(pUrl);
+                    combined['photos'] = curPhotos;
+                  }
+                }
+              }
+
+              if (pPremise == null && pTags.any((t) => t.startsWith('doc_crafting_photo_'))) {
+                pPremise = 'Home / Village Workshop (Bengkel Kediaman / Desa)';
+              }
+
+              final isVillagePending = (pPremise?.contains('Home') == true ||
+                  pPremise?.contains('Village') == true ||
+                  pMap['ssm_number'] == 'VILLAGE_EXEMPT');
+              if (combined['ssm_file_url'] == null && isVillagePending && (combined['photos'] is List) && (combined['photos'] as List).isNotEmpty) {
+                combined['ssm_file_url'] = (combined['photos'] as List).first;
+                combined['ssm_file_name'] ??= combined['ssm_file_url'].toString().split('/').last;
+              }
+
               if (pPremise != null) {
                 combined['premise_type'] = pPremise;
                 combined['premiseType'] = pPremise;

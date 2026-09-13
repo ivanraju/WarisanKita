@@ -205,6 +205,16 @@ class UserModel {
         if (url != null && url.isNotEmpty) return url;
       }
     }
+    for (final t in tags) {
+      if (t.startsWith('doc_crafting_photo_url:')) {
+        final url = t.substring('doc_crafting_photo_url:'.length);
+        if (url.isNotEmpty) return url;
+      }
+      if (t.startsWith('doc_ssm_cert_url:')) {
+        final url = t.substring('doc_ssm_cert_url:'.length);
+        if (url.isNotEmpty) return url;
+      }
+    }
     return null;
   }
 
@@ -225,6 +235,18 @@ class UserModel {
         if (url != null && url.isNotEmpty) return url.split('/').last;
       }
     }
+    for (final t in tags) {
+      if (t.startsWith('doc_crafting_photo_name:')) {
+        final name = t.substring('doc_crafting_photo_name:'.length);
+        if (name.isNotEmpty) return name;
+      }
+      if (t.startsWith('doc_ssm_cert_name:')) {
+        final name = t.substring('doc_ssm_cert_name:'.length);
+        if (name.isNotEmpty) return name;
+      }
+    }
+    final url = ssmFileUrl;
+    if (url != null && url.isNotEmpty) return url.split('/').last;
     return null;
   }
 
@@ -236,6 +258,12 @@ class UserModel {
           type == 'CERT') {
         final url = d['file_url']?.toString();
         if (url != null && url.isNotEmpty) return url;
+      }
+    }
+    for (final t in tags) {
+      if (t.startsWith('doc_kraftangan_cert_url:')) {
+        final url = t.substring('doc_kraftangan_cert_url:'.length);
+        if (url.isNotEmpty) return url;
       }
     }
     return null;
@@ -253,7 +281,37 @@ class UserModel {
         if (url != null && url.isNotEmpty) return url.split('/').last;
       }
     }
+    for (final t in tags) {
+      if (t.startsWith('doc_kraftangan_cert_name:')) {
+        final name = t.substring('doc_kraftangan_cert_name:'.length);
+        if (name.isNotEmpty) return name;
+      }
+    }
+    final url = certFileUrl;
+    if (url != null && url.isNotEmpty) return url.split('/').last;
     return null;
+  }
+
+  List<String> get photos {
+    final list = <String>[];
+    for (final d in artisanDocuments) {
+      final type = d['doc_type']?.toString();
+      if (type == 'PORTFOLIO_IMAGE' || type == 'STUDIO_PHOTO') {
+        final url = d['file_url']?.toString();
+        if (url != null && url.isNotEmpty && !list.contains(url)) {
+          list.add(url);
+        }
+      }
+    }
+    for (final t in tags) {
+      if (t.startsWith('doc_studio_photo:')) {
+        final url = t.substring('doc_studio_photo:'.length);
+        if (url.isNotEmpty && !list.contains(url)) {
+          list.add(url);
+        }
+      }
+    }
+    return list;
   }
 
   String get handle {
@@ -493,6 +551,92 @@ class UserModel {
         : const <String>[];
     final bool isClosedTag = allTagsList.contains('__LIVE_DEMO_CLOSED__');
     final tagsList = allTagsList.where((t) => !t.startsWith('__')).toList();
+
+    // Synthesize missing document entries from tags or map metadata if artisan_documents table didn't include them
+    final bool hasSsmOrCrafting = docs.any((d) =>
+        d['doc_type'] == 'SSM_BUSINESS_CERT' ||
+        d['doc_type'] == 'SSM_CERT' ||
+        d['doc_type'] == 'SSM' ||
+        d['doc_type'] == 'CRAFTING_PHOTO' ||
+        d['doc_type'] == 'VILLAGE_CRAFTING_PHOTO' ||
+        d['doc_type'] == 'VILLAGE_HEAD_ENDORSEMENT');
+    if (!hasSsmOrCrafting) {
+      String? fallbackUrl = (map['ssm_file_url'] ?? map['ssmFileUrl'])?.toString();
+      String? fallbackName = (map['ssm_file_name'] ?? map['ssmFileName'] ?? map['ssm_file'])?.toString();
+      String docType = 'SSM_BUSINESS_CERT';
+
+      for (final t in allTagsList) {
+        if (t.startsWith('doc_crafting_photo_url:')) {
+          fallbackUrl = t.substring('doc_crafting_photo_url:'.length);
+          docType = 'CRAFTING_PHOTO';
+        } else if (t.startsWith('doc_crafting_photo_name:')) {
+          fallbackName = t.substring('doc_crafting_photo_name:'.length);
+        } else if (t.startsWith('doc_ssm_cert_url:') && fallbackUrl == null) {
+          fallbackUrl = t.substring('doc_ssm_cert_url:'.length);
+          docType = 'SSM_BUSINESS_CERT';
+        } else if (t.startsWith('doc_ssm_cert_name:') && fallbackName == null) {
+          fallbackName = t.substring('doc_ssm_cert_name:'.length);
+        }
+      }
+
+      if (fallbackUrl != null && fallbackUrl.isNotEmpty) {
+        docs.add({
+          'doc_type': docType,
+          'file_url': fallbackUrl,
+          'file_name': fallbackName ?? fallbackUrl.split('/').last,
+        });
+      }
+    }
+
+    final bool hasCert = docs.any((d) =>
+        d['doc_type'] == 'KRAFTANGAN_MASTER_CERT' ||
+        d['doc_type'] == 'KRAFTANGAN_CERT' ||
+        d['doc_type'] == 'CERT');
+    if (!hasCert) {
+      String? certUrl = (map['cert_file_url'] ?? map['certFileUrl'])?.toString();
+      String? certName = (map['cert_file_name'] ?? map['certFileName'] ?? map['cert_file'])?.toString();
+
+      for (final t in allTagsList) {
+        if (t.startsWith('doc_kraftangan_cert_url:')) {
+          certUrl = t.substring('doc_kraftangan_cert_url:'.length);
+        } else if (t.startsWith('doc_kraftangan_cert_name:')) {
+          certName = t.substring('doc_kraftangan_cert_name:'.length);
+        }
+      }
+
+      if (certUrl != null && certUrl.isNotEmpty) {
+        docs.add({
+          'doc_type': 'KRAFTANGAN_MASTER_CERT',
+          'file_url': certUrl,
+          'file_name': certName ?? certUrl.split('/').last,
+        });
+      }
+    }
+
+    for (final t in allTagsList) {
+      if (t.startsWith('doc_studio_photo:')) {
+        final pUrl = t.substring('doc_studio_photo:'.length);
+        if (pUrl.isNotEmpty && !docs.any((d) => d['file_url'] == pUrl)) {
+          docs.add({
+            'doc_type': 'STUDIO_PHOTO',
+            'file_url': pUrl,
+            'file_name': pUrl.split('/').last,
+          });
+        }
+      }
+    }
+    if (map['photos'] is List) {
+      for (final p in (map['photos'] as List)) {
+        final pUrl = p?.toString();
+        if (pUrl != null && pUrl.isNotEmpty && !docs.any((d) => d['file_url'] == pUrl)) {
+          docs.add({
+            'doc_type': 'STUDIO_PHOTO',
+            'file_url': pUrl,
+            'file_name': pUrl.split('/').last,
+          });
+        }
+      }
+    }
 
     // Parse lat/lon
     final latRaw = artisanMap?['latitude'] ?? map['latitude'];

@@ -345,14 +345,28 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
                     ),
                     const SizedBox(height: 6),
                     if (widget.artisan.isVillageWorkshop) ...[
-                      _buildAdminDocChip(
-                        Icons.photo_camera_rounded,
-                        widget.artisan.ssmFileName != null &&
-                                widget.artisan.ssmFileName!.isNotEmpty
-                            ? 'Crafting Proof Photo: ${widget.artisan.ssmFileName}'
-                            : null,
-                        url: widget.artisan.ssmFileUrl,
-                        missingLabel: '⚠️ Crafting Proof Photo Not Attached',
+                      Builder(
+                        builder: (context) {
+                          String? craftingPhotoUrl = widget.artisan.ssmFileUrl;
+                          String? craftingPhotoName = widget.artisan.ssmFileName;
+
+                          if ((craftingPhotoUrl == null || craftingPhotoUrl.isEmpty) &&
+                              widget.artisan.photos.isNotEmpty) {
+                            craftingPhotoUrl = widget.artisan.photos.first;
+                            craftingPhotoName ??= craftingPhotoUrl.split('/').last;
+                          }
+
+                          return _buildAdminDocChip(
+                            Icons.photo_camera_rounded,
+                            craftingPhotoName != null && craftingPhotoName.isNotEmpty
+                                ? 'Crafting Proof Photo: $craftingPhotoName'
+                                : (craftingPhotoUrl != null && craftingPhotoUrl.isNotEmpty
+                                    ? 'Crafting Proof Photo: ${craftingPhotoUrl.split('/').last}'
+                                    : null),
+                            url: craftingPhotoUrl,
+                            missingLabel: '⚠️ Crafting Proof Photo Not Attached',
+                          );
+                        },
                       ),
                       if (widget.artisan.photos.isNotEmpty)
                         _buildAdminDocChip(
