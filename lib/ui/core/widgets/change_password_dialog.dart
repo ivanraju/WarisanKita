@@ -91,12 +91,6 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
     } else if (newPassword.length < 8) {
       _newError = 'New password must be at least 8 characters';
       hasError = true;
-    } else {
-      final validationError = ProfileValidator.validatePassword(newPassword);
-      if (validationError != null) {
-        _newError = validationError;
-        hasError = true;
-      }
     }
 
     if (confirmPassword.isEmpty) {

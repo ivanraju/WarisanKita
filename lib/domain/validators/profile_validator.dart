@@ -320,12 +320,6 @@ class ProfileValidator {
     if (!RegExp(r'\d').hasMatch(clean)) {
       return 'Password must contain at least one number';
     }
-    if (!RegExp(r'[A-Z]').hasMatch(clean)) {
-      return 'Password must contain at least one uppercase letter';
-    }
-    if (!RegExp(r'[a-z]').hasMatch(clean)) {
-      return 'Password must contain at least one lowercase letter';
-    }
 
     return null;
   }

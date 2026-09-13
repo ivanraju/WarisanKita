@@ -166,12 +166,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       return;
     }
 
-    final passwordError = ProfileValidator.validatePassword(newPassword);
-    if (passwordError != null) {
+    if (newPassword.length < 8) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(passwordError.toUpperCase()),
-          backgroundColor: const Color(0xFFEF4444),
+        const SnackBar(
+          content: Text('PASSWORD MUST BE GREATER THAN 7 CHARACTERS'),
+          backgroundColor: Color(0xFFEF4444),
           behavior: SnackBarBehavior.floating,
         ),
       );

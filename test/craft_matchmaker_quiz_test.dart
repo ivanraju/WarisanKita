@@ -876,8 +876,6 @@ void main() {
       expect(ProfileValidator.validatePassword('short1'), 'Password must be at least 8 characters');
       expect(ProfileValidator.validatePassword('12345678'), 'Password must contain at least one letter');
       expect(ProfileValidator.validatePassword('abcdefgh'), 'Password must contain at least one number');
-      expect(ProfileValidator.validatePassword('secret123'), 'Password must contain at least one uppercase letter');
-      expect(ProfileValidator.validatePassword('SECRET123'), 'Password must contain at least one lowercase letter');
       expect(ProfileValidator.validatePassword('Secret123'), isNull);
 
       expect(ProfileValidator.validateConfirmPassword('Pass123', 'Pass456'), 'Passwords do not match');

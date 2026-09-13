@@ -1021,7 +1021,7 @@ void main() {
       expect(backend.client.auth.currentSession, isNull);
     });
 
-    test('confirmPasswordReset enforces uppercase, lowercase, numbers, and rejects similar passwords', () async {
+    test('confirmPasswordReset rejects exact reuse and similar password variations without character restrictions', () async {
       final backend = AuthBackend();
       addTearDown(backend.client.dispose);
       final service = SupabaseService(client: backend.client);
@@ -1031,46 +1031,37 @@ void main() {
       await service.signIn(email, 'OriginalPassword123!');
       service.acceptPasswordRecovery(backend.client.auth.currentSession!);
 
-      // Missing uppercase
-      final noUpper = await vm.confirmPasswordReset(
+      // Exact reuse
+      final exact = await vm.confirmPasswordReset(
         email: email,
         token: '',
-        newPassword: 'nouppercase123!',
-        confirmPassword: 'nouppercase123!',
+        newPassword: 'OriginalPassword123!',
+        confirmPassword: 'OriginalPassword123!',
       );
-      expect(noUpper.success, isFalse);
-      expect(noUpper.message, contains('UPPERCASE'));
-
-      // Missing lowercase
-      final noLower = await vm.confirmPasswordReset(
-        email: email,
-        token: '',
-        newPassword: 'NOLOWERCASE123!',
-        confirmPassword: 'NOLOWERCASE123!',
-      );
-      expect(noLower.success, isFalse);
-      expect(noLower.message, contains('LOWERCASE'));
-
-      // Missing number
-      final noNum = await vm.confirmPasswordReset(
-        email: email,
-        token: '',
-        newPassword: 'NoNumberPassword!',
-        confirmPassword: 'NoNumberPassword!',
-      );
-      expect(noNum.success, isFalse);
-      expect(noNum.message, contains('NUMBER'));
+      expect(exact.success, isFalse);
+      expect(exact.message, contains('should be different'));
+      expect(backend.passwordUpdates, 0);
 
       // Case variation of current password (similar password)
       final similar = await vm.confirmPasswordReset(
         email: email,
         token: '',
-        newPassword: 'Originalpassword123!',
-        confirmPassword: 'Originalpassword123!',
+        newPassword: 'originalpassword123!',
+        confirmPassword: 'originalpassword123!',
       );
       expect(similar.success, isFalse);
       expect(similar.message, contains('TOO SIMILAR'));
       expect(backend.passwordUpdates, 0);
+
+      // User has freedom to choose lowercase password or any valid 8+ character password
+      final success = await vm.confirmPasswordReset(
+        email: email,
+        token: '',
+        newPassword: 'freshfreepassword',
+        confirmPassword: 'freshfreepassword',
+      );
+      expect(success.success, isTrue);
+      expect(backend.passwordUpdates, 1);
     });
   });
 
