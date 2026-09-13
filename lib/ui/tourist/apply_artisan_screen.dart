@@ -52,10 +52,16 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
   bool? _isSsmAvailable;
   String? _ssmStatusMessage;
 
+  Timer? _phoneDebounce;
+  bool _isCheckingPhone = false;
+  bool? _isPhoneAvailable;
+  String? _phoneStatusMessage;
+
   @override
   void initState() {
     super.initState();
     _ssmController.addListener(_onSsmChanged);
+    _phoneController.addListener(_onPhoneChanged);
 
     Future.microtask(() async {
       if (!mounted) return;
@@ -67,6 +73,8 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
   void dispose() {
     _ssmDebounce?.cancel();
     _ssmController.removeListener(_onSsmChanged);
+    _phoneDebounce?.cancel();
+    _phoneController.removeListener(_onPhoneChanged);
     _studioNameController.dispose();
     _ssmController.dispose();
     _experienceController.dispose();
@@ -114,6 +122,47 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
         _ssmStatusMessage = isAvailable
             ? '✓ Validated & Available SSM Registration ID'
             : '⚠️ This SSM is already registered by another artisan studio';
+      });
+    });
+  }
+
+  void _onPhoneChanged() {
+    _phoneDebounce?.cancel();
+    final raw = _phoneController.text.trim();
+    if (raw.isEmpty) {
+      setState(() {
+        _isCheckingPhone = false;
+        _isPhoneAvailable = null;
+        _phoneStatusMessage = null;
+      });
+      return;
+    }
+
+    final formatErr = ProfileValidator.validatePhone(raw);
+    if (formatErr != null) {
+      setState(() {
+        _isCheckingPhone = false;
+        _isPhoneAvailable = false;
+        _phoneStatusMessage = formatErr;
+      });
+      return;
+    }
+
+    setState(() {
+      _isCheckingPhone = true;
+      _phoneStatusMessage = 'Validating phone availability...';
+    });
+
+    _phoneDebounce = Timer(const Duration(milliseconds: 350), () async {
+      final authVM = context.read<AuthViewModel>();
+      final isAvailable = await authVM.isPhoneAvailable(raw);
+      if (!mounted) return;
+      setState(() {
+        _isCheckingPhone = false;
+        _isPhoneAvailable = isAvailable;
+        _phoneStatusMessage = isAvailable
+            ? '✓ Validated & Available contact phone'
+            : '⚠️ This phone number is already registered by another artisan / user';
       });
     });
   }
@@ -498,6 +547,34 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
       );
       return;
     }
+
+    final phoneText = _phoneController.text.trim();
+    if (phoneText.isNotEmpty) {
+      final phoneErr = ProfileValidator.validatePhone(phoneText);
+      if (phoneErr != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(phoneErr),
+            backgroundColor: const Color(0xFFEF4444),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+      final isPhoneAvail = await authVM.isPhoneAvailable(phoneText);
+      if (!isPhoneAvail) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('⚠️ This contact phone number is already registered by another artisan studio or account.'),
+            backgroundColor: Color(0xFFEF4444),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+    }
+
     if (_workshopLocation == null || _workshopAddress == null) {
       setState(() {
         _locationError =
@@ -568,7 +645,6 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
     final expDigits = _experienceController.text.trim().replaceAll(RegExp(r'[^0-9]'), '');
     final experience = expDigits.isNotEmpty ? '$expDigits Years' : null;
     final bio = _bioController.text.trim();
-    final phoneText = _phoneController.text.trim();
     final phone = phoneText.isNotEmpty ? phoneText : null;
 
     final effectiveEmail = user?.email.trim() ?? '';
@@ -1166,6 +1242,18 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                             borderRadius: BorderRadius.circular(14),
                             borderSide: isDark ? const BorderSide(color: Color(0xFF1E3A34)) : BorderSide.none,
                           ),
+                          helperText: _phoneStatusMessage,
+                          helperStyle: TextStyle(
+                            color: _isCheckingPhone
+                                ? const Color(0xFFD97706)
+                                : (_isPhoneAvailable == true
+                                    ? const Color(0xFF10B981)
+                                    : (_isPhoneAvailable == false
+                                        ? const Color(0xFFEF4444)
+                                        : (isDark ? Colors.white60 : Colors.grey[600]))),
+                            fontSize: 11,
+                            fontWeight: _isPhoneAvailable != null ? FontWeight.w600 : FontWeight.normal,
+                          ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
                             borderSide: BorderSide(
@@ -1174,7 +1262,16 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                             ),
                           ),
                         ),
-                        validator: (v) => ProfileValidator.validatePhone(v, isRequired: false),
+                        validator: (v) {
+                          final trimmed = (v ?? '').trim();
+                          if (trimmed.isEmpty) return null;
+                          final formatErr = ProfileValidator.validatePhone(trimmed, isRequired: false);
+                          if (formatErr != null) return formatErr;
+                          if (_isPhoneAvailable == false) {
+                            return _phoneStatusMessage ?? 'This phone number is already registered';
+                          }
+                          return null;
+                        },
                       ),
 
                       const SizedBox(height: 16),
@@ -1472,6 +1569,25 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                                 : 'Upload official SSM business certificate (10 KB – 10 MB)',
                         isAttached: _ssmFile != null,
                         onTap: _pickSsmDocument,
+                        onRemove: _ssmFile != null
+                            ? () {
+                                setState(() {
+                                  _ssmFile = null;
+                                  _ssmFileSizeLabel = null;
+                                  _documentError = null;
+                                });
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      _isVillageWorkshop
+                                          ? 'Crafting photo unattached'
+                                          : 'SSM document unattached',
+                                    ),
+                                    duration: const Duration(seconds: 2),
+                                  ),
+                                );
+                              }
+                            : null,
                       ),
 
                       const SizedBox(height: 10),
@@ -1488,6 +1604,21 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                                 : 'Upload accreditation certificate from Kraftangan Malaysia',
                         isAttached: _kraftanganFile != null,
                         onTap: _pickKraftanganCertificate,
+                        onRemove: _kraftanganFile != null
+                            ? () {
+                                setState(() {
+                                  _kraftanganFile = null;
+                                  _kraftanganFileSizeLabel = null;
+                                  _documentError = null;
+                                });
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Kraftangan Master Certificate unattached'),
+                                    duration: Duration(seconds: 2),
+                                  ),
+                                );
+                              }
+                            : null,
                       ),
 
                       const SizedBox(height: 10),
@@ -1500,7 +1631,70 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
                             : 'Upload photos of your craft studio/workshop',
                         isAttached: _uploadedPhotos.isNotEmpty,
                         onTap: _pickStudioPhotos,
+                        onRemove: _uploadedPhotos.isNotEmpty
+                            ? () {
+                                setState(() {
+                                  _uploadedPhotos.clear();
+                                });
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('All studio photos unattached'),
+                                    duration: Duration(seconds: 2),
+                                  ),
+                                );
+                              }
+                            : null,
                       ),
+
+                      if (_uploadedPhotos.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: _uploadedPhotos.asMap().entries.map((entry) {
+                            final idx = entry.key;
+                            final photo = entry.value;
+                            return Chip(
+                              avatar: const Icon(
+                                Icons.image_outlined,
+                                size: 16,
+                                color: Color(0xFF004D40),
+                              ),
+                              label: Text(
+                                photo.name,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11,
+                                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                ),
+                              ),
+                              deleteIcon: const Icon(
+                                Icons.cancel_rounded,
+                                size: 16,
+                                color: Color(0xFFEF4444),
+                              ),
+                              onDeleted: () {
+                                setState(() {
+                                  _uploadedPhotos.removeAt(idx);
+                                });
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Removed photo: ${photo.name}'),
+                                    duration: const Duration(seconds: 1),
+                                  ),
+                                );
+                              },
+                              backgroundColor: isDark
+                                  ? const Color(0xFF041412)
+                                  : const Color(0xFFF1F5F9),
+                              side: BorderSide(
+                                color: isDark
+                                    ? const Color(0xFF1E3A34)
+                                    : const Color(0xFFCBD5E1),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ],
 
                       if (_documentError != null) ...[
                         const SizedBox(height: 12),
@@ -1787,79 +1981,97 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
     required String subtitle,
     required bool isAttached,
     required VoidCallback onTap,
+    VoidCallback? onRemove,
+    String removeTooltip = 'Unsubmit / Remove attached document',
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: isDark
-              ? (isAttached ? const Color(0xFF063529) : const Color(0xFF041412))
-              : (isAttached ? const Color(0xFFECFDF5) : const Color(0xFFF8F9FA)),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: isAttached
-                ? const Color(0xFF10B981)
-                : (isDark ? const Color(0xFF1E3A34) : Colors.grey[300]!),
-          ),
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark
+            ? (isAttached ? const Color(0xFF063529) : const Color(0xFF041412))
+            : (isAttached ? const Color(0xFFECFDF5) : const Color(0xFFF8F9FA)),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isAttached
+              ? const Color(0xFF10B981)
+              : (isDark ? const Color(0xFF1E3A34) : Colors.grey[300]!),
         ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: isAttached
-                    ? const Color(0xFF10B981).withValues(alpha: 0.15)
-                    : (isDark ? const Color(0xFF1E3A34) : Colors.grey[200]),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                isAttached ? Icons.check_circle_rounded : icon,
-                color: isAttached
-                    ? const Color(0xFF10B981)
-                    : (isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40)),
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                      color: isDark ? Colors.white : const Color(0xFF0F172A),
-                    ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: isAttached
+                        ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                        : (isDark ? const Color(0xFF1E3A34) : Colors.grey[200]),
+                    shape: BoxShape.circle,
                   ),
-                  Text(
-                    subtitle,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 10.5,
-                      color: isDark
-                          ? (isAttached ? const Color(0xFF34D399) : Colors.white60)
-                          : (isAttached ? const Color(0xFF047857) : Colors.grey[600]),
-                    ),
+                  child: Icon(
+                    isAttached ? Icons.check_circle_rounded : icon,
+                    color: isAttached
+                        ? const Color(0xFF10B981)
+                        : (isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40)),
+                    size: 20,
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: isDark ? Colors.white : const Color(0xFF0F172A),
+                        ),
+                      ),
+                      Text(
+                        subtitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 10.5,
+                          color: isDark
+                              ? (isAttached ? const Color(0xFF34D399) : Colors.white60)
+                              : (isAttached ? const Color(0xFF047857) : Colors.grey[600]),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (isAttached && onRemove != null) ...[
+                  IconButton(
+                    icon: const Icon(
+                      Icons.delete_outline_rounded,
+                      color: Color(0xFFEF4444),
+                      size: 22,
+                    ),
+                    tooltip: removeTooltip,
+                    onPressed: onRemove,
+                  ),
+                ] else
+                  Icon(
+                    Icons.upload_file_rounded,
+                    size: 18,
+                    color: isAttached
+                        ? const Color(0xFF10B981)
+                        : (isDark ? Colors.white38 : Colors.grey[500]),
+                  ),
+              ],
             ),
-            Icon(
-              Icons.upload_file_rounded,
-              size: 18,
-              color: isAttached
-                  ? const Color(0xFF10B981)
-                  : (isDark ? Colors.white38 : Colors.grey[500]),
-            ),
-          ],
+          ),
         ),
       ),
     );

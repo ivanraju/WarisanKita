@@ -2184,5 +2184,139 @@ void main() {
         }, createHttpClient: (context) => _MockHttpClient());
       });
     });
+
+    group('Duplicate Phone Detection & Document Unsubmission Tests', () {
+      test('ProfileValidator phone normalization and comparison works as expected', () {
+        expect(ProfileValidator.normalizePhone('012-345 6789'), '+60123456789');
+        expect(ProfileValidator.normalizePhone('+60 12-345 6789'), '+60123456789');
+        expect(ProfileValidator.normalizePhone('60123456789'), '+60123456789');
+        expect(ProfileValidator.normalizePhone('011-12345678'), '+601112345678');
+        expect(ProfileValidator.phoneDigitsOnly('+60 12-345 6789'), '60123456789');
+
+        expect(ProfileValidator.arePhonesEqual('012-345 6789', '+60123456789'), isTrue);
+        expect(ProfileValidator.arePhonesEqual('+60 12-345 6789', '0123456789'), isTrue);
+        expect(ProfileValidator.arePhonesEqual('60123456789', '012-345 6789'), isTrue);
+        expect(ProfileValidator.arePhonesEqual('012-345 6789', '019-876 5432'), isFalse);
+      });
+
+      test('SupabaseService and AuthViewModel detect duplicate phone numbers correctly', () async {
+        final service = SupabaseService();
+        final userRepo = UserRepository(service: service);
+        final authVm = AuthViewModel(repository: userRepo);
+        SharedPreferences.setMockInitialValues({});
+
+        // Populate test user store with an existing artisan having a unique phone number
+        const existingPhone = '+60 17-987 6543';
+        await service.linkArtisanRoleToTourist(
+          email: 'pak_phone_unique@warisankita.my',
+          studioName: 'Pak Mat Studio',
+          craftCategory: 'Woodcraft',
+          ssmNumber: '202601009999',
+          phone: existingPhone,
+        );
+
+        // Check format validation
+        final invalidCheck = await authVm.isPhoneAvailable('12345');
+        expect(invalidCheck, isFalse);
+
+        // Check identical phone is marked unavailable
+        final dupCheck1 = await authVm.isPhoneAvailable('+60 17-987 6543');
+        expect(dupCheck1, isFalse);
+
+        // Check normalized variant ('017-987 6543') is also detected as taken
+        final dupCheck2 = await authVm.isPhoneAvailable('017-987 6543');
+        expect(dupCheck2, isFalse);
+
+        // Check with excludeEmail for the same user allows it (for profile updates)
+        final selfCheck = await authVm.isPhoneAvailable(
+          '017-987 6543',
+          excludeEmail: 'pak_phone_unique@warisankita.my',
+        );
+        expect(selfCheck, isTrue);
+
+        // Check new, unregistered phone is available
+        final newCheck = await authVm.isPhoneAvailable('019-999 8888');
+        expect(newCheck, isTrue);
+      });
+
+      test('linkArtisanRoleToTourist rejects duplicate phone numbers with DUPLICATE_PHONE', () async {
+        final service = SupabaseService();
+        SharedPreferences.setMockInitialValues({});
+
+        // Add an existing user with phone
+        await service.linkArtisanRoleToTourist(
+          email: 'existing_master_unique@warisankita.my',
+          studioName: 'Master Crafts',
+          craftCategory: 'Woodcraft',
+          ssmNumber: '202601008888',
+          phone: '+60 18-123 4567',
+        );
+
+        // Attempting to link another user with the same phone should throw DUPLICATE_PHONE
+        expect(
+          () => service.linkArtisanRoleToTourist(
+            email: 'new_applicant_unique@warisankita.my',
+            studioName: 'Applicant Studio',
+            craftCategory: 'Textiles',
+            ssmNumber: '202601007777',
+            phone: '018-123 4567', // normalized matches existing
+          ),
+          throwsA(predicate((e) => e.toString().contains('DUPLICATE_PHONE'))),
+        );
+      });
+
+      testWidgets('ApplyArtisanScreen renders file upload tiles and allows interactions', (tester) async {
+        tester.view.physicalSize = const Size(1200, 2000);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+
+        final service = SupabaseService();
+        final userRepo = UserRepository(service: service);
+        final authVm = AuthViewModel(repository: userRepo);
+        final modVm = ModerationViewModel(repository: userRepo);
+
+        authVm.setCurrentUserForTesting(
+          const UserModel(
+            id: 'tourist_unsubmit_test',
+            email: 'tourist_unsubmit@warisankita.my',
+            displayName: 'Test Tourist',
+            role: 'Tourist',
+            address: 'Melaka',
+            state: 'Melaka',
+          ),
+        );
+
+        await tester.pumpWidget(
+          MultiProvider(
+            providers: [
+              ChangeNotifierProvider.value(value: authVm),
+              ChangeNotifierProvider.value(value: modVm),
+            ],
+            child: const MaterialApp(
+              home: ApplyArtisanScreen(),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        // Verify the screen loads
+        expect(find.text('Apply for Master Artisan'), findsOneWidget);
+
+        // Scroll to Proof of Authenticity
+        await tester.scrollUntilVisible(
+          find.text('Proof of Authenticity & Credentials'),
+          300.0,
+          scrollable: find.byType(Scrollable).first,
+        );
+        await tester.pump();
+
+        // Find the SSM Business Registration tile and Kraftangan tile
+        expect(find.text('1. SSM Business Registration PDF / Image *'), findsOneWidget);
+        expect(find.text('2. Kraftangan Master Certificate *'), findsOneWidget);
+        expect(find.text('Studio Workshop Photos (Optional)'), findsOneWidget);
+      });
+    });
 }
+
 

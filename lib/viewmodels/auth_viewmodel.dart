@@ -1060,6 +1060,21 @@ class AuthViewModel extends ChangeNotifier {
     return !isRegistered;
   }
 
+  Future<bool> isPhoneAvailable(
+    String phone, {
+    String? excludeEmail,
+    String? excludeUserId,
+  }) async {
+    final clean = phone.trim();
+    if (ProfileValidator.validatePhone(clean) != null) return false;
+    final isRegistered = await _repository.isPhoneRegistered(
+      clean,
+      excludeEmail: excludeEmail ?? _currentUser?.email,
+      excludeUserId: excludeUserId ?? _currentUser?.id,
+    );
+    return !isRegistered;
+  }
+
   // UC003_RESET_PASSWORD: Step 1 - Send reset token email
   Future<AuthResult> sendPasswordReset(String email) async {
     final cleanEmail = email.trim();

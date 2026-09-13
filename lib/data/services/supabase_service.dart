@@ -12,6 +12,7 @@ import 'package:warisan_kita/domain/models/forum_post.dart';
 import 'package:warisan_kita/domain/models/system_task_provisioning.dart';
 import 'package:warisan_kita/domain/models/user.dart';
 import 'package:warisan_kita/domain/validators/ssm_validator.dart';
+import 'package:warisan_kita/domain/validators/profile_validator.dart';
 
 class EmailVerificationRequired extends AuthException {
   final String email;
@@ -379,6 +380,86 @@ class SupabaseService {
         }
       } catch (e) {
         debugPrint('Supabase SSM uniqueness check note: $e');
+      }
+    }
+
+    return false;
+  }
+
+  Future<bool> isPhoneRegistered(
+    String phone, {
+    String? excludeEmail,
+    String? excludeUserId,
+  }) async {
+    final clean = phone.trim();
+    if (clean.isEmpty) return false;
+
+    // 1. Check local in-memory store
+    for (final entry in _userStore.entries) {
+      if (excludeEmail != null &&
+          entry.key.toLowerCase() == excludeEmail.toLowerCase()) {
+        continue;
+      }
+      final u = entry.value;
+      if (excludeUserId != null && u['id'] == excludeUserId) {
+        continue;
+      }
+      final existingPhone = (u['phone'] ?? u['phone_number']) as String?;
+      if (existingPhone != null && existingPhone.trim().isNotEmpty) {
+        if (ProfileValidator.arePhonesEqual(existingPhone, clean)) {
+          return true;
+        }
+      }
+    }
+
+    // 2. Check Supabase database
+    final client = _client;
+    if (client != null) {
+      try {
+        // Query users table
+        final userRows = await client
+            .from('users')
+            .select('id, email, phone_number, phone')
+            .timeout(const Duration(seconds: 5));
+
+        for (final row in userRows) {
+          if (excludeEmail != null &&
+              row['email']?.toString().toLowerCase() ==
+                  excludeEmail.toLowerCase()) {
+            continue;
+          }
+          if (excludeUserId != null &&
+              row['id']?.toString() == excludeUserId) {
+            continue;
+          }
+          final rowPhone = (row['phone_number'] ?? row['phone'])?.toString();
+          if (rowPhone != null && rowPhone.trim().isNotEmpty) {
+            if (ProfileValidator.arePhonesEqual(rowPhone, clean)) {
+              return true;
+            }
+          }
+        }
+
+        // Query artisan_profiles table
+        final apRows = await client
+            .from('artisan_profiles')
+            .select('id, user_id, phone_number, phone')
+            .timeout(const Duration(seconds: 5));
+
+        for (final row in apRows) {
+          if (excludeUserId != null &&
+              row['user_id']?.toString() == excludeUserId) {
+            continue;
+          }
+          final rowPhone = (row['phone_number'] ?? row['phone'])?.toString();
+          if (rowPhone != null && rowPhone.trim().isNotEmpty) {
+            if (ProfileValidator.arePhonesEqual(rowPhone, clean)) {
+              return true;
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('Supabase phone uniqueness check note: $e');
       }
     }
 
@@ -1203,6 +1284,24 @@ class SupabaseService {
       }
     } else if (!isVillage) {
       throw Exception('INVALID_SSM: SSM registration number is required for Commercial Studios.');
+    }
+
+    final cleanPhone = phone?.trim() ?? '';
+    if (cleanPhone.isNotEmpty) {
+      final phoneErr = ProfileValidator.validatePhone(cleanPhone);
+      if (phoneErr != null) {
+        throw Exception('INVALID_PHONE: $phoneErr');
+      }
+      final isPhoneTaken = await isPhoneRegistered(
+        cleanPhone,
+        excludeEmail: cleanEmail,
+        excludeUserId: userRecord['id'],
+      );
+      if (isPhoneTaken) {
+        throw Exception(
+          'DUPLICATE_PHONE: An artisan studio or user account is already registered with contact phone "$cleanPhone".',
+        );
+      }
     }
 
     // Update user record with pending artisan credentials

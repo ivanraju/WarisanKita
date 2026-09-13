@@ -539,6 +539,36 @@ class _ArtisanApplicationPendingScreenState
                       ),
                     ),
                   ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const ApplyArtisanScreen(),
+                          ),
+                        );
+                      },
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(
+                          color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                          width: 1.5,
+                        ),
+                        foregroundColor: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      icon: const Icon(Icons.edit_document, size: 20),
+                      label: Text(
+                        'Update / Replace Attached Documents',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
 
                 const SizedBox(height: 12),
