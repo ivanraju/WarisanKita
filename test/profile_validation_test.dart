@@ -2044,8 +2044,12 @@ void main() {
         // Verify initial values reflect custom user data rather than hardcoded defaults
         expect(find.text('Che Wan Craft'), findsOneWidget);
         expect(find.text('custom_craft_artisan'), findsOneWidget);
-        expect(find.text('Wayang Kulit & Puppetry'), findsOneWidget);
-        expect(find.text('Perlis'), findsOneWidget);
+
+        // Verify the dual role sync yellow box and its studio inputs are removed
+        expect(find.text('DUAL ROLE SYNC: ARTISAN STUDIO'), findsNothing);
+        expect(find.text('Artisan Studio Name'), findsNothing);
+        expect(find.text('Craft Specialization'), findsNothing);
+        expect(find.text('Studio State / Location'), findsNothing);
 
         // Ensure dummy strings are not present
         expect(find.text('Aiman Haziq'), findsNothing);
