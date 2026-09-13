@@ -59,6 +59,16 @@ class ThemeViewModel extends ChangeNotifier {
           borderSide: BorderSide.none,
         ),
       ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: const Color(0xFF004D40),
+        contentTextStyle: const TextStyle(
+          color: Colors.white,
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
 
@@ -107,6 +117,16 @@ class ThemeViewModel extends ChangeNotifier {
         backgroundColor: Color(0xFF041412),
         foregroundColor: Color(0xFFFFD54F),
         elevation: 0,
+      ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: const Color(0xFF1E3A34),
+        contentTextStyle: const TextStyle(
+          color: Colors.white,
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }

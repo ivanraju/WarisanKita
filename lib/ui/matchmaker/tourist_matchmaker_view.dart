@@ -549,6 +549,7 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
                 content: Text(
                   'Quest stopped because you left the workshop area. '
                   'Your progress has been saved.',
+                  style: TextStyle(color: Colors.white),
                 ),
                 behavior: SnackBarBehavior.floating,
                 backgroundColor: Color(0xFF005B4F),
@@ -585,7 +586,10 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
             backgroundColor: const Color(0xFF004D40),
             content: Text(
               'Heritage Quest Discovered • ${artisan.name}',
-              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
+              style: GoogleFonts.plusJakartaSans(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         );

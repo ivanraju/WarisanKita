@@ -204,9 +204,13 @@ class _CraftMatchmakerQuizWizardState extends State<CraftMatchmakerQuizWizard> {
     if (!_isAllQuestionsAnswered) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(langVM.translate('Please answer all 6 questions to save your preferences.')),
+          content: Text(
+            langVM.translate('Please answer all 6 questions to save your preferences.'),
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+          ),
           backgroundColor: const Color(0xFFEF4444),
           behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
       return;
@@ -221,13 +225,17 @@ class _CraftMatchmakerQuizWizardState extends State<CraftMatchmakerQuizWizard> {
     );
 
     if (mounted) {
+      final isDark = Theme.of(context).brightness == Brightness.dark;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             '✨ ${langVM.translate('Your Craft Soul:')} ${personality.title}! ${langVM.translate('Preferences updated successfully.')}',
-            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold),
+            style: GoogleFonts.plusJakartaSans(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-          backgroundColor: const Color(0xFF004D40),
+          backgroundColor: isDark ? const Color(0xFF1E3A34) : const Color(0xFF004D40),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
