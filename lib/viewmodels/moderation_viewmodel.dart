@@ -936,8 +936,16 @@ class ModerationViewModel extends ChangeNotifier {
                 raw['pending_relocation_address'].toString().trim().isNotEmpty) ||
             (raw['pendingRelocationAddress'] != null &&
                 raw['pendingRelocationAddress'].toString().trim().isNotEmpty) ||
+            (raw['pending_relocation_date'] != null &&
+                raw['pending_relocation_date'].toString().trim().isNotEmpty) ||
+            (raw['pending_relocation_reason'] != null &&
+                raw['pending_relocation_reason'].toString().trim().isNotEmpty) ||
             (artisanProfile?['pending_relocation_address'] != null &&
-                artisanProfile!['pending_relocation_address'].toString().trim().isNotEmpty);
+                artisanProfile!['pending_relocation_address'].toString().trim().isNotEmpty) ||
+            (artisanProfile?['pending_relocation_date'] != null &&
+                artisanProfile!['pending_relocation_date'].toString().trim().isNotEmpty) ||
+            (artisanProfile?['pending_relocation_reason'] != null &&
+                artisanProfile!['pending_relocation_reason'].toString().trim().isNotEmpty);
 
         if (!isExplicitlyPending && !isReloc) {
           if (rawStatus == 'REJECTED' ||
@@ -1184,15 +1192,6 @@ class ModerationViewModel extends ChangeNotifier {
             ? rawPhone.toString().trim()
             : '+60 12-345 6789';
 
-        final relocAddr = (raw['pending_relocation_address'] ??
-                raw['pendingRelocationAddress'] ??
-                raw['proposed_address'] ??
-                raw['proposedAddress'] ??
-                artisanProfile?['pending_relocation_address'])
-            ?.toString()
-            .trim();
-        final isActualReloc = isReloc || (relocAddr != null && relocAddr.isNotEmpty);
-
         final dynProposedLat = raw['pending_relocation_lat'] ??
             raw['pendingRelocationLatitude'] ??
             raw['proposed_latitude'] ??
@@ -1217,6 +1216,23 @@ class ModerationViewModel extends ChangeNotifier {
                 raw['proposedState'] ??
                 artisanProfile?['pending_relocation_state'])
             ?.toString();
+
+        var relocAddr = (raw['pending_relocation_address'] ??
+                raw['pendingRelocationAddress'] ??
+                raw['proposed_address'] ??
+                raw['proposedAddress'] ??
+                artisanProfile?['pending_relocation_address'])
+            ?.toString()
+            .trim();
+        if ((relocAddr == null || relocAddr.isEmpty) && isReloc) {
+          final pState = propState ?? state;
+          if (propLat != null && propLng != null) {
+            relocAddr = '$pState (${propLat.toStringAsFixed(4)}, ${propLng.toStringAsFixed(4)})';
+          } else {
+            relocAddr = '$pState Premise';
+          }
+        }
+        final isActualReloc = isReloc || (relocAddr != null && relocAddr.isNotEmpty);
 
         final relocReason = (raw['pending_relocation_reason'] ??
                 raw['pendingRelocationReason'] ??
@@ -1358,6 +1374,17 @@ class ModerationViewModel extends ChangeNotifier {
                   p.email.toLowerCase() == u.email.toLowerCase() &&
                   p.isRelocationRequest,
             )) {
+              var proposedAddr = u.pendingRelocationAddress;
+              if (proposedAddr == null || proposedAddr.trim().isEmpty) {
+                final pState = u.pendingRelocationState ?? u.state ?? 'Melaka';
+                if (u.pendingRelocationLatitude != null &&
+                    u.pendingRelocationLongitude != null) {
+                  proposedAddr =
+                      '$pState (${u.pendingRelocationLatitude!.toStringAsFixed(4)}, ${u.pendingRelocationLongitude!.toStringAsFixed(4)})';
+                } else {
+                  proposedAddr = '$pState Premise';
+                }
+              }
               fetched.insert(
                 0,
                 PendingArtisanProfile(
@@ -1380,7 +1407,7 @@ class ModerationViewModel extends ChangeNotifier {
                   isUpgradeFromTourist: false,
                   isRelocationRequest: true,
                   currentAddress: u.address,
-                  proposedAddress: u.pendingRelocationAddress,
+                  proposedAddress: proposedAddr,
                   proposedLatitude: u.pendingRelocationLatitude,
                   proposedLongitude: u.pendingRelocationLongitude,
                   proposedState: u.pendingRelocationState,
