@@ -41,6 +41,12 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
   Timer? _usernameDebounce;
   String? _initialUsername;
 
+  bool _isCheckingPhone = false;
+  bool? _isPhoneAvailable;
+  String? _phoneStatusMessage;
+  Timer? _phoneDebounce;
+  String? _initialPhone;
+
   GoogleMapController? _workshopMapController;
   LatLng? _selectedWorkshopPin;
   String? _workshopAddress;
@@ -207,8 +213,10 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     _experienceController = TextEditingController(
       text: _extractExperienceNumber(user?.experience),
     );
-    _experienceController.addListener(_onFormChanged);
-    _phoneController = TextEditingController(text: user?.phone ?? '');
+    final initialPhone = user?.phone ?? '';
+    _initialPhone = initialPhone;
+    _phoneController = TextEditingController(text: initialPhone);
+    _phoneController.addListener(_onPhoneChanged);
     _phoneController.addListener(_onFormChanged);
     _bioController = TextEditingController(
       text: user?.bio ?? '',
@@ -253,6 +261,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
 
     if (force || (_phoneController.text.isEmpty && (user.phone?.isNotEmpty ?? false))) {
       _phoneController.text = user.phone ?? '';
+      _initialPhone = user.phone ?? '';
     }
 
     if (force || _workshopAddress == null || (user.address != null && _workshopAddress != user.address)) {
@@ -415,9 +424,74 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     });
   }
 
+  void _onPhoneChanged() {
+    _onFormChanged();
+    _phoneDebounce?.cancel();
+    final raw = _phoneController.text.trim();
+    if (raw.isEmpty) {
+      setState(() {
+        _isCheckingPhone = false;
+        _isPhoneAvailable = null;
+        _phoneStatusMessage = null;
+      });
+      return;
+    }
+
+    final validationError = ProfileValidator.validatePhone(raw, isRequired: true);
+    if (validationError != null) {
+      setState(() {
+        _isCheckingPhone = false;
+        _isPhoneAvailable = false;
+        _phoneStatusMessage = validationError;
+      });
+      return;
+    }
+
+    if (ProfileValidator.arePhonesEqual(raw, _initialPhone)) {
+      setState(() {
+        _isCheckingPhone = false;
+        _isPhoneAvailable = true;
+        _phoneStatusMessage = '✓ Current verified phone number';
+      });
+      return;
+    }
+
+    setState(() {
+      _isCheckingPhone = true;
+      _phoneStatusMessage = 'Checking whether this phone number is registered…';
+    });
+
+    _phoneDebounce = Timer(const Duration(milliseconds: 400), () async {
+      try {
+        final authVM = context.read<AuthViewModel>();
+        final isAvailable = await authVM.isPhoneAvailable(
+          raw,
+          excludeEmail: authVM.currentUser?.email,
+          excludeUserId: authVM.currentUser?.id,
+        );
+        if (!mounted || _phoneController.text.trim() != raw) return;
+        setState(() {
+          _isCheckingPhone = false;
+          _isPhoneAvailable = isAvailable;
+          _phoneStatusMessage = isAvailable
+              ? '✓ This contact phone number is available'
+              : '⚠️ This phone number is already registered by another account';
+        });
+      } catch (_) {
+        if (!mounted || _phoneController.text.trim() != raw) return;
+        setState(() {
+          _isCheckingPhone = false;
+          _isPhoneAvailable = null;
+          _phoneStatusMessage = 'Unable to check phone number availability right now.';
+        });
+      }
+    });
+  }
+
   @override
   void dispose() {
     _usernameDebounce?.cancel();
+    _phoneDebounce?.cancel();
     _usernameController.removeListener(_onUsernameChanged);
     _usernameController.removeListener(_onFormChanged);
     _usernameController.dispose();
@@ -429,6 +503,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     _stateController.dispose();
     _experienceController.removeListener(_onFormChanged);
     _experienceController.dispose();
+    _phoneController.removeListener(_onPhoneChanged);
     _phoneController.removeListener(_onFormChanged);
     _phoneController.dispose();
     _bioController.removeListener(_onFormChanged);
@@ -1026,6 +1101,17 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
       return;
     }
 
+    if (_isPhoneAvailable == false) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_phoneStatusMessage ?? 'Phone number is already registered by another account'),
+          backgroundColor: const Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     if (_selectedWorkshopPin == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -1066,6 +1152,31 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
       }
     }
 
+    if (phone.isNotEmpty && !ProfileValidator.arePhonesEqual(phone, _initialPhone)) {
+      _phoneDebounce?.cancel();
+      final isPhoneAvail = await authVM.isPhoneAvailable(
+        phone,
+        excludeEmail: authVM.currentUser?.email,
+        excludeUserId: authVM.currentUser?.id,
+      );
+      if (!isPhoneAvail) {
+        if (!mounted) return;
+        setState(() {
+          _isCheckingPhone = false;
+          _isPhoneAvailable = false;
+          _phoneStatusMessage = '⚠️ This phone number is already registered by another account';
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Phone number $phone is already registered by another account. Please use a unique phone number.'),
+            backgroundColor: const Color(0xFFEF4444),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+    }
+
     setState(() => _isSaving = true);
 
     try {
@@ -1094,6 +1205,9 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
             _experienceController.text = _isDefaultOrEmptyExperience(updatedUser.experience)
                 ? ''
                 : (updatedUser.experience ?? '');
+            _initialPhone = updatedUser.phone ?? phone;
+            _isPhoneAvailable = true;
+            _phoneStatusMessage = '✓ Current verified phone number';
           });
         }
       }
@@ -1614,13 +1728,38 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
               controller: _phoneController,
               keyboardType: TextInputType.phone,
               autovalidateMode: AutovalidateMode.onUserInteraction,
-              validator: (v) => ProfileValidator.validatePhone(v, isRequired: true),
+              validator: (v) {
+                final basicError = ProfileValidator.validatePhone(v, isRequired: true);
+                if (basicError != null) return basicError;
+                if (_isPhoneAvailable == false) {
+                  return 'This phone number is already registered';
+                }
+                return null;
+              },
               style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
               decoration: _inputDecoration(
                 isDark,
                 labelText: 'Phone Number',
                 prefixIcon: Icons.phone_outlined,
-                helperText: 'Public workshop contact for tourist inquiries (e.g. +60 12-345 6789)',
+                helperText: _phoneStatusMessage ?? 'Public workshop contact for tourist inquiries (e.g. +60 12-345 6789)',
+                helperColor: _isPhoneAvailable == true
+                    ? const Color(0xFF10B981)
+                    : (_isPhoneAvailable == false ? const Color(0xFFEF4444) : null),
+                suffixIcon: _isCheckingPhone
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: Padding(
+                          padding: EdgeInsets.all(12),
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    : (_isPhoneAvailable != null
+                        ? Icon(
+                            _isPhoneAvailable! ? Icons.check_circle_rounded : Icons.cancel_rounded,
+                            color: _isPhoneAvailable! ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                          )
+                        : null),
               ),
             ),
 
