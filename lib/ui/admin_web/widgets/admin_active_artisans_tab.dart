@@ -34,209 +34,282 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
 
   void _showArtisanProfileModal(
     BuildContext context,
-    ActiveArtisanMaster artisan,
+    ActiveArtisanMaster initialArtisan,
   ) {
     showDialog(
       context: context,
-      builder: (dialogCtx) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        child: Container(
-          width: 580,
-          constraints: const BoxConstraints(maxHeight: 700),
-          padding: const EdgeInsets.all(28),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      builder: (dialogCtx) => Consumer<ModerationViewModel>(
+        builder: (modalCtx, vm, _) {
+          final artisan = vm.activeArtisanMasters.firstWhere(
+            (a) => a.id == initialArtisan.id,
+            orElse: () => initialArtisan,
+          );
+          return Dialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            child: Container(
+              width: 580,
+              constraints: const BoxConstraints(maxHeight: 700),
+              padding: const EdgeInsets.all(28),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: const Color(
-                                0xFF004D40,
-                              ).withValues(alpha: 0.1),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.storefront_rounded,
-                              color: Color(0xFF004D40),
-                              size: 24,
-                            ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: const Color(
+                                    0xFF004D40,
+                                  ).withValues(alpha: 0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.storefront_rounded,
+                                  color: Color(0xFF004D40),
+                                  size: 24,
+                                ),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      artisan.name,
+                                      style: GoogleFonts.dmSerifDisplay(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.bold,
+                                        color: const Color(0xFF0F172A),
+                                      ),
+                                    ),
+                                    Text(
+                                      artisan.isVillageWorkshop
+                                          ? 'Heritage Village Crafter • Home Workshop'
+                                          : 'Master Artisan • Commercial Studio',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 12,
+                                        color: const Color(0xFF64748B),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  artisan.name,
-                                  style: GoogleFonts.dmSerifDisplay(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.bold,
-                                    color: const Color(0xFF0F172A),
-                                  ),
-                                ),
-                                Text(
-                                  artisan.isVillageWorkshop
-                                      ? 'Heritage Village Crafter • Home Workshop'
-                                      : 'Master Artisan • Commercial Studio',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 12,
-                                    color: const Color(0xFF64748B),
-                                  ),
-                                ),
-                              ],
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.close_rounded,
+                            color: Color(0xFF94A3B8),
+                          ),
+                          onPressed: () => Navigator.of(dialogCtx).pop(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    if (artisan.isDualRole) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0FDF4),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFF86EFAC)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.swap_horiz_rounded,
+                              color: Color(0xFF16A34A),
+                              size: 20,
                             ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'DUAL ROLE ACCOUNT: This master is active as both an Artisan studio host and a Cultural Explorer.',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF15803D),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Column(
+                        children: [
+                          _buildModalInfoRow(
+                            'Premise Type',
+                            artisan.premiseTypeDisplay,
+                            artisan.isVillageWorkshop ? Icons.cottage_outlined : Icons.store_outlined,
+                          ),
+                          const Divider(height: 20),
+                          _buildModalInfoRow('Craft Specialization', artisan.category, Icons.category_outlined),
+                          const Divider(height: 20),
+                          _buildModalInfoRow(
+                            'Location & State',
+                            '${artisan.state}, Malaysia',
+                            Icons.location_on_outlined,
+                          ),
+                          const Divider(height: 20),
+                          _buildModalInfoRow(
+                            artisan.isVillageWorkshop ? 'SSM / Reg No. (Optional)' : 'SSM License No.',
+                            artisan.licenseNo.isNotEmpty && artisan.licenseNo != 'Pending' && artisan.licenseNo != 'N/A'
+                                ? artisan.licenseNo
+                                : (artisan.isVillageWorkshop ? 'Exempted (Village Crafter)' : 'SSM Verified'),
+                            Icons.verified_user_outlined,
+                          ),
+                          const Divider(height: 20),
+                          _buildModalInfoRow(
+                            'Experience & Mastery',
+                            artisan.experience,
+                            Icons.history_edu_outlined,
+                          ),
+                          const Divider(height: 20),
+                          _buildModalInfoRow(
+                            'Contact Phone',
+                            artisan.phone,
+                            Icons.phone_outlined,
+                          ),
+                          const Divider(height: 20),
+                          _buildModalInfoRow(
+                            'Contact Email',
+                            artisan.email,
+                            Icons.email_outlined,
+                          ),
+                          const Divider(height: 20),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.sensors_rounded,
+                                    size: 18,
+                                    color: artisan.isLiveOpen
+                                        ? const Color(0xFF10B981)
+                                        : const Color(0xFFF59E0B),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Studio Live Cultural Status',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 12,
+                                          color: const Color(0xFF64748B),
+                                        ),
+                                      ),
+                                      Text(
+                                        artisan.isSuspended
+                                            ? 'Suspended (Disabled)'
+                                            : (artisan.isLiveOpen
+                                                ? '🟢 Open for Live Demos'
+                                                : '🔴 In Session (Paused)'),
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: artisan.isSuspended
+                                              ? const Color(0xFFB91C1C)
+                                              : (artisan.isLiveOpen
+                                                  ? const Color(0xFF047857)
+                                                  : const Color(0xFFB45309)),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              Switch(
+                                value: artisan.isLiveOpen,
+                                activeThumbColor: const Color(0xFF10B981),
+                                onChanged: artisan.isSuspended
+                                    ? null
+                                    : (val) async {
+                                        await vm.toggleActiveArtisanLiveStatus(artisan.id);
+                                        if (dialogCtx.mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                '${artisan.name}: Studio live demo ${val ? "Opened" : "Paused"}',
+                                              ),
+                                              duration: const Duration(seconds: 2),
+                                            ),
+                                          );
+                                        }
+                                      },
+                              ),
+                            ],
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.close_rounded,
-                        color: Color(0xFF94A3B8),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Master Artisan Bio & Heritage Statement',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF475569),
                       ),
-                      onPressed: () => Navigator.of(dialogCtx).pop(),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                if (artisan.isDualRole) ...[
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF0FDF4),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFF86EFAC)),
+                    const SizedBox(height: 6),
+                    Text(
+                      artisan.bio,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12.5,
+                        color: const Color(0xFF334155),
+                        height: 1.4,
+                      ),
                     ),
-                    child: Row(
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        const Icon(
-                          Icons.swap_horiz_rounded,
-                          color: Color(0xFF16A34A),
-                          size: 20,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
+                        FilledButton(
+                          onPressed: () => Navigator.of(dialogCtx).pop(),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF004D40),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
                           child: Text(
-                            'DUAL ROLE ACCOUNT: This master is active as both an Artisan studio host and a Cultural Explorer.',
+                            'Close Profile',
                             style: GoogleFonts.plusJakartaSans(
-                              fontSize: 11,
                               fontWeight: FontWeight.bold,
-                              color: const Color(0xFF15803D),
                             ),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  child: Column(
-                    children: [
-                      _buildModalInfoRow(
-                        'Premise Type',
-                        artisan.premiseTypeDisplay,
-                        artisan.isVillageWorkshop ? Icons.cottage_outlined : Icons.store_outlined,
-                      ),
-                      const Divider(height: 20),
-                      _buildModalInfoRow('Craft Specialization', artisan.category, Icons.category_outlined),
-                      const Divider(height: 20),
-                      _buildModalInfoRow(
-                        'Location & State',
-                        '${artisan.state}, Malaysia',
-                        Icons.location_on_outlined,
-                      ),
-                      const Divider(height: 20),
-                      _buildModalInfoRow(
-                        artisan.isVillageWorkshop ? 'SSM / Reg No. (Optional)' : 'SSM License No.',
-                        artisan.licenseNo.isNotEmpty && artisan.licenseNo != 'Pending' && artisan.licenseNo != 'N/A'
-                            ? artisan.licenseNo
-                            : (artisan.isVillageWorkshop ? 'Exempted (Village Crafter)' : 'SSM Verified'),
-                        Icons.verified_user_outlined,
-                      ),
-                      const Divider(height: 20),
-                      _buildModalInfoRow(
-                        'Experience & Mastery',
-                        artisan.experience,
-                        Icons.history_edu_outlined,
-                      ),
-                      const Divider(height: 20),
-                      _buildModalInfoRow(
-                        'Contact Phone',
-                        artisan.phone,
-                        Icons.phone_outlined,
-                      ),
-                      const Divider(height: 20),
-                      _buildModalInfoRow(
-                        'Contact Email',
-                        artisan.email,
-                        Icons.email_outlined,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Master Artisan Bio & Heritage Statement',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF475569),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  artisan.bio,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 12.5,
-                    color: const Color(0xFF334155),
-                    height: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    FilledButton(
-                      onPressed: () => Navigator.of(dialogCtx).pop(),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFF004D40),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 12,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: Text(
-                        'Close Profile',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
                   ],
                 ),
-              ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
@@ -850,46 +923,88 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
                                 ),
                               ),
                               DataCell(
-                                InkWell(
-                                  onTap: artisan.isSuspended
-                                      ? null
-                                      : () => vm.toggleActiveArtisanLiveStatus(
-                                          artisan.id,
-                                        ),
-                                  borderRadius: BorderRadius.circular(10),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 6,
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Transform.scale(
+                                      scale: 0.8,
+                                      child: Switch(
+                                        value: artisan.isLiveOpen,
+                                        activeThumbColor: const Color(0xFF10B981),
+                                        onChanged: artisan.isSuspended
+                                            ? null
+                                            : (val) async {
+                                                await vm.toggleActiveArtisanLiveStatus(
+                                                  artisan.id,
+                                                );
+                                                if (context.mounted) {
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    SnackBar(
+                                                      content: Text(
+                                                        '${artisan.name}: Studio live demo ${val ? "Opened" : "Paused"}',
+                                                      ),
+                                                      duration: const Duration(seconds: 2),
+                                                    ),
+                                                  );
+                                                }
+                                              },
+                                      ),
                                     ),
-                                    decoration: BoxDecoration(
-                                      color: artisan.isSuspended
-                                          ? const Color(0xFFFEF2F2)
-                                          : (artisan.isLiveOpen
-                                                ? const Color(0xFFECFDF5)
-                                                : const Color(0xFFFFFBEB)),
+                                    const SizedBox(width: 4),
+                                    InkWell(
+                                      onTap: artisan.isSuspended
+                                          ? null
+                                          : () async {
+                                              await vm.toggleActiveArtisanLiveStatus(
+                                                artisan.id,
+                                              );
+                                              if (context.mounted) {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(
+                                                      '${artisan.name}: Studio live demo ${!artisan.isLiveOpen ? "Opened" : "Paused"}',
+                                                    ),
+                                                    duration: const Duration(seconds: 2),
+                                                  ),
+                                                );
+                                              }
+                                            },
                                       borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(
-                                        color: artisan.isSuspended
-                                            ? const Color(0xFFEF4444)
-                                            : (artisan.isLiveOpen
-                                                  ? const Color(0xFF10B981)
-                                                  : const Color(0xFFF59E0B)),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 6,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: artisan.isSuspended
+                                              ? const Color(0xFFFEF2F2)
+                                              : (artisan.isLiveOpen
+                                                    ? const Color(0xFFECFDF5)
+                                                    : const Color(0xFFFFFBEB)),
+                                          borderRadius: BorderRadius.circular(10),
+                                          border: Border.all(
+                                            color: artisan.isSuspended
+                                                ? const Color(0xFFEF4444)
+                                                : (artisan.isLiveOpen
+                                                      ? const Color(0xFF10B981)
+                                                      : const Color(0xFFF59E0B)),
+                                          ),
+                                        ),
+                                        child: Text(
+                                          artisan.statusText,
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                            color: artisan.isSuspended
+                                                ? const Color(0xFFB91C1C)
+                                                : (artisan.isLiveOpen
+                                                      ? const Color(0xFF047857)
+                                                      : const Color(0xFFB45309)),
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                    child: Text(
-                                      artisan.statusText,
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        color: artisan.isSuspended
-                                            ? const Color(0xFFB91C1C)
-                                            : (artisan.isLiveOpen
-                                                  ? const Color(0xFF047857)
-                                                  : const Color(0xFFB45309)),
-                                      ),
-                                    ),
-                                  ),
+                                  ],
                                 ),
                               ),
                               DataCell(
