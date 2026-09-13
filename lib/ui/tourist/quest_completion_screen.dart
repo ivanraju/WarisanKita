@@ -29,7 +29,7 @@ class _QuestCompletionScreenState extends State<QuestCompletionScreen> {
     {
       'title': '1. Arrive at the Workshop (DEFAULT TASK)',
       'subtitle':
-          '📍 Geofence proximity check within 50m of studio coordinates',
+          '📍 Geofence proximity check within 75m of studio coordinates',
       'done': true, // Auto-checked since user is 35m in range
       'isDefault': true,
       'requiresScan': false,
@@ -75,7 +75,7 @@ class _QuestCompletionScreenState extends State<QuestCompletionScreen> {
               SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'You are too far away to start this quest. Get within 50 meters of the workshop!',
+                  'You are too far away to start this quest. Get within 75 meters of the workshop!',
                 ),
               ),
             ],

@@ -12,6 +12,7 @@ class HeritageTask {
   final String? reviewedBy;
   final bool isSystemTask;
   final bool isArchived;
+  final String? qrCodeSecret;
 
   const HeritageTask({
     required this.id,
@@ -27,6 +28,7 @@ class HeritageTask {
     required this.reviewedBy,
     required this.isSystemTask,
     required this.isArchived,
+    this.qrCodeSecret,
   });
 
   factory HeritageTask.fromMap(Map<String, dynamic> map) {
@@ -44,6 +46,7 @@ class HeritageTask {
       reviewedBy: _optionalString(map['reviewed_by']),
       isSystemTask: _requiredBool(map, 'is_system_task'),
       isArchived: _requiredBool(map, 'is_archived'),
+      qrCodeSecret: _optionalString(map['qr_code_secret']),
     );
   }
 
