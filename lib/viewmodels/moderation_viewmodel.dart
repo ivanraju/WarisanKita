@@ -1643,20 +1643,25 @@ class ModerationViewModel extends ChangeNotifier {
 
     try {
       if (artisan.isRelocationRequest) {
+        final userIdx = _registeredUsers.indexWhere(
+          (u) => u.email.toLowerCase() == artisan.email.toLowerCase(),
+        );
+        final artisanProfileId = userIdx != -1
+            ? _registeredUsers[userIdx].artisanProfileId
+            : null;
+
         await _repository.approveRelocationRequest(
           email: artisan.email,
           newAddress: artisan.proposedAddress,
           newState: artisan.proposedState,
           newLat: artisan.proposedLatitude,
           newLng: artisan.proposedLongitude,
+          artisanProfileId: artisanProfileId,
         );
         _pendingArtisans.removeWhere(
           (p) =>
               p.email.toLowerCase() == artisan.email.toLowerCase() &&
               p.isRelocationRequest,
-        );
-        final userIdx = _registeredUsers.indexWhere(
-          (u) => u.email.toLowerCase() == artisan.email.toLowerCase(),
         );
         if (userIdx != -1) {
           final u = _registeredUsers[userIdx];
@@ -1689,16 +1694,21 @@ class ModerationViewModel extends ChangeNotifier {
               'Relocated from ${artisan.currentAddress ?? artisan.state} to ${artisan.proposedAddress ?? artisan.proposedState}',
           previousPremise: artisan.currentAddress ?? artisan.state,
           newPremise: artisan.proposedAddress ?? artisan.proposedState,
-          ssmNumber: artisan.ssmNumber,
-          ssmFileName: artisan.ssmFileName,
-          ssmFileUrl: artisan.ssmFileUrl,
-          certFileName: artisan.certFileName,
-          certFileUrl: artisan.certFileUrl,
-          photos: artisan.photos,
           relocationCertFileName: artisan.relocationCertFileName,
           relocationCertFileUrl: artisan.relocationCertFileUrl,
-          documents: (userIdx != -1 && userIdx < _registeredUsers.length)
-              ? _registeredUsers[userIdx].artisanDocuments
+          documents: artisan.relocationCertFileUrl != null
+              ? [
+                  {
+                    'name': artisan.relocationCertFileName ??
+                        'Proof of Premise Relocation / Council Permit',
+                    'file_name': artisan.relocationCertFileName ??
+                        'Proof of Premise Relocation / Council Permit',
+                    'url': artisan.relocationCertFileUrl,
+                    'file_url': artisan.relocationCertFileUrl,
+                    'type': 'relocation_certificate',
+                    'doc_type': 'RELOCATION_CERT',
+                  }
+                ]
               : const [],
         );
         notifyListeners();
@@ -2015,14 +2025,22 @@ class ModerationViewModel extends ChangeNotifier {
       }
 
       if (artisan.isRelocationRequest) {
-        await _repository.rejectRelocationRequest(email: artisan.email);
+        final userIdx = _registeredUsers.indexWhere(
+          (u) => u.email.toLowerCase() == artisan.email.toLowerCase(),
+        );
+        final artisanProfileId = userIdx != -1
+            ? _registeredUsers[userIdx].artisanProfileId
+            : null;
+
+        await _repository.rejectRelocationRequest(
+          email: artisan.email,
+          feedback: reason,
+          artisanProfileId: artisanProfileId,
+        );
         _pendingArtisans.removeWhere(
           (p) =>
               p.email.toLowerCase() == artisan.email.toLowerCase() &&
               p.isRelocationRequest,
-        );
-        final userIdx = _registeredUsers.indexWhere(
-          (u) => u.email.toLowerCase() == artisan.email.toLowerCase(),
         );
         if (userIdx != -1) {
           _registeredUsers[userIdx] = _registeredUsers[userIdx].copyWith(
@@ -2041,18 +2059,23 @@ class ModerationViewModel extends ChangeNotifier {
               : 'Relocation request rejected by Moderator.',
           previousPremise: artisan.currentAddress ?? artisan.state,
           newPremise: artisan.proposedAddress ?? artisan.proposedState,
-          ssmNumber: artisan.ssmNumber,
-          ssmFileName: artisan.ssmFileName,
-          ssmFileUrl: artisan.ssmFileUrl,
-          certFileName: artisan.certFileName,
-          certFileUrl: artisan.certFileUrl,
-          photos: artisan.photos,
           relocationCertFileName: artisan.relocationCertFileName,
           relocationCertFileUrl: artisan.relocationCertFileUrl,
           status: 'REJECTED',
-          documents: (userIdx != -1 && userIdx < _registeredUsers.length)
-              ? _registeredUsers[userIdx].artisanDocuments
-              : const <Map<String, dynamic>>[],
+          documents: artisan.relocationCertFileUrl != null
+              ? [
+                  {
+                    'name': artisan.relocationCertFileName ??
+                        'Proof of Premise Relocation / Council Permit',
+                    'file_name': artisan.relocationCertFileName ??
+                        'Proof of Premise Relocation / Council Permit',
+                    'url': artisan.relocationCertFileUrl,
+                    'file_url': artisan.relocationCertFileUrl,
+                    'type': 'relocation_certificate',
+                    'doc_type': 'RELOCATION_CERT',
+                  }
+                ]
+              : const [],
         );
         notifyListeners();
         return;
