@@ -20,7 +20,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _fullNameController;
   late final TextEditingController _usernameController;
-  late final TextEditingController _bioController;
   bool _isUploadingAvatar = false;
 
   bool _isCheckingUsername = false;
@@ -42,7 +41,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _fullNameController = TextEditingController(text: initialFullName);
     _usernameController = TextEditingController(text: initialUsername);
     _usernameController.addListener(_onUsernameChanged);
-    _bioController = TextEditingController(text: user?.bio ?? '');
   }
 
   void _onUsernameChanged() {
@@ -103,7 +101,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _usernameController.removeListener(_onUsernameChanged);
     _fullNameController.dispose();
     _usernameController.dispose();
-    _bioController.dispose();
     super.dispose();
   }
 
@@ -179,7 +176,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     final fullName = _fullNameController.text.trim();
     final username = _usernameController.text.trim().replaceAll('@', '');
-    final bio = _bioController.text.trim();
 
     final authVM = context.read<AuthViewModel>();
 
@@ -211,7 +207,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         username: username,
         displayName: fullName.isNotEmpty ? fullName : username,
         phone: phone,
-        bio: bio,
+        bio: user?.bio,
         studioName: user?.studioName,
         craftCategory: user?.craftCategory,
         state: user?.state,
@@ -240,7 +236,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           craftCategory: user.craftCategory,
           state: user.state,
           phone: phone,
-          bio: bio,
+          bio: user.bio,
         );
       }
     } catch (_) {}
@@ -514,6 +510,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     controller: _usernameController,
                     autovalidateMode: AutovalidateMode.onUserInteraction,
                     validator: ProfileValidator.validateUsername,
+                    textInputAction: TextInputAction.done,
+                    onFieldSubmitted: (_) => _handleSave(),
                     style: TextStyle(
                       color: isDark ? Colors.white : const Color(0xFF0F172A),
                     ),
@@ -565,54 +563,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         color: isDark
                             ? const Color(0xFFFFD54F)
                             : const Color(0xFF004D40),
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 22),
-
-                  // Bio / Explorer Note Field
-                  TextFormField(
-                    controller: _bioController,
-                    maxLines: 3,
-                    textInputAction: TextInputAction.done,
-                    onFieldSubmitted: (_) => FocusScope.of(context).unfocus(),
-                    autovalidateMode: AutovalidateMode.onUserInteraction,
-                    validator: (v) => ProfileValidator.validateBio(
-                      v,
-                      isRequired: false,
-                      minLength: 10,
-                      maxLength: 500,
-                    ),
-                    style: TextStyle(
-                      color: isDark ? Colors.white : const Color(0xFF0F172A),
-                    ),
-                    decoration: InputDecoration(
-                      labelText: tr('Heritage Bio / Explorer Note'),
-                      errorMaxLines: 3,
-                      errorStyle: TextStyle(
-                        fontSize: 12,
-                        height: 1.25,
-                        color: isDark
-                            ? const Color(0xFFFCA5A5)
-                            : const Color(0xFFDC2626),
-                      ),
-                      prefixIcon: Icon(
-                        Icons.description_outlined,
-                        color: isDark ? const Color(0xFFFFD54F) : null,
-                      ),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          Icons.keyboard_hide_rounded,
-                          color: isDark
-                              ? const Color(0xFFFFD54F)
-                              : const Color(0xFF004D40),
-                        ),
-                        tooltip: tr('Done / Exit Keyboard'),
-                        onPressed: () => FocusScope.of(context).unfocus(),
                       ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),

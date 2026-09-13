@@ -2051,6 +2051,9 @@ void main() {
         expect(find.text('Craft Specialization'), findsNothing);
         expect(find.text('Studio State / Location'), findsNothing);
 
+        // Verify heritage bio / explorer note is removed from tourist edit profile
+        expect(find.text('Heritage Bio / Explorer Note'), findsNothing);
+
         // Ensure dummy strings are not present
         expect(find.text('Aiman Haziq'), findsNothing);
         expect(find.text('aiman_haziq'), findsNothing);

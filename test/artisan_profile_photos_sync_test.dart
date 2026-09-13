@@ -351,6 +351,182 @@ void main() {
         // Crafting proof tile is verified and uploaded
         expect(find.text('Traditional Crafting Proof Photo'), findsOneWidget);
         expect(find.text('Uploaded & Verified Proof'), findsOneWidget);
+        expect(find.text('VIEW'), findsWidgets);
+        expect(find.text('UPLOADED'), findsNothing);
+      });
+    });
+
+    testWidgets('Proof of authenticity credentials show VIEW button and open preview without reuploading', (tester) async {
+        await HttpOverrides.runZoned(() async {
+          tester.view.physicalSize = const Size(1200, 3200);
+          tester.view.devicePixelRatio = 1.0;
+          addTearDown(tester.view.resetPhysicalSize);
+
+          SharedPreferences.setMockInitialValues({});
+          final service = SupabaseService();
+          final userRepo = UserRepository(service: service);
+          final artisanRepo = ArtisanRepository(service: service);
+          final authVM = AuthViewModel(repository: userRepo);
+          final moderationVM = ModerationViewModel(repository: userRepo);
+          final directoryVM = DirectoryViewModel(repository: artisanRepo);
+
+          const commercialArtisan = UserModel(
+            id: 'u_auth_doc_test',
+            email: 'auth_doc_artisan@warisankita.my',
+            username: 'auth_doc_artisan',
+            displayName: 'Master Weaver Che Wan',
+            role: 'Artisan',
+            roles: ['Artisan'],
+            status: 'ACTIVE',
+            artisanStatus: 'APPROVED',
+            premiseType: 'Commercial Studio',
+            studioName: 'Che Wan Commercial Studio',
+            craftCategory: 'Songket & Weaving',
+            artisanDocuments: [
+              {
+                'doc_type': 'SSM_BUSINESS_CERT',
+                'file_url': 'https://example.com/docs/ssm_cert.png',
+              },
+              {
+                'doc_type': 'KRAFTANGAN_MASTER_CERT',
+                'file_url': 'https://example.com/docs/master_cert.png',
+              },
+            ],
+          );
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('wk_last_auth_user', jsonEncode(commercialArtisan.toMap()));
+          await prefs.setString('wk_auth_email', commercialArtisan.email);
+          await prefs.setString('wk_active_role', commercialArtisan.role);
+          authVM.setCurrentUserForTesting(commercialArtisan);
+
+          await tester.pumpWidget(
+            MultiProvider(
+              providers: [
+                ChangeNotifierProvider<AuthViewModel>.value(value: authVM),
+                ChangeNotifierProvider<ModerationViewModel>.value(value: moderationVM),
+                ChangeNotifierProvider<DirectoryViewModel>.value(value: directoryVM),
+                Provider<SupabaseService>.value(value: service),
+              ],
+              child: const MaterialApp(
+                home: Scaffold(
+                  body: ProfileBuilderTab(),
+                ),
+              ),
+            ),
+          );
+          await tester.pump();
+          while (tester.takeException() != null) {}
+
+          // Both commercial credentials are uploaded
+          expect(find.text('Business Registration (SSM) Certificate'), findsOneWidget);
+          expect(find.text('Kraftangan Malaysia Master Certification'), findsOneWidget);
+
+          // Buttons display 'VIEW' and NOT 'UPLOAD' or 'UPLOADED'
+          expect(find.text('VIEW'), findsNWidgets(2));
+          expect(find.text('UPLOADED'), findsNothing);
+
+          // Tap the VIEW button on SSM Certificate to trigger in-app preview
+          await tester.tap(find.text('VIEW').first);
+          await tester.pumpAndSettle();
+
+          // Modal preview dialog is open showing title and Close button
+          expect(find.text('Business Registration (SSM) Certificate'), findsNWidgets(2)); // Tile + Dialog Title
+          expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+
+          // Close the SSM dialog
+          await tester.tap(find.byIcon(Icons.close_rounded));
+          await tester.pumpAndSettle();
+          expect(find.byIcon(Icons.close_rounded), findsNothing);
+
+          // Tap the second VIEW button (Kraftangan Malaysia Master Certification)
+          await tester.tap(find.text('VIEW').last);
+          await tester.pumpAndSettle();
+
+          // Modal preview dialog is open showing Kraftangan Master Cert title
+          expect(find.text('Kraftangan Malaysia Master Certification'), findsNWidgets(2)); // Tile + Dialog Title
+          expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+
+          // Close the Kraftangan dialog
+          await tester.tap(find.byIcon(Icons.close_rounded));
+          await tester.pumpAndSettle();
+          expect(find.byIcon(Icons.close_rounded), findsNothing);
+        });
+      });
+
+    testWidgets('Village Workshop with Kraftangan certification in tags displays VIEW button and opens preview', (tester) async {
+      await HttpOverrides.runZoned(() async {
+        tester.view.physicalSize = const Size(1200, 3200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+
+        final service = SupabaseService();
+        final userRepo = UserRepository(service: service);
+        final artisanRepo = ArtisanRepository(service: service);
+        final authVM = AuthViewModel(repository: userRepo);
+        final moderationVM = ModerationViewModel(repository: userRepo);
+        final directoryVM = DirectoryViewModel(repository: artisanRepo);
+
+        const villageArtisanWithCertInTags = UserModel(
+          id: 'u_village_cert_tag_test',
+          email: 'village_tag@warisankita.my',
+          username: 'village_tag',
+          displayName: 'Mak Cik Salmah',
+          role: 'Artisan',
+          roles: ['Artisan'],
+          status: 'ACTIVE',
+          artisanStatus: 'APPROVED',
+          premiseType: 'Home / Village Workshop (Bengkel Kediaman / Desa)',
+          studioName: 'Bengkel Anyaman Salmah',
+          craftCategory: 'Mengkuang Weaving',
+          tags: [
+            'doc_crafting_photo_url:https://example.com/craft_proof.jpg',
+            'doc_kraftangan_cert_url:https://example.com/kraftangan_master.jpg',
+          ],
+        );
+
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('wk_last_auth_user', jsonEncode(villageArtisanWithCertInTags.toMap()));
+        await prefs.setString('wk_auth_email', villageArtisanWithCertInTags.email);
+        await prefs.setString('wk_active_role', villageArtisanWithCertInTags.role);
+        authVM.setCurrentUserForTesting(villageArtisanWithCertInTags);
+
+        await tester.pumpWidget(
+          MultiProvider(
+            providers: [
+              ChangeNotifierProvider<AuthViewModel>.value(value: authVM),
+              ChangeNotifierProvider<ModerationViewModel>.value(value: moderationVM),
+              ChangeNotifierProvider<DirectoryViewModel>.value(value: directoryVM),
+              Provider<SupabaseService>.value(value: service),
+            ],
+            child: const MaterialApp(
+              home: Scaffold(
+                body: ProfileBuilderTab(),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        while (tester.takeException() != null) {}
+
+        // Both crafting photo and Kraftangan master cert are resolved and uploaded
+        expect(find.text('Traditional Crafting Proof Photo'), findsOneWidget);
+        expect(find.text('Kraftangan Malaysia Master Certification'), findsOneWidget);
+
+        // Both buttons show 'VIEW' and zero 'UPLOAD' or 'UPLOADED'
+        expect(find.text('VIEW'), findsNWidgets(2));
+        expect(find.text('UPLOAD'), findsNothing);
+        expect(find.text('UPLOADED'), findsNothing);
+
+        // Tap VIEW on Kraftangan Master Cert
+        await tester.tap(find.text('VIEW').last);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Kraftangan Malaysia Master Certification'), findsNWidgets(2));
+        expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+
+        await tester.tap(find.byIcon(Icons.close_rounded));
+        await tester.pumpAndSettle();
+        expect(find.byIcon(Icons.close_rounded), findsNothing);
       });
     });
   });
