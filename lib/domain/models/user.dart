@@ -89,7 +89,8 @@ class UserModel {
               premiseType!.contains('Home') ||
               premiseType!.contains('Kediaman'))) ||
       ssmNumber == 'VILLAGE_EXEMPT' ||
-      (ssmNumber != null && ssmNumber!.toLowerCase().contains('village'));
+      (ssmNumber != null && ssmNumber!.toLowerCase().contains('village')) ||
+      (ssmNumber != null && ssmNumber!.toLowerCase().contains('exempt'));
 
   String get premiseTypeDisplay =>
       isVillageWorkshop ? 'Home / Village Workshop' : 'Commercial Studio';
@@ -217,6 +218,65 @@ class UserModel {
     }
     return null;
   }
+
+  String? get craftingPhotoUrl {
+    for (final d in artisanDocuments) {
+      final type = d['doc_type']?.toString();
+      if (type == 'CRAFTING_PHOTO' ||
+          type == 'VILLAGE_CRAFTING_PHOTO' ||
+          type == 'STUDIO_PHOTO') {
+        final url = d['file_url']?.toString();
+        if (url != null && url.isNotEmpty) return url;
+      }
+    }
+    for (final t in tags) {
+      if (t.startsWith('doc_crafting_photo_url:')) {
+        final url = t.substring('doc_crafting_photo_url:'.length);
+        if (url.isNotEmpty) return url;
+      }
+      if (t.startsWith('doc_studio_photo:')) {
+        final url = t.substring('doc_studio_photo:'.length);
+        if (url.isNotEmpty) return url;
+      }
+    }
+    if (photos.isNotEmpty) return photos.first;
+    return null;
+  }
+
+  String? get craftingPhotoName {
+    for (final d in artisanDocuments) {
+      final type = d['doc_type']?.toString();
+      if (type == 'CRAFTING_PHOTO' ||
+          type == 'VILLAGE_CRAFTING_PHOTO' ||
+          type == 'STUDIO_PHOTO') {
+        final name = d['file_name']?.toString();
+        if (name != null && name.isNotEmpty) return name;
+        final url = d['file_url']?.toString();
+        if (url != null && url.isNotEmpty) return url.split('/').last;
+      }
+    }
+    for (final t in tags) {
+      if (t.startsWith('doc_crafting_photo_name:')) {
+        final name = t.substring('doc_crafting_photo_name:'.length);
+        if (name.isNotEmpty) return name;
+      }
+      if (t.startsWith('doc_studio_photo_name:')) {
+        final name = t.substring('doc_studio_photo_name:'.length);
+        if (name.isNotEmpty) return name;
+      }
+    }
+    final url = craftingPhotoUrl;
+    if (url != null && url.isNotEmpty) return url.split('/').last;
+    return null;
+  }
+
+  List<String> get toolsAndMaterials => tags
+      .where((t) =>
+          !t.startsWith('doc_') &&
+          !t.startsWith('premise:') &&
+          !t.startsWith('__'))
+      .toList();
+
 
   String? get ssmFileName {
     for (final d in artisanDocuments) {
@@ -571,6 +631,9 @@ class UserModel {
           docType = 'CRAFTING_PHOTO';
         } else if (t.startsWith('doc_crafting_photo_name:')) {
           fallbackName = t.substring('doc_crafting_photo_name:'.length);
+        } else if (t.startsWith('doc_studio_photo:') && fallbackUrl == null) {
+          fallbackUrl = t.substring('doc_studio_photo:'.length);
+          docType = 'CRAFTING_PHOTO';
         } else if (t.startsWith('doc_ssm_cert_url:') && fallbackUrl == null) {
           fallbackUrl = t.substring('doc_ssm_cert_url:'.length);
           docType = 'SSM_BUSINESS_CERT';

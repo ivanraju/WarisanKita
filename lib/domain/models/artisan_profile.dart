@@ -19,6 +19,7 @@ class ArtisanModel {
   final String? phone;
   final String? premiseType;
   final int? questPotentialXp;
+  final String? craftingPhotoUrl;
 
   ArtisanModel({
     required this.id,
@@ -41,18 +42,30 @@ class ArtisanModel {
     this.phone,
     this.premiseType,
     this.questPotentialXp,
+    this.craftingPhotoUrl,
   });
 
   bool get isVillageWorkshop =>
       premiseType?.toLowerCase().contains('village') == true ||
       premiseType?.toLowerCase().contains('desa') == true ||
-      premiseType?.toLowerCase().contains('kediaman') == true;
+      premiseType?.toLowerCase().contains('kediaman') == true ||
+      premiseType?.toLowerCase().contains('home') == true ||
+      ssmNumber == 'VILLAGE_EXEMPT' ||
+      (ssmNumber != null && ssmNumber!.toLowerCase().contains('exempt')) ||
+      (ssmNumber != null && ssmNumber!.toLowerCase().contains('village'));
 
   String get premiseTypeDisplay =>
       isVillageWorkshop ? 'Home / Village Workshop' : 'Commercial Studio';
 
   String get artisanTitle =>
       isVillageWorkshop ? 'Heritage Village Crafter' : 'Master Artisan';
+
+  List<String> get toolsAndMaterials => tags
+      .where((t) =>
+          !t.startsWith('doc_') &&
+          !t.startsWith('premise:') &&
+          !t.startsWith('__'))
+      .toList();
 
   ArtisanModel copyWith({
     String? id,
@@ -75,6 +88,7 @@ class ArtisanModel {
     String? phone,
     String? premiseType,
     int? questPotentialXp,
+    String? craftingPhotoUrl,
   }) {
     return ArtisanModel(
       id: id ?? this.id,
@@ -97,45 +111,87 @@ class ArtisanModel {
       phone: phone ?? this.phone,
       premiseType: premiseType ?? this.premiseType,
       questPotentialXp: questPotentialXp ?? this.questPotentialXp,
+      craftingPhotoUrl: craftingPhotoUrl ?? this.craftingPhotoUrl,
     );
   }
 
   factory ArtisanModel.fromMap(Map<String, dynamic> map) {
-    // Extract a nice image from the artisan_documents or users if available
-    String extractedImageUrl =
-        'https://placehold.co/800x600/004D40/FFFFFF.png?text=Artisan+Studio';
-    List<String> allImages = [];
+    final List<String> rawTags = map['tags'] != null
+        ? List<String>.from(map['tags'])
+        : [map['craft_category']?.toString() ?? 'Heritage'];
+    final bool isClosedTag = rawTags.contains('__LIVE_DEMO_CLOSED__');
 
-    if (map['artisan_documents'] != null) {
-      final docs = List<Map<String, dynamic>>.from(map['artisan_documents']);
-      final photos = docs
-          .where(
-            (d) =>
-                d['doc_type'] == 'STUDIO_PHOTO' ||
-                d['doc_type'] == 'PORTFOLIO_IMAGE',
-          )
-          .toList();
-
-      for (var photo in photos) {
-        if (photo['file_url'] != null) {
-          allImages.add(photo['file_url']);
+    // 1. Resolve administrative crafting proof photo (NEVER leaked into portfolio images)
+    String? resolvedCraftingPhoto;
+    final rawDocs = map['artisan_documents'] ?? map['documents'];
+    if (rawDocs != null) {
+      final docs = List<Map<String, dynamic>>.from(rawDocs);
+      for (final d in docs) {
+        final docType = d['doc_type']?.toString();
+        if (docType == 'CRAFTING_PHOTO' ||
+            docType == 'VILLAGE_CRAFTING_PHOTO' ||
+            docType == 'STUDIO_PHOTO') {
+          final url = d['file_url']?.toString();
+          if (url != null && url.isNotEmpty) {
+            resolvedCraftingPhoto = url;
+            break;
+          }
         }
       }
+    }
 
-      if (allImages.isNotEmpty) {
-        extractedImageUrl = allImages.first;
+    if (resolvedCraftingPhoto == null || resolvedCraftingPhoto.isEmpty) {
+      for (final t in rawTags) {
+        if (t.startsWith('doc_crafting_photo_url:')) {
+          final u = t.substring('doc_crafting_photo_url:'.length).trim();
+          if (u.isNotEmpty) {
+            resolvedCraftingPhoto = u;
+            break;
+          }
+        }
+        if (t.startsWith('doc_studio_photo:')) {
+          final u = t.substring('doc_studio_photo:'.length).trim();
+          if (u.isNotEmpty) {
+            resolvedCraftingPhoto = u;
+            break;
+          }
+        }
       }
     }
 
-    if (allImages.isEmpty &&
-        map['users'] != null &&
-        map['users']['avatar_url'] != null) {
-      extractedImageUrl = map['users']['avatar_url'];
-      allImages.add(extractedImageUrl);
+    // 2. Resolve portfolio images (ONLY actual portfolio showcase images, no proof photos)
+    final List<String> portfolioImages = [];
+    if (rawDocs != null) {
+      final docs = List<Map<String, dynamic>>.from(rawDocs);
+      for (final d in docs) {
+        if (d['doc_type'] == 'PORTFOLIO_IMAGE') {
+          final url = d['file_url']?.toString();
+          if (url != null &&
+              url.isNotEmpty &&
+              !portfolioImages.contains(url)) {
+            portfolioImages.add(url);
+          }
+        }
+      }
     }
 
-    if (allImages.isEmpty) {
-      allImages.add(extractedImageUrl);
+    // 3. Resolve display/cover image (portfolio first, then avatar, then cover photo, fallback to heritage craft photo)
+    String extractedImageUrl;
+    if (portfolioImages.isNotEmpty) {
+      extractedImageUrl = portfolioImages.first;
+    } else if (map['users'] != null &&
+        map['users']['avatar_url'] != null &&
+        map['users']['avatar_url'].toString().isNotEmpty) {
+      extractedImageUrl = map['users']['avatar_url'].toString();
+    } else if (map['avatar_url'] != null &&
+        map['avatar_url'].toString().isNotEmpty) {
+      extractedImageUrl = map['avatar_url'].toString();
+    } else if (map['cover_photo'] != null &&
+        map['cover_photo'].toString().isNotEmpty) {
+      extractedImageUrl = map['cover_photo'].toString();
+    } else {
+      extractedImageUrl =
+          'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&auto=format&fit=crop&q=80';
     }
 
     double? lat;
@@ -155,11 +211,6 @@ class ArtisanModel {
         lng = double.tryParse(map['longitude'].toString());
       }
     }
-
-    final List<String> rawTags = map['tags'] != null
-        ? List<String>.from(map['tags'])
-        : [map['craft_category']?.toString() ?? 'Heritage'];
-    final bool isClosedTag = rawTags.contains('__LIVE_DEMO_CLOSED__');
 
     final bool isLive =
         map['is_live_open'] ??
@@ -182,11 +233,17 @@ class ArtisanModel {
                     : null))
             ?.toString();
 
-    final String? premiseType =
+    final String? rawPremiseType =
         (map['premise_type'] ??
                 map['premiseType'] ??
                 (map['users'] != null ? map['users']['premise_type'] : null))
             ?.toString();
+
+    final String? premiseType = (rawPremiseType != null && rawPremiseType.isNotEmpty)
+        ? rawPremiseType
+        : ((ssm == 'VILLAGE_EXEMPT' || (ssm != null && ssm.toLowerCase().contains('exempt')))
+            ? 'Home / Village Workshop (Bengkel Kediaman / Desa)'
+            : null);
 
     List<Map<String, dynamic>> docsList = [];
     if (map['artisan_documents'] != null) {
@@ -218,8 +275,14 @@ class ArtisanModel {
           (map['workshops_hosted'] as num?)?.toInt() ??
           (map['workshopCount'] as num?)?.toInt() ??
           0,
-      tags: rawTags.where((t) => !t.startsWith('__')).toList(),
-      images: allImages,
+      tags: rawTags
+          .where((t) =>
+              !t.startsWith('__') &&
+              !t.startsWith('doc_') &&
+              !t.startsWith('premise:'))
+          .toList(),
+      images: portfolioImages,
+      craftingPhotoUrl: resolvedCraftingPhoto,
       address: map['address'] as String?,
       latitude: lat,
       longitude: lng,

@@ -165,14 +165,39 @@ class ModerationViewModel extends ChangeNotifier {
         }
       }
 
-      // Merge verified active masters so historical records are visible
+      // Merge verified active masters so historical records are visible and kept up to date
       for (final artisan in _activeArtisanMasters) {
-        final alreadyLogged = loaded.any(
+        final existingIdx = loaded.indexWhere(
           (r) =>
               r.targetEmail.toLowerCase() == artisan.email.toLowerCase() &&
               !r.isRelocation,
         );
-        if (!alreadyLogged) {
+
+        final matchingUser = _registeredUsers.firstWhere(
+          (u) => u.email.toLowerCase() == artisan.email.toLowerCase(),
+          orElse: () => const UserModel(id: '', email: '', role: 'Artisan'),
+        );
+
+        final currentDocs = matchingUser.artisanDocuments;
+
+        if (existingIdx != -1) {
+          final existing = loaded[existingIdx];
+          // Reconcile outdated names (e.g. 'evan' -> 'ivantest') or missing documents/category/state
+          final needsUpdate = existing.targetName != artisan.name ||
+              existing.craftCategory != artisan.category ||
+              existing.state != artisan.state ||
+              existing.ssmNumber != artisan.licenseNo ||
+              (existing.documents.isEmpty && currentDocs.isNotEmpty);
+          if (needsUpdate) {
+            loaded[existingIdx] = existing.copyWith(
+              targetName: artisan.name,
+              craftCategory: artisan.category,
+              state: artisan.state,
+              ssmNumber: artisan.licenseNo,
+              documents: currentDocs.isNotEmpty ? currentDocs : existing.documents,
+            );
+          }
+        } else {
           DateTime approvedDate;
           try {
             approvedDate =
@@ -182,11 +207,6 @@ class ModerationViewModel extends ChangeNotifier {
           } catch (_) {
             approvedDate = DateTime(2026, 1, 15);
           }
-
-          final matchingUser = _registeredUsers.firstWhere(
-            (u) => u.email.toLowerCase() == artisan.email.toLowerCase(),
-            orElse: () => const UserModel(id: '', email: '', role: 'Artisan'),
-          );
 
           loaded.add(
             ApprovalHistoryRecord(
@@ -201,7 +221,7 @@ class ModerationViewModel extends ChangeNotifier {
                   'SSM License: ${artisan.licenseNo} • Experience: ${artisan.experience}',
               newPremise: '${artisan.name} Studio (${artisan.state})',
               ssmNumber: artisan.licenseNo,
-              documents: matchingUser.artisanDocuments,
+              documents: currentDocs,
               approvedAt: approvedDate,
               approvedBy: 'Admin Moderator',
               status: 'APPROVED',
@@ -246,9 +266,32 @@ class ModerationViewModel extends ChangeNotifier {
         }
       }
 
+      // Prune obsolete auto-synthesized records for users that are no longer active artisans and not rejected
+      loaded.removeWhere((r) {
+        if (!r.id.startsWith('hist_')) return false;
+        if (r.isRelocation) return false;
+        if (r.status == 'REJECTED') {
+          return !_registeredUsers.any(
+            (u) =>
+                u.email.toLowerCase() == r.targetEmail.toLowerCase() &&
+                u.artisanStatus?.toUpperCase() == 'REJECTED',
+          );
+        }
+        return !_activeArtisanMasters.any(
+          (a) => a.email.toLowerCase() == r.targetEmail.toLowerCase(),
+        );
+      });
+
       loaded.sort((a, b) => b.approvedAt.compareTo(a.approvedAt));
       _approvalHistory.clear();
       _approvalHistory.addAll(loaded);
+
+      // Persist reconciled records to local storage to clean up stale cached data
+      try {
+        final listMap = loaded.map((r) => r.toMap()).toList();
+        await prefs.setString(_approvalHistoryKey, jsonEncode(listMap));
+      } catch (_) {}
+
       notifyListeners();
     } catch (e) {
       debugPrint('Error loading approval history: $e');

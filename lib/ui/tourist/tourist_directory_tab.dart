@@ -1984,14 +1984,35 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final artisanModel = artisan['artisanModel'] as ArtisanModel?;
     final questPotentialXp = artisanModel?.questPotentialXp;
+    final craftingPhoto = artisanModel?.craftingPhotoUrl;
     final rawImagesList = artisan['images'] is List
         ? List<String>.from(artisan['images'])
         : <String>[];
-    final defaultImage =
-        artisan['image']?.toString() ??
+    // Strictly exclude any crafting proof photos or verification certificates from rotating portfolio
+    final cleanImagesList = rawImagesList.where((img) {
+      if (craftingPhoto != null && craftingPhoto.isNotEmpty && img == craftingPhoto) {
+        return false;
+      }
+      final lower = img.toLowerCase();
+      if (lower.contains('crafting_photo') ||
+          lower.contains('ssm_') ||
+          lower.contains('mykad')) {
+        return false;
+      }
+      return true;
+    }).toList();
+
+    String defaultImage = artisan['image']?.toString() ??
         'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&auto=format&fit=crop&q=80';
-    final List<String> rawImages = rawImagesList.isNotEmpty
-        ? rawImagesList
+    if (craftingPhoto != null &&
+        craftingPhoto.isNotEmpty &&
+        defaultImage == craftingPhoto) {
+      defaultImage =
+          'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&auto=format&fit=crop&q=80';
+    }
+
+    final List<String> rawImages = cleanImagesList.isNotEmpty
+        ? cleanImagesList
         : [defaultImage];
     final List<String> images = rawImages.length > 1
         ? rawImages

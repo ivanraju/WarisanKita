@@ -150,9 +150,33 @@ class ArtisanProfileScreen extends StatelessWidget {
                     const Icon(Icons.cottage_outlined, size: 12, color: Color(0xFF047857)),
                     const SizedBox(width: 4),
                     Text(
-                      'HOME WORKSHOP',
+                      'HOME WORKSHOP (SSM EXEMPT)',
                       style: GoogleFonts.plusJakartaSans(
                         color: const Color(0xFF047857),
+                        fontWeight: FontWeight.w800,
+                        fontSize: 10,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE0F2FE),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.store_outlined, size: 12, color: Color(0xFF0369A1)),
+                    const SizedBox(width: 4),
+                    Text(
+                      'COMMERCIAL STUDIO',
+                      style: GoogleFonts.plusJakartaSans(
+                        color: const Color(0xFF0369A1),
                         fontWeight: FontWeight.w800,
                         fontSize: 10,
                         letterSpacing: 1,
