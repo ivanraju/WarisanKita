@@ -58,7 +58,9 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
     final liveArtisansCount = activeArtisans
         .where((a) => !a.isSuspended)
         .length;
-    final pendingArtisansCount = modVM.filteredArtisans.length;
+    final pendingNewArtisansCount = modVM.pendingNewProfilesCount;
+    final pendingRelocationsCount = modVM.pendingRelocationCount;
+    final totalPendingArtisansCount = modVM.totalPendingCount;
 
     final allUsers = modVM.registeredUsers;
     final totalUsersCount = allUsers.length;
@@ -97,7 +99,7 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
     final moderationHistory = forumVM.moderationHistory;
 
     final totalActionsRequired =
-        pendingArtisansCount + pendingTaskRequests + pendingForumReportsCount;
+        totalPendingArtisansCount + pendingTaskRequests + pendingForumReportsCount;
 
     return SingleChildScrollView(
       padding: EdgeInsets.all(isMobile ? 16.0 : 32.0),
@@ -181,15 +183,20 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
                     child: _buildMetricCard(
                       title: 'Verified Artisans',
                       value: '$liveArtisansCount Live',
-                      subtitle: pendingArtisansCount > 0
-                          ? '$pendingArtisansCount Pending Verification'
+                      subtitle: totalPendingArtisansCount > 0
+                          ? (pendingRelocationsCount > 0
+                              ? '$totalPendingArtisansCount Pending ($pendingRelocationsCount Relocations)'
+                              : '$totalPendingArtisansCount Pending Verification')
                           : 'All Studios Verified',
                       icon: Icons.storefront_rounded,
                       color: const Color(0xFF10B981),
                       bgColor: const Color(0xFFECFDF5),
                       onTap: () => widget.onNavigateTab(
-                        pendingArtisansCount > 0
-                            ? 'Pending Approvals'
+                        totalPendingArtisansCount > 0
+                            ? (pendingRelocationsCount > 0 &&
+                                    pendingNewArtisansCount == 0
+                                ? 'Workshop Relocations'
+                                : 'Pending Approvals')
                             : 'Active Artisans',
                       ),
                     ),
@@ -246,7 +253,8 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
           _buildActionCenterBanner(
             isMobile: isMobile,
             totalActions: totalActionsRequired,
-            pendingArtisans: pendingArtisansCount,
+            pendingArtisans: pendingNewArtisansCount,
+            pendingRelocations: pendingRelocationsCount,
             pendingTasks: pendingTaskRequests,
             pendingReports: pendingForumReportsCount,
           ),
@@ -353,6 +361,7 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
     required bool isMobile,
     required int totalActions,
     required int pendingArtisans,
+    int pendingRelocations = 0,
     required int pendingTasks,
     required int pendingReports,
   }) {
@@ -412,7 +421,12 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
     final List<String> details = [];
     if (pendingArtisans > 0) {
       details.add(
-        '$pendingArtisans artisan profile${pendingArtisans > 1 ? 's' : ''}',
+        '$pendingArtisans new artisan profile${pendingArtisans > 1 ? 's' : ''}',
+      );
+    }
+    if (pendingRelocations > 0) {
+      details.add(
+        '$pendingRelocations premise relocation${pendingRelocations > 1 ? 's' : ''}',
       );
     }
     if (pendingTasks > 0) {
@@ -503,6 +517,33 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
                         icon: const Icon(Icons.rate_review_rounded, size: 16),
                         label: Text(
                           'Artisans ($pendingArtisans)',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    if (pendingRelocations > 0)
+                      FilledButton.icon(
+                        onPressed: () =>
+                            widget.onNavigateTab('Workshop Relocations'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFFD97706),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        icon: const Icon(
+                          Icons.edit_location_alt_rounded,
+                          size: 16,
+                        ),
+                        label: Text(
+                          'Relocations ($pendingRelocations)',
                           style: GoogleFonts.plusJakartaSans(
                             fontWeight: FontWeight.bold,
                             fontSize: 12,
@@ -624,6 +665,32 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
                         icon: const Icon(Icons.rate_review_rounded, size: 18),
                         label: Text(
                           'Artisans ($pendingArtisans)',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    if (pendingRelocations > 0)
+                      FilledButton.icon(
+                        onPressed: () =>
+                            widget.onNavigateTab('Workshop Relocations'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFFD97706),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        icon: const Icon(
+                          Icons.edit_location_alt_rounded,
+                          size: 18,
+                        ),
+                        label: Text(
+                          'Relocations ($pendingRelocations)',
                           style: GoogleFonts.plusJakartaSans(
                             fontWeight: FontWeight.bold,
                           ),

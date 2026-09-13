@@ -1023,6 +1023,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                             reason: reason,
                             certUrl: certFileUrl,
                             certName: certFileName,
+                            artisanProfileId: currentUser.artisanProfileId,
                           );
 
                           if (mounted) {

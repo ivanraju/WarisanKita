@@ -199,6 +199,7 @@ class UserRepository {
     required String reason,
     String? certUrl,
     String? certName,
+    String? artisanProfileId,
   }) {
     return _service.submitRelocationRequest(
       email: email,
@@ -209,6 +210,7 @@ class UserRepository {
       reason: reason,
       certUrl: certUrl,
       certName: certName,
+      artisanProfileId: artisanProfileId,
     );
   }
 

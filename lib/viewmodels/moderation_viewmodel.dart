@@ -615,7 +615,8 @@ class ModerationViewModel extends ChangeNotifier {
 
       final matchesCategory =
           _selectedCategory == 'All Categories' ||
-          artisan.craftCategory == _selectedCategory;
+          artisan.craftCategory.trim().toLowerCase() ==
+              _selectedCategory.trim().toLowerCase();
 
       final matchesType =
           _applicationTypeFilter == 'All' ||
@@ -699,7 +700,8 @@ class ModerationViewModel extends ChangeNotifier {
 
       final matchesCategory =
           _selectedCategory == 'All Categories' ||
-          artisan.craftCategory == _selectedCategory;
+          artisan.craftCategory.trim().toLowerCase() ==
+              _selectedCategory.trim().toLowerCase();
 
       return matchesSearch && matchesCategory;
     }).toList();
@@ -856,6 +858,11 @@ class ModerationViewModel extends ChangeNotifier {
     _activeTab = tab;
     _searchQuery = '';
     _selectedCategory = 'All Categories';
+    if (tab == 'Workshop Relocations' || tab == 'Premise Relocations') {
+      _applicationTypeFilter = 'Relocations';
+    } else if (tab == 'Pending Approvals') {
+      _applicationTypeFilter = 'All';
+    }
     notifyListeners();
   }
 
