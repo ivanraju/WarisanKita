@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:warisan_kita/ui/auth/forgot_password_screen.dart';
 import 'package:warisan_kita/ui/auth/widgets/password_strength_meter.dart';
+import 'package:warisan_kita/domain/validators/profile_validator.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 
 class ChangePasswordDialog extends StatefulWidget {
@@ -90,6 +91,12 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
     } else if (newPassword.length < 8) {
       _newError = 'New password must be at least 8 characters';
       hasError = true;
+    } else {
+      final validationError = ProfileValidator.validatePassword(newPassword);
+      if (validationError != null) {
+        _newError = validationError;
+        hasError = true;
+      }
     }
 
     if (confirmPassword.isEmpty) {

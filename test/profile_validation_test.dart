@@ -1020,6 +1020,58 @@ void main() {
       expect(vm.currentUser, isNull);
       expect(backend.client.auth.currentSession, isNull);
     });
+
+    test('confirmPasswordReset enforces uppercase, lowercase, numbers, and rejects similar passwords', () async {
+      final backend = AuthBackend();
+      addTearDown(backend.client.dispose);
+      final service = SupabaseService(client: backend.client);
+      final vm = AuthViewModel(repository: UserRepository(service: service));
+      const email = 'complexity@test.com';
+      backend.add(email, password: 'OriginalPassword123!');
+      await service.signIn(email, 'OriginalPassword123!');
+      service.acceptPasswordRecovery(backend.client.auth.currentSession!);
+
+      // Missing uppercase
+      final noUpper = await vm.confirmPasswordReset(
+        email: email,
+        token: '',
+        newPassword: 'nouppercase123!',
+        confirmPassword: 'nouppercase123!',
+      );
+      expect(noUpper.success, isFalse);
+      expect(noUpper.message, contains('UPPERCASE'));
+
+      // Missing lowercase
+      final noLower = await vm.confirmPasswordReset(
+        email: email,
+        token: '',
+        newPassword: 'NOLOWERCASE123!',
+        confirmPassword: 'NOLOWERCASE123!',
+      );
+      expect(noLower.success, isFalse);
+      expect(noLower.message, contains('LOWERCASE'));
+
+      // Missing number
+      final noNum = await vm.confirmPasswordReset(
+        email: email,
+        token: '',
+        newPassword: 'NoNumberPassword!',
+        confirmPassword: 'NoNumberPassword!',
+      );
+      expect(noNum.success, isFalse);
+      expect(noNum.message, contains('NUMBER'));
+
+      // Case variation of current password (similar password)
+      final similar = await vm.confirmPasswordReset(
+        email: email,
+        token: '',
+        newPassword: 'Originalpassword123!',
+        confirmPassword: 'Originalpassword123!',
+      );
+      expect(similar.success, isFalse);
+      expect(similar.message, contains('TOO SIMILAR'));
+      expect(backend.passwordUpdates, 0);
+    });
   });
 
   group('Account Suspension and Moderation Lifecycle Tests', () {

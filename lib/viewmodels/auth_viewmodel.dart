@@ -1132,6 +1132,27 @@ class AuthViewModel extends ChangeNotifier {
         return AuthResult(success: false, message: _errorMessage);
       }
 
+      if (!RegExp(r'[A-Z]').hasMatch(cleanPassword)) {
+        _errorMessage = 'PASSWORD MUST CONTAIN AT LEAST ONE UPPERCASE LETTER';
+        _isLoading = false;
+        notifyListeners();
+        return AuthResult(success: false, message: _errorMessage);
+      }
+
+      if (!RegExp(r'[a-z]').hasMatch(cleanPassword)) {
+        _errorMessage = 'PASSWORD MUST CONTAIN AT LEAST ONE LOWERCASE LETTER';
+        _isLoading = false;
+        notifyListeners();
+        return AuthResult(success: false, message: _errorMessage);
+      }
+
+      if (!RegExp(r'\d').hasMatch(cleanPassword)) {
+        _errorMessage = 'PASSWORD MUST CONTAIN AT LEAST ONE NUMBER';
+        _isLoading = false;
+        notifyListeners();
+        return AuthResult(success: false, message: _errorMessage);
+      }
+
       // Constraint C3: Passwords match
       if (cleanPassword != cleanConfirm) {
         _errorMessage = 'PASSWORDS DO NOT MATCH';
@@ -1193,6 +1214,24 @@ class AuthViewModel extends ChangeNotifier {
     if (cleanCurrent.toLowerCase() == cleanNew.toLowerCase()) {
       _errorMessage =
           'NEW PASSWORD IS TOO SIMILAR TO YOUR CURRENT PASSWORD: Please choose a completely new password, not just a change in uppercase or lowercase.';
+      notifyListeners();
+      return AuthResult(success: false, message: _errorMessage);
+    }
+
+    if (!RegExp(r'[A-Z]').hasMatch(cleanNew)) {
+      _errorMessage = 'PASSWORD MUST CONTAIN AT LEAST ONE UPPERCASE LETTER';
+      notifyListeners();
+      return AuthResult(success: false, message: _errorMessage);
+    }
+
+    if (!RegExp(r'[a-z]').hasMatch(cleanNew)) {
+      _errorMessage = 'PASSWORD MUST CONTAIN AT LEAST ONE LOWERCASE LETTER';
+      notifyListeners();
+      return AuthResult(success: false, message: _errorMessage);
+    }
+
+    if (!RegExp(r'\d').hasMatch(cleanNew)) {
+      _errorMessage = 'PASSWORD MUST CONTAIN AT LEAST ONE NUMBER';
       notifyListeners();
       return AuthResult(success: false, message: _errorMessage);
     }
