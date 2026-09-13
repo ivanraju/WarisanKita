@@ -116,8 +116,15 @@ class _ArtisanHeritageTaskManagementViewState
     if (submitted == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Heritage task submitted for admin approval.'),
-          backgroundColor: _green,
+          content: Text(
+            'Heritage task submitted for admin approval.',
+            style: TextStyle(
+              color: Color(0xFFFFF8E1),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          backgroundColor: Color(0xFF00695C),
+          behavior: SnackBarBehavior.floating,
         ),
       );
     }
@@ -130,8 +137,13 @@ class _ArtisanHeritageTaskManagementViewState
         const SnackBar(
           content: Text(
             'A cultural quest must be assigned before you can add tasks.',
+            style: TextStyle(
+              color: Color(0xFFFFF8E1),
+              fontWeight: FontWeight.w600,
+            ),
           ),
           backgroundColor: Color(0xFF9A6700),
+          behavior: SnackBarBehavior.floating,
         ),
       );
       return;
@@ -177,8 +189,13 @@ class _ArtisanHeritageTaskManagementViewState
                 : rejectedChange != null
                 ? 'Task update revised and resubmitted for admin approval.'
                 : 'Task edit request submitted for admin approval.',
+            style: const TextStyle(
+              color: Color(0xFFFFF8E1),
+              fontWeight: FontWeight.w600,
+            ),
           ),
-          backgroundColor: _green,
+          backgroundColor: const Color(0xFF00695C),
+          behavior: SnackBarBehavior.floating,
         ),
       );
     }
@@ -216,15 +233,19 @@ class _ArtisanHeritageTaskManagementViewState
   }
 
   void _showPendingTaskSubmission(HeritageTask task) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) => Container(
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
-        decoration: const BoxDecoration(
-          color: Color(0xFFF7F5EF),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF0D2825) : const Color(0xFFF7F5EF),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
+          border: isDark
+              ? const Border(top: BorderSide(color: Color(0xFF31524B)))
+              : null,
         ),
         child: SafeArea(
           top: false,
@@ -234,25 +255,46 @@ class _ArtisanHeritageTaskManagementViewState
             children: [
               Text(
                 'New Task Submission',
-                style: GoogleFonts.dmSerifDisplay(color: _green, fontSize: 25),
+                style: GoogleFonts.dmSerifDisplay(
+                  color: isDark ? const Color(0xFFFFF8E1) : _green,
+                  fontSize: 25,
+                ),
               ),
               const SizedBox(height: 6),
-              const Text(
+              Text(
                 'This task will become active only after an admin approves it.',
-                style: TextStyle(color: Color(0xFF64748B), fontSize: 12),
+                style: TextStyle(
+                  color: isDark
+                      ? const Color(0xFFB8CCC6)
+                      : const Color(0xFF64748B),
+                  fontSize: 12,
+                ),
               ),
               const SizedBox(height: 18),
-              _changeVersion('SUBMITTED TASK', [
-                ('Title', task.title),
-                ('Type', task.isRequired ? 'Required' : 'Optional'),
-                ('XP reward', '${task.xpReward} XP'),
-              ], pending: true),
+              _changeVersion(
+                'SUBMITTED TASK',
+                [
+                  ('Title', task.title),
+                  ('Type', task.isRequired ? 'Required' : 'Optional'),
+                  ('XP reward', '${task.xpReward} XP'),
+                ],
+                pending: true,
+                isDark: isDark,
+              ),
               const SizedBox(height: 20),
               Row(
                 children: [
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => Navigator.pop(sheetContext),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: isDark
+                            ? const Color(0xFFFFD54F)
+                            : _green,
+                        side: BorderSide(
+                          color: isDark ? const Color(0xFFFFD54F) : _green,
+                        ),
+                      ),
                       child: const Text('Done'),
                     ),
                   ),
@@ -265,7 +307,12 @@ class _ArtisanHeritageTaskManagementViewState
                           if (mounted) _showEditTaskSheet(task);
                         });
                       },
-                      style: FilledButton.styleFrom(backgroundColor: _green),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: isDark
+                            ? const Color(0xFF008F78)
+                            : _green,
+                        foregroundColor: const Color(0xFFFFF8E1),
+                      ),
                       icon: const Icon(Icons.edit_outlined, size: 17),
                       label: const Text('Edit Submission'),
                     ),
@@ -348,7 +395,12 @@ class _ArtisanHeritageTaskManagementViewState
                     Expanded(
                       child: FilledButton(
                         onPressed: () => Navigator.pop(sheetContext),
-                        style: FilledButton.styleFrom(backgroundColor: _green),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: isDark
+                              ? const Color(0xFF008F78)
+                              : _green,
+                          foregroundColor: const Color(0xFFFFF8E1),
+                        ),
                         child: const Text('Done'),
                       ),
                     ),
@@ -455,8 +507,15 @@ class _ArtisanHeritageTaskManagementViewState
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Task deletion request submitted for admin approval.'),
-          backgroundColor: _green,
+          content: Text(
+            'Task deletion request submitted for admin approval.',
+            style: TextStyle(
+              color: Color(0xFFFFF8E1),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          backgroundColor: Color(0xFF00695C),
+          behavior: SnackBarBehavior.floating,
         ),
       );
     }
@@ -508,8 +567,15 @@ class _ArtisanHeritageTaskManagementViewState
               ? successMessage
               : viewModel.artisanTaskError ??
                     'The request could not be updated. Please retry.',
+          style: const TextStyle(
+            color: Color(0xFFFFF8E1),
+            fontWeight: FontWeight.w600,
+          ),
         ),
-        backgroundColor: success ? _green : const Color(0xFFB42318),
+        backgroundColor: success
+            ? const Color(0xFF00695C)
+            : const Color(0xFFB42318),
+        behavior: SnackBarBehavior.floating,
         action: success
             ? null
             : SnackBarAction(
@@ -603,8 +669,15 @@ class _ArtisanHeritageTaskManagementViewState
     if (secret == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('This workshop QR has not been configured yet.'),
+          content: Text(
+            'This workshop QR has not been configured yet.',
+            style: TextStyle(
+              color: Color(0xFFFFF8E1),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           backgroundColor: Color(0xFFB42318),
+          behavior: SnackBarBehavior.floating,
         ),
       );
       return;
@@ -736,9 +809,7 @@ class _ArtisanHeritageTaskManagementViewState
       ),
       body: DecoratedBox(
         decoration: BoxDecoration(
-          color: isDark
-              ? const Color(0xFF041412)
-              : const Color(0xFFF7F5EF),
+          color: isDark ? const Color(0xFF041412) : const Color(0xFFF7F5EF),
           image: DecorationImage(
             image: const AssetImage(
               'assets/images/heritage_passport_background.png',
@@ -747,10 +818,7 @@ class _ArtisanHeritageTaskManagementViewState
             repeat: ImageRepeat.repeatY,
             opacity: isDark ? 0.28 : 0.55,
             colorFilter: isDark
-                ? const ColorFilter.mode(
-                    Color(0xFF2A6A5C),
-                    BlendMode.modulate,
-                  )
+                ? const ColorFilter.mode(Color(0xFF2A6A5C), BlendMode.modulate)
                 : null,
           ),
         ),
@@ -986,22 +1054,56 @@ class _ArtisanHeritageTaskManagementViewState
         ? 'REJECTED'
         : task.status.replaceAll('_', ' ').toUpperCase();
     final statusColor = switch (displayStatus) {
-      'APPROVED' => const Color(0xFF087F5B),
-      'REJECTED' => const Color(0xFFB42318),
-      'DELETE PENDING' => const Color(0xFF9F5C5C),
-      'ARCHIVED' => const Color(0xFF64748B),
-      _ => const Color(0xFF9A6700),
+      'APPROVED' => isDark ? const Color(0xFF6EE7B7) : const Color(0xFF087F5B),
+      'REJECTED' => isDark ? const Color(0xFFFCA5A5) : const Color(0xFFB42318),
+      'DELETE PENDING' =>
+        isDark ? const Color(0xFFFDBA74) : const Color(0xFF9F5C5C),
+      'ARCHIVED' => isDark ? const Color(0xFFCBD5E1) : const Color(0xFF64748B),
+      _ => isDark ? const Color(0xFFFFD54F) : const Color(0xFF9A6700),
     };
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0D2825) : Colors.white,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isDark
+              ? [
+                  statusColor.withValues(alpha: 0.10),
+                  const Color(0xFF12332D),
+                  const Color(0xFF0D2825),
+                ]
+              : [
+                  Color.alphaBlend(
+                    statusColor.withValues(alpha: 0.12),
+                    Colors.white,
+                  ),
+                  const Color(0xFFFFFBF2),
+                  Colors.white,
+                ],
+          stops: isDark ? const [0, 0.42, 1] : const [0, 0.46, 1],
+        ),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFE3E6E2),
+          color: isDark
+              ? statusColor.withValues(alpha: 0.34)
+              : Color.alphaBlend(
+                  statusColor.withValues(alpha: 0.18),
+                  const Color(0xFFE3E6E2),
+                ),
+          width: isDark ? 1.2 : 1,
         ),
+        boxShadow: isDark
+            ? const [
+                BoxShadow(
+                  color: Color(0x33000000),
+                  blurRadius: 14,
+                  offset: Offset(0, 6),
+                ),
+              ]
+            : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1010,8 +1112,8 @@ class _ArtisanHeritageTaskManagementViewState
             children: [
               Text(
                 '${index + 1}'.padLeft(2, '0'),
-                style: const TextStyle(
-                  color: _gold,
+                style: TextStyle(
+                  color: isDark ? const Color(0xFFFFD54F) : _gold,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -1019,8 +1121,11 @@ class _ArtisanHeritageTaskManagementViewState
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                 decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.10),
+                  color: statusColor.withValues(alpha: isDark ? 0.18 : 0.10),
                   borderRadius: BorderRadius.circular(999),
+                  border: isDark
+                      ? Border.all(color: statusColor.withValues(alpha: 0.24))
+                      : null,
                 ),
                 child: Text(
                   displayStatus,
@@ -1037,7 +1142,7 @@ class _ArtisanHeritageTaskManagementViewState
           Text(
             task.title,
             style: TextStyle(
-              color: isDark ? Colors.white : const Color(0xFF183B34),
+              color: isDark ? const Color(0xFFFFF8E1) : const Color(0xFF183B34),
               fontSize: 16,
               fontWeight: FontWeight.w700,
             ),
@@ -1050,12 +1155,19 @@ class _ArtisanHeritageTaskManagementViewState
                 decoration: BoxDecoration(
                   color: task.isRequired
                       ? (isDark
-                            ? const Color(0xFF1E3A34)
+                            ? const Color(0xFF174B40)
                             : const Color(0xFFE0F2ED))
                       : (isDark
-                            ? const Color(0xFF041412)
+                            ? const Color(0xFF172A27)
                             : const Color(0xFFF1F3F2)),
                   borderRadius: BorderRadius.circular(999),
+                  border: isDark
+                      ? Border.all(
+                          color: task.isRequired
+                              ? const Color(0xFF2A6B5D)
+                              : const Color(0xFF36554D),
+                        )
+                      : null,
                 ),
                 child: Text(
                   task.isRequired ? 'REQUIRED' : 'OPTIONAL',
@@ -1071,8 +1183,8 @@ class _ArtisanHeritageTaskManagementViewState
               const Spacer(),
               Text(
                 '+${task.xpReward} XP',
-                style: const TextStyle(
-                  color: _gold,
+                style: TextStyle(
+                  color: isDark ? const Color(0xFFFFD54F) : _gold,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -1120,10 +1232,12 @@ class _ArtisanHeritageTaskManagementViewState
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           '🕒 Task pending admin review',
                           style: TextStyle(
-                            color: Color(0xFF9A6700),
+                            color: isDark
+                                ? const Color(0xFFFFD54F)
+                                : const Color(0xFF9A6700),
                             fontSize: 11,
                             fontWeight: FontWeight.w800,
                           ),
@@ -1172,8 +1286,10 @@ class _ArtisanHeritageTaskManagementViewState
                           hasPendingDelete
                               ? '🕒 Deletion pending admin review'
                               : '🕒 Update pending admin review',
-                          style: const TextStyle(
-                            color: Color(0xFF9A6700),
+                          style: TextStyle(
+                            color: isDark
+                                ? const Color(0xFFFFD54F)
+                                : const Color(0xFF9A6700),
                             fontSize: 11,
                             fontWeight: FontWeight.w800,
                           ),
@@ -1183,8 +1299,8 @@ class _ArtisanHeritageTaskManagementViewState
                           hasPendingDelete
                               ? 'View deletion request ›'
                               : 'View changes ›',
-                          style: const TextStyle(
-                            color: _green,
+                          style: TextStyle(
+                            color: isDark ? const Color(0xFF6EE7B7) : _green,
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
                           ),
