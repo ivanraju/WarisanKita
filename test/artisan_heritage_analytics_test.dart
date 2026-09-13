@@ -163,6 +163,32 @@ void main() {
     );
     expect(find.text('Retry'), findsOneWidget);
   });
+
+  testWidgets('dashboard header renders full title without truncation on small screens', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 640);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final service = _AnalyticsService(() async => {
+      'visits': [],
+      'stamps': [],
+      'completions': [],
+      'stamps_available': true,
+      'completions_available': true,
+    });
+
+    await _pumpDashboard(tester, service);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Master Artisan Command Dashboard'), findsOneWidget);
+    expect(find.byType(FittedBox), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 Future<void> _pumpDashboard(WidgetTester tester, _AnalyticsService service) {
