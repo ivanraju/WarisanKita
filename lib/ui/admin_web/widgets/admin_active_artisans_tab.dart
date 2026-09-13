@@ -918,7 +918,6 @@ class _AdminActiveArtisansTabState extends State<AdminActiveArtisansTab> {
                                           : 'License: ${artisan.licenseNo}',
                                       style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 11, color: const Color(0xFF004D40)),
                                     ),
-                                    Text('🏅 ${artisan.plaques} Digital Plaques Issued', style: GoogleFonts.plusJakartaSans(fontSize: 10, color: const Color(0xFFD97706), fontWeight: FontWeight.bold)),
                                   ],
                                 ),
                               ),
