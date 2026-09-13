@@ -11,7 +11,7 @@ class RoleSelectionScreen extends StatelessWidget {
   const RoleSelectionScreen({super.key});
 
   Future<void> _launchExternalAdminBrowser(BuildContext context) async {
-    final Uri url = Uri.parse('https://warisan-kita.vercel.app');
+    final Uri url = Uri.parse('https://warisan-kita-nine.vercel.app');
 
     try {
       final bool launched = await launchUrl(url, mode: LaunchMode.externalApplication);
@@ -22,7 +22,7 @@ class RoleSelectionScreen extends StatelessWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('🌐 Opening https://warisan-kita.vercel.app in external browser...'),
+            content: Text('🌐 Opening https://warisan-kita-nine.vercel.app in external browser...'),
             backgroundColor: Color(0xFF004D40),
             behavior: SnackBarBehavior.floating,
           ),
@@ -32,7 +32,7 @@ class RoleSelectionScreen extends StatelessWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('🌐 Browser Launched: https://warisan-kita.vercel.app ($e)'),
+            content: Text('🌐 Browser Launched: https://warisan-kita-nine.vercel.app ($e)'),
             backgroundColor: const Color(0xFF004D40),
             behavior: SnackBarBehavior.floating,
           ),
@@ -60,7 +60,7 @@ class RoleSelectionScreen extends StatelessWidget {
           ],
         ),
         content: Text(
-          'The Web Admin Moderation Portal is hosted externally at https://warisan-kita.vercel.app.\n\nChoose how you would like to open the Admin Portal:',
+          'The Web Admin Moderation Portal is hosted externally at https://warisan-kita-nine.vercel.app.\n\nChoose how you would like to open the Admin Portal:',
           style: GoogleFonts.plusJakartaSans(fontSize: 13, height: 1.5),
         ),
         actions: [
