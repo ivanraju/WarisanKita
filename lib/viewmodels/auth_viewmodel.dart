@@ -769,9 +769,9 @@ class AuthViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Constraint C1: Password length > 7 characters
-      if (cleanPassword.length <= 7) {
-        _errorMessage = 'PASSWORD MUST BE GREATER THAN 7 CHARACTERS';
+      // Constraint C1: Password length >= 8 characters
+      if (cleanPassword.length < 8) {
+        _errorMessage = 'PASSWORD MUST BE AT LEAST 8 CHARACTERS';
         _isLoading = false;
         notifyListeners();
         return AuthResult(success: false, message: _errorMessage);
@@ -879,9 +879,9 @@ class AuthViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Constraint C1: Password length > 7 characters
-      if (cleanPassword.length <= 7) {
-        _errorMessage = 'PASSWORD MUST BE GREATER THAN 7 CHARACTERS';
+      // Constraint C1: Password length >= 8 characters
+      if (cleanPassword.length < 8) {
+        _errorMessage = 'PASSWORD MUST BE AT LEAST 8 CHARACTERS';
         _isLoading = false;
         notifyListeners();
         return AuthResult(success: false, message: _errorMessage);
@@ -1158,9 +1158,9 @@ class AuthViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Constraint C2: Password length > 7 characters
-      if (cleanPassword.length <= 7) {
-        _errorMessage = 'PASSWORD MUST BE GREATER THAN 7 CHARACTERS';
+      // Constraint C2: Password length >= 8 characters
+      if (cleanPassword.length < 8) {
+        _errorMessage = 'PASSWORD MUST BE AT LEAST 8 CHARACTERS';
         _isLoading = false;
         notifyListeners();
         return AuthResult(success: false, message: _errorMessage);
@@ -1212,8 +1212,8 @@ class AuthViewModel extends ChangeNotifier {
       return AuthResult(success: false, message: _errorMessage);
     }
 
-    if (cleanNew.length <= 7) {
-      _errorMessage = 'PASSWORD MUST BE GREATER THAN 7 CHARACTERS';
+    if (cleanNew.length < 8) {
+      _errorMessage = 'PASSWORD MUST BE AT LEAST 8 CHARACTERS';
       notifyListeners();
       return AuthResult(success: false, message: _errorMessage);
     }
