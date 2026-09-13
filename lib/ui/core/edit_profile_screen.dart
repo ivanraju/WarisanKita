@@ -21,9 +21,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late final TextEditingController _fullNameController;
   late final TextEditingController _usernameController;
   late final TextEditingController _bioController;
-  late final TextEditingController _studioNameController;
-  String _selectedCraftCategory = 'Pottery & Ceramics';
-  String _selectedState = 'Melaka';
   bool _isUploadingAvatar = false;
 
   bool _isCheckingUsername = false;
@@ -31,28 +28,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   String? _usernameStatusMessage;
   Timer? _usernameDebounce;
   String? _initialUsername;
-
-  late final List<String> _craftCategories = [
-    'Pottery & Ceramics',
-    'Batik Weaving',
-    'Wood Carving',
-    'Songket Weaving',
-    'Pewter Craft',
-    'Handicraft & Heritage',
-    'Woodwork',
-    'Songket & Weaving',
-    'Batik & Textiles',
-    'Metalwork & Pewter',
-    'Heritage Food',
-    'Wayang Kulit & Puppetry',
-    'Rattan & Bamboo Craft',
-    'Wau & Kite Making',
-    'Metalwork & Kris',
-  ];
-
-  late final List<String> _malaysianStates = List<String>.from(
-    ProfileValidator.supportedStates,
-  );
 
   @override
   void initState() {
@@ -68,24 +43,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _usernameController = TextEditingController(text: initialUsername);
     _usernameController.addListener(_onUsernameChanged);
     _bioController = TextEditingController(text: user?.bio ?? '');
-    _studioNameController = TextEditingController(
-      text: user?.studioName ?? user?.displayName ?? '',
-    );
-
-    if (user?.craftCategory != null && user!.craftCategory!.trim().isNotEmpty) {
-      final craft = user.craftCategory!.trim();
-      if (!_craftCategories.contains(craft)) {
-        _craftCategories.add(craft);
-      }
-      _selectedCraftCategory = craft;
-    }
-    if (user?.state != null && user!.state!.trim().isNotEmpty) {
-      final st = user.state!.trim();
-      if (!_malaysianStates.contains(st)) {
-        _malaysianStates.add(st);
-      }
-      _selectedState = st;
-    }
   }
 
   void _onUsernameChanged() {
@@ -147,7 +104,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _fullNameController.dispose();
     _usernameController.dispose();
     _bioController.dispose();
-    _studioNameController.dispose();
     super.dispose();
   }
 
@@ -224,7 +180,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final fullName = _fullNameController.text.trim();
     final username = _usernameController.text.trim().replaceAll('@', '');
     final bio = _bioController.text.trim();
-    final studioName = _studioNameController.text.trim();
 
     final authVM = context.read<AuthViewModel>();
 
@@ -250,15 +205,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
     final user = authVM.currentUser;
     final phone = user?.phone;
-    final isArtisan =
-        user?.isArtisan == true ||
-        (user?.role.toLowerCase().contains('artisan') ?? false);
-
-    final finalStudioName = isArtisan
-        ? (studioName.isNotEmpty
-              ? studioName
-              : (fullName.isNotEmpty ? fullName : username))
-        : null;
 
     try {
       await authVM.updateProfile(
@@ -266,9 +212,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         displayName: fullName.isNotEmpty ? fullName : username,
         phone: phone,
         bio: bio,
-        studioName: finalStudioName,
-        craftCategory: isArtisan ? _selectedCraftCategory : null,
-        state: isArtisan ? _selectedState : null,
+        studioName: user?.studioName,
+        craftCategory: user?.craftCategory,
+        state: user?.state,
       );
     } catch (e) {
       if (!mounted) return;
@@ -290,9 +236,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           email: user!.email,
           username: username,
           displayName: fullName.isNotEmpty ? fullName : username,
-          studioName: finalStudioName,
-          craftCategory: isArtisan ? _selectedCraftCategory : null,
-          state: isArtisan ? _selectedState : null,
+          studioName: user.studioName,
+          craftCategory: user.craftCategory,
+          state: user.state,
           phone: phone,
           bio: bio,
         );
@@ -302,13 +248,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
+      const SnackBar(
         content: Text(
-          isArtisan
-              ? 'Artisan Studio profile synced successfully!'
-              : 'Explorer profile updated successfully!',
+          'Profile updated successfully!',
         ),
-        backgroundColor: const Color(0xFF004D40),
+        backgroundColor: Color(0xFF004D40),
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -350,10 +294,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
 
     final initials = user.initials;
-    final isArtisan =
-        user.isArtisan ||
-        user.role == 'Artisan' ||
-        user.role.toLowerCase().contains('artisan');
 
     return HeritageBackground(
       child: Scaffold(
@@ -679,186 +619,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       ),
                     ),
                   ),
-
-                  if (isArtisan) ...[
-                    const SizedBox(height: 32),
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? const Color(0xFF78350F).withValues(alpha: 0.35)
-                            : const Color(0xFFFEF3C7),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: const Color(
-                            0xFFF59E0B,
-                          ).withValues(alpha: isDark ? 0.6 : 1.0),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.swap_horiz_rounded,
-                                color: isDark
-                                    ? const Color(0xFFFFD54F)
-                                    : const Color(0xFFB45309),
-                                size: 22,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                tr('DUAL ROLE SYNC: ARTISAN STUDIO'),
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w800,
-                                  color: isDark
-                                      ? const Color(0xFFFFD54F)
-                                      : const Color(0xFFB45309),
-                                  letterSpacing: 0.8,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            tr(
-                              'Changes here update your public Artisan Studio profile across the platform.',
-                            ),
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 11,
-                              color: isDark
-                                  ? Colors.white70
-                                  : const Color(0xFF92400E),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Studio Name Input
-                          TextFormField(
-                            controller: _studioNameController,
-                            autovalidateMode:
-                                AutovalidateMode.onUserInteraction,
-                            validator: ProfileValidator.validateStudioName,
-                            style: TextStyle(
-                              color: isDark
-                                  ? Colors.white
-                                  : const Color(0xFF0F172A),
-                            ),
-                            decoration: InputDecoration(
-                              labelText: tr('Artisan Studio Name'),
-                              errorMaxLines: 3,
-                              errorStyle: TextStyle(
-                                fontSize: 12,
-                                height: 1.25,
-                                color: isDark
-                                    ? const Color(0xFFFCA5A5)
-                                    : const Color(0xFFDC2626),
-                              ),
-                              prefixIcon: Icon(
-                                Icons.storefront_outlined,
-                                color: isDark
-                                    ? const Color(0xFFFFD54F)
-                                    : const Color(0xFFB45309),
-                              ),
-                              filled: true,
-                              fillColor: isDark
-                                  ? const Color(0xFF0D2825)
-                                  : Colors.white,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                            ),
-                          ),
-
-                          const SizedBox(height: 14),
-
-                          // Craft Category Dropdown
-                          DropdownButtonFormField<String>(
-                            initialValue: _selectedCraftCategory,
-                            dropdownColor: isDark
-                                ? const Color(0xFF0D2825)
-                                : Colors.white,
-                            decoration: InputDecoration(
-                              labelText: tr('Craft Specialization'),
-                              prefixIcon: Icon(
-                                Icons.category_outlined,
-                                color: isDark
-                                    ? const Color(0xFFFFD54F)
-                                    : const Color(0xFFB45309),
-                              ),
-                              filled: true,
-                              fillColor: isDark
-                                  ? const Color(0xFF0D2825)
-                                  : Colors.white,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                            ),
-                            items: _craftCategories.map((craft) {
-                              return DropdownMenuItem<String>(
-                                value: craft,
-                                child: Text(
-                                  tr(craft),
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                            onChanged: (val) {
-                              if (val != null) {
-                                setState(() => _selectedCraftCategory = val);
-                              }
-                            },
-                          ),
-
-                          const SizedBox(height: 14),
-
-                          // State / Region Dropdown
-                          DropdownButtonFormField<String>(
-                            initialValue: _selectedState,
-                            dropdownColor: isDark
-                                ? const Color(0xFF0D2825)
-                                : Colors.white,
-                            decoration: InputDecoration(
-                              labelText: tr('Studio State / Location'),
-                              prefixIcon: Icon(
-                                Icons.location_on_outlined,
-                                color: isDark
-                                    ? const Color(0xFFFFD54F)
-                                    : const Color(0xFFB45309),
-                              ),
-                              filled: true,
-                              fillColor: isDark
-                                  ? const Color(0xFF0D2825)
-                                  : Colors.white,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                            ),
-                            items: _malaysianStates.map((st) {
-                              return DropdownMenuItem<String>(
-                                value: st,
-                                child: Text(
-                                  tr(st),
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                            onChanged: (val) {
-                              if (val != null) {
-                                setState(() => _selectedState = val);
-                              }
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),
