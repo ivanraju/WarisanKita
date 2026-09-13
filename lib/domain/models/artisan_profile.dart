@@ -129,8 +129,7 @@ class ArtisanModel {
       for (final d in docs) {
         final docType = d['doc_type']?.toString();
         if (docType == 'CRAFTING_PHOTO' ||
-            docType == 'VILLAGE_CRAFTING_PHOTO' ||
-            docType == 'STUDIO_PHOTO') {
+            docType == 'VILLAGE_CRAFTING_PHOTO') {
           final url = d['file_url']?.toString();
           if (url != null && url.isNotEmpty) {
             resolvedCraftingPhoto = url;
@@ -149,28 +148,40 @@ class ArtisanModel {
             break;
           }
         }
-        if (t.startsWith('doc_studio_photo:')) {
-          final u = t.substring('doc_studio_photo:'.length).trim();
-          if (u.isNotEmpty) {
-            resolvedCraftingPhoto = u;
-            break;
-          }
-        }
       }
     }
 
-    // 2. Resolve portfolio images (ONLY actual portfolio showcase images, no proof photos)
+    // 2. Resolve portfolio images (actual portfolio and studio showcase images, no proof photos)
     final List<String> portfolioImages = [];
     if (rawDocs != null) {
       final docs = List<Map<String, dynamic>>.from(rawDocs);
       for (final d in docs) {
-        if (d['doc_type'] == 'PORTFOLIO_IMAGE') {
+        if (d['doc_type'] == 'PORTFOLIO_IMAGE' ||
+            d['doc_type'] == 'STUDIO_PHOTO') {
           final url = d['file_url']?.toString();
           if (url != null &&
               url.isNotEmpty &&
               !portfolioImages.contains(url)) {
             portfolioImages.add(url);
           }
+        }
+      }
+    }
+
+    for (final t in rawTags) {
+      if (t.startsWith('doc_studio_photo:')) {
+        final u = t.substring('doc_studio_photo:'.length).trim();
+        if (u.isNotEmpty && !portfolioImages.contains(u)) {
+          portfolioImages.add(u);
+        }
+      }
+    }
+
+    if (portfolioImages.isEmpty && map['photos'] is List) {
+      for (final p in (map['photos'] as List)) {
+        final u = p?.toString().trim();
+        if (u != null && u.isNotEmpty && !portfolioImages.contains(u)) {
+          portfolioImages.add(u);
         }
       }
     }

@@ -1723,33 +1723,76 @@ class SupabaseService {
                       )
                     : <Map<String, dynamic>>[])));
 
-    void replaceLocalDocument(String type, PlatformFile? file) {
+    Future<String> makeFileUrl(PlatformFile file) async {
+      try {
+        Uint8List bytes;
+        if (file.path != null) {
+          final f = io.File(file.path!);
+          if (f.existsSync()) {
+            bytes = await f.readAsBytes();
+          } else {
+            bytes = await file.readAsBytes();
+          }
+        } else {
+          bytes = await file.readAsBytes();
+        }
+        if (bytes.isNotEmpty) {
+          final lc = file.name.toLowerCase();
+          String mime = 'image/jpeg';
+          if (lc.endsWith('.png')) mime = 'image/png';
+          if (lc.endsWith('.webp')) mime = 'image/webp';
+          if (lc.endsWith('.pdf')) mime = 'application/pdf';
+          return 'data:$mime;base64,${base64Encode(bytes)}';
+        }
+      } catch (_) {}
+      if (file.path != null && file.path!.isNotEmpty) {
+        return file.path!;
+      }
+      return '';
+    }
+
+    Future<void> replaceLocalDocument(String type, PlatformFile? file) async {
       if (file == null) return;
       preservedDocuments.removeWhere((doc) => doc['doc_type'] == type);
+      final url = await makeFileUrl(file);
       preservedDocuments.add({
         'doc_type': type,
         'file_name': file.name,
-        'file_url': '',
+        'file_url': url,
       });
     }
 
     final certDocType = isVillage ? 'CRAFTING_PHOTO' : 'SSM_BUSINESS_CERT';
-    replaceLocalDocument(certDocType, ssmFile);
-    replaceLocalDocument('KRAFTANGAN_MASTER_CERT', certFile);
+    await replaceLocalDocument(certDocType, ssmFile);
+    await replaceLocalDocument('KRAFTANGAN_MASTER_CERT', certFile);
     if (photos != null && photos.isNotEmpty) {
       preservedDocuments.removeWhere(
         (doc) => doc['doc_type'] == 'STUDIO_PHOTO',
       );
       for (final photo in photos) {
+        final url = await makeFileUrl(photo);
         preservedDocuments.add({
           'doc_type': 'STUDIO_PHOTO',
           'file_name': photo.name,
-          'file_url': '',
+          'file_url': url,
         });
       }
     }
     userRecord['artisan_documents'] = preservedDocuments;
     userRecord['artisanDocuments'] = preservedDocuments;
+
+    final localTags = List<String>.from(
+      userRecord['tags'] is List ? userRecord['tags'] : <String>[],
+    );
+    for (final doc in preservedDocuments) {
+      if (doc['doc_type'] == 'STUDIO_PHOTO' &&
+          doc['file_url'] != null &&
+          (doc['file_url'] as String).isNotEmpty) {
+        final tag = 'doc_studio_photo:${doc['file_url']}';
+        if (!localTags.contains(tag)) localTags.add(tag);
+      }
+    }
+    userRecord['tags'] = localTags;
 
     if (client != null) {
       try {
@@ -5926,8 +5969,32 @@ class SupabaseService {
 
   Future<bool> deleteArtisanDocumentByUrl(String fileUrl) async {
     try {
+      for (final userRecord in _userStore.values) {
+        if (userRecord['artisan_documents'] is List) {
+          (userRecord['artisan_documents'] as List).removeWhere(
+            (d) => d is Map && d['file_url'] == fileUrl,
+          );
+        }
+        if (userRecord['artisanDocuments'] is List) {
+          (userRecord['artisanDocuments'] as List).removeWhere(
+            (d) => d is Map && d['file_url'] == fileUrl,
+          );
+        }
+        if (userRecord['artisan_profiles'] is Map &&
+            userRecord['artisan_profiles']['artisan_documents'] is List) {
+          (userRecord['artisan_profiles']['artisan_documents'] as List).removeWhere(
+            (d) => d is Map && d['file_url'] == fileUrl,
+          );
+        }
+        if (userRecord['tags'] is List) {
+          (userRecord['tags'] as List).removeWhere(
+            (t) => t == 'doc_studio_photo:$fileUrl',
+          );
+        }
+      }
+
       final client = _client;
-      if (client == null) return false;
+      if (client == null) return true;
 
       // Find the document record
       final response = await client

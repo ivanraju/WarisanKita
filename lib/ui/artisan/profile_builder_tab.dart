@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io' as io;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -292,8 +294,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
       final url = doc['file_url'] as String?;
       if (type != null && url != null && url.isNotEmpty) {
         newDocs[type] = url;
-        if (type == 'STUDIO_PHOTO' ||
-            type == 'CRAFTING_PHOTO' ||
+        if (type == 'CRAFTING_PHOTO' ||
             type == 'VILLAGE_CRAFTING_PHOTO') {
           newDocs['CRAFTING_PHOTO'] = url;
         }
@@ -325,22 +326,27 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     if (user.isVillageWorkshop &&
         (newDocs['CRAFTING_PHOTO'] == null ||
             newDocs['CRAFTING_PHOTO']!.isEmpty)) {
-      if (_portfolioImages.isNotEmpty) {
-        newDocs['CRAFTING_PHOTO'] = _portfolioImages.first;
-      } else if (user.photos.isNotEmpty) {
-        newDocs['CRAFTING_PHOTO'] = user.photos.first;
+      if (user.craftingPhotoUrl != null && user.craftingPhotoUrl!.isNotEmpty) {
+        newDocs['CRAFTING_PHOTO'] = user.craftingPhotoUrl!;
       }
     }
     _documents = newDocs;
 
-    // 2. Sync portfolio images (ONLY actual portfolio showcase images)
+    // 2. Sync portfolio & studio images
     if (force || _portfolioImages.isEmpty) {
       final newImages = <String>[];
       for (var doc in user.artisanDocuments) {
         final type = doc['doc_type'] as String?;
         final url = doc['file_url'] as String?;
-        if (type == 'PORTFOLIO_IMAGE' && url != null && url.isNotEmpty) {
+        if ((type == 'PORTFOLIO_IMAGE' || type == 'STUDIO_PHOTO') &&
+            url != null &&
+            url.isNotEmpty) {
           if (!newImages.contains(url)) newImages.add(url);
+        }
+      }
+      for (final photo in user.photos) {
+        if (photo.isNotEmpty && !newImages.contains(photo)) {
+          newImages.add(photo);
         }
       }
       if (newImages.isNotEmpty) {
@@ -1452,6 +1458,59 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
       }
     }
   }
+
+  Widget _buildPortfolioImage(String image) {
+    if (image.startsWith('data:image')) {
+      try {
+        final commaIdx = image.indexOf(',');
+        if (commaIdx != -1) {
+          final bytes = base64Decode(image.substring(commaIdx + 1));
+          return Image.memory(
+            bytes,
+            width: double.infinity,
+            height: double.infinity,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _buildPortfolioImagePlaceholder(),
+          );
+        }
+      } catch (_) {}
+    }
+    if (image.startsWith('http://') || image.startsWith('https://')) {
+      return Image.network(
+        image,
+        width: double.infinity,
+        height: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _buildPortfolioImagePlaceholder(),
+      );
+    }
+    try {
+      final file = io.File(image);
+      if (file.existsSync()) {
+        return Image.file(
+          file,
+          width: double.infinity,
+          height: double.infinity,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _buildPortfolioImagePlaceholder(),
+        );
+      }
+    } catch (_) {}
+    return _buildPortfolioImagePlaceholder();
+  }
+
+  Widget _buildPortfolioImagePlaceholder() {
+    return Container(
+      color: Colors.grey.withValues(alpha: 0.2),
+      child: const Center(
+        child: Icon(
+          Icons.image_not_supported_outlined,
+          color: Colors.grey,
+          size: 24,
+        ),
+      ),
+    );
+  }
   
   InputDecoration _inputDecoration(
     bool isDark, {
@@ -2518,12 +2577,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(16),
-                        child: Image.network(
-                          image,
-                          width: double.infinity,
-                          height: double.infinity,
-                          fit: BoxFit.cover,
-                        ),
+                        child: _buildPortfolioImage(image),
                       ),
                       Positioned(
                         top: 4,

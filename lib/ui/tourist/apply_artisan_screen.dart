@@ -762,7 +762,9 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
           ssmFileUrl: updatedUser?.ssmFileUrl,
           certFileName: _kraftanganFile?.name ?? updatedUser?.certFileName,
           certFileUrl: updatedUser?.certFileUrl,
-          photos: _uploadedPhotos.map((p) => p.name).toList(),
+          photos: (updatedUser?.photos != null && updatedUser!.photos.isNotEmpty)
+              ? updatedUser.photos
+              : _uploadedPhotos.map((p) => p.name).toList(),
           bio: bio.isNotEmpty
               ? bio
               : '${_isVillageWorkshop ? 'Village craft workshop' : 'Master studio'} application for $_selectedCraftCategory in $_selectedState.',
@@ -803,7 +805,9 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
           ssmFileUrl: updatedUser?.ssmFileUrl,
           certFileName: _kraftanganFile?.name ?? updatedUser?.certFileName,
           certFileUrl: updatedUser?.certFileUrl,
-          photos: _uploadedPhotos.map((p) => p.name).toList(),
+          photos: (updatedUser?.photos != null && updatedUser!.photos.isNotEmpty)
+              ? updatedUser.photos
+              : _uploadedPhotos.map((p) => p.name).toList(),
         ),
       ),
     );
