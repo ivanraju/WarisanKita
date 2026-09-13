@@ -570,10 +570,16 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
         tagList,
       );
 
+      final artisanState =
+          (artisan['state']?.toString() ?? '').toLowerCase().trim();
+      final targetState = _selectedState.toLowerCase().trim();
       final matchesState =
           _selectedState == 'All States' ||
-          artisan['state'].toString().toLowerCase() ==
-              _selectedState.toLowerCase();
+          artisanState == targetState ||
+          artisanState.contains(targetState) ||
+          (artisan['address']?.toString() ?? '')
+              .toLowerCase()
+              .contains(targetState);
 
       return matchesQuery && matchesCategory && matchesState;
     }).toList();
