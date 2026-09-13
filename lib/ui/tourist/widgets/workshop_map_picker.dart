@@ -112,7 +112,9 @@ class WorkshopPlaceResult {
     ].whereType<Object>().join(' ').toLowerCase();
 
     const aliases = <String, List<String>>{
-      'Kuala Lumpur': ['kuala lumpur'],
+      'Kuala Lumpur': ['kuala lumpur', 'kl', 'wilayah persekutuan kuala lumpur'],
+      'Putrajaya': ['putrajaya', 'wilayah persekutuan putrajaya'],
+      'Labuan': ['labuan', 'wilayah persekutuan labuan'],
       'Negeri Sembilan': ['negeri sembilan'],
       'Penang': ['pulau pinang', 'penang'],
       'Melaka': ['malacca', 'melaka'],

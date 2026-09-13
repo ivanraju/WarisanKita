@@ -67,6 +67,8 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     'Selangor': LatLng(3.0738, 101.5183),
     'Terengganu': LatLng(5.3296, 103.1370),
     'Kuala Lumpur': LatLng(3.1390, 101.6869),
+    'Putrajaya': LatLng(2.9264, 101.6964),
+    'Labuan': LatLng(5.2831, 115.2308),
   };
 
   static LatLng _resolveStateCenter(String? stateName) {
