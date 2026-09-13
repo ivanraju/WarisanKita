@@ -114,6 +114,48 @@ class TouristDirectoryTab extends StatefulWidget {
         'mengkuang',
       ],
     ),
+    CraftCategoryFilterItem(
+      key: 'FOOD',
+      englishName: 'Heritage Food',
+      icon: Icons.restaurant_menu_rounded,
+      matchKeywords: [
+        'food',
+        'heritage food',
+        'makanan',
+        'kuih',
+        'rendang',
+        'dodol',
+        'pastry',
+        'culinary',
+        'tradisi',
+        'traditional food',
+      ],
+    ),
+    CraftCategoryFilterItem(
+      key: 'PUPPETRY',
+      englishName: 'Wayang Kulit & Puppetry',
+      icon: Icons.theater_comedy_rounded,
+      matchKeywords: [
+        'wayang',
+        'wayang kulit',
+        'puppet',
+        'puppetry',
+        'shadow puppet',
+        'dalang',
+      ],
+    ),
+    CraftCategoryFilterItem(
+      key: 'WAU',
+      englishName: 'Wau & Kite Making',
+      icon: Icons.air_rounded,
+      matchKeywords: [
+        'wau',
+        'kite',
+        'layang',
+        'layang-layang',
+        'wau bulan',
+      ],
+    ),
   ];
 
   @override
@@ -223,6 +265,11 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
     'Penang',
     'Kedah',
     'Pahang',
+    'Negeri Sembilan',
+    'Perlis',
+    'Kuala Lumpur',
+    'Putrajaya',
+    'Labuan',
     'Sabah',
     'Sarawak',
   ];
@@ -577,13 +624,23 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
       final artisanState =
           (artisan['state']?.toString() ?? '').toLowerCase().trim();
       final targetState = _selectedState.toLowerCase().trim();
+      final address = (artisan['address']?.toString() ?? '').toLowerCase();
       final matchesState =
           _selectedState == 'All States' ||
           artisanState == targetState ||
           artisanState.contains(targetState) ||
-          (artisan['address']?.toString() ?? '')
-              .toLowerCase()
-              .contains(targetState);
+          targetState.contains(artisanState) ||
+          address.contains(targetState) ||
+          (targetState == 'penang' &&
+              (artisanState.contains('pulau pinang') ||
+                  address.contains('pulau pinang'))) ||
+          (targetState == 'melaka' &&
+              (artisanState.contains('malacca') ||
+                  address.contains('malacca'))) ||
+          (targetState == 'kuala lumpur' &&
+              (artisanState == 'kl' ||
+                  artisanState.contains('kuala lumpur') ||
+                  address.contains('kuala lumpur')));
 
       return matchesQuery && matchesCategory && matchesState;
     }).toList();
@@ -2043,11 +2100,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
         : [defaultImage];
     final List<String> images = rawImages.length > 1
         ? rawImages
-        : [
-            rawImages.first,
-            'https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=600&auto=format&fit=crop&q=80',
-            'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80',
-          ];
+        : [rawImages.first];
 
     return Container(
       margin: const EdgeInsets.only(bottom: 24),

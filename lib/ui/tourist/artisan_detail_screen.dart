@@ -97,20 +97,9 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
 
   late final List<String> _carouselImages = () {
     if (widget.imageUrls != null && widget.imageUrls!.isNotEmpty) {
-      if (widget.imageUrls!.length > 1) {
-        return widget.imageUrls!;
-      }
-      return [
-        widget.imageUrls!.first,
-        'https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=600&auto=format&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80',
-      ];
+      return widget.imageUrls!;
     }
-    return [
-      widget.imageUrl,
-      'https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=600&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80',
-    ];
+    return [widget.imageUrl];
   }();
 
   @override
