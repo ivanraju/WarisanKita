@@ -518,10 +518,16 @@ class _WorkshopMapPickerPageState extends State<WorkshopMapPickerPage> {
     required VoidCallback? onPressed,
     BorderRadius? borderRadius,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Material(
-      color: Colors.white,
+      color: isDark ? const Color(0xFF0D2825) : Colors.white,
       elevation: 4,
-      borderRadius: borderRadius ?? BorderRadius.circular(14),
+      shape: RoundedRectangleBorder(
+        borderRadius: borderRadius ?? BorderRadius.circular(14),
+        side: isDark
+            ? const BorderSide(color: Color(0xFF1E3A34))
+            : BorderSide.none,
+      ),
       child: InkWell(
         onTap: onPressed,
         borderRadius: borderRadius ?? BorderRadius.circular(14),
@@ -529,13 +535,23 @@ class _WorkshopMapPickerPageState extends State<WorkshopMapPickerPage> {
           dimension: 46,
           child: Center(
             child: _isLocating && icon == Icons.my_location_rounded
-                ? const SizedBox.square(
+                ? SizedBox.square(
                     dimension: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: isDark
+                          ? const Color(0xFFFFD54F)
+                          : const Color(0xFF004D40),
+                    ),
                   )
                 : Tooltip(
                     message: tooltip,
-                    child: Icon(icon, color: const Color(0xFF004D40)),
+                    child: Icon(
+                      icon,
+                      color: isDark
+                          ? const Color(0xFFFFD54F)
+                          : const Color(0xFF004D40),
+                    ),
                   ),
           ),
         ),
@@ -564,26 +580,34 @@ class _WorkshopMapPickerPageState extends State<WorkshopMapPickerPage> {
   Future<WorkshopPlaceResult?> _chooseResult(
     List<WorkshopPlaceResult> results,
   ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return showModalBottomSheet<WorkshopPlaceResult>(
       context: context,
       showDragHandle: true,
+      backgroundColor: isDark ? const Color(0xFF0D2825) : Colors.white,
       builder: (sheetContext) => SafeArea(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxHeight: 430),
           child: ListView.separated(
             shrinkWrap: true,
             itemCount: results.length,
-            separatorBuilder: (_, _) => const Divider(height: 1),
+            separatorBuilder: (_, _) => Divider(
+              height: 1,
+              color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFE2E8F0),
+            ),
             itemBuilder: (_, index) {
               final result = results[index];
               return ListTile(
-                leading: const Icon(
+                leading: Icon(
                   Icons.location_on_rounded,
-                  color: Color(0xFFD97706),
+                  color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFD97706),
                 ),
                 title: Text(
                   result.displayName,
-                  style: GoogleFonts.plusJakartaSans(fontSize: 12),
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
                 ),
                 onTap: () => Navigator.of(sheetContext).pop(result),
               );
@@ -610,6 +634,7 @@ class _WorkshopMapPickerPageState extends State<WorkshopMapPickerPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final selected = _selection;
     final markerPosition = _pendingPosition ?? selected?.position;
     final initialTarget =
@@ -619,10 +644,14 @@ class _WorkshopMapPickerPageState extends State<WorkshopMapPickerPage> {
         const LatLng(3.1390, 101.6869);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F5EF),
+      backgroundColor: isDark ? const Color(0xFF041412) : const Color(0xFFF7F5EF),
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF004D40),
+        backgroundColor: isDark ? const Color(0xFF041412) : Colors.white,
+        foregroundColor: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+        elevation: 0,
+        iconTheme: IconThemeData(
+          color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+        ),
         title: Text(
           widget.isReadOnly
               ? (widget.artisanName != null && widget.artisanName!.isNotEmpty
@@ -631,7 +660,10 @@ class _WorkshopMapPickerPageState extends State<WorkshopMapPickerPage> {
               : (widget.lockedState != null
                   ? 'Pin Workshop (${widget.lockedState})'
                   : 'Pin Workshop Location'),
-          style: GoogleFonts.dmSerifDisplay(fontSize: 20),
+          style: GoogleFonts.dmSerifDisplay(
+            fontSize: 20,
+            color: isDark ? const Color(0xFFFFE082) : const Color(0xFF004D40),
+          ),
         ),
         actions: [
           if (!widget.isReadOnly) ...[
@@ -639,6 +671,11 @@ class _WorkshopMapPickerPageState extends State<WorkshopMapPickerPage> {
               onPressed: selected == null
                   ? null
                   : () => Navigator.of(context).pop(selected),
+              style: TextButton.styleFrom(
+                foregroundColor: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                disabledForegroundColor: isDark ? Colors.white24 : Colors.black26,
+                textStyle: const TextStyle(fontWeight: FontWeight.bold),
+              ),
               child: const Text('Done'),
             ),
             const SizedBox(width: 8),
@@ -646,6 +683,7 @@ class _WorkshopMapPickerPageState extends State<WorkshopMapPickerPage> {
             IconButton(
               icon: const Icon(Icons.directions_rounded),
               tooltip: 'Get Directions',
+              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
               onPressed: () => _openDirections(markerPosition),
             ),
             const SizedBox(width: 8),
@@ -656,6 +694,9 @@ class _WorkshopMapPickerPageState extends State<WorkshopMapPickerPage> {
         children: [
           Positioned.fill(
             child: GoogleMap(
+              style: isDark && _mapType == MapType.normal
+                  ? GoogleMapService.darkHeritageMapStyle
+                  : null,
               initialCameraPosition: CameraPosition(
                 target: initialTarget,
                 zoom: selected == null ? 15 : 17,
@@ -733,7 +774,7 @@ class _WorkshopMapPickerPageState extends State<WorkshopMapPickerPage> {
                         Container(
                           width: 32,
                           height: 1,
-                          color: const Color(0xFFE2E8F0),
+                          color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFE2E8F0),
                         ),
                         _mapControlButton(
                           icon: Icons.remove_rounded,
@@ -756,54 +797,96 @@ class _WorkshopMapPickerPageState extends State<WorkshopMapPickerPage> {
                   if (!widget.isReadOnly) ...[
                     Material(
                       elevation: 5,
-                      borderRadius: BorderRadius.circular(16),
+                      color: isDark ? const Color(0xFF0D2825) : Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(
+                          color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFE2E8F0),
+                        ),
+                      ),
                       child: TextField(
                         controller: _searchController,
+                        style: GoogleFonts.plusJakartaSans(
+                          color: isDark ? Colors.white : Colors.black87,
+                          fontSize: 13,
+                        ),
+                        cursorColor: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
                         textInputAction: TextInputAction.search,
                         onSubmitted: (_) => _search(),
                         decoration: InputDecoration(
                           hintText: widget.lockedState != null
                               ? 'Search within ${widget.lockedState}...'
                               : 'Search a workshop or address',
-                          prefixIcon: const Icon(Icons.search_rounded),
+                          hintStyle: GoogleFonts.plusJakartaSans(
+                            color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
+                            fontSize: 13,
+                          ),
+                          prefixIcon: Icon(
+                            Icons.search_rounded,
+                            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                          ),
                           suffixIcon: IconButton(
                             onPressed: _isLoading ? null : _search,
-                            icon: const Icon(Icons.arrow_forward_rounded),
+                            icon: Icon(
+                              Icons.arrow_forward_rounded,
+                              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                            ),
                           ),
                           errorText: _error,
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: isDark ? const Color(0xFF0D2825) : Colors.white,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
                             borderSide: BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide(
+                              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                              width: 1.5,
+                            ),
                           ),
                         ),
                       ),
                     ),
                     if (_isLoading)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 12),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
                         child: LinearProgressIndicator(
-                          color: Color(0xFFD97706),
+                          color: const Color(0xFFD97706),
+                          backgroundColor: isDark ? const Color(0xFF1E3A34) : const Color(0xFFFDE68A),
                           minHeight: 3,
                         ),
                       ),
                   ] else ...[
                     Material(
                       elevation: 4,
-                      borderRadius: BorderRadius.circular(16),
-                      color: Colors.white,
+                      color: isDark ? const Color(0xFF0D2825) : Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(
+                          color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFE2E8F0),
+                        ),
+                      ),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         child: Row(
                           children: [
                             Container(
                               padding: const EdgeInsets.all(8),
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFE8F5E9),
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF123D35) : const Color(0xFFE8F5E9),
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(Icons.verified_rounded, color: Color(0xFF16A34A), size: 20),
+                              child: Icon(
+                                Icons.verified_rounded,
+                                color: isDark ? const Color(0xFF34D399) : const Color(0xFF16A34A),
+                                size: 20,
+                              ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
@@ -816,14 +899,14 @@ class _WorkshopMapPickerPageState extends State<WorkshopMapPickerPage> {
                                     style: GoogleFonts.plusJakartaSans(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 13,
-                                      color: const Color(0xFF14532D),
+                                      color: isDark ? const Color(0xFF6EE7B7) : const Color(0xFF14532D),
                                     ),
                                   ),
                                   Text(
                                     'Official accredited premise verified by Kraftangan Malaysia',
                                     style: GoogleFonts.plusJakartaSans(
                                       fontSize: 11,
-                                      color: const Color(0xFF15803D),
+                                      color: isDark ? const Color(0xFFD1FAE5) : const Color(0xFF15803D),
                                     ),
                                   ),
                                 ],
@@ -837,8 +920,13 @@ class _WorkshopMapPickerPageState extends State<WorkshopMapPickerPage> {
                   const Spacer(),
                   Material(
                     elevation: 5,
-                    borderRadius: BorderRadius.circular(16),
-                    color: Colors.white,
+                    color: isDark ? const Color(0xFF0D2825) : Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(
+                        color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFE2E8F0),
+                      ),
+                    ),
                     child: Padding(
                       padding: const EdgeInsets.all(14),
                       child: Column(
@@ -853,7 +941,7 @@ class _WorkshopMapPickerPageState extends State<WorkshopMapPickerPage> {
                                     : (selected == null
                                         ? Icons.touch_app_rounded
                                         : Icons.location_on_rounded),
-                                color: const Color(0xFFD97706),
+                                color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFD97706),
                               ),
                               const SizedBox(width: 10),
                               Expanded(
@@ -872,7 +960,7 @@ class _WorkshopMapPickerPageState extends State<WorkshopMapPickerPage> {
                                               : _detectedState),
                                       style: GoogleFonts.plusJakartaSans(
                                         fontWeight: FontWeight.w700,
-                                        color: const Color(0xFF004D40),
+                                        color: isDark ? const Color(0xFFFFE082) : const Color(0xFF004D40),
                                       ),
                                     ),
                                     if (selected != null || widget.initialAddress != null) ...[
@@ -885,7 +973,7 @@ class _WorkshopMapPickerPageState extends State<WorkshopMapPickerPage> {
                                         overflow: TextOverflow.ellipsis,
                                         style: GoogleFonts.plusJakartaSans(
                                           fontSize: 11,
-                                          color: const Color(0xFF64748B),
+                                          color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                                         ),
                                       ),
                                     ],
@@ -903,8 +991,8 @@ class _WorkshopMapPickerPageState extends State<WorkshopMapPickerPage> {
                                 icon: const Icon(Icons.directions_rounded, size: 18),
                                 label: const Text('Get Directions'),
                                 style: FilledButton.styleFrom(
-                                  backgroundColor: const Color(0xFF004D40),
-                                  foregroundColor: Colors.white,
+                                  backgroundColor: isDark ? const Color(0xFF1E3A34) : const Color(0xFF004D40),
+                                  foregroundColor: isDark ? const Color(0xFFFFD54F) : Colors.white,
                                   padding: const EdgeInsets.symmetric(vertical: 12),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),

@@ -1404,20 +1404,26 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                               vertical: 5,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFFEF3C7),
+                              color: isDark
+                                  ? const Color(0xFF2E2305)
+                                  : const Color(0xFFFEF3C7),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: const Color(
-                                  0xFFF59E0B,
-                                ).withValues(alpha: 0.5),
+                                color: isDark
+                                    ? const Color(0xFFD97706)
+                                    : const Color(
+                                        0xFFF59E0B,
+                                      ).withValues(alpha: 0.5),
                               ),
                             ),
                             child: Row(
                               children: [
-                                const Icon(
+                                Icon(
                                   Icons.verified_rounded,
                                   size: 12,
-                                  color: Color(0xFFB45309),
+                                  color: isDark
+                                      ? const Color(0xFFFFD54F)
+                                      : const Color(0xFFB45309),
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
@@ -1425,7 +1431,9 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                   style: GoogleFonts.plusJakartaSans(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w900,
-                                    color: const Color(0xFFB45309),
+                                    color: isDark
+                                        ? const Color(0xFFFFD54F)
+                                        : const Color(0xFFB45309),
                                   ),
                                 ),
                               ],
@@ -1442,6 +1450,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                         _buildPassportNotice(
                           gameStat.passportWarning!,
                           gameStat.loadPassport,
+                          isDark: isDark,
                         ),
                       ],
 
@@ -1453,13 +1462,15 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
 
               // 🎨 PERFECTLY CENTERED PASSPORT STAMPS GRID
               if (gameStat.isLoadingPassport && gameStat.stamps.isEmpty)
-                const SliverToBoxAdapter(
+                SliverToBoxAdapter(
                   child: Padding(
-                    key: Key('passport-loading'),
-                    padding: EdgeInsets.symmetric(vertical: 44),
+                    key: const Key('passport-loading'),
+                    padding: const EdgeInsets.symmetric(vertical: 44),
                     child: Center(
                       child: CircularProgressIndicator(
-                        color: Color(0xFF004D40),
+                        color: isDark
+                            ? const Color(0xFFFFD54F)
+                            : const Color(0xFF004D40),
                       ),
                     ),
                   ),
@@ -1475,6 +1486,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                       message: gameStat.passportError!,
                       actionLabel: 'Try Again',
                       onAction: gameStat.loadPassport,
+                      isDark: isDark,
                     ),
                   ),
                 )
@@ -1490,6 +1502,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                           : 'No earned stamps were found. Pull to refresh your Passport.',
                       actionLabel: 'Refresh',
                       onAction: gameStat.loadPassport,
+                      isDark: isDark,
                     ),
                   ),
                 )
@@ -1887,29 +1900,46 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
     );
   }
 
-  Widget _buildPassportNotice(String message, Future<void> Function() retry) {
+  Widget _buildPassportNotice(
+    String message,
+    Future<void> Function() retry, {
+    bool isDark = false,
+  }) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFBEB),
+        color: isDark ? const Color(0xFF1F1805) : const Color(0xFFFFFBEB),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFFCD34D)),
+        border: Border.all(
+          color: isDark ? const Color(0xFF78590D) : const Color(0xFFFCD34D),
+        ),
       ),
       child: Row(
         children: [
-          const Icon(Icons.info_outline_rounded, color: Color(0xFFB45309)),
+          Icon(
+            Icons.info_outline_rounded,
+            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFB45309),
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               message,
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 11,
-                color: const Color(0xFF92400E),
+                color: isDark ? const Color(0xFFFDE68A) : const Color(0xFF92400E),
               ),
             ),
           ),
-          TextButton(onPressed: retry, child: const Text('Retry')),
+          TextButton(
+            onPressed: retry,
+            style: TextButton.styleFrom(
+              foregroundColor: isDark
+                  ? const Color(0xFFFFD54F)
+                  : const Color(0xFFB45309),
+            ),
+            child: const Text('Retry'),
+          ),
         ],
       ),
     );
@@ -1921,35 +1951,79 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
     required String message,
     required String actionLabel,
     required Future<void> Function() onAction,
+    bool isDark = false,
   }) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF0D2825) : Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFE2E8E5)),
+        border: Border.all(
+          color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFE2E8E5),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.3)
+                : Colors.black.withValues(alpha: 0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         children: [
-          Icon(icon, color: const Color(0xFFD97706), size: 38),
-          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1F1805) : const Color(0xFFFEF3C7),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFFD97706),
+              size: 32,
+            ),
+          ),
+          const SizedBox(height: 12),
           Text(
             title,
             textAlign: TextAlign.center,
             style: GoogleFonts.dmSerifDisplay(
               fontSize: 20,
-              color: const Color(0xFF004D40),
+              color: isDark ? const Color(0xFFFFE082) : const Color(0xFF004D40),
             ),
           ),
           const SizedBox(height: 6),
           Text(
             message,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.black54, height: 1.4),
+            style: GoogleFonts.plusJakartaSans(
+              color: isDark ? Colors.white70 : Colors.black54,
+              fontSize: 13,
+              height: 1.4,
+            ),
           ),
-          const SizedBox(height: 14),
-          OutlinedButton(onPressed: onAction, child: Text(actionLabel)),
+          const SizedBox(height: 16),
+          OutlinedButton(
+            onPressed: onAction,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: isDark
+                  ? const Color(0xFFFFD54F)
+                  : const Color(0xFF004D40),
+              side: BorderSide(
+                color: isDark
+                    ? const Color(0xFFFFD54F)
+                    : const Color(0xFF004D40),
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            ),
+            child: Text(actionLabel),
+          ),
         ],
       ),
     );
