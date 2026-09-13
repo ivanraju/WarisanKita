@@ -5,6 +5,15 @@ import 'package:warisan_kita/data/services/content_safety_service.dart';
 import 'package:warisan_kita/domain/models/forum_post.dart';
 
 class ForumViewModel extends ChangeNotifier {
+  List<Map<String, dynamic>> _adminOnlyHistory(
+      List<Map<String, dynamic>> rows) {
+    return rows.where((row) {
+      final reason = row['deletion_reason']?.toString().toLowerCase() ?? '';
+      final notes = row['notes']?.toString().toLowerCase() ?? '';
+      return !reason.contains('deleted by author/user') &&
+          !notes.contains('deleted by author/user');
+    }).toList();
+  }
   final ForumRepository _repository;
 
   ForumViewModel({ForumRepository? repository})
@@ -41,7 +50,8 @@ class ForumViewModel extends ChangeNotifier {
 
     _threads = await _repository.getThreads();
     try {
-      _moderationHistory = await _repository.fetchForumModerationHistory();
+      _moderationHistory = _adminOnlyHistory(
+          await _repository.fetchForumModerationHistory());
     } catch (_) {}
 
     _isLoading = false;
@@ -68,7 +78,8 @@ class ForumViewModel extends ChangeNotifier {
 
   Future<void> fetchForumModerationHistory() async {
     try {
-      _moderationHistory = await _repository.fetchForumModerationHistory();
+      _moderationHistory = _adminOnlyHistory(
+          await _repository.fetchForumModerationHistory());
 
       debugPrint(
         'ViewModel moderation history: '
