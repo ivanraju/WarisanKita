@@ -659,8 +659,7 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
         _questProgressStatus?.toUpperCase() == 'IN_PROGRESS' &&
         !isQuestPermanentlyCompleted;
     final canCompleteAfterBadge =
-        isQuestPermanentlyCompleted &&
-        (!task.isRequired || isBonusTask(task));
+        isQuestPermanentlyCompleted && (!task.isRequired || isBonusTask(task));
     if (_requiresManualResume ||
         (!canCompleteJourneyTask && !canCompleteAfterBadge) ||
         isTaskCompleted(task)) {
@@ -678,8 +677,7 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
         _questProgressStatus?.toUpperCase() == 'IN_PROGRESS' &&
         !isQuestPermanentlyCompleted;
     final canCompleteAfterBadge =
-        isQuestPermanentlyCompleted &&
-        (!task.isRequired || isBonusTask(task));
+        isQuestPermanentlyCompleted && (!task.isRequired || isBonusTask(task));
     if (!canCompleteJourneyTask && !canCompleteAfterBadge) {
       return 'Start Quest to Scan';
     }
@@ -694,9 +692,17 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
   Future<bool> verifyArtisanQrForTask({
     required quest_domain.HeritageTask task,
     required String qrPayload,
+    QuestLocationValidationResult? verifiedLocation,
   }) async {
     final quest = _selectedQuest;
     if (quest == null || !canVerifyTaskWithQr(task)) return false;
+
+    if (verifiedLocation != null && !verifiedLocation.isValid) {
+      _startQuestError =
+          verifiedLocation.message ?? 'A fresh location is required.';
+      notifyListeners();
+      return false;
+    }
 
     _startQuestError = null;
     notifyListeners();
