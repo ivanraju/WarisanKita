@@ -305,9 +305,10 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
     final workshop = artisan.workshop;
 
     if (workshop == null) {
+      final langVM = context.read<LanguageViewModel>();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Workshop details are unavailable.'),
+        SnackBar(
+          content: Text(langVM.translate('Workshop details are unavailable.')),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -544,15 +545,18 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
             gamificationViewModel.questProgressStatus == 'STOPPED') {
           await mapViewModel.loadJourneyData();
           if (mounted) {
+            final langVM = context.read<LanguageViewModel>();
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
+              SnackBar(
                 content: Text(
-                  'Quest stopped because you left the workshop area. '
-                  'Your progress has been saved.',
-                  style: TextStyle(color: Colors.white),
+                  langVM.translate(
+                    'Quest stopped because you left the workshop area. '
+                    'Your progress has been saved.',
+                  ),
+                  style: const TextStyle(color: Colors.white),
                 ),
                 behavior: SnackBarBehavior.floating,
-                backgroundColor: Color(0xFF005B4F),
+                backgroundColor: const Color(0xFF005B4F),
               ),
             );
           }
@@ -577,6 +581,7 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
     _discoveredQuestIds.add(journey.questId);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !(ModalRoute.of(context)?.isCurrent ?? false)) return;
+      final langVM = context.read<LanguageViewModel>();
       HapticFeedback.lightImpact();
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
@@ -585,7 +590,7 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
             behavior: SnackBarBehavior.floating,
             backgroundColor: const Color(0xFF004D40),
             content: Text(
-              'Heritage Quest Discovered • ${artisan.name}',
+              '${langVM.translate('Heritage Quest Discovered')} • ${artisan.name}',
               style: GoogleFonts.plusJakartaSans(
                 color: Colors.white,
                 fontWeight: FontWeight.w700,
@@ -608,6 +613,7 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
     final refreshed = await mapViewModel.refreshWorkshops();
     if (!mounted) return;
 
+    final langVM = context.read<LanguageViewModel>();
     final messenger = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
     messenger.showSnackBar(
       SnackBar(
@@ -615,8 +621,10 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
         duration: const Duration(seconds: 2),
         content: Text(
           refreshed
-              ? 'Studios refreshed.'
-              : mapViewModel.refreshError ?? 'Unable to refresh studios.',
+              ? langVM.translate('Studios refreshed.')
+              : (mapViewModel.refreshError != null
+                  ? langVM.translate(mapViewModel.refreshError!)
+                  : langVM.translate('Unable to refresh studios.')),
         ),
       ),
     );
@@ -930,7 +938,7 @@ class _TouristMatchmakerViewState extends State<TouristMatchmakerView> {
                                       ),
                                       trailing: TextButton(
                                         onPressed: mapVM.loadJourneyData,
-                                        child: const Text('RETRY'),
+                                        child: Text(langVM.translate('RETRY')),
                                       ),
                                     ),
                                   ),

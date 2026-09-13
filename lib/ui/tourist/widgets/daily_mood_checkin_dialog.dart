@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
 
 class DailyMoodCheckinDialog extends StatefulWidget {
   final Function(String selectedMood) onMoodSelected;
@@ -43,11 +45,14 @@ class _DailyMoodCheckinDialogState extends State<DailyMoodCheckinDialog> {
   ];
 
   void _submitCheckin() {
+    final langVM = context.read<LanguageViewModel>();
     if (_selectedMood == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select what craft interests you today!'),
-          backgroundColor: Color(0xFFEF4444),
+        SnackBar(
+          content: Text(
+            langVM.translate('Please select what craft interests you today!'),
+          ),
+          backgroundColor: const Color(0xFFEF4444),
         ),
       );
       return;
@@ -57,7 +62,7 @@ class _DailyMoodCheckinDialogState extends State<DailyMoodCheckinDialog> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          '🔥 Daily Check-in Claimed! Earned +50 Streak XP!',
+          langVM.translate('🔥 Daily Check-in Claimed! Earned +50 Streak XP!'),
           style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold),
         ),
         backgroundColor: const Color(0xFF004D40),
@@ -71,17 +76,24 @@ class _DailyMoodCheckinDialogState extends State<DailyMoodCheckinDialog> {
   }
 
   void _handleHide() {
+    final langVM = context.read<LanguageViewModel>();
     if (widget.onHide != null) {
       widget.onHide!();
     }
     Navigator.of(context).pop();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Row(
+        content: Row(
           children: [
-            Icon(Icons.visibility_off_rounded, color: Colors.white, size: 18),
-            SizedBox(width: 10),
-            Text('Daily Heritage Challenges hidden for this session.'),
+            const Icon(Icons.visibility_off_rounded, color: Colors.white, size: 18),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                langVM.translate(
+                  'Daily Heritage Challenges hidden for this session.',
+                ),
+              ),
+            ),
           ],
         ),
         backgroundColor: const Color(0xFF475569),
@@ -93,6 +105,7 @@ class _DailyMoodCheckinDialogState extends State<DailyMoodCheckinDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final langVM = context.watch<LanguageViewModel>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Dialog(
@@ -124,7 +137,7 @@ class _DailyMoodCheckinDialogState extends State<DailyMoodCheckinDialog> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            'Daily Heritage Check-in',
+                            langVM.translate('Daily Heritage Check-in'),
                             softWrap: true,
                             style: GoogleFonts.dmSerifDisplay(
                               fontSize: 20,
@@ -144,7 +157,9 @@ class _DailyMoodCheckinDialogState extends State<DailyMoodCheckinDialog> {
 
               const SizedBox(height: 6),
               Text(
-                'What craft heritage would you like to explore today?',
+                langVM.translate(
+                  'What craft heritage would you like to explore today?',
+                ),
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 13,
                   color: isDark ? Colors.white70 : Colors.grey[700],
@@ -174,7 +189,7 @@ class _DailyMoodCheckinDialogState extends State<DailyMoodCheckinDialog> {
                   child: ListTile(
                     onTap: () => setState(() => _selectedMood = opt['category']),
                     title: Text(
-                      opt['title'],
+                      langVM.translate(opt['title']),
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
@@ -184,7 +199,7 @@ class _DailyMoodCheckinDialogState extends State<DailyMoodCheckinDialog> {
                       ),
                     ),
                     subtitle: Text(
-                      opt['subtitle'],
+                      langVM.translate(opt['subtitle']),
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 11,
                         color: isDark ? Colors.white70 : Colors.grey[600],
@@ -213,7 +228,7 @@ class _DailyMoodCheckinDialogState extends State<DailyMoodCheckinDialog> {
                   ),
                   Expanded(
                     child: Text(
-                      'Hide & don\'t prompt again today',
+                      langVM.translate('Hide & don\'t prompt again today'),
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 11,
                         color: isDark ? Colors.white70 : Colors.grey[700],
@@ -237,7 +252,7 @@ class _DailyMoodCheckinDialogState extends State<DailyMoodCheckinDialog> {
                     ),
                     icon: Icon(Icons.visibility_off_outlined, color: isDark ? Colors.white70 : Colors.grey, size: 16),
                     label: Text(
-                      'Hide Card',
+                      langVM.translate('Hide Card'),
                       style: GoogleFonts.plusJakartaSans(
                         color: isDark ? Colors.white70 : Colors.grey[700],
                         fontSize: 12,
@@ -258,9 +273,9 @@ class _DailyMoodCheckinDialogState extends State<DailyMoodCheckinDialog> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
                     icon: const Icon(Icons.local_fire_department_rounded, color: Color(0xFFFFD54F), size: 18),
-                    label: const Text(
-                      'CLAIM +50 XP',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    label: Text(
+                      langVM.translate('CLAIM +50 XP'),
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),

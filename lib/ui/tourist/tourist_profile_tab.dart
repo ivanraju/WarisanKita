@@ -33,8 +33,9 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
     final color = _stampColor(stamp);
     showDialog(
       context: context,
-      builder: (context) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
+      builder: (dialogCtx) {
+        final isDark = Theme.of(dialogCtx).brightness == Brightness.dark;
+        final langVM = dialogCtx.watch<LanguageViewModel>();
         return Dialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(28),
@@ -67,7 +68,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                     child: Text(
                       stamp.isUnlocked && stamp.stampCode.isNotEmpty
                           ? stamp.stampCode
-                          : 'LOCKED STAMP',
+                          : langVM.translate('LOCKED STAMP'),
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
@@ -106,19 +107,19 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                   if (stamp.questTitle.isNotEmpty)
                     _buildStampDetailRow(
                       Icons.explore_rounded,
-                      'Quest: ${stamp.questTitle}',
+                      '${langVM.translate('Quest')}: ${stamp.questTitle}',
                     ),
                   if (stamp.earnedAt != null) ...[
                     const SizedBox(height: 8),
                     _buildStampDetailRow(
                       Icons.event_available_rounded,
-                      'Earned: ${_formatStampDate(stamp.earnedAt!)}',
+                      '${langVM.translate('Earned')}: ${_formatStampDate(stamp.earnedAt!)}',
                     ),
                   ],
                   if (!stamp.isUnlocked) ...[
                     const SizedBox(height: 14),
                     Text(
-                      'Complete this approved cultural quest to earn its stamp.',
+                      langVM.translate('Complete this approved cultural quest to earn its stamp.'),
                       textAlign: TextAlign.center,
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 12,
@@ -134,11 +135,11 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                       height: 48,
                       child: OutlinedButton.icon(
                         onPressed: () => _openPassportQuest(
-                          dialogContext: context,
+                          dialogContext: dialogCtx,
                           stamp: stamp,
                         ),
                         icon: const Icon(Icons.explore_rounded),
-                        label: const Text('VIEW QUEST'),
+                        label: Text(langVM.translate('VIEW QUEST')),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: isDark
                               ? const Color(0xFFFFD54F)
@@ -160,7 +161,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                     width: double.infinity,
                     height: 48,
                     child: FilledButton(
-                      onPressed: () => Navigator.of(context).pop(),
+                      onPressed: () => Navigator.of(dialogCtx).pop(),
                       style: FilledButton.styleFrom(
                         backgroundColor: isDark
                             ? const Color(0xFFFFD54F)
@@ -172,9 +173,9 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                           borderRadius: BorderRadius.circular(16),
                         ),
                       ),
-                      child: const Text(
-                        'CLOSE STAMP SEAL',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                      child: Text(
+                        langVM.translate('CLOSE STAMP SEAL'),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),
                   ),
@@ -215,9 +216,10 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
     }
 
     if (workshop == null) {
+      final langVM = context.read<LanguageViewModel>();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Quest unavailable for this Passport stamp.'),
+        SnackBar(
+          content: Text(langVM.translate('Quest unavailable for this Passport stamp.')),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -275,17 +277,17 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
         : '—';
     final nextTier = gameStat.nextTier;
     final xpProgressLabel = !gameStat.hasPassportXpData
-        ? 'XP unavailable'
+        ? langVM.translate('XP unavailable')
         : nextTier == null
         ? '${_formatNumber(gameStat.totalEarnedXp)} XP'
         : '${_formatNumber(gameStat.totalEarnedXp)} / '
               '${_formatNumber(nextTier.minimumXp)} XP';
     final xpRemainingLabel = !gameStat.hasPassportXpData
-        ? 'Pull to refresh your progression'
+        ? langVM.translate('Pull to refresh your progression')
         : nextTier == null
-        ? 'Maximum heritage tier reached'
+        ? langVM.translate('Maximum heritage tier reached')
         : '${_formatNumber(nextTier.minimumXp - gameStat.totalEarnedXp)} XP '
-              'to ${nextTier.title}';
+              '${langVM.translate('to')} ${langVM.translate(nextTier.title)}';
 
     return Stack(
       children: [
@@ -348,7 +350,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                           ? const Color(0xFFFFD54F)
                           : const Color(0xFF004D40),
                     ),
-                    tooltip: 'Edit Explorer Profile',
+                    tooltip: langVM.translate('Edit Explorer Profile'),
                     onPressed: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
@@ -364,7 +366,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                           ? const Color(0xFFFFD54F)
                           : const Color(0xFF004D40),
                     ),
-                    tooltip: 'Settings',
+                    tooltip: langVM.translate('Settings'),
                     onPressed: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
@@ -592,7 +594,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                                     ),
                                                     const SizedBox(width: 4),
                                                     Text(
-                                                      'Edit',
+                                                      langVM.translate('Edit'),
                                                       style:
                                                           GoogleFonts.plusJakartaSans(
                                                             fontSize: 10,
@@ -619,9 +621,9 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                             Expanded(
                                               child: Text(
                                                 gameStat.hasPassportXpData
-                                                    ? 'Tier ${gameStat.currentTier.level} · '
-                                                          '${gameStat.currentTier.title}'
-                                                    : 'Tier unavailable',
+                                                    ? '${langVM.translate('Tier')} ${gameStat.currentTier.level} · '
+                                                          '${langVM.translate(gameStat.currentTier.title)}'
+                                                    : langVM.translate('Tier unavailable'),
                                                 maxLines: 2,
                                                 overflow: TextOverflow.ellipsis,
                                                 style:
@@ -726,19 +728,19 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                 children: [
                                   _buildPassportMetric(
                                     completedQuests,
-                                    'Quests Done',
+                                    langVM.translate('Quests Done'),
                                     Icons.check_circle_rounded,
                                   ),
                                   _buildMetricDivider(),
                                   _buildPassportMetric(
                                     visitedStudios,
-                                    'Studios Visited',
+                                    langVM.translate('Studios Visited'),
                                     Icons.storefront_rounded,
                                   ),
                                   _buildMetricDivider(),
                                   _buildPassportMetric(
                                     passportStamps,
-                                    'Passport Stamps',
+                                    langVM.translate('Passport Stamps'),
                                     Icons.workspace_premium_rounded,
                                   ),
                                 ],
@@ -780,7 +782,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'Master Artisan Studio: Suspended',
+                                      langVM.translate('Master Artisan Studio: Suspended'),
                                       style: GoogleFonts.plusJakartaSans(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 13,
@@ -788,7 +790,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                       ),
                                     ),
                                     Text(
-                                      'Your studio license is under administrative suspension. You may continue exploring as a Cultural Tourist.',
+                                      langVM.translate('Your studio license is under administrative suspension. You may continue exploring as a Cultural Tourist.'),
                                       style: GoogleFonts.plusJakartaSans(
                                         fontSize: 11,
                                         color: const Color(0xFF7F1D1D),
@@ -844,7 +846,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'Master Artisan Studio',
+                                      langVM.translate('Master Artisan Studio'),
                                       style: GoogleFonts.plusJakartaSans(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 13,
@@ -854,7 +856,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                       ),
                                     ),
                                     Text(
-                                      'Manage your craft studio, quests and visitors.',
+                                      langVM.translate('Manage your craft studio, quests and visitors.'),
                                       style: GoogleFonts.plusJakartaSans(
                                         fontSize: 11,
                                         color: isDark
@@ -884,9 +886,9 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                 ),
-                                child: const Text(
-                                  'Switch',
-                                  style: TextStyle(
+                                child: Text(
+                                  langVM.translate('Switch'),
+                                  style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 12,
                                   ),
@@ -944,7 +946,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                               WrapCrossAlignment.center,
                                           children: [
                                             Text(
-                                              'Artisan Application',
+                                              langVM.translate('Artisan Application'),
                                               style:
                                                   GoogleFonts.plusJakartaSans(
                                                     fontWeight: FontWeight.bold,
@@ -977,7 +979,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                                 ),
                                               ),
                                               child: Text(
-                                                'REQUIRES REVISION',
+                                                langVM.translate('REQUIRES REVISION'),
                                                 style:
                                                     GoogleFonts.plusJakartaSans(
                                                       fontSize: 8.5,
@@ -1007,8 +1009,8 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                                       .rejectionReason!
                                                       .trim()
                                                       .isNotEmpty)
-                                              ? 'Feedback: "${authVM.currentUser!.rejectionReason!.trim()}" - Tap to revise and resubmit.'
-                                              : 'Kraftangan review requires document updates. Tap to revise and resubmit your application.',
+                                              ? '${langVM.translate('Feedback')}: "${authVM.currentUser!.rejectionReason!.trim()}" - ${langVM.translate('Tap to revise and resubmit.')}'
+                                              : langVM.translate('Kraftangan review requires document updates. Tap to revise and resubmit your application.'),
                                           style: GoogleFonts.plusJakartaSans(
                                             fontSize: 11.5,
                                             color: isDark
@@ -1061,9 +1063,9 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                   ),
-                                  child: const Text(
-                                    'Re-apply',
-                                    style: TextStyle(
+                                  child: Text(
+                                    langVM.translate('Re-apply'),
+                                    style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 12,
                                     ),
@@ -1133,7 +1135,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                               WrapCrossAlignment.center,
                                           children: [
                                             Text(
-                                              'Artisan Studio Application',
+                                              langVM.translate('Artisan Studio Application'),
                                               style:
                                                   GoogleFonts.plusJakartaSans(
                                                     fontWeight: FontWeight.bold,
@@ -1166,7 +1168,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                                 ),
                                               ),
                                               child: Text(
-                                                'PENDING REVIEW',
+                                                langVM.translate('PENDING REVIEW'),
                                                 style:
                                                     GoogleFonts.plusJakartaSans(
                                                       fontSize: 8.5,
@@ -1187,7 +1189,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                         ),
                                         const SizedBox(height: 4),
                                         Text(
-                                          'Your Master Artisan registration is undergoing Kraftangan Malaysia verification. Studio access unlocks upon approval.',
+                                          langVM.translate('Your Master Artisan registration is undergoing Kraftangan Malaysia verification. Studio access unlocks upon approval.'),
                                           style: GoogleFonts.plusJakartaSans(
                                             fontSize: 11.5,
                                             color: isDark
@@ -1240,9 +1242,9 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                   ),
-                                  child: const Text(
-                                    'View Application',
-                                    style: TextStyle(
+                                  child: Text(
+                                    langVM.translate('View Application'),
+                                    style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 12,
                                     ),
@@ -1295,7 +1297,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'Are you a Master Artisan?',
+                                      langVM.translate('Are you a Master Artisan?'),
                                       style: GoogleFonts.plusJakartaSans(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 13,
@@ -1305,7 +1307,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                       ),
                                     ),
                                     Text(
-                                      'Register your traditional studio to host quests and earn Kraftangan recognition.',
+                                      langVM.translate('Register your traditional studio to host quests and earn Kraftangan recognition.'),
                                       style: GoogleFonts.plusJakartaSans(
                                         fontSize: 11,
                                         color: isDark
@@ -1347,7 +1349,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                   ),
                                 ),
                                 child: Text(
-                                  'Apply',
+                                  langVM.translate('Apply'),
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 11,
@@ -1373,7 +1375,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Heritage Passport Stamps',
+                                  langVM.translate('Heritage Passport Stamps'),
                                   maxLines: 2,
                                   softWrap: true,
                                   style: GoogleFonts.dmSerifDisplay(
@@ -1384,7 +1386,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                   ),
                                 ),
                                 Text(
-                                  'Collect stamps by completing cultural quests',
+                                  langVM.translate('Collect stamps by completing cultural quests'),
                                   maxLines: 2,
                                   softWrap: true,
                                   style: GoogleFonts.plusJakartaSans(
@@ -1427,7 +1429,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  _stampCounterText(gameStat),
+                                  _stampCounterText(gameStat, langVM),
                                   style: GoogleFonts.plusJakartaSans(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w900,
@@ -1443,13 +1445,14 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                       ),
 
                       const SizedBox(height: 12),
-                      _buildStampCollectionProgress(gameStat, isDark),
+                      _buildStampCollectionProgress(gameStat, isDark, langVM),
 
                       if (gameStat.passportWarning != null) ...[
                         const SizedBox(height: 12),
                         _buildPassportNotice(
                           gameStat.passportWarning!,
                           gameStat.loadPassport,
+                          langVM: langVM,
                           isDark: isDark,
                         ),
                       ],
@@ -1482,9 +1485,9 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: _buildPassportStateCard(
                       icon: Icons.cloud_off_rounded,
-                      title: 'Passport unavailable',
+                      title: langVM.translate('Passport unavailable'),
                       message: gameStat.passportError!,
-                      actionLabel: 'Try Again',
+                      actionLabel: langVM.translate('Try Again'),
                       onAction: gameStat.loadPassport,
                       isDark: isDark,
                     ),
@@ -1496,11 +1499,11 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: _buildPassportStateCard(
                       icon: Icons.auto_awesome_outlined,
-                      title: 'Your first stamp awaits',
+                      title: langVM.translate('Your first stamp awaits'),
                       message: gameStat.hasAvailablePassportStampData
-                          ? 'No approved Heritage Passport badges are available yet.'
-                          : 'No earned stamps were found. Pull to refresh your Passport.',
-                      actionLabel: 'Refresh',
+                          ? langVM.translate('No approved Heritage Passport badges are available yet.')
+                          : langVM.translate('No earned stamps were found. Pull to refresh your Passport.'),
+                      actionLabel: langVM.translate('Refresh'),
                       onAction: gameStat.loadPassport,
                       isDark: isDark,
                     ),
@@ -1642,7 +1645,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                                   child: Text(
                                     unlocked && stamp.earnedAt != null
                                         ? _formatStampDate(stamp.earnedAt!)
-                                        : 'COMPLETE QUEST TO UNLOCK',
+                                        : langVM.translate('COMPLETE QUEST TO UNLOCK'),
                                     maxLines: unlocked ? 1 : 2,
                                     overflow: TextOverflow.ellipsis,
                                     textAlign: TextAlign.center,
@@ -1712,19 +1715,20 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
         '${months[date.month - 1]} ${date.year}';
   }
 
-  String _stampCounterText(GamificationViewModel state) {
-    if (!state.hasPassportStampData) return '— STAMPS';
+  String _stampCounterText(GamificationViewModel state, LanguageViewModel langVM) {
+    if (!state.hasPassportStampData) return '— ${langVM.translate('STAMPS')}';
     final earned = state.earnedPassportStamps.length;
     if (state.hasAvailablePassportStampData &&
         state.availablePassportStamps > 0) {
-      return '$earned / ${state.availablePassportStamps} STAMPS';
+      return '$earned / ${state.availablePassportStamps} ${langVM.translate('STAMPS')}';
     }
-    return '$earned STAMPS EARNED';
+    return '$earned ${langVM.translate('STAMPS EARNED')}';
   }
 
   Widget _buildStampCollectionProgress(
     GamificationViewModel state,
     bool isDark,
+    LanguageViewModel langVM,
   ) {
     final earned = state.earnedPassportStamps.length;
     final hasTotal =
@@ -1733,8 +1737,8 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
     final total = hasTotal ? state.availablePassportStamps : 0;
     final progress = total > 0 ? (earned / total).clamp(0.0, 1.0) : 0.0;
     final countLabel = hasTotal
-        ? '$earned of $total Heritage Stamps Collected'
-        : '$earned Heritage ${earned == 1 ? 'Stamp' : 'Stamps'} Collected';
+        ? '$earned ${langVM.translate('of')} $total ${langVM.translate('Heritage Stamps Collected')}'
+        : '$earned ${langVM.translate('Heritage Stamps Collected')}';
 
     return Container(
       width: double.infinity,
@@ -1774,7 +1778,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
           if (!hasTotal || earned < total) ...[
             const SizedBox(height: 8),
             Text(
-              'Complete another cultural quest to grow your Passport.',
+              langVM.translate('Complete another cultural quest to grow your Passport.'),
               style: GoogleFonts.plusJakartaSans(
                 color: isDark ? Colors.white60 : const Color(0xFF6B6250),
                 fontSize: 9.5,
@@ -1903,6 +1907,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
   Widget _buildPassportNotice(
     String message,
     Future<void> Function() retry, {
+    required LanguageViewModel langVM,
     bool isDark = false,
   }) {
     return Container(
@@ -1938,7 +1943,7 @@ class _TouristProfileTabState extends State<TouristProfileTab> {
                   ? const Color(0xFFFFD54F)
                   : const Color(0xFFB45309),
             ),
-            child: const Text('Retry'),
+            child: Text(langVM.translate('Retry')),
           ),
         ],
       ),
