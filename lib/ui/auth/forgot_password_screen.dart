@@ -682,6 +682,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             fontSize: 14,
           ),
           decoration: InputDecoration(
+            floatingLabelBehavior: FloatingLabelBehavior.always,
             labelText: 'New Password',
             labelStyle: GoogleFonts.plusJakartaSans(
               color: isDark ? Colors.white70 : null,
@@ -739,6 +740,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             fontSize: 14,
           ),
           decoration: InputDecoration(
+            floatingLabelBehavior: FloatingLabelBehavior.always,
             labelText: 'Confirm New Password',
             labelStyle: GoogleFonts.plusJakartaSans(
               color: isDark ? Colors.white70 : null,
