@@ -393,7 +393,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
     }
 
     try {
-      final time = DateTime.parse(raw).toLocal();
+      final time = DateTime.parse(raw).toUtc().add(const Duration(hours: 8));
 
       final day = time.day.toString().padLeft(2, '0');
       final month = time.month.toString().padLeft(2, '0');
@@ -408,7 +408,16 @@ class _LiveForumTabState extends State<LiveForumTab> {
     }
   }
 
+  bool get _replyingIsQuarantined {
+    if (_activeThread?['isReported'] == true) return true;
+    final messages = _activeThread?['messages'] as List? ?? const [];
+    return _replyingToReplyId != null && messages.any((message) =>
+        message['id']?.toString() == _replyingToReplyId &&
+        message['isReported'] == true);
+  }
+
   Future<void> _sendMessage(BuildContext context) async {
+    if (_replyingIsQuarantined) return;
     final text = _messageController.text.trim();
     if (text.isEmpty || _activeThread == null) return;
     final sendingThreadId = _activeThread!['id'].toString();
@@ -1414,6 +1423,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
   void _showCreateThreadModal(LanguageViewModel langVM) {
     final titleController = TextEditingController();
     final bodyController = TextEditingController();
+    bool showRequiredErrors = false;
     String selectedCommunity = 'c/BatikCraft';
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -1536,6 +1546,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                     const SizedBox(height: 6),
                     TextField(
                       controller: titleController,
+                      onChanged: (_) => setModalState(() {}),
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 13,
                         color: isDark ? Colors.white : Colors.black87,
@@ -1543,6 +1554,8 @@ class _LiveForumTabState extends State<LiveForumTab> {
                       decoration: InputDecoration(
                         hintText:
                             'e.g. How to care for handwoven Songket silk?',
+                        errorText: showRequiredErrors && titleController.text.trim().isEmpty
+                            ? 'Please enter a title.' : null,
                         hintStyle: GoogleFonts.plusJakartaSans(
                           fontSize: 13,
                           color: isDark ? Colors.white38 : Colors.grey[400],
@@ -1578,6 +1591,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                     const SizedBox(height: 6),
                     TextField(
                       controller: bodyController,
+                      onChanged: (_) => setModalState(() {}),
                       maxLines: 3,
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 12,
@@ -1586,6 +1600,8 @@ class _LiveForumTabState extends State<LiveForumTab> {
                       decoration: InputDecoration(
                         hintText:
                             'Provide details or background for master artisans...',
+                        errorText: showRequiredErrors && bodyController.text.trim().isEmpty
+                            ? 'Please enter a description.' : null,
                         hintStyle: GoogleFonts.plusJakartaSans(
                           fontSize: 12,
                           color: isDark ? Colors.white38 : Colors.grey[400],
@@ -1618,7 +1634,8 @@ class _LiveForumTabState extends State<LiveForumTab> {
                           final title = titleController.text.trim();
                           final body = bodyController.text.trim();
 
-                          if (title.isEmpty) return;
+                          setModalState(() => showRequiredErrors = true);
+                          if (title.isEmpty || body.isEmpty) return;
 
                           final authVM = context.read<AuthViewModel>();
                           final user = authVM.currentUser;
@@ -3356,6 +3373,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                     Expanded(
                       child: TextField(
                         controller: _messageController,
+                        enabled: !_replyingIsQuarantined,
                         maxLines: 4,
                         minLines: 1,
                         textInputAction: TextInputAction.send,
@@ -3365,7 +3383,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                           color: isDark ? Colors.white : Colors.black87,
                         ),
                         decoration: InputDecoration(
-                          hintText: _replyingToName != null
+                          hintText: _replyingIsQuarantined
+                              ? 'Under review - replies disabled'
+                              : _replyingToName != null
                               ? 'Reply to $_replyingToName...'
                               : 'Write your answer or response...',
                           hintStyle: GoogleFonts.plusJakartaSans(
@@ -3414,7 +3434,8 @@ class _LiveForumTabState extends State<LiveForumTab> {
                     SizedBox(
                       height: 42,
                       child: FilledButton.icon(
-                        onPressed: () => _sendMessage(context),
+                        onPressed: _replyingIsQuarantined
+                            ? null : () => _sendMessage(context),
                         style: FilledButton.styleFrom(
                           backgroundColor: isDark
                               ? const Color(0xFF00695C)
@@ -3875,10 +3896,13 @@ class _LiveForumTabState extends State<LiveForumTab> {
                       ? const Color(0xFFFFD54F)
                       : const Color(0xFF004D40),
                 ),
-                tooltip: 'Reply to ${msg['displayName'] ?? msg['sender']}',
+                tooltip: msg['isReported'] == true || _activeThread?['isReported'] == true
+                    ? 'Replies unavailable while content is under review'
+                    : 'Reply to ${msg['displayName'] ?? msg['sender']}',
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
-                onPressed: () {
+                onPressed: msg['isReported'] == true || _activeThread?['isReported'] == true
+                    ? null : () {
                   setState(() {
                     _replyingToReplyId = msg['id'].toString();
                     _replyingToName = (msg['displayName'] ?? msg['sender'])

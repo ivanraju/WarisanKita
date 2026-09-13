@@ -5,6 +5,15 @@ import 'package:warisan_kita/data/services/content_safety_service.dart';
 import 'package:warisan_kita/domain/models/forum_post.dart';
 
 class ForumViewModel extends ChangeNotifier {
+  List<Map<String, dynamic>> _adminOnlyHistory(
+      List<Map<String, dynamic>> rows) {
+    return rows.where((row) {
+      final reason = row['deletion_reason']?.toString().toLowerCase() ?? '';
+      final notes = row['notes']?.toString().toLowerCase() ?? '';
+      return !reason.contains('deleted by author/user') &&
+          !notes.contains('deleted by author/user');
+    }).toList();
+  }
   final ForumRepository _repository;
 
   ForumViewModel({ForumRepository? repository})
@@ -41,7 +50,8 @@ class ForumViewModel extends ChangeNotifier {
 
     _threads = await _repository.getThreads();
     try {
-      _moderationHistory = await _repository.fetchForumModerationHistory();
+      _moderationHistory = _adminOnlyHistory(
+          await _repository.fetchForumModerationHistory());
     } catch (_) {}
 
     _isLoading = false;
@@ -68,7 +78,8 @@ class ForumViewModel extends ChangeNotifier {
 
   Future<void> fetchForumModerationHistory() async {
     try {
-      _moderationHistory = await _repository.fetchForumModerationHistory();
+      _moderationHistory = _adminOnlyHistory(
+          await _repository.fetchForumModerationHistory());
 
       debugPrint(
         'ViewModel moderation history: '
@@ -91,13 +102,10 @@ class ForumViewModel extends ChangeNotifier {
     required String authorUserId,
     String? initialMessage,
   }) async {
-    final safety = ContentSafetyService.evaluate(
-      title: title,
-      body: initialMessage ?? '',
-    );
-    if (safety.isBlocked) {
-      return safety;
-    }
+    final safety = ContentSafetyService.evaluate(title: title);
+    final replySafety = ContentSafetyService.evaluate(title: initialMessage ?? '');
+    if (safety.isBlocked) return safety;
+    if (replySafety.isBlocked) return replySafety;
 
     final threadId = _generateUuid();
     final List<ThreadReply> initialReplies = [];
@@ -116,6 +124,10 @@ class ForumViewModel extends ChangeNotifier {
           isVerifiedAnswer: false,
           timestamp: 'Just now',
           text: initialMessage.trim(),
+          isReported: replySafety.isAutoFlagged,
+          reportReason: replySafety.flagReason,
+          reportNotes: replySafety.isAutoFlagged
+              ? 'Automated system flag triggered upon reply creation.' : null,
         ),
       );
     }
@@ -151,9 +163,20 @@ class ForumViewModel extends ChangeNotifier {
         isAutomated: true,
       );
     }
+    if (replySafety.isAutoFlagged) {
+      for (final reply in initialReplies) {
+        await _repository.reportReply(
+          threadId,
+          reply.id,
+          replySafety.flagReason ?? 'Automated reply flag',
+          'Flagged reply posted by $authorName: "${reply.text}"',
+          isAutomated: true,
+        );
+      }
+    }
     await fetchThreads();
     await fetchForumReportQueue();
-    return safety;
+    return safety.isAutoFlagged ? safety : replySafety;
   }
 
   Future<ContentSafetyResult> postReply({
@@ -166,6 +189,15 @@ class ForumViewModel extends ChangeNotifier {
     required String authorUserId,
     String? parentReplyId,
   }) async {
+    for (final thread in _threads.where((t) => t.id == threadId)) {
+      if (thread.isReported || thread.replies.any((reply) =>
+          reply.id == parentReplyId && reply.isReported)) {
+        return const ContentSafetyResult(
+          isBlocked: true,
+          blockReason: 'Replies are unavailable while this content is under review.',
+        );
+      }
+    }
     final safety = ContentSafetyService.evaluate(title: text);
     if (safety.isBlocked) {
       return safety;
