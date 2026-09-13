@@ -7,6 +7,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:warisan_kita/data/services/supabase_service.dart';
 
+const postId = '11111111-1111-4111-8111-111111111111';
+const replyId = '22222222-2222-4222-8222-222222222222';
+const bodyPostId = '33333333-3333-4333-8333-333333333333';
+
 class VoteBackend {
   final votes = <String, List<int>>{
     'post': [...List.filled(5, 1), ...List.filled(6, -1)],
@@ -22,6 +26,7 @@ class VoteBackend {
     final name = request.url.pathSegments.last;
     final target = name.contains('reply') || name == 'forum_replies'
         ? 'reply' : 'post';
+    final targetId = target == 'post' ? postId : replyId;
     Object result;
     final headers = {'content-type': 'application/json'};
     if ((failCounts && name.endsWith('_votes')) ||
@@ -30,6 +35,7 @@ class VoteBackend {
           403, request: request, headers: headers);
     }
     if (name.startsWith('vote_forum_')) {
+      expect(jsonDecode(request.body)['p_${target}_id'], targetId);
       final direction = jsonDecode(request.body)['p_vote'] as int;
       final old = selected[target]!;
       final next = old == direction ? 0 : direction;
@@ -55,15 +61,16 @@ class VoteBackend {
       headers['content-range'] = rows.isEmpty
           ? '*/${votes[target]!.length}'
           : '$offset-${offset + rows.length - 1}/${votes[target]!.length}';
-      result = rows.map((v) => {'${target}_id': target, 'vote': v}).toList();
+      expect(request.url.queryParameters['${target}_id'], contains(targetId));
+      result = rows.map((v) => {'${target}_id': targetId, 'vote': v}).toList();
     } else {
-      result = [{'id': target, 'title': 'Content', 'content': 'Content',
+      result = [{'id': targetId, 'title': 'Content', 'content': 'Content',
         'upvotes': votes[target]!.fold<int>(0, (a, b) => a + b)}];
       if (includePostBody && name == 'forum_posts') {
-        (result as List).add({'id': 'body-post', 'title': 'Title', 'content': 'Body'});
+        (result as List).add({'id': bodyPostId, 'title': 'Title', 'content': 'Body'});
       }
       if (includePostBody && name == 'forum_replies' &&
-          request.url.queryParameters['post_id'] == 'eq.body-post') {
+          request.url.queryParameters['post_id'] == 'eq.$bodyPostId') {
         result = [];
       }
     }
@@ -96,8 +103,8 @@ void main() {
     // Fetch fallback exposes the local updates independently of count rereads.
     backend.failContent = true;
     for (final direction in [1, -1, 1, 1, -1, -1]) {
-      await service.voteThread('post', direction);
-      await service.voteReply('post', 'reply', direction);
+      await service.voteThread(postId, direction);
+      await service.voteReply(postId, replyId, direction);
       final post = (await service.fetchThreads()).single;
       for (final entry in {'post': post.toMap(),
         'reply': post.replies.single.toMap()}.entries) {
@@ -113,12 +120,12 @@ void main() {
   test('Count failure retains freshly fetched posts and replies with zero counts', () async {
     backend.failCounts = true;
     final post = (await service.fetchThreads()).single;
-    expect(post.id, 'post');
+    expect(post.id, postId);
     expect(post.title, 'Content');
     expect(post.upvotes, -1);
     expect(post.upvoteCount, 0);
     expect(post.downvoteCount, 0);
-    expect(post.replies.single.id, 'reply');
+    expect(post.replies.single.id, replyId);
     expect(post.replies.single.text, 'Content');
     expect(post.replies.single.upvoteCount, 0);
     expect(post.replies.single.downvoteCount, 0);
@@ -135,12 +142,12 @@ void main() {
   test('Synthetic post body cannot break real reply counts after voting', () async {
     backend.includePostBody = true;
     final initial = await service.fetchThreads();
-    expect(initial.firstWhere((p) => p.id == 'body-post').replies.single.id,
-        'body-post_content');
-    expect(initial.firstWhere((p) => p.id == 'post').replies.single.upvoteCount, 5);
-    await service.voteReply('post', 'reply', 1);
+    expect(initial.firstWhere((p) => p.id == bodyPostId).replies.single.id,
+        '${bodyPostId}_content');
+    expect(initial.firstWhere((p) => p.id == postId).replies.single.upvoteCount, 5);
+    await service.voteReply(postId, replyId, 1);
     final refreshed = await service.fetchThreads();
-    final reply = refreshed.firstWhere((p) => p.id == 'post').replies.single;
+    final reply = refreshed.firstWhere((p) => p.id == postId).replies.single;
     expect(reply.userVote, 1);
     expect(reply.upvoteCount, 6);
     expect(reply.downvoteCount, 6);
