@@ -553,13 +553,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             ? const Color(0xFFFFD54F)
                             : const Color(0xFF004D40),
                       ),
+                      errorMaxLines: 3,
+                      errorStyle: TextStyle(
+                        fontSize: 12,
+                        height: 1.25,
+                        color: isDark
+                            ? const Color(0xFFFCA5A5)
+                            : const Color(0xFFDC2626),
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
                     ),
                   ),
 
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 22),
 
                   // Unique Username Handle Input Field
                   TextFormField(
@@ -574,6 +582,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       hintText: 'e.g. siticrafts',
                       prefixText: '@',
                       helperText: _usernameStatusMessage,
+                      helperMaxLines: 2,
+                      errorMaxLines: 3,
+                      errorStyle: TextStyle(
+                        fontSize: 12,
+                        height: 1.25,
+                        color: isDark
+                            ? const Color(0xFFFCA5A5)
+                            : const Color(0xFFDC2626),
+                      ),
                       helperStyle: TextStyle(
                         color: _isUsernameAvailable == true
                             ? const Color(0xFF10B981)
@@ -615,7 +632,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 22),
 
                   // Bio / Explorer Note Field
                   TextFormField(
@@ -635,6 +652,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ),
                     decoration: InputDecoration(
                       labelText: tr('Heritage Bio / Explorer Note'),
+                      errorMaxLines: 3,
+                      errorStyle: TextStyle(
+                        fontSize: 12,
+                        height: 1.25,
+                        color: isDark
+                            ? const Color(0xFFFCA5A5)
+                            : const Color(0xFFDC2626),
+                      ),
                       prefixIcon: Icon(
                         Icons.description_outlined,
                         color: isDark ? const Color(0xFFFFD54F) : null,
@@ -723,6 +748,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             ),
                             decoration: InputDecoration(
                               labelText: tr('Artisan Studio Name'),
+                              errorMaxLines: 3,
+                              errorStyle: TextStyle(
+                                fontSize: 12,
+                                height: 1.25,
+                                color: isDark
+                                    ? const Color(0xFFFCA5A5)
+                                    : const Color(0xFFDC2626),
+                              ),
                               prefixIcon: Icon(
                                 Icons.storefront_outlined,
                                 color: isDark

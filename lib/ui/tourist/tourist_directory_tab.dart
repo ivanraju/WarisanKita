@@ -1883,12 +1883,18 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                   vertical: 36.0,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: isDark ? const Color(0xFF0D2825) : Colors.white,
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  border: Border.all(
+                    color: isDark
+                        ? const Color(0xFF1E3A34)
+                        : const Color(0xFFE2E8F0),
+                  ),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF004D40).withValues(alpha: 0.05),
+                      color: isDark
+                          ? Colors.black.withValues(alpha: 0.3)
+                          : const Color(0xFF004D40).withValues(alpha: 0.05),
                       blurRadius: 16,
                       offset: const Offset(0, 4),
                     ),
@@ -1900,14 +1906,22 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFFFBEB),
+                        color: isDark
+                            ? const Color(0xFFFFD54F).withValues(alpha: 0.15)
+                            : const Color(0xFFFFFBEB),
                         shape: BoxShape.circle,
-                        border: Border.all(color: const Color(0xFFFDE68A)),
+                        border: Border.all(
+                          color: isDark
+                              ? const Color(0xFFFFD54F).withValues(alpha: 0.35)
+                              : const Color(0xFFFDE68A),
+                        ),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.search_off_rounded,
                         size: 44,
-                        color: Color(0xFFD97706),
+                        color: isDark
+                            ? const Color(0xFFFFD54F)
+                            : const Color(0xFFD97706),
                       ),
                     ),
                     const SizedBox(height: 18),
@@ -1916,7 +1930,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                       style: GoogleFonts.dmSerifDisplay(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
-                        color: const Color(0xFF1E293B),
+                        color: isDark ? Colors.white : const Color(0xFF1E293B),
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -1927,7 +1941,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                       ),
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 13,
-                        color: const Color(0xFF64748B),
+                        color: isDark ? Colors.white70 : const Color(0xFF64748B),
                         height: 1.5,
                       ),
                       textAlign: TextAlign.center,
@@ -1944,7 +1958,10 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                         ),
                       ),
                       style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFF004D40),
+                        backgroundColor: isDark
+                            ? const Color(0xFF00695C)
+                            : const Color(0xFF004D40),
+                        foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 24,
                           vertical: 14,

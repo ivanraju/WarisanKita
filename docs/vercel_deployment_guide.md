@@ -46,7 +46,7 @@ In the Vercel **Configure Project** screen:
 1. Click the **Deploy** button.
 2. Vercel will execute `build.sh`, set up Flutter stable, run `flutter build web --release`, and publish your app.
 3. Once finished, you will receive your live URL:
-   `https://warisan-kita.vercel.app`
+   `https://warisan-kita-nine.vercel.app`
 
 ---
 

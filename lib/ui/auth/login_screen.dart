@@ -510,7 +510,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ],
           ),
           content: Text(
-            'Administrator accounts and moderation features are hosted exclusively on the Desktop Web Portal.\n\nPlease open the Admin Portal in a web browser at:\nhttps://warisan-kita.vercel.app',
+            'Administrator accounts and moderation features are hosted exclusively on the Desktop Web Portal.\n\nPlease open the Admin Portal in a web browser at:\nhttps://warisan-kita-nine.vercel.app',
             style: GoogleFonts.plusJakartaSans(fontSize: 13, height: 1.5, color: isDark ? Colors.white70 : Colors.black87),
           ),
           actions: [
@@ -528,7 +528,7 @@ class _LoginScreenState extends State<LoginScreen> {
               label: const Text('OPEN WEB PORTAL'),
               onPressed: () async {
                 Navigator.pop(dialogCtx);
-                final uri = Uri.parse('https://warisan-kita.vercel.app');
+                final uri = Uri.parse('https://warisan-kita-nine.vercel.app');
                 try {
                   await launchUrl(uri, mode: LaunchMode.externalApplication);
                 } catch (e) {
