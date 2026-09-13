@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:warisan_kita/ui/auth/forgot_password_screen.dart';
 import 'package:warisan_kita/ui/core/widgets/change_password_dialog.dart';
 import 'package:warisan_kita/ui/matchmaker/craft_matchmaker_quiz_wizard.dart';
 import 'package:warisan_kita/ui/core/edit_profile_screen.dart';
@@ -285,8 +284,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 CircleAvatar(
                   radius: 28,
                   backgroundColor: const Color(0xFF004D40),
-                  backgroundImage: user?.avatarImageProvider,
-                  child: user?.avatarImageProvider != null
+                  backgroundImage: user.avatarImageProvider,
+                  child: user.avatarImageProvider != null
                       ? null
                       : Text(
                           initials,
@@ -342,7 +341,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             isDark: isDark,
             icon: Icons.person_outline_rounded,
             title: langVM.translate('Edit Profile'),
-            subtitle: langVM.translate('Update avatar, name, and heritage bio'),
+            subtitle: langVM.translate('Update avatar, name, and username handle'),
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const EditProfileScreen()),

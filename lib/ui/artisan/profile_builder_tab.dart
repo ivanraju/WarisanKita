@@ -298,6 +298,29 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
             type == 'VILLAGE_CRAFTING_PHOTO') {
           newDocs['CRAFTING_PHOTO'] = url;
         }
+        if (type == 'KRAFTANGAN_MASTER_CERT' ||
+            type == 'KRAFTANGAN_CERT' ||
+            type == 'CERT' ||
+            type == 'KRAFTANGAN') {
+          newDocs['KRAFTANGAN_MASTER_CERT'] = url;
+        }
+        if (type == 'SSM_BUSINESS_CERT' ||
+            type == 'SSM_CERT' ||
+            type == 'SSM') {
+          newDocs['SSM_BUSINESS_CERT'] = url;
+        }
+      }
+    }
+    for (final tag in user.tags) {
+      if (tag.startsWith('doc_kraftangan_cert_url:')) {
+        final u = tag.substring('doc_kraftangan_cert_url:'.length);
+        if (u.isNotEmpty) newDocs['KRAFTANGAN_MASTER_CERT'] = u;
+      } else if (tag.startsWith('doc_ssm_cert_url:')) {
+        final u = tag.substring('doc_ssm_cert_url:'.length);
+        if (u.isNotEmpty) newDocs['SSM_BUSINESS_CERT'] = u;
+      } else if (tag.startsWith('doc_crafting_photo_url:')) {
+        final u = tag.substring('doc_crafting_photo_url:'.length);
+        if (u.isNotEmpty) newDocs['CRAFTING_PHOTO'] = u;
       }
     }
     if (user.isVillageWorkshop &&
@@ -316,12 +339,9 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
         newDocs['SSM_BUSINESS_CERT'] = fallbackSsm;
       }
     }
-    if (newDocs['KRAFTANGAN_MASTER_CERT'] == null ||
-        newDocs['KRAFTANGAN_MASTER_CERT']!.isEmpty) {
-      final fallbackCert = user.certFileUrl;
-      if (fallbackCert != null && fallbackCert.isNotEmpty) {
-        newDocs['KRAFTANGAN_MASTER_CERT'] = fallbackCert;
-      }
+    final fallbackCert = user.certFileUrl;
+    if (fallbackCert != null && fallbackCert.isNotEmpty) {
+      newDocs['KRAFTANGAN_MASTER_CERT'] = fallbackCert;
     }
     if (user.isVillageWorkshop &&
         (newDocs['CRAFTING_PHOTO'] == null ||
@@ -1448,14 +1468,174 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     }
   }
 
-  void _viewDocument(String url) async {
-    final uri = Uri.parse(url);
-    try {
-      await launchUrl(uri, mode: LaunchMode.platformDefault);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open file.')));
+  void _viewDocument(String title, String url) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final lowerUrl = url.toLowerCase();
+    final bool isImage = url.startsWith('data:image') ||
+        lowerUrl.endsWith('.png') ||
+        lowerUrl.endsWith('.jpg') ||
+        lowerUrl.endsWith('.jpeg') ||
+        lowerUrl.endsWith('.webp');
+
+    if (isImage) {
+      showDialog(
+        context: context,
+        builder: (dialogCtx) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          backgroundColor: isDark ? const Color(0xFF0D2825) : Colors.white,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 500,
+              maxHeight: MediaQuery.of(context).size.height * 0.85,
+            ),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.verified_user_outlined,
+                        color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.dmSerifDisplay(
+                            fontSize: 18,
+                            color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded),
+                        onPressed: () => Navigator.of(dialogCtx).pop(),
+                        tooltip: 'Close',
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: Container(
+                      constraints: const BoxConstraints(maxHeight: 400),
+                      color: isDark ? Colors.black26 : const Color(0xFFF1F5F9),
+                      child: InteractiveViewer(
+                        minScale: 0.8,
+                        maxScale: 4.0,
+                        child: _buildPortfolioImage(url),
+                      ),
+                    ),
+                  ),
+                  if (url.startsWith('http://') || url.startsWith('https://')) ...[
+                    const SizedBox(height: 12),
+                    TextButton.icon(
+                      onPressed: () async {
+                        final uri = Uri.tryParse(url);
+                        if (uri != null) {
+                          await launchUrl(uri, mode: LaunchMode.platformDefault);
+                        }
+                      },
+                      icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                      label: const Text('Open External / Full Resolution'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: isDark ? const Color(0xFF34D399) : const Color(0xFF004D40),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      return;
+    }
+
+    final uri = Uri.tryParse(url);
+    if (uri != null && (url.startsWith('http://') || url.startsWith('https://'))) {
+      try {
+        await launchUrl(uri, mode: LaunchMode.platformDefault);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open file.')));
+        }
       }
+    } else {
+      showDialog(
+        context: context,
+        builder: (dialogCtx) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          backgroundColor: isDark ? const Color(0xFF0D2825) : Colors.white,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.description_outlined,
+                      color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.dmSerifDisplay(
+                          fontSize: 18,
+                          color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded),
+                      onPressed: () => Navigator.of(dialogCtx).pop(),
+                      tooltip: 'Close',
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF041412) : const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.picture_as_pdf_rounded, color: Colors.redAccent, size: 32),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          url.split('/').last.split('\\').last,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.white : const Color(0xFF1E293B),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
     }
   }
 
@@ -1602,9 +1782,62 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     final authVM = context.watch<AuthViewModel>();
     final currentUser = authVM.currentUser;
     final bool isVillage = currentUser?.isVillageWorkshop ?? false;
-    final int ssmUploaded = _documents['SSM_BUSINESS_CERT'] != null ? 1 : 0;
-    final int certUploaded = _documents['KRAFTANGAN_MASTER_CERT'] != null ? 1 : 0;
-    final int craftingPhotoUploaded = _documents['CRAFTING_PHOTO'] != null ? 1 : 0;
+
+    // Comprehensive resolution of credentials from state, user getters, artisanDocuments, and tags
+    String? resolvedCraftingPhoto = _documents['CRAFTING_PHOTO'] ??
+        _documents['VILLAGE_CRAFTING_PHOTO'] ??
+        currentUser?.craftingPhotoUrl ??
+        (currentUser?.isVillageWorkshop == true ? currentUser?.ssmFileUrl : null);
+
+    String? resolvedSsmCert = _documents['SSM_BUSINESS_CERT'] ??
+        _documents['SSM_CERT'] ??
+        _documents['SSM'] ??
+        currentUser?.ssmFileUrl;
+
+    String? resolvedKraftanganCert = _documents['KRAFTANGAN_MASTER_CERT'] ??
+        _documents['KRAFTANGAN_CERT'] ??
+        _documents['CERT'] ??
+        _documents['KRAFTANGAN'] ??
+        currentUser?.certFileUrl;
+
+    if (currentUser != null) {
+      for (final doc in currentUser.artisanDocuments) {
+        final t = doc['doc_type']?.toString();
+        final u = doc['file_url']?.toString();
+        if (u != null && u.isNotEmpty) {
+          if (t == 'CRAFTING_PHOTO' || t == 'VILLAGE_CRAFTING_PHOTO') {
+            resolvedCraftingPhoto ??= u;
+          } else if (t == 'SSM_BUSINESS_CERT' || t == 'SSM_CERT' || t == 'SSM') {
+            resolvedSsmCert ??= u;
+          } else if (t == 'KRAFTANGAN_MASTER_CERT' ||
+              t == 'KRAFTANGAN_CERT' ||
+              t == 'CERT' ||
+              t == 'KRAFTANGAN') {
+            resolvedKraftanganCert ??= u;
+          }
+        }
+      }
+      for (final tag in currentUser.tags) {
+        if (tag.startsWith('doc_kraftangan_cert_url:')) {
+          final u = tag.substring('doc_kraftangan_cert_url:'.length);
+          if (u.isNotEmpty) resolvedKraftanganCert ??= u;
+        } else if (tag.startsWith('doc_ssm_cert_url:')) {
+          final u = tag.substring('doc_ssm_cert_url:'.length);
+          if (u.isNotEmpty) resolvedSsmCert ??= u;
+        } else if (tag.startsWith('doc_crafting_photo_url:')) {
+          final u = tag.substring('doc_crafting_photo_url:'.length);
+          if (u.isNotEmpty) resolvedCraftingPhoto ??= u;
+        }
+      }
+    }
+
+    final bool isCraftingPhotoUploaded = resolvedCraftingPhoto != null && resolvedCraftingPhoto.isNotEmpty;
+    final bool isSsmUploaded = resolvedSsmCert != null && resolvedSsmCert.isNotEmpty;
+    final bool isKraftanganUploaded = resolvedKraftanganCert != null && resolvedKraftanganCert.isNotEmpty;
+
+    final int ssmUploaded = isSsmUploaded ? 1 : 0;
+    final int certUploaded = isKraftanganUploaded ? 1 : 0;
+    final int craftingPhotoUploaded = isCraftingPhotoUploaded ? 1 : 0;
     final int totalUploadedDocs = isVillage
         ? (craftingPhotoUploaded + certUploaded)
         : (ssmUploaded + certUploaded);
@@ -2769,14 +3002,14 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
               _buildDocumentUploadTile(
                 isDark: isDark,
                 title: 'Traditional Crafting Proof Photo',
-                subtitle: _documents['CRAFTING_PHOTO'] != null
+                subtitle: isCraftingPhotoUploaded
                     ? 'Uploaded & Verified Proof'
                     : 'Required for Village Crafters',
                 icon: Icons.photo_camera_rounded,
-                isUploaded: _documents['CRAFTING_PHOTO'] != null,
-                onTap: () => _uploadDocument('CRAFTING_PHOTO'),
-                onView: _documents['CRAFTING_PHOTO'] != null
-                    ? () => _viewDocument(_documents['CRAFTING_PHOTO']!)
+                isUploaded: isCraftingPhotoUploaded,
+                onTap: null,
+                onView: isCraftingPhotoUploaded
+                    ? () => _viewDocument('Traditional Crafting Proof Photo', resolvedCraftingPhoto!)
                     : null,
               ),
 
@@ -2784,14 +3017,14 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
               _buildDocumentUploadTile(
                 isDark: isDark,
                 title: 'Kraftangan Malaysia Master Certification',
-                subtitle: _documents['KRAFTANGAN_MASTER_CERT'] != null
+                subtitle: isKraftanganUploaded
                     ? 'Uploaded Document'
                     : 'Optional',
                 icon: Icons.workspace_premium_rounded,
-                isUploaded: _documents['KRAFTANGAN_MASTER_CERT'] != null,
-                onTap: () => _uploadDocument('KRAFTANGAN_MASTER_CERT'),
-                onView: _documents['KRAFTANGAN_MASTER_CERT'] != null
-                    ? () => _viewDocument(_documents['KRAFTANGAN_MASTER_CERT']!)
+                isUploaded: isKraftanganUploaded,
+                onTap: null,
+                onView: isKraftanganUploaded
+                    ? () => _viewDocument('Kraftangan Malaysia Master Certification', resolvedKraftanganCert!)
                     : null,
               ),
             ] else ...[
@@ -2799,14 +3032,14 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
               _buildDocumentUploadTile(
                 isDark: isDark,
                 title: 'Business Registration (SSM) Certificate',
-                subtitle: _documents['SSM_BUSINESS_CERT'] != null
+                subtitle: isSsmUploaded
                     ? 'Uploaded Document'
                     : 'Required',
                 icon: Icons.article_rounded,
-                isUploaded: _documents['SSM_BUSINESS_CERT'] != null,
-                onTap: () => _uploadDocument('SSM_BUSINESS_CERT'),
-                onView: _documents['SSM_BUSINESS_CERT'] != null
-                    ? () => _viewDocument(_documents['SSM_BUSINESS_CERT']!)
+                isUploaded: isSsmUploaded,
+                onTap: null,
+                onView: isSsmUploaded
+                    ? () => _viewDocument('Business Registration (SSM) Certificate', resolvedSsmCert!)
                     : null,
               ),
 
@@ -2814,14 +3047,14 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
               _buildDocumentUploadTile(
                 isDark: isDark,
                 title: 'Kraftangan Malaysia Master Certification',
-                subtitle: _documents['KRAFTANGAN_MASTER_CERT'] != null
+                subtitle: isKraftanganUploaded
                     ? 'Uploaded Document'
                     : 'Optional',
                 icon: Icons.workspace_premium_rounded,
-                isUploaded: _documents['KRAFTANGAN_MASTER_CERT'] != null,
-                onTap: () => _uploadDocument('KRAFTANGAN_MASTER_CERT'),
-                onView: _documents['KRAFTANGAN_MASTER_CERT'] != null
-                    ? () => _viewDocument(_documents['KRAFTANGAN_MASTER_CERT']!)
+                isUploaded: isKraftanganUploaded,
+                onTap: null,
+                onView: isKraftanganUploaded
+                    ? () => _viewDocument('Kraftangan Malaysia Master Certification', resolvedKraftanganCert!)
                     : null,
               ),
             ],
@@ -2916,9 +3149,10 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     VoidCallback? onTap,
     VoidCallback? onView,
   }) {
+    final effectiveAction = isUploaded ? onView : onTap;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: isDark
             ? const Color(0xFF0D2825)
@@ -2930,90 +3164,92 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
               : (isUploaded ? const Color(0xFFCBD5E1) : Colors.black.withValues(alpha: 0.06)),
         ),
       ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: isDark
-                  ? const Color(0xFF041412)
-                  : (isUploaded ? const Color(0xFF004D40).withValues(alpha: 0.1) : Colors.grey[100]),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              icon,
-              color: isUploaded
-                  ? (isDark ? const Color(0xFF34D399) : const Color(0xFF004D40))
-                  : (isDark ? Colors.white54 : Colors.grey[500]),
-              size: 22,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: effectiveAction,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
               children: [
-                Text(
-                  title,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : const Color(0xFF1E293B),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? const Color(0xFF041412)
+                        : (isUploaded ? const Color(0xFF004D40).withValues(alpha: 0.1) : Colors.grey[100]),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: isUploaded
+                        ? (isDark ? const Color(0xFF34D399) : const Color(0xFF004D40))
+                        : (isDark ? Colors.white54 : Colors.grey[500]),
+                    size: 22,
                   ),
                 ),
-                Text(
-                  subtitle,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 10,
-                    color: isDark ? Colors.white60 : Colors.grey[600],
-                  ),
-                ),
-                if (isUploaded && onView != null) ...[
-                  const SizedBox(height: 4),
-                  InkWell(
-                    onTap: onView,
-                    child: Text(
-                      'View File',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 10,
-                        color: const Color(0xFFD97706),
-                        fontWeight: FontWeight.w600,
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : const Color(0xFF1E293B),
+                        ),
                       ),
+                      Text(
+                        subtitle,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 10,
+                          color: isDark ? Colors.white60 : Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: effectiveAction,
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: isDark
+                        ? (isUploaded ? const Color(0xFF041412) : null)
+                        : (isUploaded ? const Color(0xFFF0FDF4) : null),
+                    side: BorderSide(
+                      color: isDark
+                          ? (isUploaded ? const Color(0xFF34D399) : (onTap != null ? const Color(0xFF1E3A34) : Colors.white12))
+                          : (isUploaded ? const Color(0xFF10B981) : (onTap != null ? Colors.grey : Colors.grey.shade300)),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  icon: Icon(
+                    isUploaded
+                        ? Icons.visibility_rounded
+                        : (onTap != null ? Icons.upload_file_rounded : Icons.remove_circle_outline_rounded),
+                    size: 14,
+                    color: isUploaded
+                        ? (isDark ? const Color(0xFF34D399) : const Color(0xFF10B981))
+                        : (onTap != null ? (isDark ? Colors.white60 : Colors.grey) : (isDark ? Colors.white30 : Colors.grey.shade400)),
+                  ),
+                  label: Text(
+                    isUploaded ? 'VIEW' : (onTap != null ? 'UPLOAD' : 'NOT ATTACHED'),
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: isUploaded ? FontWeight.bold : FontWeight.normal,
+                      color: isUploaded
+                          ? (isDark ? const Color(0xFF34D399) : const Color(0xFF10B981))
+                          : (onTap != null ? (isDark ? Colors.white60 : Colors.grey) : (isDark ? Colors.white30 : Colors.grey.shade400)),
                     ),
                   ),
-                ],
+                ),
               ],
             ),
           ),
-          OutlinedButton.icon(
-            onPressed: onTap,
-            style: OutlinedButton.styleFrom(
-              side: BorderSide(
-                color: isDark
-                    ? (isUploaded ? const Color(0xFF34D399) : const Color(0xFF1E3A34))
-                    : (isUploaded ? const Color(0xFF10B981) : Colors.grey),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            icon: Icon(
-              isUploaded ? Icons.check_circle_rounded : Icons.upload_file_rounded,
-              size: 14,
-              color: isUploaded
-                  ? (isDark ? const Color(0xFF34D399) : const Color(0xFF10B981))
-                  : (isDark ? Colors.white60 : Colors.grey),
-            ),
-            label: Text(
-              isUploaded ? 'UPLOADED' : 'UPLOAD',
-              style: TextStyle(
-                fontSize: 10,
-                color: isUploaded
-                    ? (isDark ? const Color(0xFF34D399) : const Color(0xFF10B981))
-                    : (isDark ? Colors.white60 : Colors.grey),
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
