@@ -322,27 +322,15 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     }
     _documents = newDocs;
 
-    // 2. Sync portfolio images
+    // 2. Sync portfolio images (ONLY actual portfolio showcase images)
     if (force || _portfolioImages.isEmpty) {
       final newImages = <String>[];
       for (var doc in user.artisanDocuments) {
         final type = doc['doc_type'] as String?;
         final url = doc['file_url'] as String?;
-        if (type != null && url != null && url.isNotEmpty) {
-          if (type == 'PORTFOLIO_IMAGE' ||
-              type == 'STUDIO_PHOTO' ||
-              type == 'CRAFTING_PHOTO' ||
-              type == 'VILLAGE_CRAFTING_PHOTO') {
-            if (!newImages.contains(url)) newImages.add(url);
-          }
+        if (type == 'PORTFOLIO_IMAGE' && url != null && url.isNotEmpty) {
+          if (!newImages.contains(url)) newImages.add(url);
         }
-      }
-      for (var photo in user.photos) {
-        if (!newImages.contains(photo)) newImages.add(photo);
-      }
-      if (newDocs['CRAFTING_PHOTO'] != null &&
-          !newImages.contains(newDocs['CRAFTING_PHOTO']!)) {
-        newImages.add(newDocs['CRAFTING_PHOTO']!);
       }
       if (newImages.isNotEmpty) {
         _portfolioImages = newImages;
@@ -1248,11 +1236,9 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
         setState(() {
           if (docType == 'PORTFOLIO_IMAGE') {
             _portfolioImages.add(uploadRes['url']!);
-          } else if (docType == 'STUDIO_PHOTO') {
-            _portfolioImages.add(uploadRes['url']!);
-            _documents['CRAFTING_PHOTO'] = uploadRes['url']!;
-            _documents[docType] = uploadRes['url']!;
-          } else if (docType == 'CRAFTING_PHOTO') {
+          } else if (docType == 'STUDIO_PHOTO' ||
+              docType == 'CRAFTING_PHOTO' ||
+              docType == 'VILLAGE_CRAFTING_PHOTO') {
             _documents['CRAFTING_PHOTO'] = uploadRes['url']!;
             _documents[docType] = uploadRes['url']!;
           } else {
