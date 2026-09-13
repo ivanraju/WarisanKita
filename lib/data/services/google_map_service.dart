@@ -19,8 +19,6 @@ class GoogleMapService {
     {"featureType":"administrative","elementType":"geometry.stroke","stylers":[{"color":"#56645d"}]},
     {"featureType":"landscape.man_made","elementType":"geometry","stylers":[{"color":"#263b35"}]},
     {"featureType":"landscape.man_made","elementType":"geometry.stroke","stylers":[{"color":"#3e574f"}]},
-    {"featureType":"poi","elementType":"labels.icon","stylers":[{"visibility":"off"}]},
-    {"featureType":"poi.business","stylers":[{"visibility":"off"}]},
     {"featureType":"poi.attraction","elementType":"labels.text.fill","stylers":[{"color":"#d5a928"}]},
     {"featureType":"poi.park","elementType":"geometry","stylers":[{"color":"#28483a"}]},
     {"featureType":"poi.park","elementType":"labels.text.fill","stylers":[{"color":"#9caf9d"}]},
@@ -30,8 +28,6 @@ class GoogleMapService {
     {"featureType":"road","elementType":"labels.text.stroke","stylers":[{"color":"#2b2923"}]},
     {"featureType":"road.highway","elementType":"geometry","stylers":[{"color":"#a58a59"}]},
     {"featureType":"road.highway","elementType":"geometry.stroke","stylers":[{"color":"#5c4c35"}]},
-    {"featureType":"road","elementType":"labels.icon","stylers":[{"visibility":"off"}]},
-    {"featureType":"transit","elementType":"labels.icon","stylers":[{"visibility":"off"}]},
     {"featureType":"transit.line","elementType":"geometry","stylers":[{"color":"#394a43"}]},
     {"featureType":"water","elementType":"geometry","stylers":[{"color":"#123e43"}]},
     {"featureType":"water","elementType":"labels.text.fill","stylers":[{"color":"#8eafb0"}]}
