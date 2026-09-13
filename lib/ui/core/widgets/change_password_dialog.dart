@@ -190,11 +190,11 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
             : BorderSide.none,
       ),
       backgroundColor: isDark ? const Color(0xFF0D2825) : Colors.white,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 440),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -294,6 +294,7 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
                   fontSize: 14,
                 ),
                 decoration: InputDecoration(
+                  floatingLabelBehavior: FloatingLabelBehavior.always,
                   labelText: tr('Current Password'),
                   labelStyle: TextStyle(
                     color: isDark ? Colors.white70 : const Color(0xFF64748B),
@@ -304,6 +305,8 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
                     size: 20,
                     color: isDark ? Colors.white60 : const Color(0xFF64748B),
                   ),
+                  prefixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                  suffixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 44),
                   suffixIcon: IconButton(
                     icon: Icon(
                       _obscureCurrent ? Icons.visibility_off : Icons.visibility,
@@ -340,6 +343,7 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
                   fontSize: 14,
                 ),
                 decoration: InputDecoration(
+                  floatingLabelBehavior: FloatingLabelBehavior.always,
                   labelText: tr('New Password'),
                   labelStyle: TextStyle(
                     color: isDark ? Colors.white70 : const Color(0xFF64748B),
@@ -354,6 +358,8 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
                     size: 20,
                     color: isDark ? Colors.white60 : const Color(0xFF64748B),
                   ),
+                  prefixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                  suffixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 44),
                   suffixIcon: IconButton(
                     icon: Icon(
                       _obscureNew ? Icons.visibility_off : Icons.visibility,
@@ -396,6 +402,7 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
                   fontSize: 14,
                 ),
                 decoration: InputDecoration(
+                  floatingLabelBehavior: FloatingLabelBehavior.always,
                   labelText: tr('Confirm New Password'),
                   labelStyle: TextStyle(
                     color: isDark ? Colors.white70 : const Color(0xFF64748B),
@@ -406,6 +413,8 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
                     size: 20,
                     color: isDark ? Colors.white60 : const Color(0xFF64748B),
                   ),
+                  prefixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                  suffixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 44),
                   suffixIcon: IconButton(
                     icon: Icon(
                       _obscureConfirm ? Icons.visibility_off : Icons.visibility,

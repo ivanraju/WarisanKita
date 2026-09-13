@@ -161,6 +161,25 @@ void main() {
     expect(find.text('Kuat'), findsOneWidget);
     expect(find.text('8+ aksara'), findsOneWidget);
   });
+
+  testWidgets('renders Confirm New Password with FloatingLabelBehavior.always to prevent truncation on small screens', (tester) async {
+    tester.view.physicalSize = const Size(320, 600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpAndSettle();
+
+    // Confirm New Password should be present as a TextField with full label
+    expect(find.widgetWithText(TextField, 'Confirm New Password'), findsOneWidget);
+
+    final textField = tester.widget<TextField>(find.widgetWithText(TextField, 'Confirm New Password'));
+    expect(textField.decoration?.floatingLabelBehavior, FloatingLabelBehavior.always);
+    expect(textField.decoration?.labelText, 'Confirm New Password');
+  });
 }
 
 class _MockTestLanguageViewModel extends LanguageViewModel {
