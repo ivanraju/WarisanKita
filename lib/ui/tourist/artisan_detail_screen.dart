@@ -520,7 +520,7 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
-                          '${widget.state}, Malaysia',
+                          '${tr(widget.state)}, ${tr('Malaysia')}',
                           softWrap: true,
                           style: GoogleFonts.plusJakartaSans(
                             fontWeight: FontWeight.bold,
@@ -771,16 +771,16 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                       return t == 'KRAFTANGAN_MASTER_CERT' ||
                           t == 'KRAFTANGAN_CERT';
                     })
-                        ? '${tr('Accredited in')} ${tr(widget.craftCategory)} (${widget.state}) • ${tr('Official Certificate Verified')}'
-                        : '${tr('Accredited in')} ${tr(widget.craftCategory)} (${widget.state}) • ${tr('Verified Master Craftsman')}',
+                        ? '${tr('Accredited in')} ${tr(widget.craftCategory)} (${tr(widget.state)}) • ${tr('Official Certificate Verified')}'
+                        : '${tr('Accredited in')} ${tr(widget.craftCategory)} (${tr(widget.state)}) • ${tr('Verified Master Craftsman')}',
                     isDark: isDark,
                   ),
                   _buildCredentialTile(
                     icon: Icons.history_edu_rounded,
                     title: tr('Heritage Craft Practitioner'),
                     subtitle: widget.experience.trim().isNotEmpty
-                        ? '${widget.experience.trim()} ${tr('of authentic')} ${tr(widget.craftCategory)} ${tr('heritage mastery in')} ${widget.state}'
-                        : '${tr('Dedicated authentic')} ${tr(widget.craftCategory)} ${tr('practitioner in')} ${widget.state}',
+                        ? '${widget.experience.trim()} ${tr('of authentic')} ${tr(widget.craftCategory)} ${tr('heritage mastery in')} ${tr(widget.state)}'
+                        : '${tr('Dedicated authentic')} ${tr(widget.craftCategory)} ${tr('practitioner in')} ${tr(widget.state)}',
                     isDark: isDark,
                   ),
 
@@ -1024,7 +1024,7 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                           widget.address != null &&
                                   widget.address!.trim().isNotEmpty
                               ? widget.address!
-                              : widget.state,
+                              : tr(widget.state),
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,

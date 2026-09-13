@@ -11,6 +11,7 @@ import 'package:warisan_kita/ui/forum/forum_user_profile_page.dart';
 import 'package:warisan_kita/ui/forum/forum_public_passport.dart';
 import 'package:warisan_kita/domain/models/badge.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:warisan_kita/ui/core/widgets/translation_language_dialog.dart';
 
 class _ForumProfilePreviewDialog extends StatelessWidget {
   final String userId;
@@ -69,67 +70,69 @@ class _ForumProfilePreviewDialog extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) => Dialog(
-    backgroundColor: Theme.of(context).colorScheme.surface,
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-    child: FutureBuilder<Map<String, dynamic>>(
-      future: _load(),
-      builder: (context, snapshot) {
-        final data = snapshot.data ?? const <String, dynamic>{};
-        final profile = Map<String, dynamic>.from(data['profile'] ?? const {});
-        final name =
-            (profile['display_name'] ?? profile['full_name'] ?? displayName)
-                .toString();
-        final handle = (profile['username'] ?? username ?? '').toString();
-        final photo = (profile['avatar_url'] ?? avatarUrl ?? '')
-            .toString()
-            .trim();
-        final progress = data['progress'] as HeritageProgress?;
-        final badge = data['badge'] as HeritageStamp?;
-        return Padding(
-          padding: const EdgeInsets.all(22),
-          child: snapshot.connectionState != ConnectionState.done
-              ? const SizedBox(
-                  height: 120,
-                  child: Center(child: CircularProgressIndicator()),
-                )
-              : snapshot.hasError
-              ? const SizedBox(
-                  height: 100,
-                  child: Center(
-                    child: Text('Unable to load profile. Please try again.'),
-                  ),
-                )
-              : profile.isEmpty
-              ? const SizedBox(
-                  height: 100,
-                  child: Center(child: Text('User profile unavailable')),
-                )
-              : Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.forum_outlined,
-                          size: 16,
-                          color: Color(0xFFB8860B),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Community profile',
-                            style: GoogleFonts.dmSerifDisplay(fontSize: 18),
-                          ),
-                        ),
-                        IconButton(
-                          tooltip: 'Close',
-                          onPressed: () => Navigator.of(context).pop(),
-                          icon: const Icon(Icons.close, size: 20),
-                        ),
-                      ],
+  Widget build(BuildContext context) {
+    final langVM = context.watch<LanguageViewModel>();
+    return Dialog(
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+      child: FutureBuilder<Map<String, dynamic>>(
+        future: _load(),
+        builder: (context, snapshot) {
+          final data = snapshot.data ?? const <String, dynamic>{};
+          final profile = Map<String, dynamic>.from(data['profile'] ?? const {});
+          final name =
+              (profile['display_name'] ?? profile['full_name'] ?? displayName)
+                  .toString();
+          final handle = (profile['username'] ?? username ?? '').toString();
+          final photo = (profile['avatar_url'] ?? avatarUrl ?? '')
+              .toString()
+              .trim();
+          final progress = data['progress'] as HeritageProgress?;
+          final badge = data['badge'] as HeritageStamp?;
+          return Padding(
+            padding: const EdgeInsets.all(22),
+            child: snapshot.connectionState != ConnectionState.done
+                ? const SizedBox(
+                    height: 120,
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                : snapshot.hasError
+                ? SizedBox(
+                    height: 100,
+                    child: Center(
+                      child: Text(langVM.translate('Unable to load profile. Please try again.')),
                     ),
+                  )
+                : profile.isEmpty
+                ? SizedBox(
+                    height: 100,
+                    child: Center(child: Text(langVM.translate('User profile unavailable'))),
+                  )
+                : Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.forum_outlined,
+                            size: 16,
+                            color: Color(0xFFB8860B),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              langVM.translate('Community profile'),
+                              style: GoogleFonts.dmSerifDisplay(fontSize: 18),
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: langVM.translate('Close'),
+                            onPressed: () => Navigator.of(context).pop(),
+                            icon: const Icon(Icons.close, size: 20),
+                          ),
+                        ],
+                      ),
                     const SizedBox(height: 12),
                     Row(
                       children: [
@@ -168,7 +171,7 @@ class _ForumProfilePreviewDialog extends StatelessWidget {
                     const Divider(height: 1),
                     const SizedBox(height: 14),
                     Text(
-                      historicalRole == 'artisan' ? 'Artisan' : 'Tourist',
+                      langVM.translate(historicalRole == 'artisan' ? 'Artisan' : 'Tourist'),
                       style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
                     if (historicalRole == 'artisan') ...[
@@ -181,7 +184,7 @@ class _ForumProfilePreviewDialog extends StatelessWidget {
                           .toString()
                           .trim()
                           .isNotEmpty)
-                        Text(profile['craft_category'].toString()),
+                        Text(langVM.translate(profile['craft_category'].toString())),
                     ],
                     if (progress != null)
                       Text(
@@ -190,7 +193,7 @@ class _ForumProfilePreviewDialog extends StatelessWidget {
                       ),
                     const SizedBox(height: 8),
                     Text(
-                      (profile['bio'] ?? 'Forum member').toString(),
+                      (profile['bio'] ?? langVM.translate('Forum member')).toString(),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -206,15 +209,16 @@ class _ForumProfilePreviewDialog extends StatelessWidget {
                         onPressed: () => Navigator.of(
                           context,
                         ).pop({'open': true, 'profile': profile}),
-                        label: const Text('View Profile'),
+                        label: Text(langVM.translate('View Profile')),
                       ),
                     ),
                   ],
                 ),
-        );
-      },
-    ),
-  );
+          );
+        },
+      ),
+    );
+  }
 }
 
 class LiveForumTab extends StatefulWidget {
@@ -439,8 +443,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
   }
 
   void _showQuarantineError() {
+    final langVM = context.read<LanguageViewModel>();
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('This content is under review and cannot be replied to or edited.')),
+      SnackBar(content: Text(langVM.translate('This content is under review and cannot be replied to or edited.'))),
     );
   }
 
@@ -452,6 +457,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
 
     final authVM = context.read<AuthViewModel>();
     final forumVM = context.read<ForumViewModel>();
+    final langVM = context.read<LanguageViewModel>();
     final user = authVM.currentUser;
     final bool isUserArtisan =
         normalizeForumCreationRole(authVM.activeRole) == 'artisan';
@@ -489,7 +495,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Content Blocked',
+                  langVM.translate('Content Blocked'),
                   softWrap: true,
                   style: GoogleFonts.dmSerifDisplay(
                     color: const Color(0xFF991B1B),
@@ -499,7 +505,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
             ],
           ),
           content: Text(
-            result.blockReason ?? 'Your reply contains prohibited words.',
+            result.blockReason != null
+                ? langVM.translate(result.blockReason!)
+                : langVM.translate('Your reply contains prohibited words.'),
             style: GoogleFonts.plusJakartaSans(fontSize: 13, height: 1.5),
           ),
           actions: [
@@ -509,7 +517,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                 backgroundColor: const Color(0xFF004D40),
                 foregroundColor: Colors.white,
               ),
-              child: const Text('UNDERSTOOD', style: TextStyle(color: Colors.white)),
+              child: Text(langVM.translate('UNDERSTOOD'), style: const TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -545,8 +553,8 @@ class _LiveForumTabState extends State<LiveForumTab> {
       SnackBar(
         content: Text(
           result.isAutoFlagged
-              ? '⚠️ Answer posted and flagged for moderator review (${result.flagReason})'
-              : '💬 Answer posted to discussion!',
+              ? '⚠️ ${langVM.translate('Answer posted and flagged for moderator review')} (${result.flagReason})'
+              : '💬 ${langVM.translate('Answer posted to discussion!')}',
         ),
         backgroundColor: result.isAutoFlagged
             ? const Color(0xFFD97706)
@@ -655,6 +663,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
     String threadId,
     String title,
   ) {
+    final langVM = context.read<LanguageViewModel>();
     String selectedReason = 'Inappropriate Content';
     final notesController = TextEditingController();
 
@@ -670,7 +679,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
               const Icon(Icons.flag_rounded, color: Color(0xFFEF4444)),
               const SizedBox(width: 10),
               Text(
-                'Report / Flag Content',
+                langVM.translate('Report / Flag Content'),
                 style: GoogleFonts.dmSerifDisplay(
                   fontSize: 20,
                   color: Theme.of(dialogContext).brightness == Brightness.dark
@@ -685,7 +694,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Report item: "$title"',
+                '${langVM.translate('Report item:')} "$title"',
                 maxLines: 2,
                 softWrap: true,
                 style: GoogleFonts.plusJakartaSans(
@@ -696,7 +705,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
               ),
               const SizedBox(height: 14),
               Text(
-                'Select Moderation Reason:',
+                langVM.translate('Select Moderation Reason:'),
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 11,
                   color: Colors.grey[600],
@@ -716,22 +725,22 @@ class _LiveForumTabState extends State<LiveForumTab> {
                     vertical: 8,
                   ),
                 ),
-                items: const [
+                items: [
                   DropdownMenuItem(
                     value: 'Inappropriate Content',
-                    child: Text('Inappropriate / Offensive Content', maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14)),
+                    child: Text(langVM.translate('Inappropriate / Offensive Content'), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14)),
                   ),
                   DropdownMenuItem(
                     value: 'Misinformation',
-                    child: Text('Misinformation / Fake Heritage Claim', maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14)),
+                    child: Text(langVM.translate('Misinformation / Fake Heritage Claim'), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14)),
                   ),
                   DropdownMenuItem(
                     value: 'Spam/Off-topic',
-                    child: Text('Spam or Off-topic Advertisement', maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14)),
+                    child: Text(langVM.translate('Spam or Off-topic Advertisement'), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14)),
                   ),
                   DropdownMenuItem(
                     value: 'Harassment',
-                    child: Text('Harassment or Abusive Language', maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14)),
+                    child: Text(langVM.translate('Harassment or Abusive Language'), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14)),
                   ),
                 ],
                 onChanged: (val) {
@@ -743,8 +752,8 @@ class _LiveForumTabState extends State<LiveForumTab> {
                 controller: notesController,
                 maxLines: 2,
                 decoration: InputDecoration(
-                  labelText: 'Additional Notes for Admin (Optional)',
-                  hintText: 'Provide details for the admin moderation team...',
+                  labelText: langVM.translate('Additional Notes for Admin (Optional)'),
+                  hintText: langVM.translate('Provide details for the admin moderation team...'),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -755,7 +764,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('CANCEL'),
+              child: Text(langVM.translate('CANCEL')),
             ),
             FilledButton.icon(
               onPressed: () async {
@@ -773,14 +782,15 @@ class _LiveForumTabState extends State<LiveForumTab> {
                 // User already has a pending report
                 if (result['already_reported'] == true) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
+                    SnackBar(
                       content: Text(
-                        '⚠️ You have already reported this post. '
-                        'Your report is still pending Admin review.',
+                        langVM.translate(
+                          '⚠️ You have already reported this post. Your report is still pending Admin review.',
+                        ),
                       ),
-                      backgroundColor: Color(0xFFD97706),
+                      backgroundColor: const Color(0xFFD97706),
                       behavior: SnackBarBehavior.floating,
-                      duration: Duration(seconds: 4),
+                      duration: const Duration(seconds: 4),
                     ),
                   );
 
@@ -791,8 +801,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
-                        result['message']?.toString() ??
-                            'Unable to submit your report. Please try again.',
+                        result['message']?.toString() != null
+                            ? langVM.translate(result['message'].toString())
+                            : langVM.translate('Unable to submit your report. Please try again.'),
                       ),
                       backgroundColor: const Color(0xFFD97706),
                       behavior: SnackBarBehavior.floating,
@@ -806,7 +817,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
-                      '🚩 Report submitted successfully ($selectedReason)',
+                      '🚩 ${langVM.translate('Report submitted successfully')} (${langVM.translate(selectedReason)})',
                     ),
                     backgroundColor: const Color(0xFFEF4444),
                     behavior: SnackBarBehavior.floating,
@@ -817,7 +828,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                 backgroundColor: const Color(0xFFEF4444),
               ),
               icon: const Icon(Icons.flag_rounded, size: 16),
-              label: const Text('SUBMIT REPORT'),
+              label: Text(langVM.translate('SUBMIT REPORT')),
             ),
           ],
         ),
@@ -831,6 +842,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
     String replyId,
     String replyText,
   ) {
+    final langVM = context.read<LanguageViewModel>();
     String selectedReason = 'Inappropriate Content';
     final notesController = TextEditingController();
 
@@ -847,7 +859,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Report Reply',
+                  langVM.translate('Report Reply'),
                   style: GoogleFonts.dmSerifDisplay(
                     fontSize: 20,
                     color: Theme.of(dialogContext).brightness == Brightness.dark
@@ -863,7 +875,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Report reply: "$replyText"',
+                '${langVM.translate('Report reply:')} "$replyText"',
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.plusJakartaSans(
@@ -876,7 +888,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
               const SizedBox(height: 14),
 
               Text(
-                'Select Moderation Reason:',
+                langVM.translate('Select Moderation Reason:'),
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 11,
                   color: Colors.grey[600],
@@ -898,22 +910,22 @@ class _LiveForumTabState extends State<LiveForumTab> {
                     vertical: 8,
                   ),
                 ),
-                items: const [
+                items: [
                   DropdownMenuItem(
                     value: 'Inappropriate Content',
-                    child: Text('Inappropriate / Offensive Content', maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14)),
+                    child: Text(langVM.translate('Inappropriate / Offensive Content'), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14)),
                   ),
                   DropdownMenuItem(
                     value: 'Misinformation',
-                    child: Text('Misinformation / Fake Heritage Claim', maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14)),
+                    child: Text(langVM.translate('Misinformation / Fake Heritage Claim'), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14)),
                   ),
                   DropdownMenuItem(
                     value: 'Spam/Off-topic',
-                    child: Text('Spam or Off-topic Advertisement', maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14)),
+                    child: Text(langVM.translate('Spam or Off-topic Advertisement'), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14)),
                   ),
                   DropdownMenuItem(
                     value: 'Harassment',
-                    child: Text('Harassment or Abusive Language', maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14)),
+                    child: Text(langVM.translate('Harassment or Abusive Language'), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14)),
                   ),
                 ],
                 onChanged: (val) {
@@ -931,8 +943,8 @@ class _LiveForumTabState extends State<LiveForumTab> {
                 controller: notesController,
                 maxLines: 2,
                 decoration: InputDecoration(
-                  labelText: 'Additional Notes for Admin (Optional)',
-                  hintText: 'Explain why this reply should be reviewed...',
+                  labelText: langVM.translate('Additional Notes for Admin (Optional)'),
+                  hintText: langVM.translate('Explain why this reply should be reviewed...'),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -943,7 +955,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('CANCEL'),
+              child: Text(langVM.translate('CANCEL')),
             ),
 
             FilledButton.icon(
@@ -965,14 +977,15 @@ class _LiveForumTabState extends State<LiveForumTab> {
                 // Already has pending report
                 if (result['already_reported'] == true) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
+                    SnackBar(
                       content: Text(
-                        '⚠️ You have already reported this reply. '
-                        'Your report is still pending Admin review.',
+                        langVM.translate(
+                          '⚠️ You have already reported this reply. Your report is still pending Admin review.',
+                        ),
                       ),
-                      backgroundColor: Color(0xFFD97706),
+                      backgroundColor: const Color(0xFFD97706),
                       behavior: SnackBarBehavior.floating,
-                      duration: Duration(seconds: 4),
+                      duration: const Duration(seconds: 4),
                     ),
                   );
 
@@ -983,8 +996,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
-                        result['message']?.toString() ??
-                            'Unable to submit your report. Please try again.',
+                        result['message']?.toString() != null
+                            ? langVM.translate(result['message'].toString())
+                            : langVM.translate('Unable to submit your report. Please try again.'),
                       ),
                       backgroundColor: const Color(0xFFD97706),
                       behavior: SnackBarBehavior.floating,
@@ -998,7 +1012,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
-                      '🚩 Reply report submitted successfully ($selectedReason)',
+                      '🚩 ${langVM.translate('Reply report submitted successfully')} (${langVM.translate(selectedReason)})',
                     ),
                     backgroundColor: const Color(0xFFEF4444),
                     behavior: SnackBarBehavior.floating,
@@ -1009,7 +1023,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                 backgroundColor: const Color(0xFFEF4444),
               ),
               icon: const Icon(Icons.flag_rounded, size: 16),
-              label: const Text('SUBMIT REPORT'),
+              label: Text(langVM.translate('SUBMIT REPORT')),
             ),
           ],
         ),
@@ -1020,6 +1034,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
   void _confirmDeleteMessage(String replyId) {
     if (_activeThread == null) return;
     final threadId = _activeThread!['id'].toString();
+    final langVM = context.read<LanguageViewModel>();
     showDialog(
       context: context,
       builder: (dialogContext) {
@@ -1032,7 +1047,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Delete Answer / Reply',
+                  langVM.translate('Delete Answer / Reply'),
                   softWrap: true,
                   style: GoogleFonts.dmSerifDisplay(
                     fontSize: 18,
@@ -1043,7 +1058,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
             ],
           ),
           content: Text(
-            'Are you sure you want to delete this response? This action cannot be undone.',
+            langVM.translate('Are you sure you want to delete this response? This action cannot be undone.'),
             style: GoogleFonts.plusJakartaSans(
               fontSize: 13,
               height: 1.5,
@@ -1054,7 +1069,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
               child: Text(
-                'CANCEL',
+                langVM.translate('CANCEL'),
                 style: TextStyle(
                   color: isDark ? Colors.white70 : const Color(0xFF004D40),
                 ),
@@ -1088,15 +1103,15 @@ class _LiveForumTabState extends State<LiveForumTab> {
                 );
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('🗑️ Response deleted successfully.'),
-                      backgroundColor: Color(0xFFEF4444),
+                    SnackBar(
+                      content: Text('🗑️ ${langVM.translate('Response deleted successfully.')}'),
+                      backgroundColor: const Color(0xFFEF4444),
                       behavior: SnackBarBehavior.floating,
                     ),
                   );
                 }
               },
-              child: const Text('DELETE ANSWER'),
+              child: Text(langVM.translate('DELETE ANSWER')),
             ),
           ],
         );
@@ -1106,6 +1121,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
 
   void _confirmDeleteThread(Map<String, dynamic> thread) {
     final threadId = thread['id'].toString();
+    final langVM = context.read<LanguageViewModel>();
     showDialog(
       context: context,
       builder: (dialogContext) {
@@ -1118,7 +1134,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Delete Question / Post',
+                  langVM.translate('Delete Question / Post'),
                   softWrap: true,
                   style: GoogleFonts.dmSerifDisplay(
                     fontSize: 18,
@@ -1131,7 +1147,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
             ],
           ),
           content: Text(
-            'Are you sure you want to delete your post "${thread['title']}"? All community answers will be permanently removed.',
+            '${langVM.translate('Are you sure you want to delete your post')} "${thread['title']}"? ${langVM.translate('All community answers will be permanently removed.')}',
             style: GoogleFonts.plusJakartaSans(
               fontSize: 13,
               height: 1.5,
@@ -1142,7 +1158,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
               child: Text(
-                'CANCEL',
+                langVM.translate('CANCEL'),
                 style: TextStyle(
                   color: isDark ? Colors.white70 : const Color(0xFF004D40),
                 ),
@@ -1160,14 +1176,14 @@ class _LiveForumTabState extends State<LiveForumTab> {
                   setState(() => _activeThread = null);
                 }
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('🗑️ Post deleted successfully.'),
-                    backgroundColor: Color(0xFFEF4444),
+                  SnackBar(
+                    content: Text('🗑️ ${langVM.translate('Post deleted successfully.')}'),
+                    backgroundColor: const Color(0xFFEF4444),
                     behavior: SnackBarBehavior.floating,
                   ),
                 );
               },
-              child: const Text('DELETE POST'),
+              child: Text(langVM.translate('DELETE POST')),
             ),
           ],
         );
@@ -1179,6 +1195,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
     if (_activeThread == null) return;
     final threadId = _activeThread!['id'].toString();
     final editController = TextEditingController(text: currentText);
+    final langVM = context.read<LanguageViewModel>();
 
     showDialog(
       context: context,
@@ -1197,7 +1214,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Edit Response',
+                  langVM.translate('Edit Response'),
                   softWrap: true,
                   style: GoogleFonts.dmSerifDisplay(
                     fontSize: 20,
@@ -1217,7 +1234,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
               color: isDark ? Colors.white : Colors.black87,
             ),
             decoration: InputDecoration(
-              labelText: 'Your Answer / Response',
+              labelText: langVM.translate('Your Answer / Response'),
               labelStyle: GoogleFonts.plusJakartaSans(
                 color: isDark ? Colors.white70 : const Color(0xFF475569),
               ),
@@ -1248,7 +1265,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
               child: Text(
-                'CANCEL',
+                langVM.translate('CANCEL'),
                 style: TextStyle(
                   color: isDark ? Colors.white70 : const Color(0xFF004D40),
                 ),
@@ -1272,7 +1289,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                 if (result.isBlocked) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('🚫 Edit Blocked: ${result.blockReason}'),
+                      content: Text('🚫 ${langVM.translate('Edit Blocked')}: ${result.blockReason}'),
                       backgroundColor: const Color(0xFFEF4444),
                       behavior: SnackBarBehavior.floating,
                     ),
@@ -1290,8 +1307,8 @@ class _LiveForumTabState extends State<LiveForumTab> {
                   SnackBar(
                     content: Text(
                       result.isAutoFlagged
-                          ? '⚠️ Answer updated and flagged for moderator review (${result.flagReason}).'
-                          : '✏️ Answer updated successfully.',
+                          ? '⚠️ ${langVM.translate('Answer updated and flagged for moderator review')} (${result.flagReason}).'
+                          : '✏️ ${langVM.translate('Answer updated successfully.')}',
                     ),
                     backgroundColor: result.isAutoFlagged
                         ? const Color(0xFFD97706)
@@ -1307,7 +1324,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                 foregroundColor: Colors.white,
               ),
               icon: const Icon(Icons.check_rounded, size: 16, color: Color(0xFFFFD54F)),
-              label: const Text('SAVE CHANGES', style: TextStyle(color: Colors.white)),
+              label: Text(langVM.translate('SAVE CHANGES'), style: const TextStyle(color: Colors.white)),
             ),
           ],
         );
@@ -1320,6 +1337,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
     final editTitleController = TextEditingController(
       text: thread['title'].toString(),
     );
+    final langVM = context.read<LanguageViewModel>();
 
     showDialog(
       context: context,
@@ -1338,7 +1356,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Edit Question / Post Title',
+                  langVM.translate('Edit Question / Post Title'),
                   softWrap: true,
                   style: GoogleFonts.dmSerifDisplay(
                     fontSize: 18,
@@ -1358,7 +1376,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
               color: isDark ? Colors.white : Colors.black87,
             ),
             decoration: InputDecoration(
-              labelText: 'Question Title',
+              labelText: langVM.translate('Question Title'),
               labelStyle: GoogleFonts.plusJakartaSans(
                 color: isDark ? Colors.white70 : const Color(0xFF475569),
               ),
@@ -1389,7 +1407,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
               child: Text(
-                'CANCEL',
+                langVM.translate('CANCEL'),
                 style: TextStyle(
                   color: isDark ? Colors.white70 : const Color(0xFF004D40),
                 ),
@@ -1409,7 +1427,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                 if (result.isBlocked) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('🚫 Edit Blocked: ${result.blockReason}'),
+                      content: Text('🚫 ${langVM.translate('Edit Blocked')}: ${result.blockReason}'),
                       backgroundColor: const Color(0xFFEF4444),
                       behavior: SnackBarBehavior.floating,
                     ),
@@ -1427,8 +1445,8 @@ class _LiveForumTabState extends State<LiveForumTab> {
                   SnackBar(
                     content: Text(
                       result.isAutoFlagged
-                          ? '⚠️ Title updated and flagged for moderator review (${result.flagReason}).'
-                          : '✏️ Post title updated.',
+                          ? '⚠️ ${langVM.translate('Title updated and flagged for moderator review')} (${result.flagReason}).'
+                          : '✏️ ${langVM.translate('Post title updated.')}',
                     ),
                     backgroundColor: result.isAutoFlagged
                         ? const Color(0xFFD97706)
@@ -1444,7 +1462,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                 foregroundColor: Colors.white,
               ),
               icon: const Icon(Icons.check_rounded, size: 16, color: Color(0xFFFFD54F)),
-              label: const Text('SAVE CHANGES', style: TextStyle(color: Colors.white)),
+              label: Text(langVM.translate('SAVE CHANGES'), style: const TextStyle(color: Colors.white)),
             ),
           ],
         );
@@ -1487,7 +1505,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                       children: [
                         Expanded(
                           child: Text(
-                            'Ask Question / Create Post',
+                            langVM.translate('Ask Question / Create Post'),
                             style: GoogleFonts.dmSerifDisplay(
                               fontSize: 22,
                               color: isDark
@@ -1508,7 +1526,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                     const SizedBox(height: 16),
 
                     Text(
-                      'Select Community Hub:',
+                      langVM.translate('Select Community Hub:'),
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
@@ -1552,7 +1570,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                         return DropdownMenuItem(
                           value: c,
                           child: Text(
-                            _communityLabel(c),
+                            langVM.translate(_communityLabel(c)),
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 13,
                               fontWeight: FontWeight.bold,
@@ -1562,14 +1580,15 @@ class _LiveForumTabState extends State<LiveForumTab> {
                         );
                       }).toList(),
                       onChanged: (val) {
-                        if (val != null)
+                        if (val != null) {
                           setModalState(() => selectedCommunity = val);
+                        }
                       },
                     ),
                     const SizedBox(height: 16),
 
                     Text(
-                      'Question / Title:',
+                      langVM.translate('Question / Title:'),
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
@@ -1586,9 +1605,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                       ),
                       decoration: InputDecoration(
                         hintText:
-                            'e.g. How to care for handwoven Songket silk?',
+                            langVM.translate('e.g. How to care for handwoven Songket silk?'),
                         errorText: showRequiredErrors && titleController.text.trim().isEmpty
-                            ? 'Please enter a title.' : null,
+                            ? langVM.translate('Please enter a title.') : null,
                         hintStyle: GoogleFonts.plusJakartaSans(
                           fontSize: 13,
                           color: isDark ? Colors.white38 : Colors.grey[400],
@@ -1614,7 +1633,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                     const SizedBox(height: 16),
 
                     Text(
-                      'Details / Context:',
+                      langVM.translate('Details / Context:'),
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
@@ -1632,9 +1651,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                       ),
                       decoration: InputDecoration(
                         hintText:
-                            'Provide details or background for master artisans...',
+                            langVM.translate('Provide details or background for master artisans...'),
                         errorText: showRequiredErrors && bodyController.text.trim().isEmpty
-                            ? 'Please enter a description.' : null,
+                            ? langVM.translate('Please enter a description.') : null,
                         hintStyle: GoogleFonts.plusJakartaSans(
                           fontSize: 12,
                           color: isDark ? Colors.white38 : Colors.grey[400],
@@ -1722,7 +1741,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                                     const SizedBox(width: 10),
                                     Expanded(
                                       child: Text(
-                                        'Post Blocked',
+                                        langVM.translate('Post Blocked'),
                                         softWrap: true,
                                         style: GoogleFonts.dmSerifDisplay(
                                           color: const Color(0xFF991B1B),
@@ -1732,8 +1751,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                                   ],
                                 ),
                                 content: Text(
-                                  result.blockReason ??
-                                      'Your question contains prohibited or offensive keywords.',
+                                  result.blockReason != null
+                                      ? langVM.translate(result.blockReason!)
+                                      : langVM.translate('Your question contains prohibited or offensive keywords.'),
                                   style: GoogleFonts.plusJakartaSans(
                                     fontSize: 13,
                                     height: 1.5,
@@ -1748,7 +1768,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                                           : const Color(0xFF004D40),
                                       foregroundColor: Colors.white,
                                     ),
-                                    child: const Text('UNDERSTOOD', style: TextStyle(color: Colors.white)),
+                                    child: Text(langVM.translate('UNDERSTOOD'), style: const TextStyle(color: Colors.white)),
                                   ),
                                 ],
                               ),
@@ -1764,8 +1784,8 @@ class _LiveForumTabState extends State<LiveForumTab> {
                             SnackBar(
                               content: Text(
                                 result.isAutoFlagged
-                                    ? '⏳ Post held in moderation queue for admin review (${result.flagReason}). It will appear publicly once approved.'
-                                    : '🎉 Post published to community hub!',
+                                    ? '⏳ ${langVM.translate('Post held in moderation queue for admin review')} (${result.flagReason}). ${langVM.translate('It will appear publicly once approved.')}'
+                                    : '🎉 ${langVM.translate('Post published to community hub!')}',
                               ),
                               backgroundColor: result.isAutoFlagged
                                   ? const Color(0xFFD97706)
@@ -1794,7 +1814,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                                 child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFFFD54F)))
                             : const Icon(Icons.send_rounded, size: 18, color: Color(0xFFFFD54F)),
                         label: Text(
-                          isPosting ? 'Posting...' : 'Post Question to Community',
+                          isPosting ? langVM.translate('Posting...') : langVM.translate('Post Question to Community'),
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
@@ -1836,7 +1856,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
 
       map['isMe'] = isMyThread;
       if (isMyThread) {
-        map['displayName'] = '${t.authorName} (You)';
+        map['displayName'] = '${t.authorName} (${langVM.translate('You')})';
       } else {
         map['displayName'] = t.authorName;
       }
@@ -1850,7 +1870,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                 r.authorEmail.toLowerCase() == currentUser.email.toLowerCase());
         rMap['isMe'] = isMyMsg;
         if (isMyMsg) {
-          rMap['displayName'] = '${r.sender} (You)';
+          rMap['displayName'] = '${r.sender} (${langVM.translate('You')})';
         } else {
           rMap['displayName'] = r.sender;
         }
@@ -1901,8 +1921,8 @@ class _LiveForumTabState extends State<LiveForumTab> {
               const SizedBox(width: 8),
               Text(
                 _activeThread == null
-                    ? 'Warisan Community Hub'
-                    : 'Question & Answers',
+                    ? langVM.translate('Warisan Community Hub')
+                    : langVM.translate('Question & Answers'),
                 style: GoogleFonts.dmSerifDisplay(
                   color: isDark
                       ? const Color(0xFFFFD54F)
@@ -1932,6 +1952,26 @@ class _LiveForumTabState extends State<LiveForumTab> {
               )
             : null,
         actions: [
+          IconButton(
+            icon: Icon(
+              Icons.g_translate_rounded,
+              color: isDark
+                  ? const Color(0xFFFFD54F)
+                  : const Color(0xFF004D40),
+            ),
+            tooltip: langVM.translate('Translate Page Live'),
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (_) => TranslationLanguageDialog(
+                  currentLanguage: langVM.currentLanguageCode,
+                  onLanguageChanged: (code, name) {
+                    context.read<LanguageViewModel>().setLanguage(code, name);
+                  },
+                ),
+              );
+            },
+          ),
           if (_activeThread == null)
             Padding(
               padding: const EdgeInsets.only(right: 12),
@@ -1954,7 +1994,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                   color: Color(0xFFFFD54F),
                 ),
                 label: Text(
-                  'Ask Question',
+                  langVM.translate('Ask Question'),
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -1966,7 +2006,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
           if (_activeThread != null && _activeThread!['isMe'] != true)
             IconButton(
               icon: const Icon(Icons.flag_outlined, color: Color(0xFFEF4444)),
-              tooltip: 'Report / Flag Post',
+              tooltip: langVM.translate('Report / Flag Post'),
               onPressed: () => _showFlagReportModal(
                 context,
                 _activeThread!['id'].toString(),
@@ -1996,7 +2036,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                   size: 26,
                 ),
                 label: Text(
-                  'Ask / Post',
+                  langVM.translate('Ask / Post'),
                   style: GoogleFonts.plusJakartaSans(
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
@@ -2257,8 +2297,8 @@ class _LiveForumTabState extends State<LiveForumTab> {
                 }
 
                 final String descriptionText = postTitle.isNotEmpty
-                    ? 'Your post "$postTitle" was removed by an administrator.'
-                    : 'Your content was removed by moderation.';
+                    ? '${langVM.translate('Your post')} "$postTitle" ${langVM.translate('was removed by an administrator.')}'
+                    : langVM.translate('Your content was removed by moderation.');
 
                 return Container(
                   margin: const EdgeInsets.fromLTRB(14, 8, 14, 4),
@@ -2291,7 +2331,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                               children: [
                                 Expanded(
                                   child: Text(
-                                    'Post Removed by Administrator',
+                                    langVM.translate('Post Removed by Administrator'),
                                     style: GoogleFonts.plusJakartaSans(
                                       fontSize: 13,
                                       fontWeight: FontWeight.bold,
@@ -2363,7 +2403,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                                   const SizedBox(width: 6),
                                   Flexible(
                                     child: Text(
-                                      'Admin Reason: $reasonText',
+                                      '${langVM.translate('Admin Reason')}: ${langVM.translate(reasonText)}',
                                       style: GoogleFonts.plusJakartaSans(
                                         fontSize: 11,
                                         fontWeight: FontWeight.w700,
@@ -2404,7 +2444,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'You have ${pendingMyPosts.length} question(s) currently held in moderation review.',
+                    '${langVM.translate('You have')} ${pendingMyPosts.length} ${langVM.translate('question(s) currently held in moderation review.')}',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
@@ -2445,7 +2485,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                       padding: const EdgeInsets.only(right: 8),
                       child: FilterChip(
                         selected: isSelected,
-                        label: Text(_communityLabel(c)),
+                        label: Text(langVM.translate(_communityLabel(c))),
                         labelStyle: GoogleFonts.plusJakartaSans(
                           fontSize: 12,
                           fontWeight: isSelected
@@ -2494,7 +2534,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                 child: Row(
                   children: [
                     Text(
-                      'Sort by:',
+                      langVM.translate('Sort by:'),
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
@@ -2528,7 +2568,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                                 : null,
                           ),
                           child: Text(
-                            sort,
+                            langVM.translate(sort),
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 11,
                               fontWeight: isSelected
@@ -2588,7 +2628,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              'No community questions yet',
+                              langVM.translate('No community questions yet'),
                               style: GoogleFonts.dmSerifDisplay(
                                 fontSize: 20,
                                 color: isDark
@@ -2598,7 +2638,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              'Be the first to start a conversation or ask heritage craft masters!',
+                              langVM.translate('Be the first to start a conversation or ask heritage craft masters!'),
                               textAlign: TextAlign.center,
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 13,
@@ -2629,7 +2669,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                                 color: Color(0xFFFFD54F),
                               ),
                               label: Text(
-                                'Ask a Question',
+                                langVM.translate('Ask a Question'),
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 13,
                                   fontWeight: FontWeight.bold,
@@ -2656,7 +2696,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                     itemCount: filteredThreads.length,
                     itemBuilder: (context, index) {
                       final thread = filteredThreads[index];
-                      return _buildRedditPostCard(thread, isDark);
+                      return _buildRedditPostCard(thread, isDark, langVM);
                     },
                   ),
           ),
@@ -2666,7 +2706,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
   }
 
   // REDDIT STYLE POST CARD WITH UPVOTE SIDEBAR
-  Widget _buildRedditPostCard(Map<String, dynamic> thread, bool isDark) {
+  Widget _buildRedditPostCard(Map<String, dynamic> thread, bool isDark, LanguageViewModel langVM) {
     final bool isArtisan = (thread['isArtisan'] as bool?) ?? false;
 
     return Container(
@@ -2755,7 +2795,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                'Pending Moderation',
+                                langVM.translate('Pending Moderation'),
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
@@ -2785,7 +2825,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
-                              _communityLabel(thread['community'].toString()),
+                              langVM.translate(_communityLabel(thread['community'].toString())),
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
@@ -2796,7 +2836,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                             ),
                           ),
                           Text(
-                            '• Posted by ${thread['displayName'] ?? thread['authorName']}',
+                            '• ${langVM.translate('Posted by')} ${thread['displayName'] ?? thread['authorName']}',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 11,
                               color: isDark ? Colors.white60 : Colors.grey[600],
@@ -2814,7 +2854,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
-                                isArtisan ? 'Artisan' : 'Tourist',
+                                langVM.translate(isArtisan ? 'Artisan' : 'Tourist'),
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 8,
                                   fontWeight: FontWeight.w900,
@@ -2837,7 +2877,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                               if (thread['isEdited'] == true) ...[
                                 const SizedBox(width: 4),
                                 Text(
-                                  '(edited)',
+                                  langVM.translate('(edited)'),
                                   style: GoogleFonts.plusJakartaSans(
                                     fontSize: 10,
                                     fontStyle: FontStyle.italic,
@@ -2855,7 +2895,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
 
                       // Title
                       Text(
-                        thread['title'].toString(),
+                        langVM.translate(thread['title'].toString()),
                         style: GoogleFonts.dmSerifDisplay(
                           fontSize: 16,
                           color: isDark
@@ -2924,7 +2964,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
 
                                           return Text(
                                             '$visibleReplyCount '
-                                            '${visibleReplyCount == 1 ? 'Answer' : 'Answers'}',
+                                            '${langVM.translate(visibleReplyCount == 1 ? 'Answer' : 'Answers')}',
                                             maxLines: 1,
                                             softWrap: false,
                                             overflow: TextOverflow.visible,
@@ -2965,7 +3005,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                                         ),
                                         const SizedBox(width: 4),
                                         Text(
-                                          'Verified Answer',
+                                          langVM.translate('Verified Answer'),
                                           maxLines: 1,
                                           softWrap: false,
                                           style: GoogleFonts.plusJakartaSans(
@@ -3115,7 +3155,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        _communityLabel(_activeThread!['community'].toString()),
+                        langVM.translate(_communityLabel(_activeThread!['community'].toString())),
                         softWrap: true,
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 11,
@@ -3130,7 +3170,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                   const SizedBox(width: 8),
                   Flexible(
                     child: Text(
-                      'Asked by ${_activeThread!['displayName'] ?? _activeThread!['authorName']}',
+                      '${langVM.translate('Asked by')} ${_activeThread!['displayName'] ?? _activeThread!['authorName']}',
                       softWrap: true,
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 11,
@@ -3142,7 +3182,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
               ),
               const SizedBox(height: 12),
               Text(
-                _activeThread!['title'].toString(),
+                langVM.translate(_activeThread!['title'].toString()),
                 style: GoogleFonts.dmSerifDisplay(
                   fontSize: 20,
                   color: isDark
@@ -3171,7 +3211,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                     ),
                   ),
                   child: Text(
-                    _activeThread!['content'].toString(),
+                    langVM.translate(_activeThread!['content'].toString()),
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 13,
                       color: isDark ? Colors.white70 : const Color(0xFF334155),
@@ -3200,7 +3240,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    '${messages.length} Answers',
+                    '${messages.length} ${langVM.translate('Answers')}',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
@@ -3229,7 +3269,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
               ),
               const SizedBox(width: 8),
               Text(
-                'Discussion & Community Answers (${messages.length})',
+                '${langVM.translate('Discussion & Community Answers')} (${messages.length})',
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
@@ -3264,7 +3304,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                         ),
                         const SizedBox(height: 10),
                         Text(
-                          'No answers yet',
+                          langVM.translate('No answers yet'),
                           style: GoogleFonts.dmSerifDisplay(
                             fontSize: 18,
                             color: isDark
@@ -3274,7 +3314,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Be the first to share your heritage craft experience or insights below!',
+                          langVM.translate('Be the first to share your heritage craft experience or insights below!'),
                           textAlign: TextAlign.center,
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 12,
@@ -3301,7 +3341,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
 
                     return Container(
                       key: replyKey,
-                      child: _buildQuoraAnswerCard(msg, index, isDark),
+                      child: _buildQuoraAnswerCard(msg, index, isDark, langVM),
                     );
                   }).toList(),
                 ),
@@ -3365,7 +3405,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Replying to ${_replyingToName ?? 'User'}',
+                                '${langVM.translate('Replying to')} ${_replyingToName ?? 'User'}',
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold,
@@ -3393,7 +3433,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                         ),
 
                         IconButton(
-                          tooltip: 'Cancel reply',
+                          tooltip: langVM.translate('Cancel reply'),
                           icon: Icon(
                             Icons.close_rounded,
                             size: 16,
@@ -3434,10 +3474,10 @@ class _LiveForumTabState extends State<LiveForumTab> {
                         ),
                         decoration: InputDecoration(
                           hintText: _replyingIsQuarantined
-                              ? 'Under review - replies disabled'
+                              ? langVM.translate('Under review - replies disabled')
                               : _replyingToName != null
-                              ? 'Reply to $_replyingToName...'
-                              : 'Write your answer or response...',
+                              ? '${langVM.translate('Reply to')} $_replyingToName...'
+                              : langVM.translate('Write your answer or response...'),
                           hintStyle: GoogleFonts.plusJakartaSans(
                             fontSize: 13,
                             color: isDark ? Colors.white38 : Colors.grey[400],
@@ -3501,7 +3541,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                                 child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFFFD54F)))
                             : const Icon(Icons.send_rounded, size: 15, color: Color(0xFFFFD54F)),
                         label: Text(
-                          _isSendingReply ? 'Sending...' : 'Reply',
+                          _isSendingReply ? langVM.translate('Sending...') : langVM.translate('Reply'),
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
@@ -3525,6 +3565,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
     Map<String, dynamic> msg,
     int index,
     bool isDark,
+    LanguageViewModel langVM,
   ) {
     final bool isMe = msg['isMe'] as bool? ?? false;
     final bool isArtisan = msg['isArtisan'] as bool? ?? false;
@@ -3612,7 +3653,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                   const SizedBox(width: 6),
                   Flexible(
                     child: Text(
-                      'VERIFIED MASTER ARTISAN ANSWER',
+                      langVM.translate('VERIFIED MASTER ARTISAN ANSWER'),
                       softWrap: true,
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 10,
@@ -3652,7 +3693,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    'Pending Moderation (Only visible to you)',
+                    langVM.translate('Pending Moderation (Only visible to you)'),
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
@@ -3768,7 +3809,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
-                              isArtisan ? 'Artisan' : 'Tourist',
+                              langVM.translate(isArtisan ? 'Artisan' : 'Tourist'),
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 8,
                                 fontWeight: FontWeight.bold,
@@ -3792,7 +3833,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                             msg['time'].toString().contains('(edited)')) ...[
                           const SizedBox(width: 4),
                           Text(
-                            '• (edited)',
+                            '• ${langVM.translate('(edited)')}',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 10,
                               fontStyle: FontStyle.italic,
@@ -3859,7 +3900,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                         const SizedBox(width: 5),
                         Expanded(
                           child: Text(
-                            'Replying to $replyingToName',
+                            '${langVM.translate('Replying to')} $replyingToName',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
@@ -3885,7 +3926,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                         replyingToText.isNotEmpty) ...[
                       const SizedBox(height: 3),
                       Text(
-                        replyingToText,
+                        langVM.translate(replyingToText),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.plusJakartaSans(
@@ -3906,7 +3947,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
 
           // Answer Text
           Text(
-            msg['text'].toString(),
+            langVM.translate(msg['text'].toString()),
             style: GoogleFonts.plusJakartaSans(
               fontSize: 13,
               color: isDark ? Colors.white : const Color(0xFF1E293B),
@@ -3946,8 +3987,8 @@ class _LiveForumTabState extends State<LiveForumTab> {
                       : const Color(0xFF004D40),
                 ),
                 tooltip: msg['isReported'] == true || _activeThread?['isReported'] == true
-                    ? 'Replies unavailable while content is under review'
-                    : 'Reply to ${msg['displayName'] ?? msg['sender']}',
+                    ? langVM.translate('Replies unavailable while content is under review')
+                    : '${langVM.translate('Reply to')} ${msg['displayName'] ?? msg['sender']}',
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
                 onPressed: () {
@@ -3975,7 +4016,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                         ? const Color(0xFFFFD54F)
                         : const Color(0xFF004D40),
                   ),
-                  tooltip: 'Edit Answer',
+                  tooltip: langVM.translate('Edit Answer'),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                   onPressed: () {
@@ -3995,7 +4036,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                     size: 16,
                     color: Color(0xFFEF4444),
                   ),
-                  tooltip: 'Delete Answer',
+                  tooltip: langVM.translate('Delete Answer'),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                   onPressed: () => _confirmDeleteMessage(msg['id'].toString()),
@@ -4007,7 +4048,7 @@ class _LiveForumTabState extends State<LiveForumTab> {
                     size: 16,
                     color: Color(0xFFEF4444),
                   ),
-                  tooltip: 'Report Content',
+                  tooltip: langVM.translate('Report Content'),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                   onPressed: () => _showReplyReportModal(

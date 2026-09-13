@@ -361,9 +361,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                           final isSelected = _selectedState == st;
                           return ChoiceChip(
                             label: Text(
-                              st == 'All States'
-                                  ? langVM.translate('All States')
-                                  : st,
+                              langVM.translate(st),
                             ),
                             selected: isSelected,
                             onSelected: (selected) {
@@ -1556,9 +1554,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                           padding: const EdgeInsets.only(right: 6.0),
                           child: ChoiceChip(
                             label: Text(
-                              st == 'All States'
-                                  ? langVM.translate('All States')
-                                  : st,
+                              langVM.translate(st),
                             ),
                             selected: isSelected,
                             onSelected: (selected) {
@@ -2361,7 +2357,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            artisan['category'],
+                            langVM.translate(artisan['category']?.toString() ?? ''),
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
@@ -2407,7 +2403,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                             const SizedBox(width: 4),
                             Flexible(
                               child: Text(
-                                artisan['state'],
+                                langVM.translate(artisan['state']?.toString() ?? ''),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: GoogleFonts.plusJakartaSans(
@@ -2754,7 +2750,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            category,
+                            langVM.translate(category),
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
@@ -2776,7 +2772,7 @@ class _TouristDirectoryTabState extends State<TouristDirectoryTab> {
                                 const SizedBox(width: 2),
                                 Expanded(
                                   child: Text(
-                                    state,
+                                    langVM.translate(state),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: GoogleFonts.plusJakartaSans(
