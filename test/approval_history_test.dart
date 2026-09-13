@@ -1,10 +1,14 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:warisan_kita/data/repositories/user_repository.dart';
 import 'package:warisan_kita/data/services/supabase_service.dart';
 import 'package:warisan_kita/domain/models/approval_history_record.dart';
 import 'package:warisan_kita/domain/models/pending_artisan_profile.dart';
 import 'package:warisan_kita/domain/models/user.dart';
+import 'package:warisan_kita/ui/admin_web/widgets/admin_approval_history_tab.dart';
+import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 import 'package:warisan_kita/viewmodels/moderation_viewmodel.dart';
 
 void main() {
@@ -641,6 +645,235 @@ void main() {
       expect(filtered.isNotEmpty, isTrue);
       expect(filtered.every((r) => r.isAccountModeration), isTrue);
       expect(filtered.any((r) => r.targetEmail == 'mod.filter@warisankita.my'), isTrue);
+    });
+
+    test('approveRelocation records Premise Relocation in approval history and updates user premise', () async {
+      final vm = ModerationViewModel(repository: repository);
+      await vm.refreshAllData();
+
+      const artisanUser = UserModel(
+        id: 'u_reloc_artisan_1',
+        email: 'reloc.artisan@warisankita.my',
+        displayName: 'Master Relocator',
+        studioName: 'Relocation Studio',
+        craftCategory: 'Pottery & Ceramics',
+        role: 'Artisan',
+        roles: ['Artisan'],
+        status: 'ACTIVE',
+        artisanStatus: 'APPROVED',
+        address: '10 Old Studio Rd, Melaka',
+        state: 'Melaka',
+      );
+      vm.addUserForTesting(artisanUser);
+
+      // Create a pending relocation profile
+      const relocProfile = PendingArtisanProfile(
+        id: 'reloc_u_reloc_artisan_1',
+        name: 'Relocation Studio',
+        craftCategory: 'Pottery & Ceramics',
+        state: 'Melaka',
+        dateSubmitted: 'Today',
+        imageUrl: '',
+        email: 'reloc.artisan@warisankita.my',
+        experience: '15 Years',
+        phone: '+60 12-345 6789',
+        ssmNumber: 'SSM-RELOC-123',
+        isUpgradeFromTourist: false,
+        isRelocationRequest: true,
+        currentAddress: '10 Old Studio Rd, Melaka',
+        proposedAddress: '99 New Heritage Way, Melaka',
+        proposedLatitude: 2.2000,
+        proposedLongitude: 102.2500,
+        proposedState: 'Melaka',
+        relocationReason: 'Expanding workshop capacity for visitors',
+      );
+
+      vm.addRelocationRequest(relocProfile);
+
+      expect(
+        vm.pendingArtisans.any((p) => p.email == 'reloc.artisan@warisankita.my' && p.isRelocationRequest),
+        isTrue,
+      );
+
+      // Approve relocation
+      final success = await vm.approveArtisan('reloc_u_reloc_artisan_1');
+      expect(success, isTrue);
+
+      // Verify removed from pending
+      expect(
+        vm.pendingArtisans.any((p) => p.email == 'reloc.artisan@warisankita.my' && p.isRelocationRequest),
+        isFalse,
+      );
+
+      // Verify recorded in approval history as Premise Relocation
+      final historyRecords = vm.approvalHistory.where(
+        (r) => r.targetEmail == 'reloc.artisan@warisankita.my' && r.isRelocation,
+      ).toList();
+
+      expect(historyRecords.isNotEmpty, isTrue);
+      final relocRecord = historyRecords.first;
+      expect(relocRecord.approvalType, 'Premise Relocation');
+      expect(relocRecord.title, 'Workshop Premise Relocation Approved');
+      expect(relocRecord.previousPremise, '10 Old Studio Rd, Melaka');
+      expect(relocRecord.newPremise, '99 New Heritage Way, Melaka');
+      expect(relocRecord.status, 'APPROVED');
+
+      // Verify Premise Relocations filter shows it
+      vm.setHistoryTypeFilter('Premise Relocations');
+      expect(vm.filteredApprovalHistory.any((r) => r.targetEmail == 'reloc.artisan@warisankita.my'), isTrue);
+    });
+
+    test('artisan self-withdrawing relocation request clears pending state without false REJECTED notice', () async {
+      SharedPreferences.setMockInitialValues({});
+      final service = SupabaseService();
+      final repo = UserRepository(service: service);
+      final authVM = AuthViewModel(repository: repo);
+
+      const email = 'withdraw.artisan@warisankita.my';
+      const initialUser = UserModel(
+        id: 'u_withdraw_1',
+        email: email,
+        displayName: 'Withdraw Artisan Studio',
+        role: 'Artisan',
+        status: 'ACTIVE',
+        artisanStatus: 'APPROVED',
+        address: '10 Old Road, Penang',
+        state: 'Penang',
+        pendingRelocationAddress: '20 New Road, Penang',
+        pendingRelocationState: 'Penang',
+        pendingRelocationReason: 'Expansion',
+      );
+
+      authVM.setCurrentUserForTesting(initialUser);
+
+      expect(authVM.currentUser?.hasPendingRelocation, isTrue);
+      expect(authVM.relocationResolutionNotice, isNull);
+
+      // Artisan withdraws relocation request
+      await authVM.cancelRelocationRequest();
+
+      // State is immediately cleared
+      expect(authVM.currentUser?.hasPendingRelocation, isFalse);
+      // Crucial: notice MUST remain null and NEVER falsely report REJECTED
+      expect(authVM.relocationResolutionNotice, isNull);
+    });
+
+    test('ModerationViewModel applicationTypeFilter and filteredRelocations visibility tests', () async {
+      final vm = ModerationViewModel(repository: repository);
+      await vm.refreshAllData();
+
+      const newProfile = PendingArtisanProfile(
+        id: 'pending_new_1',
+        name: 'New Woodcarver',
+        craftCategory: 'Wood Carving',
+        state: 'Kelantan',
+        dateSubmitted: 'Today',
+        imageUrl: '',
+        email: 'new.carver@warisankita.my',
+        experience: '5 Years',
+        phone: '+60 12-111 2222',
+        isRelocationRequest: false,
+      );
+
+      const relocProfile = PendingArtisanProfile(
+        id: 'reloc_artisan_2',
+        name: 'Master Batik Relocation',
+        craftCategory: 'Batik Weaving',
+        state: 'Terengganu',
+        dateSubmitted: 'Today',
+        imageUrl: '',
+        email: 'master.batik@warisankita.my',
+        experience: '20 Years',
+        phone: '+60 13-999 8888',
+        isRelocationRequest: true,
+        currentAddress: 'Old Beach Rd, KT',
+        proposedAddress: 'New Heritage Alley, KT',
+        proposedState: 'Terengganu',
+      );
+
+      vm.addPendingArtisan(newProfile);
+      vm.addRelocationRequest(relocProfile);
+
+      // Verify counts
+      expect(vm.totalPendingCount >= 2, isTrue);
+      expect(vm.pendingRelocationCount >= 1, isTrue);
+      expect(vm.pendingNewProfilesCount >= 1, isTrue);
+
+      // 'All' filter includes both
+      vm.setApplicationTypeFilter('All');
+      expect(vm.filteredArtisans.any((a) => a.id == 'pending_new_1'), isTrue);
+      expect(vm.filteredArtisans.any((a) => a.id == 'reloc_artisan_2'), isTrue);
+
+      // 'New Profiles' filter includes only new profiles
+      vm.setApplicationTypeFilter('New Profiles');
+      expect(vm.filteredArtisans.any((a) => a.id == 'pending_new_1'), isTrue);
+      expect(vm.filteredArtisans.any((a) => a.id == 'reloc_artisan_2'), isFalse);
+
+      // 'Relocations' filter includes only relocations
+      vm.setApplicationTypeFilter('Relocations');
+      expect(vm.filteredArtisans.any((a) => a.id == 'pending_new_1'), isFalse);
+      expect(vm.filteredArtisans.any((a) => a.id == 'reloc_artisan_2'), isTrue);
+
+      // filteredRelocations always isolates relocation requests
+      expect(vm.filteredRelocations.any((a) => a.id == 'reloc_artisan_2'), isTrue);
+      expect(vm.filteredRelocations.any((a) => a.id == 'pending_new_1'), isFalse);
+
+      // Category matching is case-insensitive and trimmed
+      vm.setSelectedCategory('Batik Weaving');
+      expect(vm.filteredRelocations.any((a) => a.id == 'reloc_artisan_2'), isTrue);
+
+      // Tab switching syncs applicationTypeFilter
+      vm.setActiveTab('Workshop Relocations');
+      expect(vm.applicationTypeFilter, 'Relocations');
+
+      vm.setActiveTab('Pending Approvals');
+      expect(vm.applicationTypeFilter, 'All');
+    });
+
+    testWidgets('AdminApprovalHistoryTab displays Audit Record button clearly and without overflow', (tester) async {
+      tester.view.physicalSize = const Size(1280, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      SharedPreferences.setMockInitialValues({});
+      final service = SupabaseService();
+      final repo = UserRepository(service: service);
+      final modVM = ModerationViewModel(repository: repo);
+      await modVM.refreshAllData();
+
+      modVM.addPendingArtisan(
+        const PendingArtisanProfile(
+          id: 'p_audit_btn_test',
+          name: 'Pak Hamid Keris',
+          craftCategory: 'Metalwork',
+          state: 'Melaka',
+          dateSubmitted: 'Today',
+          imageUrl: 'https://example.com/hamid.jpg',
+          email: 'hamid@keris.my',
+          experience: '25 Years',
+          phone: '+60 12-345 6789',
+        ),
+      );
+
+      await modVM.approveArtisan('p_audit_btn_test');
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ChangeNotifierProvider<ModerationViewModel>.value(
+              value: modVM,
+              child: const AdminApprovalHistoryTab(),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.text('Approval History & Audit Trail'), findsOneWidget);
+      expect(find.text('Audit Record'), findsWidgets);
+      expect(find.text('Pak Hamid Keris'), findsOneWidget);
+      expect(tester.takeException(), isNull);
     });
   });
 }

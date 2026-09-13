@@ -615,7 +615,8 @@ class ModerationViewModel extends ChangeNotifier {
 
       final matchesCategory =
           _selectedCategory == 'All Categories' ||
-          artisan.craftCategory == _selectedCategory;
+          artisan.craftCategory.trim().toLowerCase() ==
+              _selectedCategory.trim().toLowerCase();
 
       final matchesType =
           _applicationTypeFilter == 'All' ||
@@ -699,7 +700,8 @@ class ModerationViewModel extends ChangeNotifier {
 
       final matchesCategory =
           _selectedCategory == 'All Categories' ||
-          artisan.craftCategory == _selectedCategory;
+          artisan.craftCategory.trim().toLowerCase() ==
+              _selectedCategory.trim().toLowerCase();
 
       return matchesSearch && matchesCategory;
     }).toList();
@@ -856,6 +858,11 @@ class ModerationViewModel extends ChangeNotifier {
     _activeTab = tab;
     _searchQuery = '';
     _selectedCategory = 'All Categories';
+    if (tab == 'Workshop Relocations' || tab == 'Premise Relocations') {
+      _applicationTypeFilter = 'Relocations';
+    } else if (tab == 'Pending Approvals') {
+      _applicationTypeFilter = 'All';
+    }
     notifyListeners();
   }
 
@@ -923,8 +930,24 @@ class ModerationViewModel extends ChangeNotifier {
             rawArtisanStatus == 'PENDING' ||
             rawStatus == 'PENDING_APPROVAL' ||
             rawStatus == 'PENDING';
+        final bool isReloc = raw['is_relocation_request'] == true ||
+            raw['isRelocationRequest'] == true ||
+            (raw['pending_relocation_address'] != null &&
+                raw['pending_relocation_address'].toString().trim().isNotEmpty) ||
+            (raw['pendingRelocationAddress'] != null &&
+                raw['pendingRelocationAddress'].toString().trim().isNotEmpty) ||
+            (raw['pending_relocation_date'] != null &&
+                raw['pending_relocation_date'].toString().trim().isNotEmpty) ||
+            (raw['pending_relocation_reason'] != null &&
+                raw['pending_relocation_reason'].toString().trim().isNotEmpty) ||
+            (artisanProfile?['pending_relocation_address'] != null &&
+                artisanProfile!['pending_relocation_address'].toString().trim().isNotEmpty) ||
+            (artisanProfile?['pending_relocation_date'] != null &&
+                artisanProfile!['pending_relocation_date'].toString().trim().isNotEmpty) ||
+            (artisanProfile?['pending_relocation_reason'] != null &&
+                artisanProfile!['pending_relocation_reason'].toString().trim().isNotEmpty);
 
-        if (!isExplicitlyPending) {
+        if (!isExplicitlyPending && !isReloc) {
           if (rawStatus == 'REJECTED' ||
               terminalStatuses.contains(rawArtisanStatus) ||
               terminalStatuses.contains(profileStatus)) {
@@ -944,7 +967,7 @@ class ModerationViewModel extends ChangeNotifier {
               continue;
             }
           }
-        } else {
+        } else if (isExplicitlyPending && !isReloc) {
           final regIdx = _registeredUsers.indexWhere(
             (u) => u.email.toLowerCase() == email.toLowerCase(),
           );
@@ -1169,8 +1192,71 @@ class ModerationViewModel extends ChangeNotifier {
             ? rawPhone.toString().trim()
             : '+60 12-345 6789';
 
+        final dynProposedLat = raw['pending_relocation_lat'] ??
+            raw['pendingRelocationLatitude'] ??
+            raw['proposed_latitude'] ??
+            raw['proposedLatitude'] ??
+            artisanProfile?['pending_relocation_lat'];
+        final dynProposedLng = raw['pending_relocation_lng'] ??
+            raw['pendingRelocationLongitude'] ??
+            raw['proposed_longitude'] ??
+            raw['proposedLongitude'] ??
+            artisanProfile?['pending_relocation_lng'];
+
+        final double? propLat = dynProposedLat is num
+            ? dynProposedLat.toDouble()
+            : (dynProposedLat != null ? double.tryParse(dynProposedLat.toString()) : null);
+        final double? propLng = dynProposedLng is num
+            ? dynProposedLng.toDouble()
+            : (dynProposedLng != null ? double.tryParse(dynProposedLng.toString()) : null);
+
+        final propState = (raw['pending_relocation_state'] ??
+                raw['pendingRelocationState'] ??
+                raw['proposed_state'] ??
+                raw['proposedState'] ??
+                artisanProfile?['pending_relocation_state'])
+            ?.toString();
+
+        var relocAddr = (raw['pending_relocation_address'] ??
+                raw['pendingRelocationAddress'] ??
+                raw['proposed_address'] ??
+                raw['proposedAddress'] ??
+                artisanProfile?['pending_relocation_address'])
+            ?.toString()
+            .trim();
+        if ((relocAddr == null || relocAddr.isEmpty) && isReloc) {
+          final pState = propState ?? state;
+          if (propLat != null && propLng != null) {
+            relocAddr = '$pState (${propLat.toStringAsFixed(4)}, ${propLng.toStringAsFixed(4)})';
+          } else {
+            relocAddr = '$pState Premise';
+          }
+        }
+        final isActualReloc = isReloc || (relocAddr != null && relocAddr.isNotEmpty);
+
+        final relocReason = (raw['pending_relocation_reason'] ??
+                raw['pendingRelocationReason'] ??
+                raw['relocation_reason'] ??
+                raw['relocationReason'] ??
+                artisanProfile?['pending_relocation_reason'])
+            ?.toString();
+
+        final relocCertName = (raw['pending_relocation_cert_name'] ??
+                raw['pendingRelocationCertName'] ??
+                raw['relocation_cert_name'] ??
+                raw['relocationCertFileName'] ??
+                artisanProfile?['pending_relocation_cert_name'])
+            ?.toString();
+
+        final relocCertUrl = (raw['pending_relocation_cert_url'] ??
+                raw['pendingRelocationCertUrl'] ??
+                raw['relocation_cert_url'] ??
+                raw['relocationCertFileUrl'] ??
+                artisanProfile?['pending_relocation_cert_url'])
+            ?.toString();
+
         final newProfile = PendingArtisanProfile(
-          id: id,
+          id: isActualReloc ? (id.startsWith('reloc_') ? id : 'reloc_$id') : id,
           name: name,
           craftCategory: craft,
           state: state,
@@ -1187,17 +1273,32 @@ class ModerationViewModel extends ChangeNotifier {
                       raw['ssmNumber'] ??
                       '202601004821 (SSM Verified)')
                   .toString(),
-          ssmFileName: resolvedSsmName,
-          ssmFileUrl: resolvedSsmUrl,
-          certFileName: resolvedCertName,
-          certFileUrl: resolvedCertUrl,
+          ssmFileName: resolvedSsmName ?? relocCertName,
+          ssmFileUrl: resolvedSsmUrl ?? relocCertUrl,
+          certFileName: resolvedCertName ?? relocCertName,
+          certFileUrl: resolvedCertUrl ?? relocCertUrl,
           photos: resolvedPhotos,
           bio: raw['bio']?.toString() ?? artisanProfile?['bio']?.toString(),
           isUpgradeFromTourist: isUpgrade,
           premiseType: resolvedPremiseType,
+          isRelocationRequest: isActualReloc,
+          currentAddress: raw['current_address']?.toString() ??
+              raw['address']?.toString() ??
+              artisanProfile?['address']?.toString(),
+          proposedAddress: relocAddr,
+          proposedLatitude: propLat,
+          proposedLongitude: propLng,
+          proposedState: propState ?? state,
+          relocationReason: relocReason,
+          relocationCertFileName: relocCertName,
+          relocationCertFileUrl: relocCertUrl,
         );
 
-        fetched.add(newProfile);
+        if (isActualReloc) {
+          fetched.insert(0, newProfile);
+        } else {
+          fetched.add(newProfile);
+        }
       }
 
       // Also query users with pending relocation from repository
@@ -1273,6 +1374,17 @@ class ModerationViewModel extends ChangeNotifier {
                   p.email.toLowerCase() == u.email.toLowerCase() &&
                   p.isRelocationRequest,
             )) {
+              var proposedAddr = u.pendingRelocationAddress;
+              if (proposedAddr == null || proposedAddr.trim().isEmpty) {
+                final pState = u.pendingRelocationState ?? u.state ?? 'Melaka';
+                if (u.pendingRelocationLatitude != null &&
+                    u.pendingRelocationLongitude != null) {
+                  proposedAddr =
+                      '$pState (${u.pendingRelocationLatitude!.toStringAsFixed(4)}, ${u.pendingRelocationLongitude!.toStringAsFixed(4)})';
+                } else {
+                  proposedAddr = '$pState Premise';
+                }
+              }
               fetched.insert(
                 0,
                 PendingArtisanProfile(
@@ -1295,7 +1407,7 @@ class ModerationViewModel extends ChangeNotifier {
                   isUpgradeFromTourist: false,
                   isRelocationRequest: true,
                   currentAddress: u.address,
-                  proposedAddress: u.pendingRelocationAddress,
+                  proposedAddress: proposedAddr,
                   proposedLatitude: u.pendingRelocationLatitude,
                   proposedLongitude: u.pendingRelocationLongitude,
                   proposedState: u.pendingRelocationState,

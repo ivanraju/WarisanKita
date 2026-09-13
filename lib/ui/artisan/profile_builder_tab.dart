@@ -118,10 +118,7 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     final currentCraft = _craftCategoryController.text.trim();
     if (currentCraft != initialCraft) return true;
 
-    // 4. Experience
-    final initialExpDigits = _extractExperienceNumber(user.experience);
-    final currentExpDigits = _experienceController.text.trim();
-    if (currentExpDigits != initialExpDigits) return true;
+    // 4. Experience (locked and auto-incremented, not an editable user change)
 
     // 5. Bio
     final initialBio = (user.bio ?? '').trim();
@@ -211,7 +208,9 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
       _selectedWorkshopPin = _resolveStateCenter(user.state);
     }
     _experienceController = TextEditingController(
-      text: _extractExperienceNumber(user?.experience),
+      text: user != null && user.effectiveExperienceNumber.isNotEmpty
+          ? user.effectiveExperienceNumber
+          : _extractExperienceNumber(user?.experience),
     );
     final initialPhone = user?.phone ?? '';
     _initialPhone = initialPhone;
@@ -236,7 +235,9 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     if (user == null) return;
 
     if (force || _experienceController.text.isEmpty) {
-      if (!_isDefaultOrEmptyExperience(user.experience)) {
+      if (user.effectiveExperienceNumber.isNotEmpty) {
+        _experienceController.text = user.effectiveExperienceNumber;
+      } else if (!_isDefaultOrEmptyExperience(user.experience)) {
         _experienceController.text = _extractExperienceNumber(user.experience);
       } else if (force) {
         _experienceController.text = '';
@@ -533,7 +534,9 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
 
     if (confirmed == true && mounted) {
       final authVM = context.read<AuthViewModel>();
+      authVM.clearRelocationResolutionNotice();
       await authVM.cancelRelocationRequest();
+      authVM.clearRelocationResolutionNotice();
       if (mounted) {
         setState(() {});
         final verifiedPin = _selectedWorkshopPin ??
@@ -939,6 +942,25 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                              );
                              return;
                            }
+                           if (currentUser.address != null &&
+                               proposedAddress!.trim().toLowerCase() ==
+                                   currentUser.address!.trim().toLowerCase()) {
+                             setDialogState(() {
+                               dialogErrorMessage =
+                                   'Proposed relocation address cannot be the same as your current verified workshop address.';
+                             });
+                             ScaffoldMessenger.of(dialogContentCtx).hideCurrentSnackBar();
+                             ScaffoldMessenger.of(dialogContentCtx).showSnackBar(
+                               const SnackBar(
+                                 content: Text(
+                                   'Proposed relocation address cannot be the same as your current verified workshop address.',
+                                 ),
+                                 backgroundColor: Color(0xFFEF4444),
+                                 behavior: SnackBarBehavior.floating,
+                               ),
+                             );
+                             return;
+                           }
                            final formValid = formKey.currentState?.validate() ?? false;
                            final hasCert = attachedCertFile != null ||
                                (certFileName != null && certFileName!.isNotEmpty) ||
@@ -967,9 +989,18 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
 
                           setDialogState(() => isUploadingCert = true);
                           final supabaseService = context.read<SupabaseService>();
+                          String? profileId = currentUser.artisanProfileId;
+                          if (profileId == null || profileId.trim().isEmpty) {
+                            try {
+                              profileId = await supabaseService.ensureArtisanProfileId(
+                                currentUser.id,
+                                email: currentUser.email,
+                              );
+                            } catch (_) {}
+                          }
+
                           if (attachedCertFile != null) {
                             try {
-                              String? profileId = currentUser.artisanProfileId;
                               if (profileId != null && profileId.isNotEmpty) {
                                 final uploadRes = await supabaseService.uploadArtisanDocument(
                                   profileId,
@@ -985,23 +1016,50 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                               } else {
                                 certFileName = attachedCertFile!.name;
                               }
-                            } catch (_) {
+                            } catch (e) {
+                              debugPrint('Error uploading relocation cert: $e');
                               certFileName = attachedCertFile!.name;
                             }
                           }
 
+                          final effectiveProposedState =
+                              proposedState ?? currentUser.state ?? 'Melaka';
+                          final effectiveProposedAddress = (proposedAddress != null &&
+                                  proposedAddress!.trim().isNotEmpty)
+                              ? proposedAddress!.trim()
+                              : (proposedPin != null
+                                  ? '$effectiveProposedState (${proposedPin!.latitude.toStringAsFixed(4)}, ${proposedPin!.longitude.toStringAsFixed(4)})'
+                                  : '$effectiveProposedState Premise');
                           final reason = reasonController.text.trim().isNotEmpty
                               ? reasonController.text.trim()
-                              : 'Premise relocation to $proposedAddress';
-                          await authVM.submitRelocationRequest(
-                            address: proposedAddress!,
-                            state: proposedState ?? currentUser.state ?? 'Melaka',
-                            latitude: proposedPin!.latitude,
-                            longitude: proposedPin!.longitude,
-                            reason: reason,
-                            certUrl: certFileUrl,
-                            certName: certFileName,
-                          );
+                              : 'Premise relocation to $effectiveProposedAddress';
+
+                          try {
+                            await authVM.submitRelocationRequest(
+                              address: effectiveProposedAddress,
+                              state: effectiveProposedState,
+                              latitude: proposedPin!.latitude,
+                              longitude: proposedPin!.longitude,
+                              reason: reason,
+                              certUrl: certFileUrl,
+                              certName: certFileName,
+                              artisanProfileId: profileId ?? currentUser.artisanProfileId,
+                            );
+                          } catch (submitErr) {
+                            if (dialogCtx.mounted) {
+                              setDialogState(() => isUploadingCert = false);
+                            }
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Failed to submit relocation request: $submitErr'),
+                                  backgroundColor: const Color(0xFFEF4444),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                            return;
+                          }
 
                           if (mounted) {
                             try {
@@ -1021,10 +1079,10 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
                                   isUpgradeFromTourist: false,
                                   isRelocationRequest: true,
                                   currentAddress: currentUser.address,
-                                  proposedAddress: proposedAddress,
+                                  proposedAddress: effectiveProposedAddress,
                                   proposedLatitude: proposedPin!.latitude,
                                   proposedLongitude: proposedPin!.longitude,
-                                  proposedState: proposedState ?? currentUser.state,
+                                  proposedState: effectiveProposedState,
                                   relocationReason: reason,
                                   relocationCertFileName: certFileName,
                                   relocationCertFileUrl: certFileUrl,
@@ -2190,24 +2248,30 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
             
             const SizedBox(height: 24),
 
-            // Experience Input
+            // Experience Input (Locked & Automatically Incremented Annually)
             TextFormField(
               controller: _experienceController,
-              keyboardType: TextInputType.number,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(2),
-              ],
-              autovalidateMode: AutovalidateMode.onUserInteraction,
-              validator: (v) => ProfileValidator.validateExperience(v, isRequired: false),
-              style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
+              readOnly: true,
+              style: TextStyle(
+                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                fontWeight: FontWeight.w600,
+              ),
               decoration: _inputDecoration(
                 isDark,
+                readOnly: true,
                 labelText: 'Years of Craft Experience',
-                hintText: 'e.g. 15',
                 suffixText: 'Years',
                 prefixIcon: Icons.workspace_premium_outlined,
-                helperText: 'Enter your years of craft heritage experience in numbers (e.g. 15)',
+                suffixIcon: Tooltip(
+                  message: 'Experience is verified and automatically increments each year (Locked)',
+                  child: Icon(
+                    Icons.lock_outline_rounded,
+                    size: 20,
+                    color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                  ),
+                ),
+                helperText: 'Verified craft experience (automatically increments annually)',
+                helperColor: isDark ? const Color(0xFF34D399) : const Color(0xFF059669),
               ),
             ),
 

@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:warisan_kita/ui/auth/forgot_password_screen.dart';
 import 'package:warisan_kita/ui/auth/widgets/password_strength_meter.dart';
+import 'package:warisan_kita/domain/validators/profile_validator.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 
 class ChangePasswordDialog extends StatefulWidget {

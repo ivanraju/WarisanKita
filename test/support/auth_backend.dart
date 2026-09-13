@@ -106,7 +106,12 @@ class AuthBackend {
       return _json(confirmOnSignup ? _session(row) : _user(row));
     }
     if (path.endsWith('/token')) {
-      final row = accounts[body['email']];
+      final emailKey = (body['email'] ?? '').toString().toLowerCase();
+      final row = accounts[body['email']] ??
+          accounts.entries
+              .where((e) => e.key.toLowerCase() == emailKey)
+              .map((e) => e.value)
+              .firstOrNull;
       if (row == null || row['password'] != body['password']) {
         return _json({'msg': 'Invalid login credentials'}, 400);
       }
@@ -126,8 +131,17 @@ class AuthBackend {
       final row = accounts[activeEmail];
       if (row == null) return _json({'msg': 'Session missing'}, 401);
       if (request.method == 'PUT' && body['password'] != null) {
-        if (row['password'] == body['password'])
-          return _json({'msg': 'New password should be different'}, 400);
+        final currentPw = (row['password'] ?? '').toString();
+        final newPw = (body['password'] ?? '').toString();
+        if (currentPw == newPw) {
+          return _json({'msg': 'New password should be different', 'code': 'same_password'}, 400);
+        }
+        if (currentPw.toLowerCase() == newPw.toLowerCase()) {
+          return _json({
+            'msg': 'NEW PASSWORD IS TOO SIMILAR TO YOUR CURRENT PASSWORD: Please choose a completely new password, not just a change in uppercase or lowercase.',
+            'code': 'same_password'
+          }, 400);
+        }
         passwordUpdates++;
         row['password'] = body['password'];
       }
