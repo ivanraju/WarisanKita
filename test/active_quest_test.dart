@@ -398,7 +398,7 @@ void main() {
 
         final completed = await viewModel.verifyArtisanQrForTask(
           task: bonusTask,
-          qrPayload: 'WK_ARTISAN:artisan-quest-1:secret',
+          qrPayload: 'WKT1:bonus-task:secret',
         );
 
         expect(completed, isFalse);
@@ -433,7 +433,7 @@ void main() {
         expect(
           await viewModel.verifyArtisanQrForTask(
             task: task,
-            qrPayload: 'WK_ARTISAN:artisan-quest-1:secret',
+            qrPayload: 'WKT1:bonus-task:secret',
           ),
           isTrue,
         );
@@ -717,7 +717,6 @@ class _QuestFlowRepository extends GamificationRepository {
   @override
   Future<TaskCompletionResult> completeTaskWithArtisanQr({
     required String questId,
-    required String artisanId,
     required String taskId,
     required String qrPayload,
   }) async {

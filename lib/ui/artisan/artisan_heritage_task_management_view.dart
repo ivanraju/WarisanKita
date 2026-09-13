@@ -664,13 +664,13 @@ class _ArtisanHeritageTaskManagementViewState
     );
   }
 
-  void _showWorkshopQr(Quest quest) {
-    final secret = quest.qrCodeSecret;
+  void _showTaskQr(HeritageTask task) {
+    final secret = task.qrCodeSecret;
     if (secret == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'This workshop QR has not been configured yet.',
+            'This task QR has not been configured yet.',
             style: TextStyle(
               color: Color(0xFFFFF8E1),
               fontWeight: FontWeight.w600,
@@ -683,7 +683,7 @@ class _ArtisanHeritageTaskManagementViewState
       return;
     }
 
-    final payload = 'WK_ARTISAN:${quest.artisanId}:$secret';
+    final payload = 'WKT1:${task.id}:$secret';
     final isDark = Theme.of(context).brightness == Brightness.dark;
     showDialog<void>(
       context: context,
@@ -705,7 +705,7 @@ class _ArtisanHeritageTaskManagementViewState
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'Workshop QR',
+                  'Task QR',
                   style: GoogleFonts.dmSerifDisplay(
                     color: isDark ? const Color(0xFFFFD54F) : _green,
                     fontSize: 24,
@@ -740,8 +740,7 @@ class _ArtisanHeritageTaskManagementViewState
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Display this single QR at your workshop. Tourists scan the '
-                  'same code to verify each completed task.',
+                  '${task.title}\n\nThis permanent QR verifies only this activity.',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.plusJakartaSans(
                     color: isDark ? Colors.white70 : const Color(0xFF64748B),
@@ -995,22 +994,6 @@ class _ArtisanHeritageTaskManagementViewState
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () => _showWorkshopQr(quest),
-              icon: const Icon(Icons.qr_code_2_rounded),
-              label: const Text('View Workshop QR'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFFFFD166),
-                side: const BorderSide(color: Color(0xFFFFD166)),
-                textStyle: GoogleFonts.plusJakartaSans(
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
           ),
         ],
       ),
@@ -1450,9 +1433,25 @@ class _ArtisanHeritageTaskManagementViewState
               ),
             )
           else
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+            Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 4,
               children: [
+                if (!isRejectedSubmission &&
+                    task.status.toUpperCase() == 'APPROVED' &&
+                    !task.isArchived)
+                  TextButton.icon(
+                    onPressed: task.qrCodeSecret == null
+                        ? null
+                        : () => _showTaskQr(task),
+                    style: TextButton.styleFrom(
+                      foregroundColor: isDark
+                          ? const Color(0xFF6EE7B7)
+                          : _green,
+                    ),
+                    icon: const Icon(Icons.qr_code_2_rounded, size: 17),
+                    label: const Text('View Task QR'),
+                  ),
                 TextButton.icon(
                   onPressed: isTaskActionBusy
                       ? null

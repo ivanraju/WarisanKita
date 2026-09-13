@@ -61,7 +61,8 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
     final user = context.read<AuthViewModel>().currentUser;
     if (user != null) {
       final prefs = await SharedPreferences.getInstance();
-      final dismissed = prefs.getBool('dismissed_rejection_banner_${user.id}') ?? false;
+      final dismissed =
+          prefs.getBool('dismissed_rejection_banner_${user.id}') ?? false;
       if (mounted && dismissed) {
         setState(() => _isRejectionBannerDismissed = true);
       }
@@ -80,15 +81,22 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
           context: context,
           barrierDismissible: false,
           builder: (dialogContext) {
-            final isDark = Theme.of(dialogContext).brightness == Brightness.dark;
-            final studioName = (user.studioName != null && user.studioName!.trim().isNotEmpty)
+            final isDark =
+                Theme.of(dialogContext).brightness == Brightness.dark;
+            final studioName =
+                (user.studioName != null && user.studioName!.trim().isNotEmpty)
                 ? user.studioName!.trim()
                 : 'your studio';
             return AlertDialog(
               backgroundColor: isDark ? const Color(0xFF0D2825) : Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
               titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 8,
+              ),
               actionsPadding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
               title: Column(
                 children: [
@@ -110,14 +118,21 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
                     textAlign: TextAlign.center,
                     style: GoogleFonts.dmSerifDisplay(
                       fontSize: 22,
-                      color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                      color: isDark
+                          ? const Color(0xFFFFD54F)
+                          : const Color(0xFF004D40),
                     ),
                   ),
                   const SizedBox(height: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF3F161A) : const Color(0xFFFEE2E2),
+                      color: isDark
+                          ? const Color(0xFF3F161A)
+                          : const Color(0xFFFEE2E2),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: const Color(0xFFEF4444)),
                     ),
@@ -144,16 +159,21 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
                       height: 1.4,
                     ),
                   ),
-                  if (user.rejectionReason != null && user.rejectionReason!.trim().isNotEmpty) ...[
+                  if (user.rejectionReason != null &&
+                      user.rejectionReason!.trim().isNotEmpty) ...[
                     const SizedBox(height: 14),
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF2A1215) : const Color(0xFFFFF1F2),
+                        color: isDark
+                            ? const Color(0xFF2A1215)
+                            : const Color(0xFFFFF1F2),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: isDark ? const Color(0xFF5C1D24) : const Color(0xFFFECDD3),
+                          color: isDark
+                              ? const Color(0xFF5C1D24)
+                              : const Color(0xFFFECDD3),
                         ),
                       ),
                       child: Column(
@@ -161,7 +181,11 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.feedback_outlined, size: 14, color: Color(0xFFEF4444)),
+                              const Icon(
+                                Icons.feedback_outlined,
+                                size: 14,
+                                color: Color(0xFFEF4444),
+                              ),
                               const SizedBox(width: 6),
                               Text(
                                 'OFFICIAL FEEDBACK',
@@ -180,7 +204,9 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: isDark ? Colors.white : const Color(0xFF881337),
+                              color: isDark
+                                  ? Colors.white
+                                  : const Color(0xFF881337),
                               height: 1.3,
                             ),
                           ),
@@ -196,7 +222,10 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
                     Expanded(
                       child: TextButton(
                         onPressed: () async {
-                          await prefs.setBool('shown_rejection_dialog_${user.id}', true);
+                          await prefs.setBool(
+                            'shown_rejection_dialog_${user.id}',
+                            true,
+                          );
                           if (dialogContext.mounted) {
                             Navigator.of(dialogContext).pop();
                           }
@@ -218,7 +247,10 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
                       flex: 2,
                       child: FilledButton(
                         onPressed: () async {
-                          await prefs.setBool('shown_rejection_dialog_${user.id}', true);
+                          await prefs.setBool(
+                            'shown_rejection_dialog_${user.id}',
+                            true,
+                          );
                           if (dialogContext.mounted) {
                             Navigator.of(dialogContext).pop();
                           }
@@ -226,9 +258,14 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
                             Navigator.of(context).push(
                               MaterialPageRoute(
                                 builder: (_) => ArtisanApplicationPendingScreen(
-                                  studioName: user.studioName ?? 'Your Craft Studio',
-                                  craftCategory: user.craftCategory ?? 'Malaysian Heritage Craft',
-                                  ssmNumber: user.ssmNumber ?? 'Pending Document Verification',
+                                  studioName:
+                                      user.studioName ?? 'Your Craft Studio',
+                                  craftCategory:
+                                      user.craftCategory ??
+                                      'Malaysian Heritage Craft',
+                                  ssmNumber:
+                                      user.ssmNumber ??
+                                      'Pending Document Verification',
                                 ),
                               ),
                             );
@@ -244,7 +281,10 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
                         ),
                         child: const Text(
                           'Review & Re-apply',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
                         ),
                       ),
                     ),
@@ -281,13 +321,14 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
           if (mounted &&
               ModalRoute.of(context)?.isCurrent == true &&
               context.read<AuthViewModel>().currentUser == null) {
-            Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil('/login', (route) => false);
+            Navigator.of(
+              context,
+              rootNavigator: true,
+            ).pushNamedAndRemoveUntil('/login', (route) => false);
           }
         });
       }
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     _scheduleJourneyRestoration();
@@ -317,11 +358,16 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
               child: SafeArea(
                 bottom: false,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     border: Border(
                       bottom: BorderSide(
-                        color: isDark ? const Color(0xFF5C1D24) : const Color(0xFFFCA5A5),
+                        color: isDark
+                            ? const Color(0xFF5C1D24)
+                            : const Color(0xFFFCA5A5),
                         width: 1,
                       ),
                     ),
@@ -334,7 +380,11 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
                           color: Color(0xFFEF4444),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.cancel_outlined, color: Colors.white, size: 16),
+                        child: const Icon(
+                          Icons.cancel_outlined,
+                          color: Colors.white,
+                          size: 16,
+                        ),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
@@ -347,18 +397,23 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
-                                color: isDark ? const Color(0xFFFCA5A5) : const Color(0xFF991B1B),
+                                color: isDark
+                                    ? const Color(0xFFFCA5A5)
+                                    : const Color(0xFF991B1B),
                               ),
                             ),
                             Text(
-                              (user.rejectionReason != null && user.rejectionReason!.trim().isNotEmpty)
+                              (user.rejectionReason != null &&
+                                      user.rejectionReason!.trim().isNotEmpty)
                                   ? user.rejectionReason!.trim()
                                   : 'Kraftangan review required document updates.',
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 11,
-                                color: isDark ? Colors.white70 : const Color(0xFF7F1D1D),
+                                color: isDark
+                                    ? Colors.white70
+                                    : const Color(0xFF7F1D1D),
                               ),
                             ),
                           ],
@@ -380,14 +435,22 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
                         style: FilledButton.styleFrom(
                           backgroundColor: const Color(0xFFEF4444),
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
                           minimumSize: Size.zero,
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
                         child: Text(
                           'Review',
-                          style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold),
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 4),
@@ -395,18 +458,29 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
                         icon: Icon(
                           Icons.close,
                           size: 18,
-                          color: isDark ? const Color(0xFFFCA5A5) : const Color(0xFF991B1B),
+                          color: isDark
+                              ? const Color(0xFFFCA5A5)
+                              : const Color(0xFF991B1B),
                         ),
                         tooltip: 'Dismiss message',
                         visualDensity: VisualDensity.compact,
                         padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                        constraints: const BoxConstraints(
+                          minWidth: 28,
+                          minHeight: 28,
+                        ),
                         onPressed: () async {
                           setState(() => _isRejectionBannerDismissed = true);
                           final prefs = await SharedPreferences.getInstance();
-                          final uid = context.read<AuthViewModel>().currentUser?.id;
+                          final uid = context
+                              .read<AuthViewModel>()
+                              .currentUser
+                              ?.id;
                           if (uid != null) {
-                            await prefs.setBool('dismissed_rejection_banner_$uid', true);
+                            await prefs.setBool(
+                              'dismissed_rejection_banner_$uid',
+                              true,
+                            );
                           }
                         },
                       ),
@@ -467,7 +541,7 @@ class _TouristMainScaffoldState extends State<TouristMainScaffold> {
                 index: 1,
                 icon: Icons.near_me_outlined,
                 activeIcon: Icons.near_me_rounded,
-                label: langVM.translate('Matchmaker'),
+                label: langVM.translate('Map'),
               ),
               _buildNavItem(
                 index: 2,

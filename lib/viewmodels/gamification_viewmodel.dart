@@ -703,7 +703,6 @@ class GamificationViewModel extends ChangeNotifier with WidgetsBindingObserver {
       }
       final completion = await _repository.completeTaskWithArtisanQr(
         questId: quest.id,
-        artisanId: quest.artisanId,
         taskId: task.id,
         qrPayload: qrPayload,
       );

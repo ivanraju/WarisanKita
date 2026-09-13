@@ -216,7 +216,10 @@ class SupabaseService {
       emails.addAll(list.map((e) => e.trim().toLowerCase()));
       for (final key in prefs.getKeys()) {
         if (key.startsWith(_keyPendingRelocPrefix)) {
-          final e = key.substring(_keyPendingRelocPrefix.length).trim().toLowerCase();
+          final e = key
+              .substring(_keyPendingRelocPrefix.length)
+              .trim()
+              .toLowerCase();
           if (e.isNotEmpty) emails.add(e);
         }
       }
@@ -224,7 +227,9 @@ class SupabaseService {
     return emails.toList();
   }
 
-  static Future<Map<String, dynamic>?> getPendingRelocationData(String email) async {
+  static Future<Map<String, dynamic>?> getPendingRelocationData(
+    String email,
+  ) async {
     return _getPendingRelocation(email);
   }
 
@@ -1244,7 +1249,8 @@ class SupabaseService {
       _userStore[cleanEmail] = userRecord;
     }
 
-    final bool isVillage = premiseType != null &&
+    final bool isVillage =
+        premiseType != null &&
         (premiseType.contains('Village') ||
             premiseType.contains('Desa') ||
             premiseType.contains('Home') ||
@@ -1267,7 +1273,9 @@ class SupabaseService {
         );
       }
     } else if (!isVillage) {
-      throw Exception('INVALID_SSM: SSM registration number is required for Commercial Studios.');
+      throw Exception(
+        'INVALID_SSM: SSM registration number is required for Commercial Studios.',
+      );
     }
 
     final cleanPhone = phone?.trim() ?? '';
@@ -1291,7 +1299,9 @@ class SupabaseService {
     // Update user record with pending artisan credentials
     userRecord['studioName'] = studioName;
     userRecord['craftCategory'] = craftCategory;
-    userRecord['ssmNumber'] = cleanSsm.isNotEmpty ? cleanSsm : (isVillage ? 'VILLAGE_EXEMPT' : '');
+    userRecord['ssmNumber'] = cleanSsm.isNotEmpty
+        ? cleanSsm
+        : (isVillage ? 'VILLAGE_EXEMPT' : '');
     if (premiseType != null) {
       userRecord['premiseType'] = premiseType;
       userRecord['premise_type'] = premiseType;
@@ -1317,23 +1327,26 @@ class SupabaseService {
     userRecord['rejection_reason'] = null;
 
     final preservedDocuments = (userRecord['artisan_documents'] is List
-            ? List<Map<String, dynamic>>.from(
-                (userRecord['artisan_documents'] as List).map(
-                  (item) => Map<String, dynamic>.from(item as Map),
-                ),
-              )
-            : (userRecord['artisanDocuments'] is List
-                ? List<Map<String, dynamic>>.from(
-                    (userRecord['artisanDocuments'] as List).map(
-                      (item) => Map<String, dynamic>.from(item as Map),
-                    ),
-                  )
-                : (userRecord['artisan_profiles'] is Map &&
-                        userRecord['artisan_profiles']['artisan_documents'] is List
+        ? List<Map<String, dynamic>>.from(
+            (userRecord['artisan_documents'] as List).map(
+              (item) => Map<String, dynamic>.from(item as Map),
+            ),
+          )
+        : (userRecord['artisanDocuments'] is List
+              ? List<Map<String, dynamic>>.from(
+                  (userRecord['artisanDocuments'] as List).map(
+                    (item) => Map<String, dynamic>.from(item as Map),
+                  ),
+                )
+              : (userRecord['artisan_profiles'] is Map &&
+                        userRecord['artisan_profiles']['artisan_documents']
+                            is List
                     ? List<Map<String, dynamic>>.from(
-                        (userRecord['artisan_profiles']['artisan_documents'] as List).map(
-                          (item) => Map<String, dynamic>.from(item as Map),
-                        ),
+                        (userRecord['artisan_profiles']['artisan_documents']
+                                as List)
+                            .map(
+                              (item) => Map<String, dynamic>.from(item as Map),
+                            ),
                       )
                     : <Map<String, dynamic>>[])));
 
@@ -1351,7 +1364,9 @@ class SupabaseService {
     replaceLocalDocument(certDocType, ssmFile);
     replaceLocalDocument('KRAFTANGAN_MASTER_CERT', certFile);
     if (photos != null && photos.isNotEmpty) {
-      preservedDocuments.removeWhere((doc) => doc['doc_type'] == 'STUDIO_PHOTO');
+      preservedDocuments.removeWhere(
+        (doc) => doc['doc_type'] == 'STUDIO_PHOTO',
+      );
       for (final photo in photos) {
         preservedDocuments.add({
           'doc_type': 'STUDIO_PHOTO',
@@ -1375,7 +1390,9 @@ class SupabaseService {
                 'rejection_reason': null,
                 'studio_name': studioName,
                 'craft_category': craftCategory,
-                'ssm_number': cleanSsm.isNotEmpty ? cleanSsm : (isVillage ? 'VILLAGE_EXEMPT' : ''),
+                'ssm_number': cleanSsm.isNotEmpty
+                    ? cleanSsm
+                    : (isVillage ? 'VILLAGE_EXEMPT' : ''),
                 if (premiseType != null) 'premise_type': premiseType,
                 if (phone != null && phone.trim().isNotEmpty)
                   'phone_number': phone.trim(),
@@ -1458,7 +1475,9 @@ class SupabaseService {
           final profileData = <String, dynamic>{
             'studio_name': studioName,
             'craft_category': craftCategory,
-            'ssm_number': cleanSsm.isNotEmpty ? cleanSsm : (isVillage ? 'VILLAGE_EXEMPT' : ''),
+            'ssm_number': cleanSsm.isNotEmpty
+                ? cleanSsm
+                : (isVillage ? 'VILLAGE_EXEMPT' : ''),
             if (experience != null &&
                 experience.trim().isNotEmpty &&
                 RegExp(r'\d+').firstMatch(experience) != null)
@@ -1495,12 +1514,15 @@ class SupabaseService {
               } catch (err2) {
                 debugPrint('artisan_profiles update fallback note: $err2');
                 try {
-                  await client.from('artisan_profiles').update({
-                    'studio_name': studioName,
-                    'craft_category': craftCategory,
-                    'status': 'PENDING_APPROVAL',
-                    'updated_at': DateTime.now().toIso8601String(),
-                  }).eq('user_id', userId);
+                  await client
+                      .from('artisan_profiles')
+                      .update({
+                        'studio_name': studioName,
+                        'craft_category': craftCategory,
+                        'status': 'PENDING_APPROVAL',
+                        'updated_at': DateTime.now().toIso8601String(),
+                      })
+                      .eq('user_id', userId);
                 } catch (_) {}
               }
             }
@@ -1558,14 +1580,23 @@ class SupabaseService {
                   mimeType = 'image/png';
                 } else if (lcName.endsWith('.webp')) {
                   mimeType = 'image/webp';
-                } else if (lcName.endsWith('.jpg') || lcName.endsWith('.jpeg')) {
+                } else if (lcName.endsWith('.jpg') ||
+                    lcName.endsWith('.jpeg')) {
                   mimeType = 'image/jpeg';
                 } else if (bytes.length > 4) {
-                  if (bytes[0] == 0x25 && bytes[1] == 0x50 && bytes[2] == 0x44 && bytes[3] == 0x46) {
+                  if (bytes[0] == 0x25 &&
+                      bytes[1] == 0x50 &&
+                      bytes[2] == 0x44 &&
+                      bytes[3] == 0x46) {
                     mimeType = 'application/pdf';
-                  } else if (bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47) {
+                  } else if (bytes[0] == 0x89 &&
+                      bytes[1] == 0x50 &&
+                      bytes[2] == 0x4E &&
+                      bytes[3] == 0x47) {
                     mimeType = 'image/png';
-                  } else if (bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF) {
+                  } else if (bytes[0] == 0xFF &&
+                      bytes[1] == 0xD8 &&
+                      bytes[2] == 0xFF) {
                     mimeType = 'image/jpeg';
                   }
                 }
@@ -1605,11 +1636,16 @@ class SupabaseService {
                       .uploadBinary(
                         path,
                         bytes,
-                        fileOptions: FileOptions(contentType: mimeType, upsert: true),
+                        fileOptions: FileOptions(
+                          contentType: mimeType,
+                          upsert: true,
+                        ),
                       );
                   uploadedUrl = client.storage.from(bucket).getPublicUrl(path);
                 } catch (firstErr) {
-                  debugPrint('Upload to $bucket failed ($firstErr), trying artisan_public_media fallback...');
+                  debugPrint(
+                    'Upload to $bucket failed ($firstErr), trying artisan_public_media fallback...',
+                  );
                   if (bucket != 'artisan_public_media') {
                     try {
                       await client.storage
@@ -1617,11 +1653,18 @@ class SupabaseService {
                           .uploadBinary(
                             path,
                             bytes,
-                            fileOptions: FileOptions(contentType: mimeType, upsert: true),
+                            fileOptions: FileOptions(
+                              contentType: mimeType,
+                              upsert: true,
+                            ),
                           );
-                      uploadedUrl = client.storage.from('artisan_public_media').getPublicUrl(path);
+                      uploadedUrl = client.storage
+                          .from('artisan_public_media')
+                          .getPublicUrl(path);
                     } catch (secondErr) {
-                      debugPrint('Fallback upload to artisan_public_media also failed: $secondErr');
+                      debugPrint(
+                        'Fallback upload to artisan_public_media also failed: $secondErr',
+                      );
                     }
                   }
                 }
@@ -1633,7 +1676,10 @@ class SupabaseService {
                 // 2. Resilient fallback: base64 data URL so the uploaded proof is never lost
                 if (mimeType.startsWith('image/')) {
                   final b64 = base64Encode(bytes);
-                  return {'url': 'data:$mimeType;base64,$b64', 'name': finalFileName};
+                  return {
+                    'url': 'data:$mimeType;base64,$b64',
+                    'name': finalFileName,
+                  };
                 }
                 return null;
               } catch (e) {
@@ -1643,7 +1689,9 @@ class SupabaseService {
             }
 
             try {
-              final ssmBucket = isVillage ? 'artisan_public_media' : 'artisan_private_docs';
+              final ssmBucket = isVillage
+                  ? 'artisan_public_media'
+                  : 'artisan_private_docs';
               final ssmUpload = await uploadDoc(
                 ssmFile,
                 ssmBucket,
@@ -1658,12 +1706,16 @@ class SupabaseService {
               final List<Map<String, dynamic>> docsToInsert = [];
 
               if (ssmUpload != null) {
-                profileTags.removeWhere((t) =>
-                    t.startsWith('doc_crafting_photo_') ||
-                    t.startsWith('doc_ssm_cert_'));
+                profileTags.removeWhere(
+                  (t) =>
+                      t.startsWith('doc_crafting_photo_') ||
+                      t.startsWith('doc_ssm_cert_'),
+                );
                 if (isVillage) {
                   profileTags.add('doc_crafting_photo_url:${ssmUpload['url']}');
-                  profileTags.add('doc_crafting_photo_name:${ssmUpload['name']}');
+                  profileTags.add(
+                    'doc_crafting_photo_name:${ssmUpload['name']}',
+                  );
                 } else {
                   profileTags.add('doc_ssm_cert_url:${ssmUpload['url']}');
                   profileTags.add('doc_ssm_cert_name:${ssmUpload['name']}');
@@ -1672,16 +1724,22 @@ class SupabaseService {
                 userRecord['ssm_file_name'] = ssmUpload['name'];
                 docsToInsert.add({
                   'artisan_id': artisanId,
-                  'doc_type': isVillage ? 'CRAFTING_PHOTO' : 'SSM_BUSINESS_CERT',
+                  'doc_type': isVillage
+                      ? 'CRAFTING_PHOTO'
+                      : 'SSM_BUSINESS_CERT',
                   'file_url': ssmUpload['url'],
                   'file_name': ssmUpload['name'],
                 });
               }
 
               if (certUpload != null) {
-                profileTags.removeWhere((t) => t.startsWith('doc_kraftangan_cert_'));
+                profileTags.removeWhere(
+                  (t) => t.startsWith('doc_kraftangan_cert_'),
+                );
                 profileTags.add('doc_kraftangan_cert_url:${certUpload['url']}');
-                profileTags.add('doc_kraftangan_cert_name:${certUpload['name']}');
+                profileTags.add(
+                  'doc_kraftangan_cert_name:${certUpload['name']}',
+                );
                 userRecord['cert_file_url'] = certUpload['url'];
                 userRecord['cert_file_name'] = certUpload['name'];
                 docsToInsert.add({
@@ -1693,7 +1751,9 @@ class SupabaseService {
               }
 
               if (photos != null && photos.isNotEmpty) {
-                profileTags.removeWhere((t) => t.startsWith('doc_studio_photo:'));
+                profileTags.removeWhere(
+                  (t) => t.startsWith('doc_studio_photo:'),
+                );
                 for (var p in photos) {
                   final pUpload = await uploadDoc(
                     p,
@@ -1730,15 +1790,21 @@ class SupabaseService {
                     .delete()
                     .eq('artisan_id', artisanId);
                 if (docsToInsert.isNotEmpty) {
-                  final replacedTypes = docsToInsert.map((d) => d['doc_type']).toSet();
-                  preservedDocuments.removeWhere((doc) => replacedTypes.contains(doc['doc_type']));
+                  final replacedTypes = docsToInsert
+                      .map((d) => d['doc_type'])
+                      .toSet();
+                  preservedDocuments.removeWhere(
+                    (doc) => replacedTypes.contains(doc['doc_type']),
+                  );
                   preservedDocuments.addAll(docsToInsert);
                   try {
                     await client
                         .from('artisan_documents')
                         .delete()
                         .eq('artisan_id', artisanId);
-                    await client.from('artisan_documents').insert(preservedDocuments);
+                    await client
+                        .from('artisan_documents')
+                        .insert(preservedDocuments);
                   } catch (_) {}
                   userRecord['artisan_documents'] = preservedDocuments;
                   userRecord['artisanDocuments'] = preservedDocuments;
@@ -1768,8 +1834,12 @@ class SupabaseService {
     userRecord['studio_name'] = studioName;
     userRecord['craftCategory'] = craftCategory;
     userRecord['craft_category'] = craftCategory;
-    userRecord['ssmNumber'] = cleanSsm.isNotEmpty ? cleanSsm : (isVillage ? 'VILLAGE_EXEMPT' : '');
-    userRecord['ssm_number'] = cleanSsm.isNotEmpty ? cleanSsm : (isVillage ? 'VILLAGE_EXEMPT' : '');
+    userRecord['ssmNumber'] = cleanSsm.isNotEmpty
+        ? cleanSsm
+        : (isVillage ? 'VILLAGE_EXEMPT' : '');
+    userRecord['ssm_number'] = cleanSsm.isNotEmpty
+        ? cleanSsm
+        : (isVillage ? 'VILLAGE_EXEMPT' : '');
     if (premiseType != null) {
       userRecord['premiseType'] = premiseType;
       userRecord['premise_type'] = premiseType;
@@ -1788,7 +1858,9 @@ class SupabaseService {
         ...(userRecord['artisan_profiles'] as Map),
       'studio_name': studioName,
       'craft_category': craftCategory,
-      'ssm_number': cleanSsm.isNotEmpty ? cleanSsm : (isVillage ? 'VILLAGE_EXEMPT' : ''),
+      'ssm_number': cleanSsm.isNotEmpty
+          ? cleanSsm
+          : (isVillage ? 'VILLAGE_EXEMPT' : ''),
       'bio': bio ?? userRecord['bio'],
       'state': state ?? userRecord['state'],
       'address': address ?? userRecord['address'],
@@ -1938,9 +2010,10 @@ class SupabaseService {
     if (experience != null) userRecord['experience'] = experience;
     final List<String> currentTags = (userRecord['tags'] is List
         ? List<String>.from(userRecord['tags'])
-        : (userRecord['artisan_profiles'] is Map && userRecord['artisan_profiles']['tags'] is List
-            ? List<String>.from(userRecord['artisan_profiles']['tags'])
-            : <String>[]));
+        : (userRecord['artisan_profiles'] is Map &&
+                  userRecord['artisan_profiles']['tags'] is List
+              ? List<String>.from(userRecord['artisan_profiles']['tags'])
+              : <String>[]));
 
     final existingSystemTags = currentTags
         .where((t) => t.startsWith('doc_') || t.startsWith('premise:'))
@@ -1949,7 +2022,12 @@ class SupabaseService {
     List<String> existingUserTags;
     if (toolsAndMaterials != null) {
       final userTools = toolsAndMaterials
-          .where((t) => !t.startsWith('doc_') && !t.startsWith('premise:') && !t.startsWith('__'))
+          .where(
+            (t) =>
+                !t.startsWith('doc_') &&
+                !t.startsWith('premise:') &&
+                !t.startsWith('__'),
+          )
           .toList();
       existingUserTags = [...userTools, ...existingSystemTags];
     } else {
@@ -2166,7 +2244,8 @@ class SupabaseService {
                     if (existingProfile['tags'] is List) {
                       for (final t in (existingProfile['tags'] as List)) {
                         final st = t.toString();
-                        if ((st.startsWith('doc_') || st.startsWith('premise:')) &&
+                        if ((st.startsWith('doc_') ||
+                                st.startsWith('premise:')) &&
                             !effectiveTags.contains(st)) {
                           effectiveTags.add(st);
                         }
@@ -2771,7 +2850,9 @@ class SupabaseService {
                         : null);
 
               // Extract documents if they exist
-              final apTags = ap['tags'] is List ? List<String>.from(ap['tags']) : <String>[];
+              final apTags = ap['tags'] is List
+                  ? List<String>.from(ap['tags'])
+                  : <String>[];
               List<String> photos = [];
               String? ssmFileName;
               String? ssmFileUrl;
@@ -2790,8 +2871,8 @@ class SupabaseService {
                   if (type == 'PORTFOLIO_IMAGE' || type == 'STUDIO_PHOTO') {
                     if (url != null) photos.add(url);
                   } else if (type == 'SSM_BUSINESS_CERT' ||
-                             type == 'CRAFTING_PHOTO' ||
-                             type == 'VILLAGE_HEAD_ENDORSEMENT') {
+                      type == 'CRAFTING_PHOTO' ||
+                      type == 'VILLAGE_HEAD_ENDORSEMENT') {
                     if (name != null) ssmFileName = name;
                     if (url != null) ssmFileUrl = url;
                   } else if (type == 'KRAFTANGAN_MASTER_CERT') {
@@ -2818,7 +2899,9 @@ class SupabaseService {
               if (ssmFileName == null) {
                 for (final t in apTags) {
                   if (t.startsWith('doc_crafting_photo_name:')) {
-                    ssmFileName = t.substring('doc_crafting_photo_name:'.length);
+                    ssmFileName = t.substring(
+                      'doc_crafting_photo_name:'.length,
+                    );
                     break;
                   } else if (t.startsWith('doc_ssm_cert_name:')) {
                     ssmFileName = t.substring('doc_ssm_cert_name:'.length);
@@ -2832,7 +2915,9 @@ class SupabaseService {
               if (certFileUrl == null) {
                 for (final t in apTags) {
                   if (t.startsWith('doc_kraftangan_cert_url:')) {
-                    certFileUrl = t.substring('doc_kraftangan_cert_url:'.length);
+                    certFileUrl = t.substring(
+                      'doc_kraftangan_cert_url:'.length,
+                    );
                     break;
                   }
                 }
@@ -2840,7 +2925,9 @@ class SupabaseService {
               if (certFileName == null) {
                 for (final t in apTags) {
                   if (t.startsWith('doc_kraftangan_cert_name:')) {
-                    certFileName = t.substring('doc_kraftangan_cert_name:'.length);
+                    certFileName = t.substring(
+                      'doc_kraftangan_cert_name:'.length,
+                    );
                     break;
                   }
                 }
@@ -2860,8 +2947,7 @@ class SupabaseService {
               if (photos.isNotEmpty) rowMap['photos'] = photos;
               if (ssmFileName != null) rowMap['ssm_file_name'] = ssmFileName;
               if (ssmFileUrl != null) rowMap['ssm_file_url'] = ssmFileUrl;
-              if (certFileName != null)
-                rowMap['cert_file_name'] = certFileName;
+              if (certFileName != null) rowMap['cert_file_name'] = certFileName;
               if (certFileUrl != null) rowMap['cert_file_url'] = certFileUrl;
 
               // fallback the avatar if users.avatar_url is empty
@@ -2872,7 +2958,9 @@ class SupabaseService {
               }
 
               // Resolve premise_type
-              String? pType = ap['premise_type']?.toString() ?? rowMap['premise_type']?.toString();
+              String? pType =
+                  ap['premise_type']?.toString() ??
+                  rowMap['premise_type']?.toString();
               if (pType == null) {
                 for (final t in apTags) {
                   if (t.startsWith('premise:')) {
@@ -2882,11 +2970,16 @@ class SupabaseService {
                 }
               }
               if (pType == null) {
-                final docsList = (ap['artisan_documents'] is List) ? ap['artisan_documents'] as List : const [];
-                final hasVillageDoc = docsList.any((d) =>
-                    d is Map &&
-                    (d['doc_type'] == 'CRAFTING_PHOTO' ||
-                        d['doc_type'] == 'VILLAGE_HEAD_ENDORSEMENT')) ||
+                final docsList = (ap['artisan_documents'] is List)
+                    ? ap['artisan_documents'] as List
+                    : const [];
+                final hasVillageDoc =
+                    docsList.any(
+                      (d) =>
+                          d is Map &&
+                          (d['doc_type'] == 'CRAFTING_PHOTO' ||
+                              d['doc_type'] == 'VILLAGE_HEAD_ENDORSEMENT'),
+                    ) ||
                     apTags.any((t) => t.startsWith('doc_crafting_photo_'));
                 if (hasVillageDoc || ap['ssm_number'] == 'VILLAGE_EXEMPT') {
                   pType = 'Home / Village Workshop (Bengkel Kediaman / Desa)';
@@ -2900,8 +2993,8 @@ class SupabaseService {
               if (rowMap['ssm_file_url'] == null &&
                   photos.isNotEmpty &&
                   (pType?.contains('Home') == true ||
-                   pType?.contains('Village') == true ||
-                   ap['ssm_number'] == 'VILLAGE_EXEMPT')) {
+                      pType?.contains('Village') == true ||
+                      ap['ssm_number'] == 'VILLAGE_EXEMPT')) {
                 rowMap['ssm_file_url'] = photos.first;
                 rowMap['ssm_file_name'] ??= photos.first.split('/').last;
               }
@@ -2976,8 +3069,12 @@ class SupabaseService {
                 'artisan_profiles': pMap,
               };
 
-              final pTags = pMap['tags'] is List ? List<String>.from(pMap['tags']) : <String>[];
-              String? pPremise = pMap['premise_type']?.toString() ?? u['premise_type']?.toString();
+              final pTags = pMap['tags'] is List
+                  ? List<String>.from(pMap['tags'])
+                  : <String>[];
+              String? pPremise =
+                  pMap['premise_type']?.toString() ??
+                  u['premise_type']?.toString();
               if (pPremise == null) {
                 for (final t in pTags) {
                   if (t.startsWith('premise:')) {
@@ -2999,8 +3096,8 @@ class SupabaseService {
                       url != null) {
                     photos.add(url);
                   } else if (type == 'SSM_BUSINESS_CERT' ||
-                             type == 'CRAFTING_PHOTO' ||
-                             type == 'VILLAGE_HEAD_ENDORSEMENT') {
+                      type == 'CRAFTING_PHOTO' ||
+                      type == 'VILLAGE_HEAD_ENDORSEMENT') {
                     if (name != null) combined['ssm_file_name'] = name;
                     if (url != null) combined['ssm_file_url'] = url;
                   } else if (type == 'KRAFTANGAN_MASTER_CERT') {
@@ -3010,12 +3107,15 @@ class SupabaseService {
                 }
                 if (photos.isNotEmpty) combined['photos'] = photos;
                 if (pPremise == null) {
-                  final hasVillageDoc = docs.any((d) =>
-                      d is Map &&
-                      (d['doc_type'] == 'CRAFTING_PHOTO' ||
-                          d['doc_type'] == 'VILLAGE_HEAD_ENDORSEMENT'));
+                  final hasVillageDoc = docs.any(
+                    (d) =>
+                        d is Map &&
+                        (d['doc_type'] == 'CRAFTING_PHOTO' ||
+                            d['doc_type'] == 'VILLAGE_HEAD_ENDORSEMENT'),
+                  );
                   if (hasVillageDoc || pMap['ssm_number'] == 'VILLAGE_EXEMPT') {
-                    pPremise = 'Home / Village Workshop (Bengkel Kediaman / Desa)';
+                    pPremise =
+                        'Home / Village Workshop (Bengkel Kediaman / Desa)';
                   }
                 }
               }
@@ -3024,10 +3124,14 @@ class SupabaseService {
               if (combined['ssm_file_url'] == null) {
                 for (final t in pTags) {
                   if (t.startsWith('doc_crafting_photo_url:')) {
-                    combined['ssm_file_url'] = t.substring('doc_crafting_photo_url:'.length);
+                    combined['ssm_file_url'] = t.substring(
+                      'doc_crafting_photo_url:'.length,
+                    );
                     break;
                   } else if (t.startsWith('doc_ssm_cert_url:')) {
-                    combined['ssm_file_url'] = t.substring('doc_ssm_cert_url:'.length);
+                    combined['ssm_file_url'] = t.substring(
+                      'doc_ssm_cert_url:'.length,
+                    );
                     break;
                   }
                 }
@@ -3035,21 +3139,31 @@ class SupabaseService {
               if (combined['ssm_file_name'] == null) {
                 for (final t in pTags) {
                   if (t.startsWith('doc_crafting_photo_name:')) {
-                    combined['ssm_file_name'] = t.substring('doc_crafting_photo_name:'.length);
+                    combined['ssm_file_name'] = t.substring(
+                      'doc_crafting_photo_name:'.length,
+                    );
                     break;
                   } else if (t.startsWith('doc_ssm_cert_name:')) {
-                    combined['ssm_file_name'] = t.substring('doc_ssm_cert_name:'.length);
+                    combined['ssm_file_name'] = t.substring(
+                      'doc_ssm_cert_name:'.length,
+                    );
                     break;
                   }
                 }
               }
-              if (combined['ssm_file_name'] == null && combined['ssm_file_url'] != null) {
-                combined['ssm_file_name'] = combined['ssm_file_url'].toString().split('/').last;
+              if (combined['ssm_file_name'] == null &&
+                  combined['ssm_file_url'] != null) {
+                combined['ssm_file_name'] = combined['ssm_file_url']
+                    .toString()
+                    .split('/')
+                    .last;
               }
               if (combined['cert_file_url'] == null) {
                 for (final t in pTags) {
                   if (t.startsWith('doc_kraftangan_cert_url:')) {
-                    combined['cert_file_url'] = t.substring('doc_kraftangan_cert_url:'.length);
+                    combined['cert_file_url'] = t.substring(
+                      'doc_kraftangan_cert_url:'.length,
+                    );
                     break;
                   }
                 }
@@ -3057,18 +3171,26 @@ class SupabaseService {
               if (combined['cert_file_name'] == null) {
                 for (final t in pTags) {
                   if (t.startsWith('doc_kraftangan_cert_name:')) {
-                    combined['cert_file_name'] = t.substring('doc_kraftangan_cert_name:'.length);
+                    combined['cert_file_name'] = t.substring(
+                      'doc_kraftangan_cert_name:'.length,
+                    );
                     break;
                   }
                 }
               }
-              if (combined['cert_file_name'] == null && combined['cert_file_url'] != null) {
-                combined['cert_file_name'] = combined['cert_file_url'].toString().split('/').last;
+              if (combined['cert_file_name'] == null &&
+                  combined['cert_file_url'] != null) {
+                combined['cert_file_name'] = combined['cert_file_url']
+                    .toString()
+                    .split('/')
+                    .last;
               }
               for (final t in pTags) {
                 if (t.startsWith('doc_studio_photo:')) {
                   final pUrl = t.substring('doc_studio_photo:'.length);
-                  final curPhotos = (combined['photos'] is List) ? List<String>.from(combined['photos'] as List) : <String>[];
+                  final curPhotos = (combined['photos'] is List)
+                      ? List<String>.from(combined['photos'] as List)
+                      : <String>[];
                   if (pUrl.isNotEmpty && !curPhotos.contains(pUrl)) {
                     curPhotos.add(pUrl);
                     combined['photos'] = curPhotos;
@@ -3076,16 +3198,24 @@ class SupabaseService {
                 }
               }
 
-              if (pPremise == null && pTags.any((t) => t.startsWith('doc_crafting_photo_'))) {
+              if (pPremise == null &&
+                  pTags.any((t) => t.startsWith('doc_crafting_photo_'))) {
                 pPremise = 'Home / Village Workshop (Bengkel Kediaman / Desa)';
               }
 
-              final isVillagePending = (pPremise?.contains('Home') == true ||
+              final isVillagePending =
+                  (pPremise?.contains('Home') == true ||
                   pPremise?.contains('Village') == true ||
                   pMap['ssm_number'] == 'VILLAGE_EXEMPT');
-              if (combined['ssm_file_url'] == null && isVillagePending && (combined['photos'] is List) && (combined['photos'] as List).isNotEmpty) {
+              if (combined['ssm_file_url'] == null &&
+                  isVillagePending &&
+                  (combined['photos'] is List) &&
+                  (combined['photos'] as List).isNotEmpty) {
                 combined['ssm_file_url'] = (combined['photos'] as List).first;
-                combined['ssm_file_name'] ??= combined['ssm_file_url'].toString().split('/').last;
+                combined['ssm_file_name'] ??= combined['ssm_file_url']
+                    .toString()
+                    .split('/')
+                    .last;
               }
 
               if (pPremise != null) {
@@ -3114,7 +3244,8 @@ class SupabaseService {
               .toString()
               .toUpperCase();
       final userEmail = (user['email'] ?? entry.key).toString().toLowerCase();
-      final hasReloc = user['pending_relocation_address'] != null ||
+      final hasReloc =
+          user['pending_relocation_address'] != null ||
           user['pendingRelocationAddress'] != null ||
           _pendingRelocationsStore.containsKey(userEmail);
       if (status.contains('PENDING') ||
@@ -3224,7 +3355,8 @@ class SupabaseService {
           (user['artisan_status'] ?? user['artisanStatus'] ?? '')
               .toString()
               .toUpperCase();
-      final isSuspended = user['isSuspended'] == true || artisanStatus == 'SUSPENDED';
+      final isSuspended =
+          user['isSuspended'] == true || artisanStatus == 'SUSPENDED';
       final reason = (user['suspensionReason'] ?? '').toString();
       if (status == 'DELETED' ||
           status == 'REJECTED' ||
@@ -3240,7 +3372,10 @@ class SupabaseService {
       final existingIdx = results.indexWhere(
         (a) => a.email.toLowerCase() == email,
       );
-      if ((role.contains('Artisan') || artisanStatus == 'SUSPENDED' || artisanStatus == 'APPROVED') && !status.contains('PENDING')) {
+      if ((role.contains('Artisan') ||
+              artisanStatus == 'SUSPENDED' ||
+              artisanStatus == 'APPROVED') &&
+          !status.contains('PENDING')) {
         if (existingIdx == -1) {
           results.add(
             ActiveArtisanMaster.fromMap(Map<String, dynamic>.from(user)),
@@ -3340,31 +3475,60 @@ class SupabaseService {
         results.add(UserModel.fromMap(Map<String, dynamic>.from(user)));
       } else {
         final existing = results[existingIdx];
-        final pendingAddr = (user['pending_relocation_address'] ?? user['pendingRelocationAddress'])?.toString();
-        final pendingState = (user['pending_relocation_state'] ?? user['pendingRelocationState'])?.toString();
-        final dynamic pLat = user['pending_relocation_lat'] ?? user['pendingRelocationLatitude'];
-        final dynamic pLng = user['pending_relocation_lng'] ?? user['pendingRelocationLongitude'];
-        final pendingReason = (user['pending_relocation_reason'] ?? user['pendingRelocationReason'])?.toString();
-        final pendingDate = (user['pending_relocation_date'] ?? user['pendingRelocationDate'])?.toString();
-        final pendingCertUrl = (user['pending_relocation_cert_url'] ?? user['pendingRelocationCertUrl'])?.toString();
-        final pendingCertName = (user['pending_relocation_cert_name'] ?? user['pendingRelocationCertName'])?.toString();
+        final pendingAddr =
+            (user['pending_relocation_address'] ??
+                    user['pendingRelocationAddress'])
+                ?.toString();
+        final pendingState =
+            (user['pending_relocation_state'] ?? user['pendingRelocationState'])
+                ?.toString();
+        final dynamic pLat =
+            user['pending_relocation_lat'] ?? user['pendingRelocationLatitude'];
+        final dynamic pLng =
+            user['pending_relocation_lng'] ??
+            user['pendingRelocationLongitude'];
+        final pendingReason =
+            (user['pending_relocation_reason'] ??
+                    user['pendingRelocationReason'])
+                ?.toString();
+        final pendingDate =
+            (user['pending_relocation_date'] ?? user['pendingRelocationDate'])
+                ?.toString();
+        final pendingCertUrl =
+            (user['pending_relocation_cert_url'] ??
+                    user['pendingRelocationCertUrl'])
+                ?.toString();
+        final pendingCertName =
+            (user['pending_relocation_cert_name'] ??
+                    user['pendingRelocationCertName'])
+                ?.toString();
 
         results[existingIdx] = existing.copyWith(
-          experience: (existing.experience == null && user['experience'] != null)
+          experience:
+              (existing.experience == null && user['experience'] != null)
               ? user['experience'].toString().trim()
               : existing.experience,
-          pendingRelocationAddress: pendingAddr ?? existing.pendingRelocationAddress,
-          pendingRelocationState: pendingState ?? existing.pendingRelocationState,
+          pendingRelocationAddress:
+              pendingAddr ?? existing.pendingRelocationAddress,
+          pendingRelocationState:
+              pendingState ?? existing.pendingRelocationState,
           pendingRelocationLatitude: pLat is num
               ? pLat.toDouble()
-              : (pLat != null ? double.tryParse(pLat.toString()) : existing.pendingRelocationLatitude),
+              : (pLat != null
+                    ? double.tryParse(pLat.toString())
+                    : existing.pendingRelocationLatitude),
           pendingRelocationLongitude: pLng is num
               ? pLng.toDouble()
-              : (pLng != null ? double.tryParse(pLng.toString()) : existing.pendingRelocationLongitude),
-          pendingRelocationReason: pendingReason ?? existing.pendingRelocationReason,
+              : (pLng != null
+                    ? double.tryParse(pLng.toString())
+                    : existing.pendingRelocationLongitude),
+          pendingRelocationReason:
+              pendingReason ?? existing.pendingRelocationReason,
           pendingRelocationDate: pendingDate ?? existing.pendingRelocationDate,
-          pendingRelocationCertUrl: pendingCertUrl ?? existing.pendingRelocationCertUrl,
-          pendingRelocationCertName: pendingCertName ?? existing.pendingRelocationCertName,
+          pendingRelocationCertUrl:
+              pendingCertUrl ?? existing.pendingRelocationCertUrl,
+          pendingRelocationCertName:
+              pendingCertName ?? existing.pendingRelocationCertName,
         );
       }
     }
@@ -3380,31 +3544,65 @@ class SupabaseService {
       for (final relocEmail in pendingRelocEmails) {
         final clean = relocEmail.trim().toLowerCase();
         if (clean.isEmpty) continue;
-        final existingIdx = results.indexWhere((u) => u.email.toLowerCase() == clean);
+        final existingIdx = results.indexWhere(
+          (u) => u.email.toLowerCase() == clean,
+        );
         if (existingIdx == -1) {
           final relocData = await _getPendingRelocation(clean);
           if (relocData != null) {
-            final dynLat = relocData['pending_relocation_lat'] ?? relocData['latitude'];
-            final dynLng = relocData['pending_relocation_lng'] ?? relocData['longitude'];
+            final dynLat =
+                relocData['pending_relocation_lat'] ?? relocData['latitude'];
+            final dynLng =
+                relocData['pending_relocation_lng'] ?? relocData['longitude'];
             results.add(
               UserModel(
                 id: 'user_reloc_$clean',
                 email: clean,
                 displayName: relocData['name']?.toString() ?? 'Artisan Studio',
-                studioName: relocData['studio_name']?.toString() ?? relocData['name']?.toString() ?? 'Artisan Studio',
+                studioName:
+                    relocData['studio_name']?.toString() ??
+                    relocData['name']?.toString() ??
+                    'Artisan Studio',
                 role: 'Artisan',
                 status: 'ACTIVE',
                 artisanStatus: 'APPROVED',
                 state: relocData['state']?.toString() ?? 'Melaka',
-                address: relocData['current_address']?.toString() ?? relocData['address']?.toString(),
-                pendingRelocationAddress: (relocData['pending_relocation_address'] ?? relocData['address'])?.toString(),
-                pendingRelocationState: (relocData['pending_relocation_state'] ?? relocData['state'])?.toString(),
-                pendingRelocationLatitude: dynLat is num ? dynLat.toDouble() : (dynLat != null ? double.tryParse(dynLat.toString()) : null),
-                pendingRelocationLongitude: dynLng is num ? dynLng.toDouble() : (dynLng != null ? double.tryParse(dynLng.toString()) : null),
-                pendingRelocationReason: (relocData['pending_relocation_reason'] ?? relocData['reason'])?.toString(),
-                pendingRelocationDate: (relocData['pending_relocation_date'] ?? relocData['date'])?.toString(),
-                pendingRelocationCertUrl: (relocData['pending_relocation_cert_url'] ?? relocData['certUrl'])?.toString(),
-                pendingRelocationCertName: (relocData['pending_relocation_cert_name'] ?? relocData['certName'])?.toString(),
+                address:
+                    relocData['current_address']?.toString() ??
+                    relocData['address']?.toString(),
+                pendingRelocationAddress:
+                    (relocData['pending_relocation_address'] ??
+                            relocData['address'])
+                        ?.toString(),
+                pendingRelocationState:
+                    (relocData['pending_relocation_state'] ??
+                            relocData['state'])
+                        ?.toString(),
+                pendingRelocationLatitude: dynLat is num
+                    ? dynLat.toDouble()
+                    : (dynLat != null
+                          ? double.tryParse(dynLat.toString())
+                          : null),
+                pendingRelocationLongitude: dynLng is num
+                    ? dynLng.toDouble()
+                    : (dynLng != null
+                          ? double.tryParse(dynLng.toString())
+                          : null),
+                pendingRelocationReason:
+                    (relocData['pending_relocation_reason'] ??
+                            relocData['reason'])
+                        ?.toString(),
+                pendingRelocationDate:
+                    (relocData['pending_relocation_date'] ?? relocData['date'])
+                        ?.toString(),
+                pendingRelocationCertUrl:
+                    (relocData['pending_relocation_cert_url'] ??
+                            relocData['certUrl'])
+                        ?.toString(),
+                pendingRelocationCertName:
+                    (relocData['pending_relocation_cert_name'] ??
+                            relocData['certName'])
+                        ?.toString(),
               ),
             );
           }
@@ -3471,7 +3669,7 @@ class SupabaseService {
               'description':
                   'Visit $studioName and experience the heritage of $craftCategory.',
               'qr_code_secret': secret,
-              'geofence_radius_meters': 50,
+              'geofence_radius_meters': 75,
               'stamp_title': '$studioName Heritage Stamp',
               'stamp_image_url':
                   'https://zmvykemnpuremkebjvyo.supabase.co/storage/v1/object/public/quest-stamps/${slug.isEmpty ? "general" : slug}.webp',
@@ -3690,11 +3888,13 @@ class SupabaseService {
         _userStore[cleanEmail]!['artisanStatus'] = resolvedArtisanStatus;
         _userStore[cleanEmail]!['artisan_status'] = resolvedArtisanStatus;
         _userStore[cleanEmail]!['status'] = 'ACTIVE';
-        _userStore[cleanEmail]!['isSuspended'] = (resolvedArtisanStatus == 'SUSPENDED');
+        _userStore[cleanEmail]!['isSuspended'] =
+            (resolvedArtisanStatus == 'SUSPENDED');
         _userStore[cleanEmail]!['suspensionReason'] = null;
         _userStore[cleanEmail]!['suspension_reason'] = null;
         if (_userStore[cleanEmail]!['artisan_profiles'] is Map) {
-          _userStore[cleanEmail]!['artisan_profiles']['status'] = resolvedArtisanStatus;
+          _userStore[cleanEmail]!['artisan_profiles']['status'] =
+              resolvedArtisanStatus;
         }
         if (newRole.isNotEmpty) {
           _userStore[cleanEmail]!['role'] = newRole;
@@ -4675,24 +4875,30 @@ class SupabaseService {
         if (docType == 'CRAFTING_PHOTO' ||
             docType == 'VILLAGE_CRAFTING_PHOTO' ||
             docType == 'STUDIO_PHOTO') {
-          currentTags.removeWhere((t) =>
-              t.startsWith('doc_crafting_photo_url:') ||
-              t.startsWith('doc_crafting_photo_name:') ||
-              t.startsWith('doc_studio_photo:'));
+          currentTags.removeWhere(
+            (t) =>
+                t.startsWith('doc_crafting_photo_url:') ||
+                t.startsWith('doc_crafting_photo_name:') ||
+                t.startsWith('doc_studio_photo:'),
+          );
           currentTags.add('doc_crafting_photo_url:$url');
           currentTags.add('doc_crafting_photo_name:$finalFileName');
           currentTags.add('doc_studio_photo:$url');
         } else if (docType == 'SSM_BUSINESS_CERT' || docType == 'SSM_CERT') {
-          currentTags.removeWhere((t) =>
-              t.startsWith('doc_ssm_cert_url:') ||
-              t.startsWith('doc_ssm_cert_name:'));
+          currentTags.removeWhere(
+            (t) =>
+                t.startsWith('doc_ssm_cert_url:') ||
+                t.startsWith('doc_ssm_cert_name:'),
+          );
           currentTags.add('doc_ssm_cert_url:$url');
           currentTags.add('doc_ssm_cert_name:$finalFileName');
         } else if (docType == 'KRAFTANGAN_MASTER_CERT' ||
             docType == 'KRAFTANGAN_CERT') {
-          currentTags.removeWhere((t) =>
-              t.startsWith('doc_kraftangan_cert_url:') ||
-              t.startsWith('doc_kraftangan_cert_name:'));
+          currentTags.removeWhere(
+            (t) =>
+                t.startsWith('doc_kraftangan_cert_url:') ||
+                t.startsWith('doc_kraftangan_cert_name:'),
+          );
           currentTags.add('doc_kraftangan_cert_url:$url');
           currentTags.add('doc_kraftangan_cert_name:$finalFileName');
         }
@@ -4872,7 +5078,8 @@ class SupabaseService {
                 .count(CountOption.exact);
             for (final row in result.data) {
               final count = counts.putIfAbsent(
-                row[targetColumn].toString(), () => [0, 0],
+                row[targetColumn].toString(),
+                () => [0, 0],
               );
               if (row['vote'] == 1) count[0]++;
               if (row['vote'] == -1) count[1]++;
@@ -4893,15 +5100,18 @@ class SupabaseService {
     try {
       final counts = await Future.wait([
         _forumVoteCounts(
-          'forum_post_votes', 'post_id',
+          'forum_post_votes',
+          'post_id',
           threads.map((t) => t.id).toList(),
         ),
         _forumVoteCounts(
-          'forum_reply_votes', 'reply_id',
+          'forum_reply_votes',
+          'reply_id',
           // The model's post-body placeholder is not a persisted reply UUID.
-          threads.expand((t) => t.replies.where(
-            (r) => r.id != '${t.id}_content',
-          )).map((r) => r.id).toList(),
+          threads
+              .expand((t) => t.replies.where((r) => r.id != '${t.id}_content'))
+              .map((r) => r.id)
+              .toList(),
         ),
       ]);
       for (var i = 0; i < threads.length; i++) {
@@ -4909,10 +5119,14 @@ class SupabaseService {
         threads[i] = thread.copyWith(
           upvoteCount: counts[0][thread.id]?[0] ?? 0,
           downvoteCount: counts[0][thread.id]?[1] ?? 0,
-          replies: thread.replies.map((reply) => reply.copyWith(
-            upvoteCount: counts[1][reply.id]?[0] ?? 0,
-            downvoteCount: counts[1][reply.id]?[1] ?? 0,
-          )).toList(),
+          replies: thread.replies
+              .map(
+                (reply) => reply.copyWith(
+                  upvoteCount: counts[1][reply.id]?[0] ?? 0,
+                  downvoteCount: counts[1][reply.id]?[1] ?? 0,
+                ),
+              )
+              .toList(),
         );
       }
     } catch (error) {
@@ -5973,10 +6187,18 @@ class SupabaseService {
     _sessionThreadVotes[voteKey] = newVote;
     _forumStore[index] = currentThread.copyWith(
       upvotes: newUpvotes,
-      upvoteCount: (currentThread.upvoteCount - (currentVote == 1 ? 1 : 0) +
-              (newVote == 1 ? 1 : 0)).clamp(0, 1 << 53).toInt(),
-      downvoteCount: (currentThread.downvoteCount - (currentVote == -1 ? 1 : 0) +
-              (newVote == -1 ? 1 : 0)).clamp(0, 1 << 53).toInt(),
+      upvoteCount:
+          (currentThread.upvoteCount -
+                  (currentVote == 1 ? 1 : 0) +
+                  (newVote == 1 ? 1 : 0))
+              .clamp(0, 1 << 53)
+              .toInt(),
+      downvoteCount:
+          (currentThread.downvoteCount -
+                  (currentVote == -1 ? 1 : 0) +
+                  (newVote == -1 ? 1 : 0))
+              .clamp(0, 1 << 53)
+              .toInt(),
       userVote: newVote,
     );
 
@@ -6086,10 +6308,18 @@ class SupabaseService {
     );
     updatedReplies[rIdx] = currentReply.copyWith(
       upvotes: newUpvotes,
-      upvoteCount: (currentReply.upvoteCount - (currentVote == 1 ? 1 : 0) +
-              (newVote == 1 ? 1 : 0)).clamp(0, 1 << 53).toInt(),
-      downvoteCount: (currentReply.downvoteCount - (currentVote == -1 ? 1 : 0) +
-              (newVote == -1 ? 1 : 0)).clamp(0, 1 << 53).toInt(),
+      upvoteCount:
+          (currentReply.upvoteCount -
+                  (currentVote == 1 ? 1 : 0) +
+                  (newVote == 1 ? 1 : 0))
+              .clamp(0, 1 << 53)
+              .toInt(),
+      downvoteCount:
+          (currentReply.downvoteCount -
+                  (currentVote == -1 ? 1 : 0) +
+                  (newVote == -1 ? 1 : 0))
+              .clamp(0, 1 << 53)
+              .toInt(),
       userVote: newVote,
     );
     _forumStore[tIdx] = thread.copyWith(replies: updatedReplies);
@@ -7327,6 +7557,7 @@ class SupabaseService {
     String questId, {
     required bool approvedOnly,
     required bool includeInactive,
+    bool includeQrSecret = false,
   }) async {
     final client = _client;
 
@@ -7334,12 +7565,13 @@ class SupabaseService {
       throw StateError('Supabase is not initialized.');
     }
 
+    final qrColumn = includeQrSecret ? ', qr_code_secret' : '';
     var query = client
         .from('heritage_tasks')
         .select(
           'id, quest_id, title, is_required, xp_reward, sort_order, '
           'created_at, status, rejection_reason, reviewed_at, reviewed_by, '
-          'is_system_task, is_archived',
+          'is_system_task, is_archived$qrColumn',
         )
         .eq('quest_id', questId);
 
@@ -7831,7 +8063,6 @@ class SupabaseService {
 
   Future<Map<String, dynamic>> completeTaskWithArtisanQr({
     required String questId,
-    required String artisanId,
     required String taskId,
     required String qrPayload,
   }) async {
@@ -7843,22 +8074,24 @@ class SupabaseService {
 
     final parts = qrPayload.trim().split(':');
     if (parts.length != 3 ||
-        parts[0] != 'WK_ARTISAN' ||
-        parts[1] != artisanId ||
+        parts[0] != 'WKT1' ||
+        parts[1] != taskId ||
         parts[2].trim().isEmpty) {
-      throw StateError('This QR code does not belong to this artisan.');
+      throw StateError('This QR code belongs to a different activity.');
     }
 
-    final matchingQuest = await client
-        .from('quests')
+    final matchingTask = await client
+        .from('heritage_tasks')
         .select('id')
-        .eq('id', questId)
-        .eq('artisan_id', artisanId)
+        .eq('id', taskId)
+        .eq('quest_id', questId)
         .eq('qr_code_secret', parts[2])
         .eq('status', 'APPROVED')
+        .eq('is_archived', false)
+        .eq('is_system_task', false)
         .maybeSingle();
-    if (matchingQuest == null) {
-      throw StateError('This QR code does not belong to this artisan.');
+    if (matchingTask == null) {
+      throw StateError('This QR code is invalid for this activity.');
     }
 
     final task = await _loadApprovedTaskForCompletion(

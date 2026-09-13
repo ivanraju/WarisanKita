@@ -20,7 +20,7 @@ void main() {
       ).readAsStringSync();
     });
 
-    test('shows reward and workshop QR without quest settings editor', () {
+    test('shows reward without quest settings editor', () {
       final body = methodSource(
         source,
         'Widget _body(',
@@ -36,7 +36,7 @@ void main() {
       expect(reward, contains('quest.stampTitle'));
       expect(reward, contains('quest.stampImageUrl'));
       expect(reward, contains("'Workshop passport stamp'"));
-      expect(reward, contains("'View Workshop QR'"));
+      expect(reward, isNot(contains("'View Workshop QR'")));
       expect(source, isNot(contains('class _EditQuestSheet')));
       expect(body, isNot(contains('Interaction Radius')));
       expect(body, isNot(contains('Edit quest information')));
@@ -68,6 +68,7 @@ void main() {
         expect(taskCard, contains("'Edit & Resubmit'"));
         expect(taskCard, contains("'Dismiss Request'"));
         expect(taskCard, contains("'Cancel Request'"));
+        expect(taskCard, contains("'View Task QR'"));
       },
     );
   });
