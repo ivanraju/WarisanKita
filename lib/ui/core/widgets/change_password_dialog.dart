@@ -108,6 +108,18 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
       hasError = true;
     }
 
+    final currentUser = context.read<AuthViewModel>().currentUser;
+    final personalErr = ProfileValidator.validatePasswordPersonalDetails(
+      newPassword,
+      email: currentUser?.email,
+      username: currentUser?.username,
+      fullName: currentUser?.displayName,
+    );
+    if (!hasError && personalErr != null) {
+      _newError = personalErr;
+      hasError = true;
+    }
+
     if (hasError) {
       setState(() {});
       return;

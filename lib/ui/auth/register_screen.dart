@@ -748,9 +748,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         if (v.trim().length < 8) {
                           return 'Password must be at least 8 characters';
                         }
-                        final cleanUsername = _usernameController.text.trim().replaceAll('@', '').toLowerCase();
-                        if (cleanUsername.length >= 3 && v.trim().toLowerCase() == cleanUsername) {
-                          return 'Password is too similar to your username';
+                        final personalErr = ProfileValidator.validatePasswordPersonalDetails(
+                          v,
+                          email: _emailController.text,
+                          username: _usernameController.text,
+                          fullName: _fullNameController.text,
+                        );
+                        if (personalErr != null) {
+                          return personalErr;
                         }
                         return null;
                       },

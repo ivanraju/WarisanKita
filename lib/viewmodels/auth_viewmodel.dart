@@ -808,6 +808,19 @@ class AuthViewModel extends ChangeNotifier {
         return AuthResult(success: false, message: _errorMessage);
       }
 
+      final personalErr = ProfileValidator.validatePasswordPersonalDetails(
+        cleanPassword,
+        email: cleanEmail,
+        username: cleanUsername,
+        fullName: cleanFullName,
+      );
+      if (personalErr != null) {
+        _errorMessage = personalErr.toUpperCase();
+        _isLoading = false;
+        notifyListeners();
+        return AuthResult(success: false, message: _errorMessage);
+      }
+
       if (ProfileValidator.validateEmail(cleanEmail) != null) {
         _errorMessage = 'PLEASE ENTER A VALID EMAIL ADDRESS';
         _isLoading = false;
@@ -896,6 +909,7 @@ class AuthViewModel extends ChangeNotifier {
     final cleanStudio = studioName.trim();
     final cleanSsm = ssmNumber.trim();
     final cleanFullName = fullName?.trim();
+    final cleanUsername = username?.trim();
 
     _isLoading = true;
     _errorMessage = null;
@@ -913,6 +927,19 @@ class AuthViewModel extends ChangeNotifier {
       // Constraint C2: Passwords match
       if (cleanPassword != cleanConfirm) {
         _errorMessage = 'PASSWORDS DO NOT MATCH';
+        _isLoading = false;
+        notifyListeners();
+        return AuthResult(success: false, message: _errorMessage);
+      }
+
+      final personalErr = ProfileValidator.validatePasswordPersonalDetails(
+        cleanPassword,
+        email: cleanEmail,
+        username: cleanUsername,
+        fullName: cleanFullName,
+      );
+      if (personalErr != null) {
+        _errorMessage = personalErr.toUpperCase();
         _isLoading = false;
         notifyListeners();
         return AuthResult(success: false, message: _errorMessage);
@@ -1197,6 +1224,17 @@ class AuthViewModel extends ChangeNotifier {
         return AuthResult(success: false, message: _errorMessage);
       }
 
+      final personalErr = ProfileValidator.validatePasswordPersonalDetails(
+        cleanPassword,
+        email: cleanEmail,
+      );
+      if (personalErr != null) {
+        _errorMessage = personalErr.toUpperCase();
+        _isLoading = false;
+        notifyListeners();
+        return AuthResult(success: false, message: _errorMessage);
+      }
+
       // Step 11: Update encrypted password & invalidate token (C4)
       await _repository.resetPasswordWithToken(
         email: cleanEmail,
@@ -1250,6 +1288,18 @@ class AuthViewModel extends ChangeNotifier {
     if (cleanCurrent.toLowerCase() == cleanNew.toLowerCase()) {
       _errorMessage =
           'NEW PASSWORD IS TOO SIMILAR TO YOUR CURRENT PASSWORD: Please choose a completely new password, not just a change in uppercase or lowercase.';
+      notifyListeners();
+      return AuthResult(success: false, message: _errorMessage);
+    }
+
+    final personalErr = ProfileValidator.validatePasswordPersonalDetails(
+      cleanNew,
+      email: _currentUser?.email,
+      username: _currentUser?.username,
+      fullName: _currentUser?.displayName,
+    );
+    if (personalErr != null) {
+      _errorMessage = personalErr.toUpperCase();
       notifyListeners();
       return AuthResult(success: false, message: _errorMessage);
     }

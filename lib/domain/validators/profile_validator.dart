@@ -335,6 +335,75 @@ class ProfileValidator {
     return null;
   }
 
+  /// Validates that a password does not match or contain user-identifying attributes
+  /// (email, username, full name), adhering to NIST SP 800-63B and OWASP guidelines.
+  static String? validatePasswordPersonalDetails(
+    String? password, {
+    String? email,
+    String? username,
+    String? fullName,
+  }) {
+    if (password == null || password.trim().isEmpty) return null;
+    final cleanPw = password.trim().toLowerCase();
+
+    // 1. Email check: exact match or prefix before '@'
+    if (email != null && email.trim().isNotEmpty) {
+      final cleanEmail = email.trim().toLowerCase();
+      if (cleanPw == cleanEmail) {
+        return 'Password cannot be your email address';
+      }
+      final localPart = cleanEmail.split('@').first.replaceAll(RegExp(r'[^a-z0-9]'), '');
+      if (localPart.isNotEmpty) {
+        if (cleanPw == localPart) {
+          return 'Password cannot contain your email address';
+        }
+        if (localPart.length >= 4 && cleanPw.contains(localPart)) {
+          return 'Password cannot contain your email address';
+        }
+      }
+    }
+
+    // 2. Username check
+    if (username != null && username.trim().isNotEmpty) {
+      final cleanUser = username.trim().replaceAll('@', '').toLowerCase();
+      if (cleanUser.isNotEmpty) {
+        if (cleanPw == cleanUser ||
+            (cleanUser.length >= 4 && cleanPw.contains(cleanUser))) {
+          return 'Password is too similar to your username';
+        }
+      }
+    }
+
+    // 3. Full name check
+    if (fullName != null && fullName.trim().isNotEmpty) {
+      final cleanName = fullName.trim().toLowerCase();
+      final nameNoSpaces = cleanName.replaceAll(RegExp(r'\s+'), '');
+      if (cleanPw == cleanName || (nameNoSpaces.isNotEmpty && cleanPw == nameNoSpaces)) {
+        return 'Password cannot be your name';
+      }
+      if (nameNoSpaces.length >= 4 && cleanPw.contains(nameNoSpaces)) {
+        return 'Password cannot contain your name';
+      }
+
+      final words = cleanName.split(RegExp(r'\s+'));
+      for (final word in words) {
+        final cleanWord = word.replaceAll(RegExp(r'[^a-z0-9]'), '');
+        if (cleanWord.isEmpty) continue;
+        if (cleanWord.length < 4) {
+          if (cleanPw == cleanWord) {
+            return 'Password cannot be your name';
+          }
+        } else {
+          if (cleanPw.contains(cleanWord)) {
+            return 'Password cannot contain your name';
+          }
+        }
+      }
+    }
+
+    return null;
+  }
+
   /// Validates a tool, material, or tag input.
   static String? validateTag(String? value, [List<String> existingTags = const []]) {
     if (value == null || value.trim().isEmpty) {
