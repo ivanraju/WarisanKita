@@ -520,6 +520,43 @@ class _LiveForumTabState extends State<LiveForumTab> {
     );
   }
 
+  Widget _buildVoteCounts(
+    Map<String, dynamic> content,
+    bool isDark,
+    bool vertical,
+    ValueChanged<int> onVote,
+  ) {
+    final selected = (content['userVote'] as num?)?.toInt() ?? 0;
+    final buttons = [1, -1].map((direction) {
+      final count = content[direction == 1 ? 'upvoteCount' : 'downvoteCount'] ?? 0;
+      return TextButton(
+        onPressed: () => onVote(direction),
+        style: TextButton.styleFrom(
+          foregroundColor: selected == direction
+              ? (direction == 1 ? const Color(0xFFF97316) : const Color(0xFF6366F1))
+              : (isDark ? Colors.white70 : Colors.grey[700]),
+          minimumSize: Size(vertical ? 40 : 32, vertical ? 44 : 24),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(direction == 1 ? Icons.arrow_upward_rounded
+                : Icons.arrow_downward_rounded, size: 14),
+            const SizedBox(width: 4),
+            Text('$count', style: GoogleFonts.plusJakartaSans(
+              fontSize: 11, fontWeight: FontWeight.bold,
+            )),
+          ],
+        ),
+      );
+    }).toList();
+    return vertical
+        ? Column(mainAxisSize: MainAxisSize.min, children: buttons)
+        : Row(mainAxisSize: MainAxisSize.min, children: buttons);
+  }
+
   void _voteThread(Map<String, dynamic> thread, int voteDirection) {
     final authVM = context.read<AuthViewModel>();
     final currentUser = authVM.currentUser;
@@ -2449,7 +2486,15 @@ class _LiveForumTabState extends State<LiveForumTab> {
                   )
                 : ListView.builder(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(12),
+                    padding: EdgeInsets.fromLTRB(
+                      12,
+                      12,
+                      12,
+                      // Clear the Ask / Post button and overlaid Tourist nav.
+                      Scaffold.maybeOf(context)?.widget.extendBody == true
+                          ? 173
+                          : 96,
+                    ),
                     itemCount: filteredThreads.length,
                     itemBuilder: (context, index) {
                       final thread = filteredThreads[index];
@@ -2465,7 +2510,6 @@ class _LiveForumTabState extends State<LiveForumTab> {
   // REDDIT STYLE POST CARD WITH UPVOTE SIDEBAR
   Widget _buildRedditPostCard(Map<String, dynamic> thread, bool isDark) {
     final bool isArtisan = (thread['isArtisan'] as bool?) ?? false;
-    final int userVote = (thread['userVote'] as num?)?.toInt() ?? 0;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -2519,50 +2563,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                         : const Color(0xFFF8F9FA),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Column(
-                    children: [
-                      IconButton(
-                        icon: Icon(
-                          Icons.arrow_upward_rounded,
-                          size: 20,
-                          color: userVote == 1
-                              ? const Color(0xFFF97316)
-                              : Colors.grey[400],
-                        ),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        onPressed: () => _voteThread(thread, 1),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${thread['upvotes']}',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: userVote == 1
-                              ? const Color(0xFFF97316)
-                              : (userVote == -1
-                                    ? const Color(0xFF6366F1)
-                                    : (isDark
-                                          ? Colors.white70
-                                          : const Color(0xFF1E293B))),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      IconButton(
-                        icon: Icon(
-                          Icons.arrow_downward_rounded,
-                          size: 20,
-                          color: userVote == -1
-                              ? const Color(0xFF6366F1)
-                              : Colors.grey[400],
-                        ),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        onPressed: () => _voteThread(thread, -1),
-                      ),
-                    ],
-                  ),
+                  child: _buildVoteCounts(thread, isDark, true,
+                    (direction) => _voteThread(thread, direction)),
+
                 ),
 
                 const SizedBox(width: 14),
@@ -3028,68 +3031,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                           : const Color(0xFFF1F5F9),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: Icon(
-                            Icons.arrow_upward_rounded,
-                            size: 16,
-                            color:
-                                (((_activeThread!['userVote'] as num?)
-                                        ?.toInt()) ==
-                                    1)
-                                ? const Color(0xFFF97316)
-                                : Colors.grey[600],
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 4,
-                            vertical: 2,
-                          ),
-                          constraints: const BoxConstraints(),
-                          onPressed: () => _voteThread(_activeThread!, 1),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${(_activeThread!['upvotes'] as num?)?.toInt() ?? 0}',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color:
-                                (((_activeThread!['userVote'] as num?)
-                                        ?.toInt()) ==
-                                    1)
-                                ? const Color(0xFFF97316)
-                                : ((((_activeThread!['userVote'] as num?)
-                                              ?.toInt()) ==
-                                          -1)
-                                      ? const Color(0xFF6366F1)
-                                      : (isDark
-                                            ? const Color(0xFFFFD54F)
-                                            : const Color(0xFF004D40))),
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        IconButton(
-                          icon: Icon(
-                            Icons.arrow_downward_rounded,
-                            size: 16,
-                            color:
-                                (((_activeThread!['userVote'] as num?)
-                                        ?.toInt()) ==
-                                    -1)
-                                ? const Color(0xFF6366F1)
-                                : Colors.grey[600],
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 4,
-                            vertical: 2,
-                          ),
-                          constraints: const BoxConstraints(),
-                          onPressed: () => _voteThread(_activeThread!, -1),
-                        ),
-                      ],
-                    ),
+                    child: _buildVoteCounts(_activeThread!, isDark, false,
+                      (direction) => _voteThread(_activeThread!, direction)),
+
                   ),
                   const SizedBox(width: 12),
                   Text(
@@ -3419,7 +3363,6 @@ class _LiveForumTabState extends State<LiveForumTab> {
     final bool isMe = msg['isMe'] as bool? ?? false;
     final bool isArtisan = msg['isArtisan'] as bool? ?? false;
     final bool isVerifiedAnswer = msg['isVerifiedAnswer'] as bool? ?? false;
-    final int userVote = (msg['userVote'] as num?)?.toInt() ?? 0;
 
     // ============================
     // Find parent reply
@@ -3819,55 +3762,9 @@ class _LiveForumTabState extends State<LiveForumTab> {
                       : const Color(0xFFF1F5F9),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    GestureDetector(
-                      onTap: () => _voteMessage(msg, 1),
-                      child: Padding(
-                        padding: const EdgeInsets.all(4),
-                        child: Icon(
-                          Icons.arrow_upward_rounded,
-                          size: 14,
-                          color: userVote == 1
-                              ? const Color(0xFFF97316)
-                              : (isDark ? Colors.white70 : Colors.grey[700]),
-                        ),
-                      ),
-                    ),
+                child: _buildVoteCounts(msg, isDark, false,
+                  (direction) => _voteMessage(msg, direction)),
 
-                    const SizedBox(width: 5),
-
-                    Text(
-                      '${(msg['upvotes'] as num?)?.toInt() ?? 0}',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: userVote == 1
-                            ? const Color(0xFFC2410C)
-                            : userVote == -1
-                            ? const Color(0xFF4338CA)
-                            : (isDark ? Colors.white70 : Colors.grey[700]),
-                      ),
-                    ),
-
-                    const SizedBox(width: 5),
-
-                    GestureDetector(
-                      onTap: () => _voteMessage(msg, -1),
-                      child: Padding(
-                        padding: const EdgeInsets.all(4),
-                        child: Icon(
-                          Icons.arrow_downward_rounded,
-                          size: 14,
-                          color: userVote == -1
-                              ? const Color(0xFF4338CA)
-                              : (isDark ? Colors.white70 : Colors.grey[700]),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
               ),
 
               // 2. 这个 Spacer 一定是在 vote 后面
