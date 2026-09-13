@@ -12,6 +12,7 @@ import 'package:warisan_kita/data/repositories/matchmaker_repository.dart';
 import 'package:warisan_kita/data/repositories/user_repository.dart';
 import 'package:warisan_kita/data/services/supabase_service.dart';
 import 'package:warisan_kita/data/services/location_service.dart';
+import 'package:warisan_kita/data/services/connectivity_service.dart';
 import 'package:warisan_kita/data/repositories/location_repository.dart';
 
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
@@ -39,6 +40,7 @@ import 'package:warisan_kita/ui/tourist/apply_artisan_screen.dart';
 import 'package:warisan_kita/ui/artisan/artisan_main_scaffold.dart';
 import 'package:warisan_kita/ui/artisan/artisan_application_pending_screen.dart';
 import 'package:warisan_kita/ui/admin_web/admin_moderation_dashboard_view.dart';
+import 'package:warisan_kita/ui/widgets/offline_banner_wrapper.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -83,6 +85,7 @@ void main() async {
     MultiProvider(
       providers: [
         Provider(create: (_) => SupabaseService()),
+        ChangeNotifierProvider(create: (_) => ConnectivityService()),
         Provider<LocationService>(create: (_) => const LocationService()),
         Provider<LocationRepository>(
           create: (context) =>
@@ -238,6 +241,8 @@ class _WarisanKitaAppState extends State<WarisanKitaApp> {
       navigatorKey: navigatorKey,
       title: kIsWeb ? 'Warisan Kita • Admin Portal' : 'Warisan Kita',
       debugShowCheckedModeBanner: false,
+      builder: (context, child) =>
+          OfflineBannerWrapper(child: child ?? const SizedBox.shrink()),
       themeMode: themeVM.themeMode,
       theme: ThemeViewModel.lightTheme,
       darkTheme: ThemeViewModel.darkTheme,
