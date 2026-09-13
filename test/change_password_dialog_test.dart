@@ -6,6 +6,7 @@ import 'package:warisan_kita/data/repositories/user_repository.dart';
 import 'package:warisan_kita/data/services/supabase_service.dart';
 import 'package:warisan_kita/ui/core/widgets/change_password_dialog.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
+import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
 import 'support/auth_backend.dart';
 
 void main() {
@@ -115,4 +116,60 @@ void main() {
     expect(find.text('Cancel'), findsOneWidget);
     expect(find.text('Update Password'), findsOneWidget);
   });
+
+  testWidgets('renders translated text in dialog and password strength meter when LanguageViewModel is provided', (tester) async {
+    final fakeLangVM = _MockTestLanguageViewModel({
+      'Change Password': 'Tukar Kata Laluan',
+      'Current Password': 'Kata Laluan Semasa',
+      'New Password': 'Kata Laluan Baharu',
+      'Confirm New Password': 'Sahkan Kata Laluan Baharu',
+      'Update Password': 'Kemas Kini Kata Laluan',
+      'Password Strength': 'Kekuatan Kata Laluan',
+      'Strong': 'Kuat',
+      '8+ characters': '8+ aksara',
+    });
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<AuthViewModel>.value(value: authVM),
+          ChangeNotifierProvider<LanguageViewModel>.value(value: fakeLangVM),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: ChangePasswordDialog(),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    // Verify dialog header and fields are translated
+    expect(find.text('Tukar Kata Laluan'), findsOneWidget);
+    expect(find.text('Kata Laluan Semasa'), findsOneWidget);
+    expect(find.text('Kata Laluan Baharu'), findsOneWidget);
+    expect(find.text('Sahkan Kata Laluan Baharu'), findsOneWidget);
+    expect(find.text('Kemas Kini Kata Laluan'), findsOneWidget);
+
+    // Enter a strong password into New Password field to trigger PasswordStrengthMeter
+    await tester.enterText(find.widgetWithText(TextField, 'Kata Laluan Baharu'), 'MyStrongP@ssw0rd!');
+    await tester.pumpAndSettle();
+
+    // Verify PasswordStrengthMeter labels are translated
+    expect(find.text('Kekuatan Kata Laluan'), findsOneWidget);
+    expect(find.text('Kuat'), findsOneWidget);
+    expect(find.text('8+ aksara'), findsOneWidget);
+  });
 }
+
+class _MockTestLanguageViewModel extends LanguageViewModel {
+  final Map<String, String> _translations;
+  _MockTestLanguageViewModel(this._translations);
+
+  @override
+  String translate(String text) {
+    return _translations[text] ?? text;
+  }
+}
+

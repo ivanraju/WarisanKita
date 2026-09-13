@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
 
 class PasswordStrengthResult {
   final bool hasMinLength;
@@ -103,6 +105,11 @@ class PasswordStrengthMeter extends StatelessWidget {
     final result = PasswordStrengthHelper.evaluate(password);
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    LanguageViewModel? langVM;
+    try {
+      langVM = context.watch<LanguageViewModel>();
+    } catch (_) {}
+    String tr(String text) => langVM?.translate(text) ?? text;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -112,7 +119,7 @@ class PasswordStrengthMeter extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Password Strength',
+              tr('Password Strength'),
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
@@ -131,7 +138,7 @@ class PasswordStrengthMeter extends StatelessWidget {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  result.label,
+                  tr(result.label),
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
@@ -165,10 +172,10 @@ class PasswordStrengthMeter extends StatelessWidget {
             spacing: 8,
             runSpacing: 6,
             children: [
-              _buildCriterionChip(context, '8+ characters', result.hasMinLength),
-              _buildCriterionChip(context, 'Upper & lowercase', result.hasUppercase && result.hasLowercase),
-              _buildCriterionChip(context, 'Number (0-9)', result.hasDigits),
-              _buildCriterionChip(context, 'Symbol (!@#\$)', result.hasSpecialChar),
+              _buildCriterionChip(context, tr('8+ characters'), result.hasMinLength),
+              _buildCriterionChip(context, tr('Upper & lowercase'), result.hasUppercase && result.hasLowercase),
+              _buildCriterionChip(context, tr('Number (0-9)'), result.hasDigits),
+              _buildCriterionChip(context, tr('Symbol (!@#\$)'), result.hasSpecialChar),
             ],
           ),
         ],

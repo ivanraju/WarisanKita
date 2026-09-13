@@ -5,6 +5,7 @@ import 'package:warisan_kita/ui/auth/forgot_password_screen.dart';
 import 'package:warisan_kita/ui/auth/widgets/password_strength_meter.dart';
 import 'package:warisan_kita/domain/validators/profile_validator.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
+import 'package:warisan_kita/viewmodels/language_viewmodel.dart';
 
 class ChangePasswordDialog extends StatefulWidget {
   const ChangePasswordDialog({super.key});
@@ -71,6 +72,12 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
     final newPassword = _newPasswordController.text.trim();
     final confirmPassword = _confirmPasswordController.text.trim();
 
+    LanguageViewModel? langVM;
+    try {
+      langVM = context.read<LanguageViewModel>();
+    } catch (_) {}
+    String tr(String text) => langVM?.translate(text) ?? text;
+
     setState(() {
       _dialogError = null;
       _currentError = null;
@@ -81,30 +88,30 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
     bool hasError = false;
 
     if (currentPassword.isEmpty) {
-      _currentError = 'Please enter your current password';
+      _currentError = tr('Please enter your current password');
       hasError = true;
     }
 
     if (newPassword.isEmpty) {
-      _newError = 'Please enter a new password';
+      _newError = tr('Please enter a new password');
       hasError = true;
     } else if (newPassword.length < 8) {
-      _newError = 'New password must be at least 8 characters';
+      _newError = tr('New password must be at least 8 characters');
       hasError = true;
     }
 
     if (confirmPassword.isEmpty) {
-      _confirmError = 'Please confirm your new password';
+      _confirmError = tr('Please confirm your new password');
       hasError = true;
     } else if (newPassword.isNotEmpty && newPassword != confirmPassword) {
-      _confirmError = 'New passwords do not match';
+      _confirmError = tr('New passwords do not match');
       hasError = true;
     }
 
     if (!hasError && currentPassword.toLowerCase() == newPassword.toLowerCase()) {
-      _newError = 'New password must be different from current password';
+      _newError = tr('New password must be different from current password');
       _dialogError =
-          'NEW PASSWORD IS TOO SIMILAR TO YOUR CURRENT PASSWORD: Please choose a completely new password, not just a change in uppercase or lowercase.';
+          tr('NEW PASSWORD IS TOO SIMILAR TO YOUR CURRENT PASSWORD: Please choose a completely new password, not just a change in uppercase or lowercase.');
       hasError = true;
     }
 
@@ -116,7 +123,7 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
       fullName: currentUser?.displayName,
     );
     if (!hasError && personalErr != null) {
-      _newError = personalErr;
+      _newError = tr(personalErr);
       hasError = true;
     }
 
@@ -145,11 +152,11 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
       final msg = result.message ?? 'Failed to change password';
       if (msg.toUpperCase().contains('INCORRECT CURRENT PASSWORD')) {
         setState(() {
-          _currentError = 'Incorrect current password. Please try again.';
-          _dialogError = msg;
+          _currentError = tr('Incorrect current password. Please try again.');
+          _dialogError = tr(msg);
         });
       } else {
-        setState(() => _dialogError = msg);
+        setState(() => _dialogError = tr(msg));
       }
       return;
     }
@@ -157,9 +164,9 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
     Navigator.of(context).pop();
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('PASSWORD CHANGED SUCCESSFULLY: Your account credentials have been updated.'),
-        backgroundColor: Color(0xFF10B981),
+      SnackBar(
+        content: Text(tr('PASSWORD CHANGED SUCCESSFULLY: Your account credentials have been updated.')),
+        backgroundColor: const Color(0xFF10B981),
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -169,6 +176,11 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    LanguageViewModel? langVM;
+    try {
+      langVM = context.watch<LanguageViewModel>();
+    } catch (_) {}
+    String tr(String text) => langVM?.translate(text) ?? text;
 
     return Dialog(
       shape: RoundedRectangleBorder(
@@ -210,7 +222,7 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Change Password',
+                          tr('Change Password'),
                           style: GoogleFonts.dmSerifDisplay(
                             fontSize: 22,
                             color: isDark ? Colors.white : const Color(0xFF004D40),
@@ -218,7 +230,7 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Verify current credentials to update',
+                          tr('Verify current credentials to update'),
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 12,
                             color: isDark ? Colors.white60 : Colors.black54,
@@ -259,7 +271,7 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          _dialogError!,
+                          tr(_dialogError!),
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
@@ -282,7 +294,7 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
                   fontSize: 14,
                 ),
                 decoration: InputDecoration(
-                  labelText: 'Current Password',
+                  labelText: tr('Current Password'),
                   labelStyle: TextStyle(
                     color: isDark ? Colors.white70 : const Color(0xFF64748B),
                   ),
@@ -328,11 +340,11 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
                   fontSize: 14,
                 ),
                 decoration: InputDecoration(
-                  labelText: 'New Password',
+                  labelText: tr('New Password'),
                   labelStyle: TextStyle(
                     color: isDark ? Colors.white70 : const Color(0xFF64748B),
                   ),
-                  hintText: 'Must be at least 8 characters',
+                  hintText: tr('Must be at least 8 characters'),
                   hintStyle: TextStyle(
                     color: isDark ? Colors.white38 : const Color(0xFF94A3B8),
                   ),
@@ -384,7 +396,7 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
                   fontSize: 14,
                 ),
                 decoration: InputDecoration(
-                  labelText: 'Confirm New Password',
+                  labelText: tr('Confirm New Password'),
                   labelStyle: TextStyle(
                     color: isDark ? Colors.white70 : const Color(0xFF64748B),
                   ),
@@ -440,7 +452,7 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
                     color: isDark ? const Color(0xFF34D399) : const Color(0xFF004D40),
                   ),
                   label: Text(
-                    'Forgot current password? Reset via email',
+                    tr('Forgot current password? Reset via email'),
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -457,8 +469,11 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
               const SizedBox(height: 24),
 
               // Action Buttons
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+              Wrap(
+                alignment: WrapAlignment.end,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 10,
+                runSpacing: 8,
                 children: [
                   TextButton(
                     onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
@@ -466,14 +481,13 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
                       foregroundColor: isDark ? Colors.white70 : const Color(0xFF64748B),
                     ),
                     child: Text(
-                      'Cancel',
+                      tr('Cancel'),
                       style: GoogleFonts.plusJakartaSans(
                         fontWeight: FontWeight.w600,
                         color: isDark ? Colors.white70 : const Color(0xFF64748B),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 10),
                   FilledButton(
                     onPressed: _isLoading ? null : _handleChangePassword,
                     style: FilledButton.styleFrom(
@@ -489,7 +503,7 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
                             child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                           )
                         : Text(
-                            'Update Password',
+                            tr('Update Password'),
                             style: GoogleFonts.plusJakartaSans(
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
