@@ -241,7 +241,7 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
-                        'Forum $typeLabel deleted. Check debug console for confirmation.',
+                        'Forum $typeLabel deleted.',
                         style: GoogleFonts.plusJakartaSans(
                           fontWeight: FontWeight.bold,
                         ),
@@ -594,6 +594,26 @@ class _AdminForumModerationTabState extends State<AdminForumModerationTab> {
           ...dynamicReported,
           ..._staticReportedPosts,
         ];
+        if (!_showHistory) {
+          DateTime? latestReportTime(Map<String, dynamic> item) {
+            final reports = List<Map<String, dynamic>>.from(item['reports'] ?? const []);
+            final dates = reports
+                .map((report) => DateTime.tryParse(report['created_at']?.toString() ?? ''))
+                .whereType<DateTime>()
+                .toList();
+            if (dates.isEmpty) return null;
+            dates.sort();
+            return dates.last;
+          }
+          allReported.sort((a, b) {
+            final aDate = latestReportTime(a);
+            final bDate = latestReportTime(b);
+            if (aDate == null && bDate == null) return 0;
+            if (aDate == null) return 1;
+            if (bDate == null) return -1;
+            return bDate.compareTo(aDate);
+          });
+        }
 
         final isMobile = MediaQuery
             .of(context)
