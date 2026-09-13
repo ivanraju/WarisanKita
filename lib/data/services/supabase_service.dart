@@ -4867,13 +4867,33 @@ class SupabaseService {
   }) async {
     final cleanEmail = email.trim().toLowerCase();
     final client = _client;
-    final resolvedArtisanStatus =
-        (newStatus.toUpperCase() == 'ACTIVE' ||
-            newStatus.toUpperCase() == 'APPROVED')
-        ? 'APPROVED'
-        : (newStatus.toUpperCase() == 'REJECTED' ? 'REJECTED' : newStatus);
+
+    final cachedUser = _userStore[cleanEmail];
+    final existingRole = cachedUser?['role']?.toString() ?? '';
+    final existingRoles = (cachedUser?['roles'] is List)
+        ? (cachedUser!['roles'] as List).map((e) => e.toString()).toList()
+        : <String>[];
+    final bool isArtisanTarget = updateArtisanProfileOnly ||
+        newRole.toLowerCase().contains('artisan') ||
+        existingRole.toLowerCase().contains('artisan') ||
+        existingRoles.any((r) => r.toLowerCase().contains('artisan'));
+
+    final String? resolvedArtisanStatus;
+    if (isArtisanTarget) {
+      resolvedArtisanStatus = (newStatus.toUpperCase() == 'ACTIVE' ||
+              newStatus.toUpperCase() == 'APPROVED')
+          ? 'APPROVED'
+          : (newStatus.toUpperCase() == 'REJECTED' ? 'REJECTED' : newStatus);
+    } else {
+      // General accounts (e.g. Tourist) must never be promoted to APPROVED or SUSPENDED artisan status
+      resolvedArtisanStatus = (newStatus.toUpperCase() == 'SUSPENDED')
+          ? null
+          : (cachedUser?['artisan_status']?.toString() ?? cachedUser?['artisanStatus']?.toString());
+    }
+
     final isApproval =
         ensureSystemTasks &&
+        isArtisanTarget &&
         (newStatus.toUpperCase() == 'ACTIVE' ||
             newStatus.toUpperCase() == 'APPROVED') &&
         newRole.toLowerCase().contains('artisan');
@@ -4893,14 +4913,16 @@ class SupabaseService {
         _userStore[cleanEmail]!['rejection_reason'] = null;
       }
       if (updateArtisanProfileOnly) {
-        _userStore[cleanEmail]!['artisanStatus'] = resolvedArtisanStatus;
-        _userStore[cleanEmail]!['artisan_status'] = resolvedArtisanStatus;
+        if (isArtisanTarget) {
+          _userStore[cleanEmail]!['artisanStatus'] = resolvedArtisanStatus;
+          _userStore[cleanEmail]!['artisan_status'] = resolvedArtisanStatus;
+        }
         _userStore[cleanEmail]!['status'] = 'ACTIVE';
         _userStore[cleanEmail]!['isSuspended'] =
-            (resolvedArtisanStatus == 'SUSPENDED');
+            isArtisanTarget && (resolvedArtisanStatus == 'SUSPENDED');
         _userStore[cleanEmail]!['suspensionReason'] = null;
         _userStore[cleanEmail]!['suspension_reason'] = null;
-        if (_userStore[cleanEmail]!['artisan_profiles'] is Map) {
+        if (isArtisanTarget && _userStore[cleanEmail]!['artisan_profiles'] is Map) {
           _userStore[cleanEmail]!['artisan_profiles']['status'] =
               resolvedArtisanStatus;
         }
@@ -4912,8 +4934,13 @@ class SupabaseService {
         _userStore[cleanEmail]!['status'] = newStatus;
         _userStore[cleanEmail]!['role'] = newRole;
         _userStore[cleanEmail]!['roles'] = [newRole];
-        _userStore[cleanEmail]!['artisanStatus'] = resolvedArtisanStatus;
-        _userStore[cleanEmail]!['artisan_status'] = resolvedArtisanStatus;
+        if (isArtisanTarget) {
+          _userStore[cleanEmail]!['artisanStatus'] = resolvedArtisanStatus;
+          _userStore[cleanEmail]!['artisan_status'] = resolvedArtisanStatus;
+        } else {
+          _userStore[cleanEmail]!['artisanStatus'] = null;
+          _userStore[cleanEmail]!['artisan_status'] = null;
+        }
         _userStore[cleanEmail]!['isSuspended'] = (newStatus == 'SUSPENDED');
         if (newStatus == 'SUSPENDED') {
           _userStore[cleanEmail]!['suspensionReason'] = suspensionReason;
@@ -4931,8 +4958,10 @@ class SupabaseService {
           final map = jsonDecode(rawUser) as Map<String, dynamic>;
           if ((map['email'] as String?)?.toLowerCase() == cleanEmail) {
             if (updateArtisanProfileOnly) {
-              map['artisanStatus'] = resolvedArtisanStatus;
-              map['artisan_status'] = resolvedArtisanStatus;
+              if (isArtisanTarget) {
+                map['artisanStatus'] = resolvedArtisanStatus;
+                map['artisan_status'] = resolvedArtisanStatus;
+              }
               map['status'] = 'ACTIVE';
               map['isSuspended'] = false;
               map['suspensionReason'] = null;
@@ -4943,8 +4972,13 @@ class SupabaseService {
               }
             } else {
               map['status'] = newStatus;
-              map['artisanStatus'] = resolvedArtisanStatus;
-              map['artisan_status'] = resolvedArtisanStatus;
+              if (isArtisanTarget) {
+                map['artisanStatus'] = resolvedArtisanStatus;
+                map['artisan_status'] = resolvedArtisanStatus;
+              } else {
+                map['artisanStatus'] = null;
+                map['artisan_status'] = null;
+              }
               map['isSuspended'] = (newStatus == 'SUSPENDED');
               if (newStatus == 'SUSPENDED') {
                 map['suspensionReason'] = suspensionReason;
@@ -4974,25 +5008,27 @@ class SupabaseService {
     }
 
     if (client != null) {
-      // 1. Try invoking PostgreSQL SECURITY DEFINER RPC
-      try {
-        final rpcParams = <String, dynamic>{
-          'p_email': cleanEmail,
-          'p_status': newStatus,
-          'p_role':
-              (newStatus.toUpperCase() == 'REJECTED' && newRole == 'Tourist')
-              ? null
-              : newRole,
-        };
-        if (rejectionReason != null) {
-          rpcParams['p_rejection_reason'] = rejectionReason;
+      if (isArtisanTarget) {
+        // 1. Try invoking PostgreSQL SECURITY DEFINER RPC (only for artisans)
+        try {
+          final rpcParams = <String, dynamic>{
+            'p_email': cleanEmail,
+            'p_status': newStatus,
+            'p_role':
+                (newStatus.toUpperCase() == 'REJECTED' && newRole == 'Tourist')
+                ? null
+                : newRole,
+          };
+          if (rejectionReason != null) {
+            rpcParams['p_rejection_reason'] = rejectionReason;
+          }
+          await client.rpc('admin_update_user_status', params: rpcParams);
+          debugPrint(
+            'Supabase RPC admin_update_user_status succeeded for $cleanEmail',
+          );
+        } catch (rpcError) {
+          debugPrint('Supabase RPC admin_update_user_status note: $rpcError');
         }
-        await client.rpc('admin_update_user_status', params: rpcParams);
-        debugPrint(
-          'Supabase RPC admin_update_user_status succeeded for $cleanEmail',
-        );
-      } catch (rpcError) {
-        debugPrint('Supabase RPC admin_update_user_status note: $rpcError');
       }
 
       // 2. Direct Table Updates Fallback
@@ -5000,7 +5036,7 @@ class SupabaseService {
         final updatePayload = <String, dynamic>{
           'status': updateArtisanProfileOnly ? 'ACTIVE' : newStatus,
           'role': newRole,
-          'artisan_status': resolvedArtisanStatus,
+          'artisan_status': isArtisanTarget ? resolvedArtisanStatus : null,
           'updated_at': DateTime.now().toIso8601String(),
         };
         if (newStatus == 'SUSPENDED') {
@@ -5012,10 +5048,12 @@ class SupabaseService {
           updatePayload['is_suspended'] = false;
           updatePayload['suspension_reason'] = null;
         }
-        if (resolvedArtisanStatus == 'REJECTED') {
-          updatePayload['rejection_reason'] = rejectionReason;
-        } else if (resolvedArtisanStatus == 'APPROVED') {
-          updatePayload['rejection_reason'] = null;
+        if (isArtisanTarget) {
+          if (resolvedArtisanStatus == 'REJECTED') {
+            updatePayload['rejection_reason'] = rejectionReason;
+          } else if (resolvedArtisanStatus == 'APPROVED') {
+            updatePayload['rejection_reason'] = null;
+          }
         }
         try {
           await client
@@ -5031,7 +5069,7 @@ class SupabaseService {
                 .update({
                   'status': updateArtisanProfileOnly ? 'ACTIVE' : newStatus,
                   'role': newRole,
-                  'artisan_status': resolvedArtisanStatus,
+                  'artisan_status': isArtisanTarget ? resolvedArtisanStatus : null,
                   'updated_at': DateTime.now().toIso8601String(),
                 })
                 .ilike('email', cleanEmail);
@@ -5040,91 +5078,95 @@ class SupabaseService {
           }
         }
 
-        // Update artisan_profiles status matching user_id if present
-        final userRow = await client
-            .from('users')
-            .select('id')
-            .ilike('email', cleanEmail)
-            .maybeSingle();
-        if (userRow != null && userRow['id'] != null) {
-          final artisanProfileBeforeUpdate = await client
-              .from('artisan_profiles')
-              .select('id, status, studio_name, craft_category')
-              .eq('user_id', userRow['id'])
+        // Update artisan_profiles status matching user_id if present and target is an artisan
+        if (isArtisanTarget) {
+          final userRow = await client
+              .from('users')
+              .select('id')
+              .ilike('email', cleanEmail)
               .maybeSingle();
-          if (artisanProfileBeforeUpdate != null) {
-            final profileUpdatePayload = <String, dynamic>{
-              'status': resolvedArtisanStatus,
-              'updated_at': DateTime.now().toIso8601String(),
-            };
-            if (resolvedArtisanStatus == 'REJECTED' &&
-                rejectionReason != null) {
-              profileUpdatePayload['rejection_reason'] = rejectionReason;
-            } else if (resolvedArtisanStatus == 'APPROVED') {
-              profileUpdatePayload['rejection_reason'] = null;
-              profileUpdatePayload['verified_at'] = DateTime.now()
-                  .toIso8601String();
-            }
-            await client
+          if (userRow != null && userRow['id'] != null) {
+            final artisanProfileBeforeUpdate = await client
                 .from('artisan_profiles')
-                .update(profileUpdatePayload)
-                .eq('user_id', userRow['id']);
-          } else if (resolvedArtisanStatus == 'APPROVED') {
-            // Self-heal: insert missing profile row for newly approved artisan
-            final cached = _userStore[cleanEmail];
-            try {
-              await client.from('artisan_profiles').insert({
-                'user_id': userRow['id'],
-                'status': 'APPROVED',
-                'studio_name': cached?['studioName'] ??
-                    cached?['studio_name'] ??
-                    'Master Artisan Studio',
-                'craft_category': cached?['craftCategory'] ??
-                    cached?['craft_category'] ??
-                    'Heritage Craft',
-                'bio': cached?['bio'] ??
-                    'Master artisan dedicated to traditional Malaysian craft.',
-                'address': cached?['address'] ?? 'Malaysia',
-                'state': cached?['state'] ?? 'Melaka',
-                if (cached?['ssmNumber'] != null ||
-                    cached?['ssm_number'] != null)
-                  'ssm_number': cached?['ssmNumber'] ??
-                      cached?['ssm_number'],
-                'verified_at': DateTime.now().toIso8601String(),
-                'created_at': DateTime.now().toIso8601String(),
+                .select('id, status, studio_name, craft_category')
+                .eq('user_id', userRow['id'])
+                .maybeSingle();
+            if (artisanProfileBeforeUpdate != null) {
+              final profileUpdatePayload = <String, dynamic>{
+                'status': resolvedArtisanStatus,
                 'updated_at': DateTime.now().toIso8601String(),
-              });
-            } catch (insErr) {
-              debugPrint('Direct artisan_profiles insert on approval error: $insErr');
+              };
+              if (resolvedArtisanStatus == 'REJECTED' &&
+                  rejectionReason != null) {
+                profileUpdatePayload['rejection_reason'] = rejectionReason;
+              } else if (resolvedArtisanStatus == 'APPROVED') {
+                profileUpdatePayload['rejection_reason'] = null;
+                profileUpdatePayload['verified_at'] = DateTime.now()
+                    .toIso8601String();
+              }
+              await client
+                  .from('artisan_profiles')
+                  .update(profileUpdatePayload)
+                  .eq('user_id', userRow['id']);
+            } else if (resolvedArtisanStatus == 'APPROVED') {
+              // Self-heal: insert missing profile row for newly approved artisan with legitimate studio data
+              final cached = _userStore[cleanEmail];
+              final studio = cached?['studioName'] ?? cached?['studio_name'];
+              if (studio != null && studio.toString().trim().isNotEmpty) {
+                try {
+                  await client.from('artisan_profiles').insert({
+                    'user_id': userRow['id'],
+                    'status': 'APPROVED',
+                    'studio_name': studio.toString().trim(),
+                    'craft_category': cached?['craftCategory'] ??
+                        cached?['craft_category'] ??
+                        'Heritage Craft',
+                    'bio': cached?['bio'] ??
+                        'Master artisan dedicated to traditional Malaysian craft.',
+                    'address': cached?['address'] ?? 'Malaysia',
+                    'state': cached?['state'] ?? 'Melaka',
+                    if (cached?['ssmNumber'] != null ||
+                        cached?['ssm_number'] != null)
+                      'ssm_number': cached?['ssmNumber'] ??
+                          cached?['ssm_number'],
+                    'verified_at': DateTime.now().toIso8601String(),
+                    'created_at': DateTime.now().toIso8601String(),
+                    'updated_at': DateTime.now().toIso8601String(),
+                  });
+                } catch (insErr) {
+                  debugPrint('Direct artisan_profiles insert on approval error: $insErr');
+                }
+              }
             }
-          }
 
-          // System tasks were verified before changing approval state. Keep
-          // the one current quest aligned with the approved profile here.
-          if (resolvedArtisanStatus == 'APPROVED' &&
-              artisanProfileBeforeUpdate != null) {
-            final artisanProfileId = artisanProfileBeforeUpdate['id']
-                .toString();
-            final studioName =
-                artisanProfileBeforeUpdate['studio_name']?.toString().trim() ??
-                'Heritage Workshop';
-            final craftCategory =
-                artisanProfileBeforeUpdate['craft_category']
-                    ?.toString()
-                    .trim() ??
-                'Malaysian craft';
+            // System tasks were verified before changing approval state. Keep
+            // the one current quest aligned with the approved profile here.
+            if (resolvedArtisanStatus == 'APPROVED' &&
+                artisanProfileBeforeUpdate != null) {
+              final artisanProfileId = artisanProfileBeforeUpdate['id']
+                  .toString();
+              final studioName =
+                  artisanProfileBeforeUpdate['studio_name']?.toString().trim();
+              if (studioName != null && studioName.isNotEmpty) {
+                final craftCategory =
+                    artisanProfileBeforeUpdate['craft_category']
+                        ?.toString()
+                        .trim() ??
+                    'Malaysian craft';
 
-            await client
-                .from('quests')
-                .update({
-                  'title': '$studioName Quest',
-                  'category': 'Demonstration & Lore',
-                  'description':
-                      'Visit $studioName and experience the heritage of $craftCategory.',
-                  'status': 'APPROVED',
-                })
-                .eq('artisan_id', artisanProfileId)
-                .eq('status', 'PENDING_APPROVAL');
+                await client
+                    .from('quests')
+                    .update({
+                      'title': '$studioName Quest',
+                      'category': 'Demonstration & Lore',
+                      'description':
+                          'Visit $studioName and experience the heritage of $craftCategory.',
+                      'status': 'APPROVED',
+                    })
+                    .eq('artisan_id', artisanProfileId)
+                    .eq('status', 'PENDING_APPROVAL');
+              }
+            }
           }
         }
       } catch (e) {

@@ -111,8 +111,30 @@ class _ArtisanMainScaffoldState extends State<ArtisanMainScaffold> {
       );
     }
 
-    // Security Guard 2: If Artisan Studio is suspended, immediately eject from artisan tabs
-    if (user != null && user.isArtisanStudioSuspended) {
+    // Security Guard 2: Non-artisan accounts (Tourists) are not authorized to view the Artisan Scaffold
+    final bool hasArtisanAccess = user.isApprovedArtisan ||
+        user.isPendingArtisan ||
+        user.isRejectedArtisan ||
+        user.isArtisanStudioSuspended ||
+        user.role == 'Artisan' ||
+        user.role == 'Master Artisan' ||
+        user.roles.contains('Artisan') ||
+        user.roles.contains('Master Artisan') ||
+        user.isDualRole;
+
+    if (!hasArtisanAccess) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && ModalRoute.of(context)?.isCurrent == true) {
+          Navigator.of(context, rootNavigator: true).pushReplacementNamed('/tourist');
+        }
+      });
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    // Security Guard 3: If Artisan Studio is suspended, immediately eject from artisan tabs
+    if (user.isArtisanStudioSuspended) {
       return const ArtisanStudioSuspendedScreen();
     }
 

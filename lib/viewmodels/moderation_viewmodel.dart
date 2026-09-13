@@ -2280,10 +2280,14 @@ class ModerationViewModel extends ChangeNotifier {
     final idx = _registeredUsers.indexWhere((u) => u.id == id);
     if (idx != -1) {
       final user = _registeredUsers[idx];
+      final isArtisan = user.isArtisan ||
+          user.role.toLowerCase().contains('artisan') ||
+          user.roles.any((r) => r.toLowerCase().contains('artisan'));
       _registeredUsers[idx] = user.copyWith(
         isSuspended: false,
         status: 'ACTIVE',
         clearSuspensionReason: true,
+        artisanStatus: isArtisan ? (user.artisanStatus ?? 'APPROVED') : null,
       );
 
       final artisanIdx = _activeArtisanMasters.indexWhere(
