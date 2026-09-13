@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:warisan_kita/ui/widgets/heritage_logo.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -101,25 +102,13 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Brand Icon Badge
-                    Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFFFFD54F).withOpacity(0.4),
-                            blurRadius: 30,
-                            spreadRadius: 8,
-                          )
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.auto_awesome_mosaic_rounded,
-                        size: 64,
-                        color: Color(0xFF004D40),
-                      ),
+                    // Brand Logo Badge with authentic Malaysian Bunga Tanjung craft motif
+                    const HeritageLogo(
+                      size: 84,
+                      glow: true,
+                      badgeColor: Colors.white,
+                      primaryColor: Color(0xFF004D40),
+                      accentColor: Color(0xFFFFD54F),
                     ),
 
                     const SizedBox(height: 28),
@@ -128,23 +117,53 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                     Text(
                       'WarisanKita',
                       style: GoogleFonts.dmSerifDisplay(
-                        fontSize: 42,
+                        fontSize: 44,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
-                        letterSpacing: 1.1,
+                        letterSpacing: 1.2,
                       ),
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    // Cultural Heritage Badge
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 20,
+                          height: 1.5,
+                          color: const Color(0xFFFFD54F).withValues(alpha: 0.7),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          'LIVING CULTURAL HERITAGE',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 3.0,
+                            color: const Color(0xFFFFD54F),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Container(
+                          width: 20,
+                          height: 1.5,
+                          color: const Color(0xFFFFD54F).withValues(alpha: 0.7),
+                        ),
+                      ],
                     ),
 
                     const SizedBox(height: 8),
 
-                    // Tagline
+                    // Living Heritage & Artisan Discovery Tagline (Not a marketplace)
                     Text(
-                      'Heritage Marketplace & Artisan Matchmaker',
+                      'Traditional Crafts • Living Culture • Master Artisans',
                       style: GoogleFonts.plusJakartaSans(
-                        fontSize: 14,
-                        color: Colors.white.withOpacity(0.8),
+                        fontSize: 13,
+                        color: Colors.white.withValues(alpha: 0.85),
                         fontWeight: FontWeight.w500,
-                        letterSpacing: 0.5,
+                        letterSpacing: 0.4,
                       ),
                     ),
 

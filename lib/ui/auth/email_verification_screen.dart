@@ -11,6 +11,7 @@ class EmailVerificationScreen extends StatefulWidget {
   final String? targetRoute;
   final String? role;
   final bool autoStartTimer;
+  final bool resendOnOpen;
 
   const EmailVerificationScreen({
     super.key,
@@ -18,6 +19,7 @@ class EmailVerificationScreen extends StatefulWidget {
     this.targetRoute,
     this.role,
     this.autoStartTimer = true,
+    this.resendOnOpen = false,
   });
 
   @override
@@ -31,7 +33,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   );
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
 
-  int _resendCooldown = 60;
+  int _resendCooldown = 0;
   Timer? _timer;
   bool _isVerifying = false;
   String? _errorMessage;
@@ -43,9 +45,12 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
       if (mounted) {
         context.read<AuthViewModel>().clearError();
         ScaffoldMessenger.of(context).clearSnackBars();
+        if (widget.resendOnOpen) {
+          _handleResend(force: true);
+        }
       }
     });
-    if (widget.autoStartTimer) {
+    if (widget.autoStartTimer && !widget.resendOnOpen) {
       _startCooldownTimer();
     }
   }
@@ -140,12 +145,26 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     setState(() => _isVerifying = false);
 
     if (!result.success) {
+      final raw = (result.message ?? '').trim();
+      final lower = raw.toLowerCase();
+      final isTokenOrTechError = lower.contains('token') ||
+          lower.contains('expired') ||
+          lower.contains('invalid') ||
+          lower.contains('authapiexception') ||
+          lower.contains('authexception') ||
+          lower.contains('exception') ||
+          lower.contains('otp');
+
+      final displayMsg = isTokenOrTechError
+          ? 'Invalid or expired verification code. Please check your 6-digit code or request a new one.'
+          : (raw.isNotEmpty ? raw : 'Invalid or expired verification code. Please try again.');
+
       setState(() {
-        _errorMessage = result.message ?? 'Invalid or expired verification code.';
+        _errorMessage = displayMsg;
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(_errorMessage!),
+          content: Text(displayMsg),
           backgroundColor: const Color(0xFFEF4444),
           behavior: SnackBarBehavior.floating,
         ),
@@ -168,16 +187,16 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     Navigator.of(context).pushNamedAndRemoveUntil(destination, (route) => false);
   }
 
-  Future<void> _handleResend() async {
-    if (_resendCooldown > 0) return;
+  Future<void> _handleResend({bool force = false}) async {
+    if (_resendCooldown > 0 && !force) return;
 
+    _startCooldownTimer();
     final authVM = context.read<AuthViewModel>();
     final sent = await authVM.resendVerificationOtp(widget.email);
 
     if (!mounted) return;
 
     if (sent) {
-      _startCooldownTimer();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('A fresh 6-digit code has been sent to ${widget.email}'),
@@ -186,10 +205,13 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
         ),
       );
     } else {
+      final err = authVM.errorMessage;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to resend code. Please try again later.'),
-          backgroundColor: Color(0xFFEF4444),
+        SnackBar(
+          content: Text(err != null && err.isNotEmpty
+              ? err
+              : 'Failed to resend code. Please try again later.'),
+          backgroundColor: const Color(0xFFEF4444),
           behavior: SnackBarBehavior.floating,
         ),
       );

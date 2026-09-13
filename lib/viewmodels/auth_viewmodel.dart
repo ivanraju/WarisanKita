@@ -41,21 +41,70 @@ class AuthViewModel extends ChangeNotifier {
     : _repository = repository ?? UserRepository();
 
   static String _friendlyError(Object error) {
+    String msg = '';
+    String? code;
+
     if (error is AuthException) {
-      if (error.code == 'invalid_credentials' ||
-          error.message.toLowerCase().contains('invalid login credentials')) {
-        return 'Incorrect email, username, or password. Please try again.';
+      msg = error.message;
+      code = error.code;
+    } else {
+      final raw = error.toString();
+      final match = RegExp(r'message:\s*([^,\)]+)').firstMatch(raw);
+      if (match != null) {
+        msg = match.group(1)!.trim();
+      } else {
+        msg = raw
+            .replaceFirst('AuthApiException: ', '')
+            .replaceFirst('AuthException: ', '')
+            .replaceFirst('Exception: ', '')
+            .trim();
       }
-      return error.message;
     }
-    final raw = error.toString();
-    final match = RegExp(r'message:\s*([^,\)]+)').firstMatch(raw);
-    if (match != null) {
-      return match.group(1)!.trim();
+
+    final lower = msg.toLowerCase();
+    final lowerCode = (code ?? '').toLowerCase();
+
+    // 1. Invalid or expired OTP / verification code
+    if (lowerCode.contains('otp') ||
+        lowerCode.contains('expired') ||
+        lower.contains('token has expired') ||
+        lower.contains('token is invalid') ||
+        lower.contains('token has expired or is invalid') ||
+        lower.contains('invalid otp') ||
+        lower.contains('otp expired') ||
+        lower.contains('bad_code') ||
+        lower.contains('invalid code') ||
+        lower.contains('invalid token') ||
+        (lower.contains('token') && (lower.contains('invalid') || lower.contains('expired')))) {
+      return 'Invalid or expired verification code. Please check your 6-digit code or request a new one.';
     }
-    return raw
-        .replaceFirst('Exception: ', '')
-        .replaceFirst('AuthException: ', '');
+
+    // 2. Invalid credentials
+    if (code == 'invalid_credentials' ||
+        lower.contains('invalid login credentials') ||
+        lower.contains('invalid credentials')) {
+      return 'Incorrect email, username, or password. Please try again.';
+    }
+
+    // 3. Email confirmation required
+    if (lower.contains('email not confirmed') ||
+        lower.contains('email_not_confirmed')) {
+      return 'Email not confirmed. Please verify your email before logging in.';
+    }
+
+    // 4. Clean any residual technical wrappers e.g. AuthApiException(...)
+    if (msg.startsWith('AuthApiException(') || msg.startsWith('AuthException(')) {
+      final mMatch = RegExp(r'message:\s*([^,\)]+)').firstMatch(msg);
+      if (mMatch != null) {
+        final innerMsg = mMatch.group(1)!.trim();
+        if (innerMsg.toLowerCase().contains('token') || innerMsg.toLowerCase().contains('expired')) {
+          return 'Invalid or expired verification code. Please check your 6-digit code or request a new one.';
+        }
+        return innerMsg;
+      }
+    }
+
+    return msg.isEmpty ? 'An error occurred. Please try again.' : msg;
   }
 
   bool _isLoading = false;
@@ -506,23 +555,39 @@ class AuthViewModel extends ChangeNotifier {
         message: _statusMessage,
       );
     } catch (e) {
-      final rawError = _friendlyError(e);
-      final lower = rawError.toLowerCase();
-      _isLoading = false;
-
-      if (lower.contains('email not confirmed') ||
-          lower.contains('email_not_confirmed') ||
-          lower.contains('not confirmed') ||
-          lower.contains('not verified')) {
+      if (e is EmailVerificationRequired) {
+        _isLoading = false;
         _errorMessage =
             'EMAIL NOT VERIFIED: Please enter the 6-digit verification code sent to your email.';
         notifyListeners();
         return AuthResult(
           success: false,
           requiresEmailVerification: true,
-          unverifiedEmail: e is EmailVerificationRequired
-              ? e.email
-              : cleanEmail,
+          unverifiedEmail: e.email,
+          message: _errorMessage,
+        );
+      }
+
+      final rawError = _friendlyError(e);
+      final lower = rawError.toLowerCase();
+      final eStr = e.toString().toLowerCase();
+      _isLoading = false;
+
+      if (lower.contains('email not confirmed') ||
+          lower.contains('email_not_confirmed') ||
+          lower.contains('not confirmed') ||
+          lower.contains('not verified') ||
+          eStr.contains('email not confirmed') ||
+          eStr.contains('email_not_confirmed') ||
+          eStr.contains('not confirmed') ||
+          eStr.contains('not verified')) {
+        _errorMessage =
+            'EMAIL NOT VERIFIED: Please enter the 6-digit verification code sent to your email.';
+        notifyListeners();
+        return AuthResult(
+          success: false,
+          requiresEmailVerification: true,
+          unverifiedEmail: cleanEmail,
           message: _errorMessage,
         );
       }
@@ -581,11 +646,7 @@ class AuthViewModel extends ChangeNotifier {
         message: _statusMessage,
       );
     } catch (e) {
-      _errorMessage = e
-          .toString()
-          .replaceAll('Exception: ', '')
-          .replaceAll('INVALID_OTP: ', '')
-          .replaceAll('OTP_EXPIRED: ', '');
+      _errorMessage = _friendlyError(e);
       _isLoading = false;
       notifyListeners();
       return AuthResult(success: false, message: _errorMessage);

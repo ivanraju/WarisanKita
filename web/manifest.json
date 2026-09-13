@@ -1,11 +1,11 @@
 {
-    "name": "warisan_kita",
-    "short_name": "warisan_kita",
+    "name": "WarisanKita",
+    "short_name": "WarisanKita",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#004D40",
+    "theme_color": "#004D40",
+    "description": "WarisanKita — Malaysian Living Cultural Heritage & Artisan Discovery",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
