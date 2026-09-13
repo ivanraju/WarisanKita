@@ -716,6 +716,29 @@ class AuthViewModel extends ChangeNotifier {
     }
   }
 
+  Future<bool> cancelPendingRegistration(String email) async {
+    final cleanEmail = email.trim().toLowerCase();
+    if (cleanEmail.isEmpty) return false;
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _repository.cancelUnconfirmedSignup(cleanEmail);
+      _currentUser = null;
+      _activeRole = null;
+      _requiresRoleSelection = false;
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = _friendlyError(e);
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
   // UC001 - A5: Select Active Session Role
   void selectActiveRole(String role) {
     if (role.contains('Artisan') &&

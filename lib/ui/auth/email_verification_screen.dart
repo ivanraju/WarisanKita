@@ -218,29 +218,106 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     }
   }
 
+  Future<void> _handleChangeEmail() async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF063529) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(
+              Icons.contact_mail_outlined,
+              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Change Email Address?',
+                style: GoogleFonts.dmSerifDisplay(
+                  fontSize: 20,
+                  color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'Going back will cancel your pending registration for ${widget.email} so you can update your email address or use your chosen username again.',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 13.5,
+            color: isDark ? Colors.white70 : const Color(0xFF475569),
+            height: 1.45,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(false),
+            child: Text(
+              'Keep Waiting',
+              style: GoogleFonts.plusJakartaSans(
+                fontWeight: FontWeight.w600,
+                color: isDark ? Colors.white60 : Colors.grey[600],
+              ),
+            ),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () => Navigator.of(dialogCtx).pop(true),
+            child: Text(
+              'Change Email',
+              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _isVerifying = true);
+    final authVM = context.read<AuthViewModel>();
+    await authVM.cancelPendingRegistration(widget.email);
+    if (!mounted) return;
+    setState(() => _isVerifying = false);
+
+    _timer?.cancel();
+    authVM.clearError();
+    ScaffoldMessenger.of(context).clearSnackBars();
+    Navigator.of(context).pop(true);
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width > 800;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return HeritageBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        await _handleChangeEmail();
+      },
+      child: HeritageBackground(
+        child: Scaffold(
           backgroundColor: Colors.transparent,
-          elevation: 0,
-          leading: IconButton(
-            icon: Icon(
-              Icons.arrow_back_rounded,
-              color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            leading: IconButton(
+              icon: Icon(
+                Icons.arrow_back_rounded,
+                color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+              ),
+              onPressed: _handleChangeEmail,
             ),
-            onPressed: () {
-              context.read<AuthViewModel>().clearError();
-              ScaffoldMessenger.of(context).clearSnackBars();
-              Navigator.of(context).pop();
-            },
           ),
-        ),
         body: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -497,11 +574,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                     // Wrong Email / Back Link
                     Center(
                       child: TextButton.icon(
-                        onPressed: () {
-                          context.read<AuthViewModel>().clearError();
-                          ScaffoldMessenger.of(context).clearSnackBars();
-                          Navigator.of(context).pop();
-                        },
+                        onPressed: _handleChangeEmail,
                         icon: Icon(
                           Icons.edit_outlined,
                           size: 16,
@@ -524,6 +597,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

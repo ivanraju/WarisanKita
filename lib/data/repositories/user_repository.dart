@@ -114,6 +114,10 @@ class UserRepository {
     return _service.resendVerificationOtp(email: email);
   }
 
+  Future<void> cancelUnconfirmedSignup(String email) {
+    return _service.cancelUnconfirmedSignup(email);
+  }
+
   Future<UserModel> linkArtisanRoleToTourist({
     required String email,
     required String studioName,

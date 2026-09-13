@@ -1467,6 +1467,35 @@ class SupabaseService {
     );
   }
 
+  Future<void> cancelUnconfirmedSignup(String email) async {
+    final cleanEmail = email.trim().toLowerCase();
+    if (cleanEmail.isEmpty) return;
+
+    final client = _client;
+    if (client != null) {
+      try {
+        await client.rpc(
+          'cancel_unconfirmed_signup',
+          params: {'p_email': cleanEmail},
+        );
+      } catch (e) {
+        debugPrint('cancel_unconfirmed_signup RPC note: $e');
+      }
+
+      try {
+        await client
+            .from('users')
+            .delete()
+            .eq('email', cleanEmail);
+      } catch (e) {
+        debugPrint('cancelUnconfirmedSignup fallback note: $e');
+      }
+    }
+
+    _userStore.remove(cleanEmail);
+    await _unrecordDeletedAccount(cleanEmail);
+  }
+
   Future<UserModel> linkArtisanRoleToTourist({
     required String email,
     required String studioName,

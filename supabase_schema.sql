@@ -1109,6 +1109,57 @@ $$;
 GRANT EXECUTE ON FUNCTION public.delete_user_account(UUID) TO anon, authenticated;
 
 -- ==============================================================================
+-- CANCEL UNCONFIRMED SIGNUP RPC
+-- ==============================================================================
+-- Safely cancels a pending signup if the email has NOT been confirmed yet.
+-- Releases the unconfirmed username and email so they can be reused or corrected.
+CREATE OR REPLACE FUNCTION public.cancel_unconfirmed_signup(p_email TEXT)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, auth
+AS $$
+DECLARE
+    v_uid UUID;
+    v_confirmed TIMESTAMPTZ;
+BEGIN
+    IF p_email IS NULL OR trim(p_email) = '' THEN
+        RETURN jsonb_build_object('success', false, 'error', 'No email provided');
+    END IF;
+
+    SELECT id, email_confirmed_at INTO v_uid, v_confirmed
+    FROM auth.users
+    WHERE LOWER(email) = LOWER(trim(p_email))
+    LIMIT 1;
+
+    -- Security assertion: verified accounts can NEVER be cancelled via this RPC
+    IF v_confirmed IS NOT NULL THEN
+        RETURN jsonb_build_object('success', false, 'error', 'Cannot cancel a verified account.');
+    END IF;
+
+    IF v_uid IS NOT NULL THEN
+        BEGIN
+            DELETE FROM public.artisan_documents WHERE artisan_id IN (SELECT id FROM public.artisan_profiles WHERE user_id = v_uid);
+            DELETE FROM public.artisan_profiles WHERE user_id = v_uid;
+            DELETE FROM public.users WHERE id = v_uid;
+            DELETE FROM auth.users WHERE id = v_uid;
+        EXCEPTION WHEN OTHERS THEN
+            NULL;
+        END;
+    ELSE
+        -- Cleanup public.users if orphan row exists
+        DELETE FROM public.users WHERE LOWER(email) = LOWER(trim(p_email));
+    END IF;
+
+    RETURN jsonb_build_object('success', true);
+EXCEPTION WHEN OTHERS THEN
+    RETURN jsonb_build_object('success', false, 'error', SQLERRM);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.cancel_unconfirmed_signup(TEXT) TO anon, authenticated;
+
+-- ==============================================================================
 -- ARTISAN DEACTIVATION & ADMIN STATUS UPDATE RPCS
 -- ==============================================================================
 

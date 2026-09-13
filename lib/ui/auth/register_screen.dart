@@ -24,6 +24,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _emailFocusNode = FocusNode();
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
@@ -160,6 +161,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _fullNameController.dispose();
     _usernameController.dispose();
     _emailController.dispose();
+    _emailFocusNode.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
@@ -288,7 +290,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     if (result.requiresEmailVerification) {
       ScaffoldMessenger.of(context).clearSnackBars();
-      Navigator.of(context).push(
+      final changedEmail = await Navigator.of(context).push<bool>(
         MaterialPageRoute(
           builder: (_) => EmailVerificationScreen(
             email: email,
@@ -297,6 +299,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
         ),
       );
+
+      if (changedEmail == true && mounted) {
+        _emailFocusNode.requestFocus();
+        _emailController.selection = TextSelection(
+          baseOffset: 0,
+          extentOffset: _emailController.text.length,
+        );
+        final rawUser = _usernameController.text.trim();
+        if (rawUser.isNotEmpty) {
+          _onUsernameChanged();
+        }
+      }
       return;
     }
 
@@ -529,6 +543,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     // Email Address Field
                     TextFormField(
                       controller: _emailController,
+                      focusNode: _emailFocusNode,
                       keyboardType: TextInputType.emailAddress,
                       style: GoogleFonts.plusJakartaSans(
                         color: isDark ? Colors.white : const Color(0xFF0F172A),
