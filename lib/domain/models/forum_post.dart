@@ -26,6 +26,8 @@ class ForumThread {
       ? _legacyIsArtisan
       : authorRoleAtCreation == 'artisan';
   final int upvotes;
+  final int upvoteCount;
+  final int downvoteCount;
   final int userVote; // -1, 0, 1
   final int replyCount;
   final String timestamp;
@@ -48,6 +50,8 @@ class ForumThread {
     this.authorRoleAtCreation,
     bool isArtisan = false,
     this.upvotes = 0,
+    this.upvoteCount = 0,
+    this.downvoteCount = 0,
     this.userVote = 0,
     this.replyCount = 0,
     required this.timestamp,
@@ -82,6 +86,8 @@ class ForumThread {
     String? username,
     bool? isArtisan,
     int? upvotes,
+    int? upvoteCount,
+    int? downvoteCount,
     int? userVote,
     int? replyCount,
     String? timestamp,
@@ -104,6 +110,8 @@ class ForumThread {
       authorRoleAtCreation: authorRoleAtCreation,
       isArtisan: isArtisan ?? this.isArtisan,
       upvotes: upvotes ?? this.upvotes,
+      upvoteCount: upvoteCount ?? this.upvoteCount,
+      downvoteCount: downvoteCount ?? this.downvoteCount,
       userVote: userVote ?? this.userVote,
       replyCount: replyCount ?? this.replyCount,
       timestamp: timestamp ?? this.timestamp,
@@ -129,6 +137,8 @@ class ForumThread {
       'author_role_at_creation': authorRoleAtCreation,
       'isArtisan': isArtisan,
       'upvotes': upvotes,
+      'upvoteCount': upvoteCount,
+      'downvoteCount': downvoteCount,
       'userVote': userVote,
       'repliesCount': replies.length,
       'timestamp': timestamp,
@@ -229,6 +239,8 @@ class ForumThread {
               as String?,
       isArtisan: resolvedIsArtisan,
       upvotes: (map['upvotes'] as num?)?.toInt() ?? 0,
+      upvoteCount: (map['upvoteCount'] as num?)?.toInt() ?? 0,
+      downvoteCount: (map['downvoteCount'] as num?)?.toInt() ?? 0,
       userVote:
           (map['userVote'] as num?)?.toInt() ??
           (map['user_vote'] as num?)?.toInt() ??
@@ -263,6 +275,8 @@ class ThreadReply {
       ? _legacyIsArtisan
       : authorRoleAtCreation == 'artisan';
   final int upvotes;
+  final int upvoteCount;
+  final int downvoteCount;
   final int userVote;
   final bool isVerifiedAnswer;
   final bool isEdited;
@@ -284,6 +298,8 @@ class ThreadReply {
     this.authorRoleAtCreation,
     bool isArtisan = false,
     this.upvotes = 0,
+    this.upvoteCount = 0,
+    this.downvoteCount = 0,
     this.userVote = 0,
     this.isVerifiedAnswer = false,
     this.isEdited = false,
@@ -318,6 +334,8 @@ class ThreadReply {
     bool? isMe,
     bool? isArtisan,
     int? upvotes,
+    int? upvoteCount,
+    int? downvoteCount,
     int? userVote,
     bool? isVerifiedAnswer,
     bool? isEdited,
@@ -339,6 +357,8 @@ class ThreadReply {
       authorRoleAtCreation: authorRoleAtCreation,
       isArtisan: isArtisan ?? this.isArtisan,
       upvotes: upvotes ?? this.upvotes,
+      upvoteCount: upvoteCount ?? this.upvoteCount,
+      downvoteCount: downvoteCount ?? this.downvoteCount,
       userVote: userVote ?? this.userVote,
       isVerifiedAnswer: isVerifiedAnswer ?? this.isVerifiedAnswer,
       isEdited: isEdited ?? this.isEdited,
@@ -363,6 +383,8 @@ class ThreadReply {
       'author_role_at_creation': authorRoleAtCreation,
       'isArtisan': isArtisan,
       'upvotes': upvotes,
+      'upvoteCount': upvoteCount,
+      'downvoteCount': downvoteCount,
       'userVote': userVote,
       'isVerifiedAnswer': isVerifiedAnswer,
       'isEdited': isEdited,
@@ -428,6 +450,8 @@ class ThreadReply {
               as String?,
       isArtisan: isArtisanUser,
       upvotes: (map['upvotes'] as num?)?.toInt() ?? 0,
+      upvoteCount: (map['upvoteCount'] as num?)?.toInt() ?? 0,
+      downvoteCount: (map['downvoteCount'] as num?)?.toInt() ?? 0,
       userVote:
           (map['userVote'] as num?)?.toInt() ??
           (map['user_vote'] as num?)?.toInt() ??
