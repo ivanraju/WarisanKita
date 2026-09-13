@@ -290,8 +290,12 @@ class ProfileValidator {
     }
 
     final clean = value.trim();
+    if (clean.contains('+')) {
+      return "Email aliases using '+' are not supported";
+    }
+
     final emailRegex = RegExp(
-      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+      r'^[a-zA-Z0-9._%-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
     );
     if (!emailRegex.hasMatch(clean)) {
       return 'Please enter a valid email address';

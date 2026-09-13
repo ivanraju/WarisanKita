@@ -1518,6 +1518,8 @@ void main() {
       expect(ProfileValidator.validateEmail(''), equals('Email address cannot be empty'));
       expect(ProfileValidator.validateEmail('invalid_email'), equals('Please enter a valid email address'));
       expect(ProfileValidator.validateEmail('valid.artisan@student.tarc.edu.my'), isNull);
+      expect(ProfileValidator.validateEmail('test+alias@gmail.com'), equals("Email aliases using '+' are not supported"));
+      expect(ProfileValidator.validateEmail('tourist+1@gmail.com'), equals("Email aliases using '+' are not supported"));
     });
 
     test('UC100: re-application preserves existing document types when updating a single document', () async {
