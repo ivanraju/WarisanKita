@@ -377,10 +377,28 @@ class ApprovalHistoryRecord {
       }
     }
 
-    final rawApprovedAt = map['approvedAt'] ??
+    final rawApprovedAt = map['created_at'] ??
+        map['approvedAt'] ??
         map['approved_at'] ??
-        map['created_at'] ??
         map['date'];
+
+    DateTime parsedDate;
+    try {
+      final parsed = DateTime.tryParse(rawApprovedAt?.toString() ?? '');
+      if (parsed != null) {
+        var local = parsed.toLocal();
+        final now = DateTime.now();
+        // Guard against timezone double-offset where timestamps end up in the future
+        if (local.isAfter(now.add(const Duration(minutes: 5)))) {
+          local = local.subtract(const Duration(hours: 8));
+        }
+        parsedDate = local;
+      } else {
+        parsedDate = DateTime.now();
+      }
+    } catch (_) {
+      parsedDate = DateTime.now();
+    }
 
     return ApprovalHistoryRecord(
       id: map['id']?.toString() ?? '',
@@ -410,9 +428,7 @@ class ApprovalHistoryRecord {
               map['relocation_cert_file_url'])
           ?.toString(),
       documents: parsedDocs,
-      approvedAt: (DateTime.tryParse(rawApprovedAt?.toString() ?? '') ??
-              DateTime.now())
-          .toLocal(),
+      approvedAt: parsedDate,
       approvedBy: (map['approvedBy'] ?? map['approved_by'])?.toString() ??
           'Admin Moderator',
       status: map['status']?.toString() ?? 'APPROVED',

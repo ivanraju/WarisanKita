@@ -228,9 +228,9 @@ class ModerationViewModel extends ChangeNotifier {
             approvedDate =
                 DateTime.tryParse(artisan.verifiedDate) ??
                 _parseSubmissionDate(artisan.verifiedDate) ??
-                DateTime.now();
+                DateTime(2026, 1, 1);
           } catch (_) {
-            approvedDate = DateTime.now();
+            approvedDate = DateTime(2026, 1, 1);
           }
 
           loaded.add(
@@ -268,7 +268,7 @@ class ModerationViewModel extends ChangeNotifier {
           );
           if (!alreadyLogged) {
             final approvedDate =
-                DateTime.tryParse(user.joinedDate) ?? DateTime.now();
+                DateTime.tryParse(user.joinedDate) ?? DateTime(2026, 1, 1);
             loaded.add(
               ApprovalHistoryRecord(
                 id: 'audit_user_${user.id}',
@@ -306,7 +306,7 @@ class ModerationViewModel extends ChangeNotifier {
           );
           if (!alreadyLogged) {
             final rejectedDate =
-                DateTime.tryParse(user.joinedDate) ?? DateTime.now();
+                DateTime.tryParse(user.joinedDate) ?? DateTime(2026, 1, 1);
             loaded.add(
               ApprovalHistoryRecord(
                 id: 'audit_rej_${user.id}',
