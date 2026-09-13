@@ -1581,14 +1581,20 @@ class _AdminApprovalHistoryTabState extends State<AdminApprovalHistoryTab> {
         children: [
           Row(
             children: [
-              const Icon(
-                Icons.folder_shared_outlined,
+              Icon(
+                record.isRelocation
+                    ? Icons.assignment_turned_in_outlined
+                    : Icons.folder_shared_outlined,
                 size: 16,
-                color: Color(0xFF0F766E),
+                color: record.isRelocation
+                    ? const Color(0xFFD97706)
+                    : const Color(0xFF0F766E),
               ),
               const SizedBox(width: 8),
               Text(
-                'Uploaded Verification Documents & Evidence (${docs.length})',
+                record.isRelocation
+                    ? 'Proof of Relocation / Council Permit (${docs.length})'
+                    : 'Uploaded Verification Documents & Evidence (${docs.length})',
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 11.5,
                   fontWeight: FontWeight.bold,
@@ -1608,7 +1614,9 @@ class _AdminApprovalHistoryTabState extends State<AdminApprovalHistoryTab> {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  'No uploaded documents attached to this record.',
+                  record.isRelocation
+                      ? 'No proof of relocation document attached.'
+                      : 'No uploaded documents attached to this record.',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 11,
                     fontStyle: FontStyle.italic,
@@ -1626,7 +1634,9 @@ class _AdminApprovalHistoryTabState extends State<AdminApprovalHistoryTab> {
               final url = (rawUrl?.toString() ?? '').trim();
               String name = (rawName?.toString() ?? '').trim();
               if (name.isEmpty || name.toLowerCase() == 'document') {
-                if (rawType.contains('ssm')) {
+                if (rawType.contains('relocation')) {
+                  name = 'Proof of Premise Relocation / Council Permit';
+                } else if (rawType.contains('ssm')) {
                   name = 'SSM Business Registration Certificate';
                 } else if (rawType.contains('kraftangan') || rawType.contains('cert')) {
                   name = 'Kraftangan Master Certificate';
@@ -1645,7 +1655,13 @@ class _AdminApprovalHistoryTabState extends State<AdminApprovalHistoryTab> {
               Color badgeBg = const Color(0xFFE0F2FE);
               Color badgeFg = const Color(0xFF0369A1);
 
-              if (rawType.contains('crafting') || rawType.contains('photo')) {
+              if (rawType.contains('relocation')) {
+                icon = Icons.assignment_turned_in_rounded;
+                iconColor = const Color(0xFFD97706);
+                typeBadge = 'RELOCATION PROOF';
+                badgeBg = const Color(0xFFFEF3C7);
+                badgeFg = const Color(0xFFB45309);
+              } else if (rawType.contains('crafting') || rawType.contains('photo')) {
                 icon = Icons.photo_library_rounded;
                 iconColor = const Color(0xFF0D9488);
                 typeBadge = 'PHOTO EVIDENCE';

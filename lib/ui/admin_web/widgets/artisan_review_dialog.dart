@@ -21,6 +21,7 @@ class ArtisanReviewDialog extends StatefulWidget {
 
 class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
   final TextEditingController _feedbackController = TextEditingController();
+  String? _feedbackError;
 
   @override
   void dispose() {
@@ -418,11 +419,17 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
                     TextField(
                       controller: _feedbackController,
                       maxLines: 2,
+                      onChanged: (val) {
+                        if (_feedbackError != null && val.trim().isNotEmpty) {
+                          setState(() => _feedbackError = null);
+                        }
+                      },
                       decoration: InputDecoration(
                         labelText: 'Rejection Feedback (Required if rejecting)',
                         hintText: 'Specify reason for rejection or missing documents...',
                         hintStyle: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[400]),
                         alignLabelWithHint: true,
+                        errorText: _feedbackError,
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         contentPadding: const EdgeInsets.all(12),
                       ),
@@ -456,6 +463,34 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
             const Divider(),
             const SizedBox(height: 20),
 
+            if (_feedbackError != null) ...[
+              Container(
+                margin: const EdgeInsets.only(bottom: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFF87171)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error_outline_rounded, color: Color(0xFFEF4444), size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        _feedbackError!,
+                        style: GoogleFonts.plusJakartaSans(
+                          color: const Color(0xFFB91C1C),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
             // Two Large Buttons: 'Approve' and 'Reject'
             Align(
               alignment: Alignment.centerRight,
@@ -469,23 +504,9 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
                     onPressed: () {
                       final reason = _feedbackController.text.trim();
                       if (reason.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: const Row(
-                              children: [
-                                Icon(Icons.warning_amber_rounded, color: Colors.white, size: 20),
-                                SizedBox(width: 10),
-                                Expanded(
-                                  child: Text('Please enter rejection feedback explaining the reason to the applicant.'),
-                                ),
-                              ],
-                            ),
-                            backgroundColor: const Color(0xFFEF4444),
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            width: 500,
-                          ),
-                        );
+                        setState(() {
+                          _feedbackError = 'Please enter rejection feedback explaining the reason to the applicant.';
+                        });
                         return;
                       }
                       Navigator.of(context).pop();
@@ -786,12 +807,14 @@ class _ArtisanReviewDialogState extends State<ArtisanReviewDialog> {
                         children: [
                           const Icon(Icons.verified_user_rounded, size: 16, color: Color(0xFF10B981)),
                           const SizedBox(width: 8),
-                          Text(
-                            'Updated Premise Certificate',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF334155),
+                          Expanded(
+                            child: Text(
+                              'Updated Premise Certificate',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF334155),
+                              ),
                             ),
                           ),
                         ],

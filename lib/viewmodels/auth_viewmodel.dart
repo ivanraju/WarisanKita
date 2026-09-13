@@ -201,7 +201,7 @@ class AuthViewModel extends ChangeNotifier {
   Future<UserModel?> _refreshCurrentUserOnce() async {
     final previousUser = _currentUser;
     try {
-      final user = await _repository.getCurrentUser();
+      var user = await _repository.getCurrentUser();
       if (user != null) {
         if (_currentUser != null &&
             _currentUser!.id != user.id &&
@@ -211,21 +211,31 @@ class AuthViewModel extends ChangeNotifier {
           return _currentUser;
         }
         if (_selfWithdrawnRelocation) {
-          _selfWithdrawnRelocation = false;
+          if (user.hasPendingRelocation) {
+            user = user.copyWith(clearPendingRelocation: true);
+          } else {
+            _selfWithdrawnRelocation = false;
+          }
         } else if (_currentUser?.hasPendingRelocation == true &&
             !user.hasPendingRelocation) {
           final pendingAddr =
               _currentUser?.pendingRelocationAddress?.trim().toLowerCase();
           final currentAddr = user.address?.trim().toLowerCase();
           final prevAddr = previousUser?.address?.trim().toLowerCase();
-          if (pendingAddr != null &&
+
+          final bool addressChanged = (currentAddr != null &&
+                  prevAddr != null &&
+                  currentAddr != prevAddr) ||
+              (currentAddr != null && prevAddr == null);
+          final bool matchesProposed = pendingAddr != null &&
               currentAddr != null &&
-              pendingAddr == currentAddr &&
-              (prevAddr == null || prevAddr != currentAddr)) {
+              (pendingAddr == currentAddr ||
+                  currentAddr.contains(pendingAddr) ||
+                  pendingAddr.contains(currentAddr));
+
+          if (addressChanged || matchesProposed) {
             _relocationResolutionNotice = 'APPROVED';
-          } else if (pendingAddr != null &&
-              currentAddr != null &&
-              currentAddr == prevAddr) {
+          } else {
             _relocationResolutionNotice = 'REJECTED';
           }
         }
@@ -412,17 +422,25 @@ class AuthViewModel extends ChangeNotifier {
     }
   }
 
-  Future<void> cancelRelocationRequest() async {
+  Future<void> cancelRelocationRequest({String? artisanProfileId}) async {
     final email = _currentUser?.email ?? '';
     if (email.isEmpty) return;
     _isLoading = true;
     _relocationResolutionNotice = null;
     _selfWithdrawnRelocation = true;
+    if (_currentUser != null) {
+      _currentUser = _currentUser!.copyWith(clearPendingRelocation: true);
+    }
     notifyListeners();
     try {
-      await _repository.cancelRelocationRequest(email: email);
+      final updated = await _repository.cancelRelocationRequest(
+        email: email,
+        artisanProfileId: artisanProfileId ?? _currentUser?.artisanProfileId,
+      );
       if (_currentUser != null) {
-        _currentUser = _currentUser!.copyWith(clearPendingRelocation: true);
+        _currentUser = (_currentUser ?? updated).copyWith(
+          clearPendingRelocation: true,
+        );
       }
     } finally {
       _isLoading = false;
@@ -751,9 +769,9 @@ class AuthViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Constraint C1: Password length > 7 characters
-      if (cleanPassword.length <= 7) {
-        _errorMessage = 'PASSWORD MUST BE GREATER THAN 7 CHARACTERS';
+      // Constraint C1: Password length >= 8 characters
+      if (cleanPassword.length < 8) {
+        _errorMessage = 'PASSWORD MUST BE AT LEAST 8 CHARACTERS';
         _isLoading = false;
         notifyListeners();
         return AuthResult(success: false, message: _errorMessage);
@@ -861,9 +879,9 @@ class AuthViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Constraint C1: Password length > 7 characters
-      if (cleanPassword.length <= 7) {
-        _errorMessage = 'PASSWORD MUST BE GREATER THAN 7 CHARACTERS';
+      // Constraint C1: Password length >= 8 characters
+      if (cleanPassword.length < 8) {
+        _errorMessage = 'PASSWORD MUST BE AT LEAST 8 CHARACTERS';
         _isLoading = false;
         notifyListeners();
         return AuthResult(success: false, message: _errorMessage);
@@ -1140,9 +1158,9 @@ class AuthViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Constraint C2: Password length > 7 characters
-      if (cleanPassword.length <= 7) {
-        _errorMessage = 'PASSWORD MUST BE GREATER THAN 7 CHARACTERS';
+      // Constraint C2: Password length >= 8 characters
+      if (cleanPassword.length < 8) {
+        _errorMessage = 'PASSWORD MUST BE AT LEAST 8 CHARACTERS';
         _isLoading = false;
         notifyListeners();
         return AuthResult(success: false, message: _errorMessage);
@@ -1194,8 +1212,8 @@ class AuthViewModel extends ChangeNotifier {
       return AuthResult(success: false, message: _errorMessage);
     }
 
-    if (cleanNew.length <= 7) {
-      _errorMessage = 'PASSWORD MUST BE GREATER THAN 7 CHARACTERS';
+    if (cleanNew.length < 8) {
+      _errorMessage = 'PASSWORD MUST BE AT LEAST 8 CHARACTERS';
       notifyListeners();
       return AuthResult(success: false, message: _errorMessage);
     }

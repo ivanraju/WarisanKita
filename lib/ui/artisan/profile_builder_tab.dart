@@ -534,8 +534,16 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
 
     if (confirmed == true && mounted) {
       final authVM = context.read<AuthViewModel>();
+      final currentUser = authVM.currentUser;
+      final profileId = currentUser?.artisanProfileId;
+      final email = currentUser?.email ?? '';
+
       authVM.clearRelocationResolutionNotice();
-      await authVM.cancelRelocationRequest();
+      try {
+        context.read<ModerationViewModel>().removeRelocationRequest(email);
+      } catch (_) {}
+
+      await authVM.cancelRelocationRequest(artisanProfileId: profileId);
       authVM.clearRelocationResolutionNotice();
       if (mounted) {
         setState(() {});

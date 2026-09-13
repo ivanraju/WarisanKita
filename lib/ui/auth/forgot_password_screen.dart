@@ -29,7 +29,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _confirmPasswordController = TextEditingController();
 
   late int _currentStep;
-  bool _isPasswordVisible = false;
+  bool _obscureNew = true;
+  bool _obscureConfirm = true;
+
+  String? _screenError;
+  String? _emailError;
+  String? _newError;
+  String? _confirmError;
 
   @override
   void initState() {
@@ -53,6 +59,17 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   void _clearErrorOnTyping() {
+    if (_screenError != null ||
+        _emailError != null ||
+        _newError != null ||
+        _confirmError != null) {
+      setState(() {
+        _screenError = null;
+        _emailError = null;
+        _newError = null;
+        _confirmError = null;
+      });
+    }
     final authVM = context.read<AuthViewModel>();
     if (authVM.errorMessage != null) {
       authVM.clearError();
@@ -60,6 +77,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   void _onPasswordChanged() {
+    _clearErrorOnTyping();
     setState(() {});
   }
 
@@ -100,6 +118,16 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     }
 
     final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      setState(() => _emailError = 'Please enter your registered email');
+      return;
+    }
+    final emailError = ProfileValidator.validateEmail(email);
+    if (emailError != null) {
+      setState(() => _emailError = emailError);
+      return;
+    }
+
     final authVM = context.read<AuthViewModel>();
 
     final result = await authVM.sendPasswordReset(email);
@@ -107,9 +135,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     if (!mounted) return;
 
     if (!result.success) {
+      final msg = result.message ?? 'EMAIL ADDRESS NOT FOUND IN SYSTEM';
+      setState(() => _screenError = msg);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(result.message ?? 'EMAIL ADDRESS NOT FOUND IN SYSTEM'),
+          content: Text(msg),
           backgroundColor: const Color(0xFFEF4444),
           behavior: SnackBarBehavior.floating,
         ),
@@ -155,47 +185,32 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     final newPassword = _newPasswordController.text.trim();
     final confirmPassword = _confirmPasswordController.text.trim();
 
-    if (newPassword.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('PLEASE ENTER A NEW PASSWORD'),
-          backgroundColor: Color(0xFFEF4444),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
+    setState(() {
+      _screenError = null;
+      _newError = null;
+      _confirmError = null;
+    });
 
-    if (newPassword.length < 8) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('PASSWORD MUST BE GREATER THAN 7 CHARACTERS'),
-          backgroundColor: Color(0xFFEF4444),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
+    bool hasError = false;
+
+    if (newPassword.isEmpty) {
+      _newError = 'Please enter a new password';
+      hasError = true;
+    } else if (newPassword.length < 8) {
+      _newError = 'New password must be at least 8 characters';
+      hasError = true;
     }
 
     if (confirmPassword.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('PLEASE CONFIRM YOUR NEW PASSWORD'),
-          backgroundColor: Color(0xFFEF4444),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
+      _confirmError = 'Please confirm your new password';
+      hasError = true;
+    } else if (newPassword.isNotEmpty && newPassword != confirmPassword) {
+      _confirmError = 'New passwords do not match';
+      hasError = true;
     }
 
-    if (newPassword != confirmPassword) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('PASSWORDS DO NOT MATCH'),
-          backgroundColor: Color(0xFFEF4444),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+    if (hasError) {
+      setState(() {});
       return;
     }
 
@@ -211,9 +226,18 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     if (!mounted) return;
 
     if (!result.success) {
+      final msg = result.message ?? 'Password reset failed';
+      setState(() {
+        _screenError = msg;
+        if (msg.toUpperCase().contains('TOO SIMILAR') ||
+            msg.toUpperCase().contains('SAME AS YOUR CURRENT PASSWORD') ||
+            msg.toUpperCase().contains('SHOULD BE DIFFERENT')) {
+          _newError = 'New password must be different from current password';
+        }
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(result.message ?? 'Password reset failed'),
+          content: Text(msg),
           backgroundColor: const Color(0xFFEF4444),
           behavior: SnackBarBehavior.floating,
         ),
@@ -383,6 +407,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           ),
           decoration: InputDecoration(
             labelText: 'Registered Email Address',
+            errorText: _emailError,
             labelStyle: GoogleFonts.plusJakartaSans(
               color: isDark ? Colors.white70 : null,
             ),
@@ -562,6 +587,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   // Step 3: Set New Password Form
   Widget _buildNewPasswordFormView(AuthViewModel authVM, bool isDark) {
+    final displayError = _screenError ?? authVM.errorMessage;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -605,26 +632,33 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
         const SizedBox(height: 20),
 
-        if (authVM.errorMessage != null) ...[
+        if (displayError != null) ...[
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: isDark
-                  ? const Color(0xFF3B1515)
+                  ? const Color(0xFF7F1D1D).withValues(alpha: 0.3)
                   : const Color(0xFFFEF2F2),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: isDark ? const Color(0xFF7F1D1D) : const Color(0xFFFCA5A5),
+                color: isDark ? const Color(0xFFB91C1C) : const Color(0xFFFCA5A5),
               ),
             ),
-            child: Text(
-              authVM.errorMessage!,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: isDark ? const Color(0xFFFCA5A5) : const Color(0xFFEF4444),
-              ),
-              textAlign: TextAlign.center,
+            child: Row(
+              children: [
+                const Icon(Icons.error_outline_rounded, color: Color(0xFFEF4444), size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    displayError,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? const Color(0xFFFCA5A5) : const Color(0xFFEF4444),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 16),
@@ -633,7 +667,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         // New Password Input
         TextField(
           controller: _newPasswordController,
-          obscureText: !_isPasswordVisible,
+          obscureText: _obscureNew,
           style: GoogleFonts.plusJakartaSans(
             color: isDark ? Colors.white : const Color(0xFF0F172A),
             fontSize: 14,
@@ -647,18 +681,19 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             hintStyle: GoogleFonts.plusJakartaSans(
               color: isDark ? Colors.white38 : null,
             ),
+            errorText: _newError,
             prefixIcon: Icon(
-              Icons.lock_outline,
+              Icons.key_rounded,
               size: 20,
               color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
             ),
             suffixIcon: IconButton(
               icon: Icon(
-                _isPasswordVisible ? Icons.visibility_off : Icons.visibility,
+                _obscureNew ? Icons.visibility_off : Icons.visibility,
                 size: 20,
                 color: isDark ? Colors.white70 : Colors.black54,
               ),
-              onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
+              onPressed: () => setState(() => _obscureNew = !_obscureNew),
             ),
             filled: true,
             fillColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),
@@ -679,14 +714,17 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         ),
 
         // 📊 Interactive Password Strength Meter & Live Checklist
-        PasswordStrengthMeter(password: _newPasswordController.text),
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: PasswordStrengthMeter(password: _newPasswordController.text),
+        ),
 
         const SizedBox(height: 16),
 
         // Confirm Password Input
         TextField(
           controller: _confirmPasswordController,
-          obscureText: !_isPasswordVisible,
+          obscureText: _obscureConfirm,
           style: GoogleFonts.plusJakartaSans(
             color: isDark ? Colors.white : const Color(0xFF0F172A),
             fontSize: 14,
@@ -696,10 +734,19 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             labelStyle: GoogleFonts.plusJakartaSans(
               color: isDark ? Colors.white70 : null,
             ),
+            errorText: _confirmError,
             prefixIcon: Icon(
               Icons.lock_reset_outlined,
               size: 20,
               color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+            ),
+            suffixIcon: IconButton(
+              icon: Icon(
+                _obscureConfirm ? Icons.visibility_off : Icons.visibility,
+                size: 20,
+                color: isDark ? Colors.white70 : Colors.black54,
+              ),
+              onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
             ),
             filled: true,
             fillColor: isDark ? const Color(0xFF041412) : const Color(0xFFF8F9FA),

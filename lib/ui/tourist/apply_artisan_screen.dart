@@ -786,6 +786,8 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
       ),
     );
 
+    final updatedUser = authVM.currentUser ?? user;
+
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (_) => ArtisanApplicationPendingScreen(
@@ -793,6 +795,11 @@ class _ApplyArtisanScreenState extends State<ApplyArtisanScreen> {
           craftCategory: _selectedCraftCategory,
           ssmNumber: ssm,
           premiseType: _selectedPremiseType,
+          ssmFileName: _ssmFile?.name ?? updatedUser?.ssmFileName,
+          ssmFileUrl: updatedUser?.ssmFileUrl,
+          certFileName: _kraftanganFile?.name ?? updatedUser?.certFileName,
+          certFileUrl: updatedUser?.certFileUrl,
+          photos: _uploadedPhotos.map((p) => p.name).toList(),
         ),
       ),
     );

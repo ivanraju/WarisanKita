@@ -214,8 +214,14 @@ class UserRepository {
     );
   }
 
-  Future<UserModel> cancelRelocationRequest({required String email}) {
-    return _service.cancelRelocationRequest(email: email);
+  Future<UserModel> cancelRelocationRequest({
+    required String email,
+    String? artisanProfileId,
+  }) {
+    return _service.cancelRelocationRequest(
+      email: email,
+      artisanProfileId: artisanProfileId,
+    );
   }
 
   Future<UserModel> approveRelocationRequest({
@@ -224,6 +230,7 @@ class UserRepository {
     String? newState,
     double? newLat,
     double? newLng,
+    String? artisanProfileId,
   }) {
     return _service.approveRelocationRequest(
       email: email,
@@ -231,14 +238,20 @@ class UserRepository {
       proposedState: newState,
       proposedLat: newLat,
       proposedLng: newLng,
+      artisanProfileId: artisanProfileId,
     );
   }
 
   Future<UserModel> rejectRelocationRequest({
     required String email,
     String? feedback,
+    String? artisanProfileId,
   }) {
-    return _service.rejectRelocationRequest(email: email, feedback: feedback);
+    return _service.rejectRelocationRequest(
+      email: email,
+      feedback: feedback,
+      artisanProfileId: artisanProfileId,
+    );
   }
 
   Future<String?> uploadUserAvatar(String userIdOrEmail, PlatformFile file) {

@@ -169,19 +169,19 @@ class ModerationViewModel extends ChangeNotifier {
         }
       }
 
+      // Preserve any records already in memory in _approvalHistory (e.g. freshly approved in this session)
+      for (final mem in _approvalHistory) {
+        if (!loaded.any((r) => r.id == mem.id)) {
+          loaded.add(mem);
+        }
+      }
+
       // Merge remote records from Supabase public.approval_history table if available
       try {
         final remoteLogs = await _repository.getApprovalHistory();
         for (final raw in remoteLogs) {
           final record = ApprovalHistoryRecord.fromMap(raw);
-          final exists = loaded.any((r) =>
-              r.id == record.id ||
-              (r.targetEmail.toLowerCase() ==
-                      record.targetEmail.toLowerCase() &&
-                  r.approvalType == record.approvalType &&
-                  r.status == record.status &&
-                  r.approvedAt.difference(record.approvedAt).inMinutes.abs() <
-                      5));
+          final exists = loaded.any((r) => r.id == record.id);
           if (!exists) {
             loaded.add(record);
           }
@@ -228,9 +228,9 @@ class ModerationViewModel extends ChangeNotifier {
             approvedDate =
                 DateTime.tryParse(artisan.verifiedDate) ??
                 _parseSubmissionDate(artisan.verifiedDate) ??
-                DateTime.now();
+                DateTime(2026, 1, 1);
           } catch (_) {
-            approvedDate = DateTime.now();
+            approvedDate = DateTime(2026, 1, 1);
           }
 
           loaded.add(
@@ -268,7 +268,7 @@ class ModerationViewModel extends ChangeNotifier {
           );
           if (!alreadyLogged) {
             final approvedDate =
-                DateTime.tryParse(user.joinedDate) ?? DateTime.now();
+                DateTime.tryParse(user.joinedDate) ?? DateTime(2026, 1, 1);
             loaded.add(
               ApprovalHistoryRecord(
                 id: 'audit_user_${user.id}',
@@ -306,7 +306,7 @@ class ModerationViewModel extends ChangeNotifier {
           );
           if (!alreadyLogged) {
             final rejectedDate =
-                DateTime.tryParse(user.joinedDate) ?? DateTime.now();
+                DateTime.tryParse(user.joinedDate) ?? DateTime(2026, 1, 1);
             loaded.add(
               ApprovalHistoryRecord(
                 id: 'audit_rej_${user.id}',
@@ -657,7 +657,8 @@ class ModerationViewModel extends ChangeNotifier {
 
       final matchesCategory =
           _selectedCategory == 'All Categories' ||
-          artisan.craftCategory == _selectedCategory;
+          artisan.craftCategory.trim().toLowerCase() ==
+              _selectedCategory.trim().toLowerCase();
 
       return matchesSearch && matchesCategory;
     }).toList();
@@ -862,6 +863,8 @@ class ModerationViewModel extends ChangeNotifier {
       _applicationTypeFilter = 'Relocations';
     } else if (tab == 'Pending Approvals') {
       _applicationTypeFilter = 'All';
+    } else if (tab == 'Approval History') {
+      loadApprovalHistory();
     }
     notifyListeners();
   }
@@ -1599,6 +1602,25 @@ class ModerationViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void removeRelocationRequest(String email) {
+    final cleanEmail = email.trim().toLowerCase();
+    _pendingArtisans.removeWhere(
+      (p) =>
+          p.email.toLowerCase() == cleanEmail &&
+          p.isRelocationRequest,
+    );
+    SupabaseService.clearPendingRelocationData(cleanEmail);
+    final userIdx = _registeredUsers.indexWhere(
+      (u) => u.email.toLowerCase() == cleanEmail,
+    );
+    if (userIdx != -1) {
+      _registeredUsers[userIdx] = _registeredUsers[userIdx].copyWith(
+        clearPendingRelocation: true,
+      );
+    }
+    notifyListeners();
+  }
+
   void addUserForTesting(UserModel user) {
     _registeredUsers.removeWhere(
       (u) =>
@@ -1624,20 +1646,25 @@ class ModerationViewModel extends ChangeNotifier {
 
     try {
       if (artisan.isRelocationRequest) {
+        final userIdx = _registeredUsers.indexWhere(
+          (u) => u.email.toLowerCase() == artisan.email.toLowerCase(),
+        );
+        final artisanProfileId = userIdx != -1
+            ? _registeredUsers[userIdx].artisanProfileId
+            : null;
+
         await _repository.approveRelocationRequest(
           email: artisan.email,
           newAddress: artisan.proposedAddress,
           newState: artisan.proposedState,
           newLat: artisan.proposedLatitude,
           newLng: artisan.proposedLongitude,
+          artisanProfileId: artisanProfileId,
         );
         _pendingArtisans.removeWhere(
           (p) =>
               p.email.toLowerCase() == artisan.email.toLowerCase() &&
               p.isRelocationRequest,
-        );
-        final userIdx = _registeredUsers.indexWhere(
-          (u) => u.email.toLowerCase() == artisan.email.toLowerCase(),
         );
         if (userIdx != -1) {
           final u = _registeredUsers[userIdx];
@@ -1659,7 +1686,7 @@ class ModerationViewModel extends ChangeNotifier {
           );
         }
         await _persistApprovalCount();
-        _recordApprovalHistory(
+        await _recordApprovalHistory(
           title: 'Workshop Premise Relocation Approved',
           targetName: artisan.name,
           targetEmail: artisan.email,
@@ -1670,16 +1697,21 @@ class ModerationViewModel extends ChangeNotifier {
               'Relocated from ${artisan.currentAddress ?? artisan.state} to ${artisan.proposedAddress ?? artisan.proposedState}',
           previousPremise: artisan.currentAddress ?? artisan.state,
           newPremise: artisan.proposedAddress ?? artisan.proposedState,
-          ssmNumber: artisan.ssmNumber,
-          ssmFileName: artisan.ssmFileName,
-          ssmFileUrl: artisan.ssmFileUrl,
-          certFileName: artisan.certFileName,
-          certFileUrl: artisan.certFileUrl,
-          photos: artisan.photos,
           relocationCertFileName: artisan.relocationCertFileName,
           relocationCertFileUrl: artisan.relocationCertFileUrl,
-          documents: (userIdx != -1 && userIdx < _registeredUsers.length)
-              ? _registeredUsers[userIdx].artisanDocuments
+          documents: artisan.relocationCertFileUrl != null
+              ? [
+                  {
+                    'name': artisan.relocationCertFileName ??
+                        'Proof of Premise Relocation / Council Permit',
+                    'file_name': artisan.relocationCertFileName ??
+                        'Proof of Premise Relocation / Council Permit',
+                    'url': artisan.relocationCertFileUrl,
+                    'file_url': artisan.relocationCertFileUrl,
+                    'type': 'relocation_certificate',
+                    'doc_type': 'RELOCATION_CERT',
+                  }
+                ]
               : const [],
         );
         notifyListeners();
@@ -1796,7 +1828,7 @@ class ModerationViewModel extends ChangeNotifier {
         ),
       );
 
-      _recordApprovalHistory(
+      await _recordApprovalHistory(
         title: isUpgrade
             ? 'Tourist Upgraded to Master Artisan'
             : 'Master Artisan Profile Approved',
@@ -1996,14 +2028,22 @@ class ModerationViewModel extends ChangeNotifier {
       }
 
       if (artisan.isRelocationRequest) {
-        await _repository.rejectRelocationRequest(email: artisan.email);
+        final userIdx = _registeredUsers.indexWhere(
+          (u) => u.email.toLowerCase() == artisan.email.toLowerCase(),
+        );
+        final artisanProfileId = userIdx != -1
+            ? _registeredUsers[userIdx].artisanProfileId
+            : null;
+
+        await _repository.rejectRelocationRequest(
+          email: artisan.email,
+          feedback: reason,
+          artisanProfileId: artisanProfileId,
+        );
         _pendingArtisans.removeWhere(
           (p) =>
               p.email.toLowerCase() == artisan.email.toLowerCase() &&
               p.isRelocationRequest,
-        );
-        final userIdx = _registeredUsers.indexWhere(
-          (u) => u.email.toLowerCase() == artisan.email.toLowerCase(),
         );
         if (userIdx != -1) {
           _registeredUsers[userIdx] = _registeredUsers[userIdx].copyWith(
@@ -2022,18 +2062,23 @@ class ModerationViewModel extends ChangeNotifier {
               : 'Relocation request rejected by Moderator.',
           previousPremise: artisan.currentAddress ?? artisan.state,
           newPremise: artisan.proposedAddress ?? artisan.proposedState,
-          ssmNumber: artisan.ssmNumber,
-          ssmFileName: artisan.ssmFileName,
-          ssmFileUrl: artisan.ssmFileUrl,
-          certFileName: artisan.certFileName,
-          certFileUrl: artisan.certFileUrl,
-          photos: artisan.photos,
           relocationCertFileName: artisan.relocationCertFileName,
           relocationCertFileUrl: artisan.relocationCertFileUrl,
           status: 'REJECTED',
-          documents: (userIdx != -1 && userIdx < _registeredUsers.length)
-              ? _registeredUsers[userIdx].artisanDocuments
-              : const <Map<String, dynamic>>[],
+          documents: artisan.relocationCertFileUrl != null
+              ? [
+                  {
+                    'name': artisan.relocationCertFileName ??
+                        'Proof of Premise Relocation / Council Permit',
+                    'file_name': artisan.relocationCertFileName ??
+                        'Proof of Premise Relocation / Council Permit',
+                    'url': artisan.relocationCertFileUrl,
+                    'file_url': artisan.relocationCertFileUrl,
+                    'type': 'relocation_certificate',
+                    'doc_type': 'RELOCATION_CERT',
+                  }
+                ]
+              : const [],
         );
         notifyListeners();
         return;
