@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:warisan_kita/domain/models/approval_history_record.dart';
 import 'package:warisan_kita/viewmodels/moderation_viewmodel.dart';
 
@@ -767,6 +768,27 @@ class _AdminApprovalHistoryTabState extends State<AdminApprovalHistoryTab> {
                     color: const Color(0xFF64748B),
                   ),
                 ),
+                if (record.hasDocuments) ...[
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.attach_file_rounded,
+                        size: 12,
+                        color: Color(0xFF0F766E),
+                      ),
+                      const SizedBox(width: 3),
+                      Text(
+                        '${record.allDocuments.length} document${record.allDocuments.length == 1 ? '' : 's'} attached',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF0F766E),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
@@ -1070,6 +1092,11 @@ class _AdminApprovalHistoryTabState extends State<AdminApprovalHistoryTab> {
                       ),
                     ),
 
+                    const SizedBox(height: 16),
+
+                    // Attached Verification Documents Section
+                    _buildAttachedDocumentsSection(context, record),
+
                     const SizedBox(height: 20),
 
                     // Verification Seal Banner
@@ -1224,5 +1251,210 @@ class _AdminApprovalHistoryTabState extends State<AdminApprovalHistoryTab> {
         ),
       ],
     );
+  }
+
+  Widget _buildAttachedDocumentsSection(
+    BuildContext context,
+    ApprovalHistoryRecord record,
+  ) {
+    final docs = record.allDocuments;
+    final hasDocs = docs.isNotEmpty;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.black.withValues(alpha: 0.05),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.folder_shared_outlined,
+                size: 16,
+                color: Color(0xFF0F766E),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Uploaded Verification Documents & Evidence (${docs.length})',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF334155),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (!hasDocs)
+            Row(
+              children: [
+                const Icon(
+                  Icons.info_outline_rounded,
+                  size: 14,
+                  color: Color(0xFF94A3B8),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'No uploaded documents attached to this record.',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11,
+                    fontStyle: FontStyle.italic,
+                    color: const Color(0xFF64748B),
+                  ),
+                ),
+              ],
+            )
+          else ...[
+            ...docs.map((doc) {
+              final name = doc['name']?.toString() ?? 'Document';
+              final url = doc['url']?.toString() ?? '';
+              final type = doc['type']?.toString() ?? '';
+
+              IconData icon = Icons.article_rounded;
+              Color iconColor = const Color(0xFF0284C7);
+
+              if (type == 'crafting_proof' || type == 'photo') {
+                icon = Icons.photo_library_rounded;
+                iconColor = const Color(0xFF0D9488);
+              } else if (type == 'certificate' ||
+                  type == 'relocation_certificate') {
+                icon = Icons.workspace_premium_rounded;
+                iconColor = const Color(0xFFD97706);
+              } else if (type == 'ssm') {
+                icon = Icons.verified_user_rounded;
+                iconColor = const Color(0xFF2563EB);
+              }
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(icon, size: 16, color: iconColor),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF0F172A),
+                        ),
+                      ),
+                    ),
+                    if (url.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      InkWell(
+                        onTap: () => _launchURL(url),
+                        borderRadius: BorderRadius.circular(6),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'View',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF0284C7),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              const Icon(
+                                Icons.open_in_new_rounded,
+                                size: 12,
+                                color: Color(0xFF0284C7),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            }),
+            if (record.photos.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                'Submitted Photos Preview',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF475569),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: record.photos.map((photoUrl) {
+                  return InkWell(
+                    onTap: () => _launchURL(photoUrl),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          photoUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const Icon(
+                            Icons.broken_image_rounded,
+                            size: 20,
+                            color: Color(0xFF94A3B8),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _launchURL(String url) async {
+    try {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+      }
+    } catch (e) {
+      debugPrint('Error launching document URL: $e');
+    }
   }
 }

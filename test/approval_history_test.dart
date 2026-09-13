@@ -71,6 +71,60 @@ void main() {
       expect(record.formattedTime, '10:15');
       expect(record.formattedDateTime, '12 Sep 2026 at 10:15');
     });
+
+    test('correctly serializes, deserializes, and computes allDocuments for uploaded documents', () {
+      final now = DateTime(2026, 9, 12, 16, 0);
+      final record = ApprovalHistoryRecord(
+        id: 'hist_docs_1',
+        title: 'Master Artisan Profile Approved',
+        targetName: 'Hassan Royal Keris',
+        targetEmail: 'hassan@keris.my',
+        approvalType: 'Artisan Profile',
+        craftCategory: 'Metalwork & Weaponry',
+        state: 'Perak',
+        details: 'Approved with SSM license and master accreditation',
+        ssmNumber: 'SSM-1029384',
+        ssmFileName: 'hassan_ssm_cert.pdf',
+        ssmFileUrl: 'https://storage.warisankita.my/docs/hassan_ssm.pdf',
+        certFileName: 'kraftangan_master_keris.pdf',
+        certFileUrl: 'https://storage.warisankita.my/docs/kraftangan_cert.pdf',
+        photos: const [
+          'https://storage.warisankita.my/photos/forge1.jpg',
+          'https://storage.warisankita.my/photos/forge2.jpg',
+        ],
+        documents: const [
+          {
+            'name': 'Apprenticeship Endorsement.pdf',
+            'url': 'https://storage.warisankita.my/docs/endorsement.pdf',
+            'type': 'endorsement',
+          }
+        ],
+        approvedAt: now,
+      );
+
+      expect(record.hasDocuments, isTrue);
+      expect(record.ssmFileName, 'hassan_ssm_cert.pdf');
+      expect(record.ssmFileUrl, 'https://storage.warisankita.my/docs/hassan_ssm.pdf');
+      expect(record.photos.length, 2);
+
+      final allDocs = record.allDocuments;
+      expect(allDocs.length, 5); // 1 generic doc + 1 SSM + 1 cert + 2 photos
+      expect(allDocs.any((d) => d['name'] == 'hassan_ssm_cert.pdf'), isTrue);
+      expect(allDocs.any((d) => d['name'] == 'kraftangan_master_keris.pdf'), isTrue);
+      expect(allDocs.any((d) => d['name'] == 'Studio Photo 1'), isTrue);
+      expect(allDocs.any((d) => d['name'] == 'Apprenticeship Endorsement.pdf'), isTrue);
+
+      final map = record.toMap();
+      final restored = ApprovalHistoryRecord.fromMap(map);
+
+      expect(restored.hasDocuments, isTrue);
+      expect(restored.ssmFileName, record.ssmFileName);
+      expect(restored.ssmFileUrl, record.ssmFileUrl);
+      expect(restored.certFileName, record.certFileName);
+      expect(restored.certFileUrl, record.certFileUrl);
+      expect(restored.photos, record.photos);
+      expect(restored.allDocuments.length, 5);
+    });
   });
 
   group('ModerationViewModel Approval History Integration Tests', () {
@@ -270,6 +324,113 @@ void main() {
       vm.setActiveTab('Workshop Relocations');
       expect(vm.searchQuery, isEmpty);
       expect(vm.filteredRelocations.any((r) => r.id == 'reloc_persisted_777'), isTrue);
+    });
+
+    test('approveArtisan preserves and records uploaded documents in approval history', () async {
+      final vm = ModerationViewModel(repository: repository);
+      await vm.refreshAllData();
+
+      final pendingWithDocs = const PendingArtisanProfile(
+        id: 'p_docs_test',
+        name: 'Pak Daud Wau Atelier',
+        craftCategory: 'Wau Making',
+        state: 'Kelantan',
+        dateSubmitted: 'Today',
+        imageUrl: 'https://example.com/daud.jpg',
+        email: 'daud.wau@warisankita.my',
+        experience: '30 Years',
+        phone: '+60 19-1234567',
+        ssmNumber: '202601009988',
+        ssmFileName: 'daud_ssm_certificate.pdf',
+        ssmFileUrl: 'https://storage.warisankita.my/docs/daud_ssm.pdf',
+        certFileName: 'kraftangan_wau_master.pdf',
+        certFileUrl: 'https://storage.warisankita.my/docs/daud_cert.pdf',
+        photos: [
+          'https://storage.warisankita.my/photos/wau_photo1.jpg',
+          'https://storage.warisankita.my/photos/wau_photo2.jpg',
+        ],
+      );
+
+      vm.addPendingArtisan(pendingWithDocs);
+      final success = await vm.approveArtisan('p_docs_test');
+      expect(success, isTrue);
+
+      final latest = vm.approvalHistory.first;
+      expect(latest.targetEmail, 'daud.wau@warisankita.my');
+      expect(latest.hasDocuments, isTrue);
+      expect(latest.ssmFileName, 'daud_ssm_certificate.pdf');
+      expect(latest.ssmFileUrl, 'https://storage.warisankita.my/docs/daud_ssm.pdf');
+      expect(latest.certFileName, 'kraftangan_wau_master.pdf');
+      expect(latest.certFileUrl, 'https://storage.warisankita.my/docs/daud_cert.pdf');
+      expect(latest.photos.length, 2);
+      expect(latest.allDocuments.length, 4);
+    });
+
+    test('approveArtisan for premise relocation preserves relocation documents in approval history', () async {
+      final vm = ModerationViewModel(repository: repository);
+      await vm.refreshAllData();
+
+      final relocWithDocs = const PendingArtisanProfile(
+        id: 'reloc_docs_test',
+        name: 'Kak Som Batik Gallery',
+        craftCategory: 'Batik Weaving',
+        state: 'Terengganu',
+        dateSubmitted: 'Today',
+        imageUrl: 'https://example.com/som.jpg',
+        email: 'som.batik@warisankita.my',
+        experience: '22 Years',
+        phone: '+60 12-9876543',
+        isRelocationRequest: true,
+        currentAddress: '15 Jalan Pantai, Terengganu',
+        proposedAddress: '42 Pasar Payang, Terengganu',
+        proposedState: 'Terengganu',
+        ssmFileName: 'som_ssm.pdf',
+        ssmFileUrl: 'https://storage.warisankita.my/docs/som_ssm.pdf',
+        relocationCertFileName: 'pasar_payang_tenancy_cert.pdf',
+        relocationCertFileUrl: 'https://storage.warisankita.my/docs/pasar_payang_cert.pdf',
+      );
+
+      vm.addRelocationRequest(relocWithDocs);
+      final success = await vm.approveArtisan('reloc_docs_test');
+      expect(success, isTrue);
+
+      final latest = vm.approvalHistory.first;
+      expect(latest.targetEmail, 'som.batik@warisankita.my');
+      expect(latest.isRelocation, isTrue);
+      expect(latest.hasDocuments, isTrue);
+      expect(latest.relocationCertFileName, 'pasar_payang_tenancy_cert.pdf');
+      expect(latest.relocationCertFileUrl, 'https://storage.warisankita.my/docs/pasar_payang_cert.pdf');
+      expect(latest.allDocuments.any((d) => d['name'] == 'pasar_payang_tenancy_cert.pdf'), isTrue);
+    });
+
+    test('rejectArtisan records documents in approval history', () async {
+      final vm = ModerationViewModel(repository: repository);
+      await vm.refreshAllData();
+
+      final pendingRejected = const PendingArtisanProfile(
+        id: 'p_reject_docs_test',
+        name: 'Rejected Metal Crafts',
+        craftCategory: 'Metalwork',
+        state: 'Johor',
+        dateSubmitted: 'Today',
+        imageUrl: 'https://example.com/reject.jpg',
+        email: 'reject.metal@warisankita.my',
+        experience: '1 Year',
+        phone: '+60 11-00112233',
+        ssmFileName: 'blurry_ssm_photo.jpg',
+        ssmFileUrl: 'https://storage.warisankita.my/docs/blurry_ssm.jpg',
+      );
+
+      vm.addPendingArtisan(pendingRejected);
+      await vm.rejectArtisan('p_reject_docs_test', reason: 'SSM document is illegible');
+
+      final latest = vm.approvalHistory.first;
+      expect(latest.targetEmail, 'reject.metal@warisankita.my');
+      expect(latest.status, 'REJECTED');
+      expect(latest.hasDocuments, isTrue);
+      expect(latest.ssmFileName, 'blurry_ssm_photo.jpg');
+      expect(latest.ssmFileUrl, 'https://storage.warisankita.my/docs/blurry_ssm.jpg');
+      expect(latest.details, contains('SSM document is illegible'));
     });
   });
 }

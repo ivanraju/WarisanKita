@@ -183,6 +183,11 @@ class ModerationViewModel extends ChangeNotifier {
             approvedDate = DateTime(2026, 1, 15);
           }
 
+          final matchingUser = _registeredUsers.firstWhere(
+            (u) => u.email.toLowerCase() == artisan.email.toLowerCase(),
+            orElse: () => const UserModel(id: '', email: '', role: 'Artisan'),
+          );
+
           loaded.add(
             ApprovalHistoryRecord(
               id: 'hist_${artisan.id}',
@@ -196,6 +201,7 @@ class ModerationViewModel extends ChangeNotifier {
                   'SSM License: ${artisan.licenseNo} • Experience: ${artisan.experience}',
               newPremise: '${artisan.name} Studio (${artisan.state})',
               ssmNumber: artisan.licenseNo,
+              documents: matchingUser.artisanDocuments,
               approvedAt: approvedDate,
               approvedBy: 'Admin Moderator',
               status: 'APPROVED',
@@ -230,6 +236,7 @@ class ModerationViewModel extends ChangeNotifier {
                     ? 'Rejected by Moderator: "${user.rejectionReason}"'
                     : 'Application rejected by Moderator.',
                 ssmNumber: user.ssmNumber,
+                documents: user.artisanDocuments,
                 approvedAt: DateTime.now(),
                 approvedBy: 'Admin Moderator',
                 status: 'REJECTED',
@@ -259,6 +266,14 @@ class ModerationViewModel extends ChangeNotifier {
     String? previousPremise,
     String? newPremise,
     String? ssmNumber,
+    String? ssmFileName,
+    String? ssmFileUrl,
+    String? certFileName,
+    String? certFileUrl,
+    List<String> photos = const [],
+    String? relocationCertFileName,
+    String? relocationCertFileUrl,
+    List<Map<String, dynamic>> documents = const [],
     String approvedBy = 'Admin Moderator',
     String status = 'APPROVED',
   }) async {
@@ -275,6 +290,14 @@ class ModerationViewModel extends ChangeNotifier {
         previousPremise: previousPremise,
         newPremise: newPremise,
         ssmNumber: ssmNumber,
+        ssmFileName: ssmFileName,
+        ssmFileUrl: ssmFileUrl,
+        certFileName: certFileName,
+        certFileUrl: certFileUrl,
+        photos: photos,
+        relocationCertFileName: relocationCertFileName,
+        relocationCertFileUrl: relocationCertFileUrl,
+        documents: documents,
         approvedAt: DateTime.now(),
         approvedBy: approvedBy,
         status: status,
@@ -852,6 +875,10 @@ class ModerationViewModel extends ChangeNotifier {
           }
         }
 
+        final tags = (artisanProfile?['tags'] is List)
+            ? List<String>.from(artisanProfile!['tags'])
+            : (raw['tags'] is List ? List<String>.from(raw['tags']) : <String>[]);
+
         String? resolvedSsmUrl = raw['ssm_file_url']?.toString();
         String? resolvedSsmName =
             (raw['ssm_file'] ?? raw['ssm_file_name'] ?? raw['ssmFileName'])
@@ -894,14 +921,67 @@ class ModerationViewModel extends ChangeNotifier {
           }
         }
 
+        // Check tags if documents table query was restricted or empty
+        if (resolvedSsmUrl == null) {
+          for (final t in tags) {
+            if (t.startsWith('doc_crafting_photo_url:')) {
+              resolvedSsmUrl = t.substring('doc_crafting_photo_url:'.length);
+              break;
+            } else if (t.startsWith('doc_ssm_cert_url:')) {
+              resolvedSsmUrl = t.substring('doc_ssm_cert_url:'.length);
+              break;
+            }
+          }
+        }
+        if (resolvedSsmName == null) {
+          for (final t in tags) {
+            if (t.startsWith('doc_crafting_photo_name:')) {
+              resolvedSsmName = t.substring('doc_crafting_photo_name:'.length);
+              break;
+            } else if (t.startsWith('doc_ssm_cert_name:')) {
+              resolvedSsmName = t.substring('doc_ssm_cert_name:'.length);
+              break;
+            }
+          }
+        }
+        if (resolvedSsmName == null && resolvedSsmUrl != null) {
+          resolvedSsmName = resolvedSsmUrl.split('/').last;
+        }
+
+        if (resolvedCertUrl == null) {
+          for (final t in tags) {
+            if (t.startsWith('doc_kraftangan_cert_url:')) {
+              resolvedCertUrl = t.substring('doc_kraftangan_cert_url:'.length);
+              break;
+            }
+          }
+        }
+        if (resolvedCertName == null) {
+          for (final t in tags) {
+            if (t.startsWith('doc_kraftangan_cert_name:')) {
+              resolvedCertName = t.substring('doc_kraftangan_cert_name:'.length);
+              break;
+            }
+          }
+        }
+        if (resolvedCertName == null && resolvedCertUrl != null) {
+          resolvedCertName = resolvedCertUrl.split('/').last;
+        }
+
+        for (final t in tags) {
+          if (t.startsWith('doc_studio_photo:')) {
+            final pUrl = t.substring('doc_studio_photo:'.length);
+            if (pUrl.isNotEmpty && !resolvedPhotos.contains(pUrl)) {
+              resolvedPhotos.add(pUrl);
+            }
+          }
+        }
+
         // Resolve premise_type
         String? resolvedPremiseType = raw['premise_type']?.toString() ??
             raw['premiseType']?.toString() ??
             artisanProfile?['premise_type']?.toString();
         if (resolvedPremiseType == null) {
-          final tags = (artisanProfile?['tags'] is List)
-              ? List<String>.from(artisanProfile!['tags'])
-              : (raw['tags'] is List ? List<String>.from(raw['tags']) : <String>[]);
           for (final t in tags) {
             if (t.startsWith('premise:')) {
               resolvedPremiseType = t.substring('premise:'.length);
@@ -918,10 +998,21 @@ class ModerationViewModel extends ChangeNotifier {
           if (hasVillageDoc ||
               raw['ssm_number'] == 'VILLAGE_EXEMPT' ||
               raw['ssmNumber'] == 'VILLAGE_EXEMPT' ||
-              artisanProfile?['ssm_number'] == 'VILLAGE_EXEMPT') {
+              artisanProfile?['ssm_number'] == 'VILLAGE_EXEMPT' ||
+              tags.any((t) => t.startsWith('doc_crafting_photo_'))) {
             resolvedPremiseType =
                 'Home / Village Workshop (Bengkel Kediaman / Desa)';
           }
+        }
+
+        // If village workshop and crafting photo url still null but photos exist, fallback to photos
+        final isVillage = (resolvedPremiseType?.contains('Home') == true ||
+            resolvedPremiseType?.contains('Village') == true ||
+            raw['ssm_number'] == 'VILLAGE_EXEMPT' ||
+            artisanProfile?['ssm_number'] == 'VILLAGE_EXEMPT');
+        if (resolvedSsmUrl == null && isVillage && resolvedPhotos.isNotEmpty) {
+          resolvedSsmUrl = resolvedPhotos.first;
+          resolvedSsmName ??= resolvedSsmUrl.split('/').last;
         }
 
         // Resolve experience
@@ -1007,6 +1098,18 @@ class ModerationViewModel extends ChangeNotifier {
                   .map((d) => (d['file_url'] ?? '').toString())
                   .where((url) => url.isNotEmpty)
                   .toList();
+              for (final t in u.tags) {
+                if (t.startsWith('doc_studio_photo:')) {
+                  final p = t.substring('doc_studio_photo:'.length);
+                  if (p.isNotEmpty && !photos.contains(p)) photos.add(p);
+                }
+              }
+              String? ssmUrl = u.ssmFileUrl;
+              String? ssmName = u.ssmFileName;
+              if (ssmUrl == null && u.isVillageWorkshop && photos.isNotEmpty) {
+                ssmUrl = photos.first;
+                ssmName ??= ssmUrl.split('/').last;
+              }
               fetched.add(
                 PendingArtisanProfile(
                   id: u.id,
@@ -1029,8 +1132,8 @@ class ModerationViewModel extends ChangeNotifier {
                       ? u.phone!
                       : '+60 12-345 6789',
                   ssmNumber: u.ssmNumber ?? 'Pending Document Verification',
-                  ssmFileName: u.ssmFileName,
-                  ssmFileUrl: u.ssmFileUrl,
+                  ssmFileName: ssmName,
+                  ssmFileUrl: ssmUrl,
                   certFileName: u.certFileName,
                   certFileUrl: u.certFileUrl,
                   bio: u.bio,
@@ -1335,6 +1438,13 @@ class ModerationViewModel extends ChangeNotifier {
           previousPremise: artisan.currentAddress ?? artisan.state,
           newPremise: artisan.proposedAddress ?? artisan.proposedState,
           ssmNumber: artisan.ssmNumber,
+          ssmFileName: artisan.ssmFileName,
+          ssmFileUrl: artisan.ssmFileUrl,
+          certFileName: artisan.certFileName,
+          certFileUrl: artisan.certFileUrl,
+          photos: artisan.photos,
+          relocationCertFileName: artisan.relocationCertFileName,
+          relocationCertFileUrl: artisan.relocationCertFileUrl,
         );
         notifyListeners();
         return true;
@@ -1464,6 +1574,11 @@ class ModerationViewModel extends ChangeNotifier {
         ssmNumber: artisan.ssmNumber,
         previousPremise: isUpgrade ? 'Tourist Account' : null,
         newPremise: '${artisan.name} Studio (${artisan.state})',
+        ssmFileName: artisan.ssmFileName,
+        ssmFileUrl: artisan.ssmFileUrl,
+        certFileName: artisan.certFileName,
+        certFileUrl: artisan.certFileUrl,
+        photos: artisan.photos,
       );
 
       notifyListeners();
@@ -1620,6 +1735,13 @@ class ModerationViewModel extends ChangeNotifier {
           previousPremise: artisan.currentAddress ?? artisan.state,
           newPremise: artisan.proposedAddress ?? artisan.proposedState,
           ssmNumber: artisan.ssmNumber,
+          ssmFileName: artisan.ssmFileName,
+          ssmFileUrl: artisan.ssmFileUrl,
+          certFileName: artisan.certFileName,
+          certFileUrl: artisan.certFileUrl,
+          photos: artisan.photos,
+          relocationCertFileName: artisan.relocationCertFileName,
+          relocationCertFileUrl: artisan.relocationCertFileUrl,
           status: 'REJECTED',
         );
         notifyListeners();
@@ -1696,6 +1818,11 @@ class ModerationViewModel extends ChangeNotifier {
         previousPremise: isExistingTourist ? 'Tourist Account' : null,
         newPremise: '${artisan.name} Studio (${artisan.state})',
         ssmNumber: artisan.ssmNumber,
+        ssmFileName: artisan.ssmFileName,
+        ssmFileUrl: artisan.ssmFileUrl,
+        certFileName: artisan.certFileName,
+        certFileUrl: artisan.certFileUrl,
+        photos: artisan.photos,
         status: 'REJECTED',
       );
 
@@ -1741,6 +1868,7 @@ class ModerationViewModel extends ChangeNotifier {
               : 'Application rejected by Moderator.',
           previousPremise: isTourist ? 'Tourist Account' : null,
           ssmNumber: existingUser.ssmNumber,
+          documents: existingUser.artisanDocuments,
           status: 'REJECTED',
         );
 
