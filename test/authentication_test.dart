@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:warisan_kita/data/services/supabase_service.dart';
 import 'package:warisan_kita/data/repositories/user_repository.dart';
 import 'package:warisan_kita/domain/models/user.dart';
+import 'package:warisan_kita/ui/auth/login_screen.dart';
 import 'package:warisan_kita/ui/auth/register_screen.dart';
 import 'package:warisan_kita/viewmodels/auth_viewmodel.dart';
 import 'support/auth_backend.dart';
@@ -708,5 +709,44 @@ void main() {
     expect(user.role, 'Tourist');
     expect(user.isApprovedArtisan, isFalse);
     expect(user.isTourist, isTrue);
+  });
+
+  testWidgets('LoginScreen multi-role selection dialog renders in dark mode without assertion failure', (tester) async {
+    backend.add(
+      'multirole.dark@test.com',
+      username: 'multirole_dark',
+      role: 'Artisan',
+      password: 'Password123!',
+    );
+    final vm = AuthViewModel(repository: UserRepository(service: service));
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<AuthViewModel>.value(value: vm),
+        ],
+        child: MaterialApp(
+          themeMode: ThemeMode.dark,
+          darkTheme: ThemeData.dark(),
+          home: const LoginScreen(),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    // Enter credentials
+    await tester.enterText(find.byType(TextFormField).first, 'multirole.dark@test.com');
+    await tester.enterText(find.byType(TextFormField).last, 'Password123!');
+    await tester.pumpAndSettle();
+
+    // Tap SIGN IN
+    await tester.tap(find.widgetWithText(FilledButton, 'SIGN IN'));
+    await tester.pumpAndSettle();
+
+    // Verify dialog appeared and did not fail assertions
+    expect(find.text('Select Active Role Context'), findsOneWidget);
+    expect(find.text('Master Artisan'), findsOneWidget);
+    expect(find.text('Cultural Tourist'), findsOneWidget);
   });
 }
