@@ -1599,6 +1599,25 @@ class ModerationViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void removeRelocationRequest(String email) {
+    final cleanEmail = email.trim().toLowerCase();
+    _pendingArtisans.removeWhere(
+      (p) =>
+          p.email.toLowerCase() == cleanEmail &&
+          p.isRelocationRequest,
+    );
+    SupabaseService.clearPendingRelocationData(cleanEmail);
+    final userIdx = _registeredUsers.indexWhere(
+      (u) => u.email.toLowerCase() == cleanEmail,
+    );
+    if (userIdx != -1) {
+      _registeredUsers[userIdx] = _registeredUsers[userIdx].copyWith(
+        clearPendingRelocation: true,
+      );
+    }
+    notifyListeners();
+  }
+
   void addUserForTesting(UserModel user) {
     _registeredUsers.removeWhere(
       (u) =>

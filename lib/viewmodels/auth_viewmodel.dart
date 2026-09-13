@@ -201,7 +201,7 @@ class AuthViewModel extends ChangeNotifier {
   Future<UserModel?> _refreshCurrentUserOnce() async {
     final previousUser = _currentUser;
     try {
-      final user = await _repository.getCurrentUser();
+      var user = await _repository.getCurrentUser();
       if (user != null) {
         if (_currentUser != null &&
             _currentUser!.id != user.id &&
@@ -211,7 +211,11 @@ class AuthViewModel extends ChangeNotifier {
           return _currentUser;
         }
         if (_selfWithdrawnRelocation) {
-          _selfWithdrawnRelocation = false;
+          if (user.hasPendingRelocation) {
+            user = user.copyWith(clearPendingRelocation: true);
+          } else {
+            _selfWithdrawnRelocation = false;
+          }
         } else if (_currentUser?.hasPendingRelocation == true &&
             !user.hasPendingRelocation) {
           final pendingAddr =
@@ -412,17 +416,25 @@ class AuthViewModel extends ChangeNotifier {
     }
   }
 
-  Future<void> cancelRelocationRequest() async {
+  Future<void> cancelRelocationRequest({String? artisanProfileId}) async {
     final email = _currentUser?.email ?? '';
     if (email.isEmpty) return;
     _isLoading = true;
     _relocationResolutionNotice = null;
     _selfWithdrawnRelocation = true;
+    if (_currentUser != null) {
+      _currentUser = _currentUser!.copyWith(clearPendingRelocation: true);
+    }
     notifyListeners();
     try {
-      await _repository.cancelRelocationRequest(email: email);
+      final updated = await _repository.cancelRelocationRequest(
+        email: email,
+        artisanProfileId: artisanProfileId ?? _currentUser?.artisanProfileId,
+      );
       if (_currentUser != null) {
-        _currentUser = _currentUser!.copyWith(clearPendingRelocation: true);
+        _currentUser = (_currentUser ?? updated).copyWith(
+          clearPendingRelocation: true,
+        );
       }
     } finally {
       _isLoading = false;
