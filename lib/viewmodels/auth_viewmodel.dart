@@ -92,6 +92,19 @@ class AuthViewModel extends ChangeNotifier {
       return 'Email not confirmed. Please verify your email before logging in.';
     }
 
+    // 4. Network and Offline Connectivity errors
+    if (lower.contains('socketexception') ||
+        lower.contains('clientexception') ||
+        lower.contains('failed host lookup') ||
+        lower.contains('network is unreachable') ||
+        lower.contains('connection refused') ||
+        lower.contains('connection closed') ||
+        lower.contains('network error') ||
+        lower.contains('timeoutexception') ||
+        lower.contains('connection timed out')) {
+      return 'No internet connection. Please check your network and try again.';
+    }
+
     // 4. Clean any residual technical wrappers e.g. AuthApiException(...)
     if (msg.startsWith('AuthApiException(') || msg.startsWith('AuthException(')) {
       final mMatch = RegExp(r'message:\s*([^,\)]+)').firstMatch(msg);
