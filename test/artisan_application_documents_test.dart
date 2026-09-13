@@ -266,5 +266,151 @@ void main() {
       // Verify re-apply action button is available
       expect(find.text('Update Documents & Re-Apply'), findsOneWidget);
     });
+
+    testWidgets('Mobile screen (360x640) renders documents section without RenderFlex overflow', (tester) async {
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      const user = UserModel(
+        id: 'mobile_artisan_1',
+        email: 'mobile@craft.my',
+        role: 'Tourist',
+        status: 'PENDING_APPROVAL',
+        studioName: 'Warisan Seni Studio',
+        craftCategory: 'Woodwork',
+        premiseType: 'Commercial Studio (Premis Perniagaan)',
+        ssmNumber: '202601234567',
+        artisanDocuments: [
+          {
+            'doc_type': 'SSM_BUSINESS_CERT',
+            'file_name': 'SSM_Business_Registration.pdf',
+            'file_url': 'https://storage.test/docs/ssm.pdf',
+          },
+          {
+            'doc_type': 'KRAFTANGAN_MASTER_CERT',
+            'file_name': 'Kraftangan_Master_Certificate.pdf',
+            'file_url': 'https://storage.test/docs/cert.pdf',
+          },
+        ],
+      );
+
+      authVM.setCurrentUserForTesting(user);
+
+      await tester.pumpWidget(
+        createTestWidget(
+          surfaceSize: const Size(360, 640),
+          child: const ArtisanApplicationPendingScreen(
+            studioName: 'Warisan Seni Studio',
+            craftCategory: 'Woodwork',
+            ssmNumber: '202601234567',
+            premiseType: 'Commercial Studio (Premis Perniagaan)',
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // Check badges exist without throwing RenderFlex overflow
+      expect(find.text('MANDATORY SSM'), findsOneWidget);
+      expect(find.text('MANDATORY ACCREDITATION'), findsOneWidget);
+
+      // Verify no exceptions thrown
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('Base64 image preview and Studio / Workshop photo thumbnails render and open in preview dialog', (tester) async {
+      tester.view.physicalSize = const Size(800, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      // 1x1 transparent PNG data URL
+      const dummyBase64Image =
+          'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+
+      const user = UserModel(
+        id: 'photo_artisan_1',
+        email: 'photo@craft.my',
+        role: 'Tourist',
+        status: 'PENDING_APPROVAL',
+        studioName: 'Photo Craft Studio',
+        craftCategory: 'Pottery',
+        premiseType: 'Home / Village Workshop (Bengkel Kediaman / Desa)',
+        ssmNumber: 'VILLAGE_EXEMPT',
+        artisanDocuments: [
+          {
+            'doc_type': 'CRAFTING_PHOTO',
+            'file_name': 'Crafting_Proof_Photo.png',
+            'file_url': dummyBase64Image,
+          },
+          {
+            'doc_type': 'PORTFOLIO_IMAGE',
+            'file_name': 'Workshop_Photo_1.png',
+            'file_url': dummyBase64Image,
+          },
+        ],
+      );
+
+      authVM.setCurrentUserForTesting(user);
+
+      await tester.pumpWidget(
+        createTestWidget(
+          surfaceSize: const Size(800, 1200),
+          child: const ArtisanApplicationPendingScreen(
+            studioName: 'Photo Craft Studio',
+            craftCategory: 'Pottery',
+            ssmNumber: 'VILLAGE_EXEMPT',
+            premiseType: 'Home / Village Workshop (Bengkel Kediaman / Desa)',
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // Verify Studio / Workshop Photos section rendered with thumbnail
+      expect(find.textContaining('Studio / Workshop Photos (1)'), findsOneWidget);
+
+      // Verify Image.memory is rendered for the thumbnail
+      expect(find.byType(Image), findsWidgets);
+
+      // Tap the thumbnail to open the photo preview dialog
+      final thumbnailInkWell = find.byWidgetPredicate(
+        (widget) => widget is InkWell && widget.child is Container && (widget.child as Container).constraints?.maxWidth == 76,
+      );
+      expect(thumbnailInkWell, findsOneWidget);
+      await tester.tap(thumbnailInkWell);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // Verify preview dialog opened with the title and Close Preview button
+      expect(find.text('Studio Photo #1'), findsOneWidget);
+      expect(find.text('Close Preview'), findsOneWidget);
+      expect(find.byType(InteractiveViewer), findsOneWidget);
+
+      // Tap Close Preview
+      await tester.tap(find.text('Close Preview'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('Studio Photo #1'), findsNothing);
+
+      // Now tap "View" on the Crafting Photo Evidence card
+      final viewButtons = find.text('View');
+      expect(viewButtons, findsWidgets);
+      await tester.tap(viewButtons.first);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // Verify crafting proof preview opened with Image.memory inside InteractiveViewer
+      expect(find.text('Crafting Photo Evidence (Proof)'), findsWidgets);
+      expect(find.byType(InteractiveViewer), findsOneWidget);
+      expect(find.text('Close Preview'), findsOneWidget);
+
+      await tester.tap(find.text('Close Preview'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Verify no exceptions
+      expect(tester.takeException(), isNull);
+    });
   });
 }

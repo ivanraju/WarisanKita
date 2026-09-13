@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io' as io;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -164,10 +166,13 @@ class _ArtisanApplicationPendingScreenState
       ),
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+          padding: EdgeInsets.symmetric(
+            horizontal: isDesktop ? 24.0 : 12.0,
+            vertical: 20.0,
+          ),
           child: Container(
             width: isDesktop ? 550 : double.infinity,
-            padding: const EdgeInsets.all(32.0),
+            padding: EdgeInsets.all(isDesktop ? 32.0 : 16.0),
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF0D2825) : Colors.white,
               borderRadius: BorderRadius.circular(28),
@@ -820,10 +825,11 @@ class _ArtisanApplicationPendingScreenState
 
     final hasCertDoc = (certDocName != null && certDocName.isNotEmpty) ||
         (certDocUrl != null && certDocUrl.isNotEmpty);
+    final isDesktop = MediaQuery.of(context).size.width > 800;
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: EdgeInsets.all(isDesktop ? 18 : 12),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF041412) : const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(20),
@@ -1082,32 +1088,32 @@ class _ArtisanApplicationPendingScreenState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: badgeBg,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              badgeText,
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 9,
-                                fontWeight: FontWeight.w800,
-                                color: badgeFg,
-                                letterSpacing: 0.4,
-                              ),
-                            ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: badgeBg,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          badgeText,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 8.5,
+                            fontWeight: FontWeight.w800,
+                            color: badgeFg,
+                            letterSpacing: 0.3,
                           ),
-                        ],
+                        ),
                       ),
                       const SizedBox(height: 3),
                       Text(
                         title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
@@ -1192,12 +1198,18 @@ class _ArtisanApplicationPendingScreenState
             itemBuilder: (ctx, idx) {
               final photo = photos[idx];
               final isUrl = photo.startsWith('http');
+              final isData = photo.startsWith('data:image');
+              final fileName = isData
+                  ? 'Studio_Photo_${idx + 1}.jpg'
+                  : (isUrl
+                      ? photo.split('/').last.split('?').first
+                      : photo.split(r'\').last.split('/').last);
               return InkWell(
                 onTap: () => _openDocumentPreview(
                   context: context,
                   title: 'Studio Photo #${idx + 1}',
-                  fileName: isUrl ? photo.split('/').last : photo,
-                  fileUrl: isUrl ? photo : null,
+                  fileName: fileName,
+                  fileUrl: photo,
                   isImage: true,
                   isDark: isDark,
                 ),
@@ -1213,40 +1225,13 @@ class _ArtisanApplicationPendingScreenState
                     color: isDark ? const Color(0xFF0D2825) : const Color(0xFFF1F5F9),
                   ),
                   clipBehavior: Clip.antiAlias,
-                  child: isUrl
-                      ? Image.network(
-                          photo,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const Center(
-                            child: Icon(
-                              Icons.photo_rounded,
-                              color: Color(0xFF94A3B8),
-                              size: 24,
-                            ),
-                          ),
-                        )
-                      : Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(
-                                Icons.image_outlined,
-                                color: Color(0xFF004D40),
-                                size: 20,
-                              ),
-                              const SizedBox(height: 2),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 4),
-                                child: Text(
-                                  photo,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontSize: 9),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                  child: _buildPreviewImage(
+                    photo,
+                    fit: BoxFit.cover,
+                    width: 76,
+                    height: 76,
+                    isThumbnail: true,
+                  ),
                 ),
               );
             },
@@ -1272,12 +1257,14 @@ class _ArtisanApplicationPendingScreenState
         ),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(icon, size: 16, color: const Color(0xFF10B981)),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               '$title: $notice',
+              softWrap: true,
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 10.5,
                 fontWeight: FontWeight.w600,
@@ -1298,182 +1285,271 @@ class _ArtisanApplicationPendingScreenState
     required bool isImage,
     required bool isDark,
   }) {
+    final bool effectiveIsImage = isImage ||
+        (fileUrl != null && _isImageFile(fileUrl)) ||
+        _isImageFile(fileName);
+
     showDialog(
       context: context,
       builder: (dialogCtx) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         backgroundColor: isDark ? const Color(0xFF0D2825) : Colors.white,
-        child: Container(
-          width: 500,
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    isImage
-                        ? Icons.photo_library_outlined
-                        : Icons.description_outlined,
-                    color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
-                    size: 20,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: 500,
+            maxHeight: MediaQuery.of(context).size.height * 0.85,
+          ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      effectiveIsImage
+                          ? Icons.photo_library_outlined
+                          : Icons.description_outlined,
+                      color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.dmSerifDisplay(
+                          fontSize: 18,
+                          color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded),
+                      onPressed: () => Navigator.of(dialogCtx).pop(),
+                      tooltip: 'Close',
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Attached File: $fileName',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                    fontWeight: FontWeight.w600,
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: GoogleFonts.dmSerifDisplay(
-                        fontSize: 18,
-                        color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                ),
+                const SizedBox(height: 16),
+                if (effectiveIsImage && fileUrl != null && fileUrl.isNotEmpty) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      constraints: const BoxConstraints(maxHeight: 320),
+                      color: isDark ? const Color(0xFF041412) : const Color(0xFFF1F5F9),
+                      child: InteractiveViewer(
+                        clipBehavior: Clip.antiAlias,
+                        child: _buildPreviewImage(fileUrl, fit: BoxFit.contain),
                       ),
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close_rounded),
-                    onPressed: () => Navigator.of(dialogCtx).pop(),
-                    tooltip: 'Close',
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Attached File: $fileName',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 12,
-                  color: isDark ? Colors.white70 : const Color(0xFF64748B),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 16),
-              if (isImage && fileUrl != null && fileUrl.isNotEmpty) ...[
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    constraints: const BoxConstraints(maxHeight: 320),
-                    color: isDark ? const Color(0xFF041412) : const Color(0xFFF1F5F9),
-                    child: InteractiveViewer(
-                      clipBehavior: Clip.antiAlias,
-                      child: Image.network(
-                        fileUrl,
-                        fit: BoxFit.contain,
-                        loadingBuilder: (_, child, progress) {
-                          if (progress == null) return child;
-                          return const Center(
-                            child: Padding(
-                              padding: EdgeInsets.all(32),
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                          );
-                        },
-                        errorBuilder: (_, __, ___) => Container(
-                          padding: const EdgeInsets.all(32),
-                          alignment: Alignment.center,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.image_not_supported_outlined,
-                                size: 48,
-                                color: Color(0xFF94A3B8),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Image preview unavailable offline or invalid URL.',
-                                textAlign: TextAlign.center,
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 11,
-                                  color: const Color(0xFF94A3B8),
-                                ),
-                              ),
-                            ],
+                  const SizedBox(height: 16),
+                ] else ...[
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF041412) : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFE2E8F0),
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Icon(
+                          effectiveIsImage
+                              ? Icons.image_rounded
+                              : Icons.picture_as_pdf_rounded,
+                          size: 48,
+                          color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          fileName,
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : const Color(0xFF0F172A),
                           ),
                         ),
+                        const SizedBox(height: 4),
+                        Text(
+                          fileUrl != null && fileUrl.startsWith('http')
+                              ? 'Uploaded to Kraftangan Document Storage'
+                              : 'Local Document Attached with Application',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11,
+                            color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                if (fileUrl != null &&
+                    fileUrl.isNotEmpty &&
+                    (fileUrl.startsWith('http://') ||
+                        fileUrl.startsWith('https://') ||
+                        fileUrl.startsWith('file://'))) ...[
+                  FilledButton.icon(
+                    onPressed: () => _launchURL(fileUrl),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: isDark
+                          ? const Color(0xFFFFD54F)
+                          : const Color(0xFF004D40),
+                      foregroundColor:
+                          isDark ? const Color(0xFF041412) : Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                    label: Text(
+                      'Open Full Document Link',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
-              ] else ...[
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF041412) : const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: isDark ? const Color(0xFF1E3A34) : const Color(0xFFE2E8F0),
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(
-                        isImage
-                            ? Icons.image_rounded
-                            : Icons.picture_as_pdf_rounded,
-                        size: 48,
-                        color: isDark ? const Color(0xFFFFD54F) : const Color(0xFF004D40),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        fileName,
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : const Color(0xFF0F172A),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        fileUrl != null && fileUrl.isNotEmpty
-                            ? 'Uploaded to Kraftangan Document Storage'
-                            : 'Local Document Attached with Application',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 11,
-                          color: isDark ? Colors.white60 : const Color(0xFF64748B),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-              if (fileUrl != null && fileUrl.isNotEmpty) ...[
-                FilledButton.icon(
-                  onPressed: () => _launchURL(fileUrl),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: isDark
-                        ? const Color(0xFFFFD54F)
-                        : const Color(0xFF004D40),
-                    foregroundColor: isDark ? const Color(0xFF041412) : Colors.white,
+                  const SizedBox(height: 8),
+                ],
+                OutlinedButton(
+                  onPressed: () => Navigator.of(dialogCtx).pop(),
+                  style: OutlinedButton.styleFrom(
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
-                  icon: const Icon(Icons.open_in_new_rounded, size: 16),
-                  label: Text(
-                    'Open Full Document Link',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                    ),
-                  ),
+                  child: const Text('Close Preview'),
                 ),
-                const SizedBox(height: 8),
               ],
-              OutlinedButton(
-                onPressed: () => Navigator.of(dialogCtx).pop(),
-                style: OutlinedButton.styleFrom(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                child: const Text('Close Preview'),
-              ),
-            ],
+            ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPreviewImage(
+    String source, {
+    BoxFit fit = BoxFit.contain,
+    double? width,
+    double? height,
+    bool isThumbnail = false,
+  }) {
+    final clean = source.trim();
+    if (clean.startsWith('data:image')) {
+      try {
+        final commaIdx = clean.indexOf(',');
+        if (commaIdx != -1) {
+          final bytes = base64Decode(clean.substring(commaIdx + 1));
+          return Image.memory(
+            bytes,
+            width: width,
+            height: height,
+            fit: fit,
+            errorBuilder: (_, __, ___) => isThumbnail
+                ? _buildImageThumbnailFallback()
+                : _buildImageFallbackPlaceholder(),
+          );
+        }
+      } catch (_) {}
+    }
+    if (clean.startsWith('http://') || clean.startsWith('https://')) {
+      return Image.network(
+        clean,
+        width: width,
+        height: height,
+        fit: fit,
+        loadingBuilder: (_, child, progress) {
+          if (progress == null) return child;
+          return Center(
+            child: SizedBox(
+              width: isThumbnail ? 20 : 32,
+              height: isThumbnail ? 20 : 32,
+              child: const CircularProgressIndicator(strokeWidth: 2),
+            ),
+          );
+        },
+        errorBuilder: (_, __, ___) => isThumbnail
+            ? _buildImageThumbnailFallback()
+            : _buildImageFallbackPlaceholder(),
+      );
+    }
+    try {
+      final file = io.File(clean);
+      if (file.existsSync()) {
+        return Image.file(
+          file,
+          width: width,
+          height: height,
+          fit: fit,
+          errorBuilder: (_, __, ___) => isThumbnail
+              ? _buildImageThumbnailFallback()
+              : _buildImageFallbackPlaceholder(),
+        );
+      }
+    } catch (_) {}
+
+    return isThumbnail
+        ? _buildImageThumbnailFallback()
+        : _buildImageFallbackPlaceholder();
+  }
+
+  Widget _buildImageThumbnailFallback() {
+    return const Center(
+      child: Icon(
+        Icons.photo_rounded,
+        color: Color(0xFF94A3B8),
+        size: 24,
+      ),
+    );
+  }
+
+  Widget _buildImageFallbackPlaceholder() {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.image_not_supported_outlined,
+              size: 40,
+              color: Color(0xFF94A3B8),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Image preview unavailable offline or invalid file format.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 11,
+                color: const Color(0xFF94A3B8),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -1492,9 +1568,11 @@ class _ArtisanApplicationPendingScreenState
   }
 
   bool _isImageFile(String path) {
+    final clean = path.trim();
+    if (clean.startsWith('data:image/')) return true;
     return RegExp(
-      r'\.(jpg|jpeg|png|webp|gif|bmp)(\?.*)?$',
+      r'(\.(jpg|jpeg|png|webp|gif|bmp)(\?.*)?$)|(^data:image\/)',
       caseSensitive: false,
-    ).hasMatch(path);
+    ).hasMatch(clean);
   }
 }
