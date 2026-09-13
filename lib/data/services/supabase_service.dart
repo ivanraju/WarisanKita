@@ -5,6 +5,7 @@ import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:warisan_kita/domain/models/artisan_profile.dart';
 import 'package:warisan_kita/domain/models/active_artisan_master.dart';
@@ -1119,10 +1120,22 @@ class SupabaseService {
           'ADMINISTRATOR ACCOUNT PROTECTED: Administrator credentials cannot be reset via self-service. Contact support.',
         );
       }
+      await _verifyNewPasswordDiffersFromCurrent(
+        client: client,
+        email: email.trim(),
+        newPassword: newPassword,
+      );
+
       try {
         await client.auth.updateUser(UserAttributes(password: newPassword));
       } on AuthException catch (e) {
         final message = e.message.toLowerCase();
+        if (message.contains('too similar') ||
+            message.contains('change in uppercase or lowercase')) {
+          throw const AuthException(
+            'NEW PASSWORD IS TOO SIMILAR TO YOUR CURRENT PASSWORD: Please choose a completely new password, not just a change in uppercase or lowercase.',
+          );
+        }
         if (message.contains('should be different') ||
             message.contains('same as old') ||
             message.contains('same password') ||
@@ -1137,6 +1150,126 @@ class SupabaseService {
       await signOut();
     } finally {
       _resetInProgress = false;
+    }
+  }
+
+  Future<void> _verifyNewPasswordDiffersFromCurrent({
+    required SupabaseClient client,
+    required String email,
+    required String newPassword,
+  }) async {
+    final cleanEmail = email.trim();
+    final cleanNewPassword = newPassword.trim();
+    if (cleanEmail.isEmpty || cleanNewPassword.isEmpty) return;
+
+    // In production environments with live HTTP endpoints, probe password reuse and similarity
+    try {
+      final apiKey = client.auth.headers['apikey'] ??
+          client.rest.headers['apikey'] ??
+          client.headers['apikey'] ??
+          'sb_publishable_8XUf77oFBVRsQ5fq1N8aOw_UljZ5waS';
+
+      final restUrl = client.rest.url;
+      final baseUrl = restUrl.contains('/rest/v1')
+          ? restUrl.replaceAll('/rest/v1', '/auth/v1')
+          : 'https://zmvykemnpuremkebjvyo.supabase.co/auth/v1';
+
+      if (baseUrl.startsWith('http')) {
+        final tokenUri = Uri.parse('$baseUrl/token?grant_type=password');
+        final headers = {
+          'apikey': apiKey,
+          'Authorization': 'Bearer $apiKey',
+          'Content-Type': 'application/json',
+        };
+
+        // 1. Verify exact current password match
+        final exactRes = await http
+            .post(
+              tokenUri,
+              headers: headers,
+              body: jsonEncode({'email': cleanEmail, 'password': cleanNewPassword}),
+            )
+            .timeout(const Duration(seconds: 4));
+
+        if (exactRes.statusCode == 200) {
+          throw const AuthException(
+            'NEW PASSWORD CANNOT BE THE SAME AS YOUR CURRENT PASSWORD; it should be different.',
+          );
+        }
+
+        // 2. Comprehensive casing similarity variations against current password
+        final variations = <String>{
+          cleanNewPassword.toLowerCase(),
+          cleanNewPassword.toUpperCase(),
+        };
+        if (cleanNewPassword.isNotEmpty) {
+          // Toggle first letter (e.g. password123 <-> Password123)
+          final firstChar = cleanNewPassword[0];
+          final toggledFirst = (firstChar == firstChar.toUpperCase()
+                  ? firstChar.toLowerCase()
+                  : firstChar.toUpperCase()) +
+              cleanNewPassword.substring(1);
+          variations.add(toggledFirst);
+
+          // Capitalized first letter, rest lowercase
+          variations.add(
+            cleanNewPassword[0].toUpperCase() + cleanNewPassword.substring(1).toLowerCase(),
+          );
+
+          // Inverted casing across all letters
+          final inverted = cleanNewPassword.split('').map((char) {
+            if (char == char.toUpperCase() && char != char.toLowerCase()) {
+              return char.toLowerCase();
+            } else if (char == char.toLowerCase() && char != char.toUpperCase()) {
+              return char.toUpperCase();
+            }
+            return char;
+          }).join('');
+          variations.add(inverted);
+
+          // Single-character case toggles for each letter
+          if (cleanNewPassword.length <= 20) {
+            for (int i = 0; i < cleanNewPassword.length; i++) {
+              final c = cleanNewPassword[i];
+              final toggled = c == c.toUpperCase() ? c.toLowerCase() : c.toUpperCase();
+              if (toggled != c) {
+                variations.add(
+                  cleanNewPassword.substring(0, i) + toggled + cleanNewPassword.substring(i + 1),
+                );
+              }
+            }
+          }
+        }
+        variations.remove(cleanNewPassword);
+
+        // Probe variations concurrently
+        final probeFutures = variations.map((candidate) async {
+          if (candidate.isEmpty) return false;
+          try {
+            final varRes = await http
+                .post(
+                  tokenUri,
+                  headers: headers,
+                  body: jsonEncode({'email': cleanEmail, 'password': candidate}),
+                )
+                .timeout(const Duration(seconds: 4));
+            return varRes.statusCode == 200;
+          } catch (_) {
+            return false;
+          }
+        });
+
+        final results = await Future.wait(probeFutures);
+        if (results.any((isMatch) => isMatch)) {
+          throw const AuthException(
+            'NEW PASSWORD IS TOO SIMILAR TO YOUR CURRENT PASSWORD: Please choose a completely new password, not just a change in uppercase or lowercase.',
+          );
+        }
+      }
+    } on AuthException {
+      rethrow;
+    } catch (_) {
+      // In tests or offline conditions, continue and allow backend updateUser to validate
     }
   }
 
