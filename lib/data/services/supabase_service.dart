@@ -7551,6 +7551,7 @@ class SupabaseService {
     String questId, {
     required bool approvedOnly,
     required bool includeInactive,
+    bool includeQrSecret = false,
   }) async {
     final client = _client;
 
@@ -7558,12 +7559,13 @@ class SupabaseService {
       throw StateError('Supabase is not initialized.');
     }
 
+    final qrColumn = includeQrSecret ? ', qr_code_secret' : '';
     var query = client
         .from('heritage_tasks')
         .select(
           'id, quest_id, title, is_required, xp_reward, sort_order, '
           'created_at, status, rejection_reason, reviewed_at, reviewed_by, '
-          'is_system_task, is_archived',
+          'is_system_task, is_archived$qrColumn',
         )
         .eq('quest_id', questId);
 
@@ -8055,7 +8057,6 @@ class SupabaseService {
 
   Future<Map<String, dynamic>> completeTaskWithArtisanQr({
     required String questId,
-    required String artisanId,
     required String taskId,
     required String qrPayload,
   }) async {
@@ -8067,22 +8068,24 @@ class SupabaseService {
 
     final parts = qrPayload.trim().split(':');
     if (parts.length != 3 ||
-        parts[0] != 'WK_ARTISAN' ||
-        parts[1] != artisanId ||
+        parts[0] != 'WKT1' ||
+        parts[1] != taskId ||
         parts[2].trim().isEmpty) {
-      throw StateError('This QR code does not belong to this artisan.');
+      throw StateError('This QR code belongs to a different activity.');
     }
 
-    final matchingQuest = await client
-        .from('quests')
+    final matchingTask = await client
+        .from('heritage_tasks')
         .select('id')
-        .eq('id', questId)
-        .eq('artisan_id', artisanId)
+        .eq('id', taskId)
+        .eq('quest_id', questId)
         .eq('qr_code_secret', parts[2])
         .eq('status', 'APPROVED')
+        .eq('is_archived', false)
+        .eq('is_system_task', false)
         .maybeSingle();
-    if (matchingQuest == null) {
-      throw StateError('This QR code does not belong to this artisan.');
+    if (matchingTask == null) {
+      throw StateError('This QR code is invalid for this activity.');
     }
 
     final task = await _loadApprovedTaskForCompletion(

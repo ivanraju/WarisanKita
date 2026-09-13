@@ -317,6 +317,7 @@ class GamificationRepository {
       questId,
       approvedOnly: false,
       includeInactive: true,
+      includeQrSecret: true,
     );
 
     return _mapAndSortTasks(rows);
@@ -394,14 +395,12 @@ class GamificationRepository {
 
   Future<TaskCompletionResult> completeTaskWithArtisanQr({
     required String questId,
-    required String artisanId,
     required String taskId,
     required String qrPayload,
   }) async {
     return TaskCompletionResult.fromMap(
       await _service.completeTaskWithArtisanQr(
         questId: questId,
-        artisanId: artisanId,
         taskId: taskId,
         qrPayload: qrPayload,
       ),
