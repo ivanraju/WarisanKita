@@ -9043,7 +9043,8 @@ class SupabaseService {
       final response = await client
           .from('artisan_profiles')
           .select(
-            'id, studio_name, craft_category, address, state, latitude, longitude',
+            'id, studio_name, craft_category, address, state, latitude, longitude, '
+            'artisan_documents(file_url, file_name, doc_type)',
           )
           .eq('status', 'APPROVED')
           .not('latitude', 'is', null)

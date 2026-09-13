@@ -7,6 +7,7 @@ import 'package:warisan_kita/domain/models/workshop_location.dart';
 class ArtisanRepository {
   final SupabaseService _service;
   late final GamificationRepository _gamificationRepository;
+  final Map<String, String> _workshopImageCache = {};
 
   ArtisanRepository({
     SupabaseService? service,
@@ -51,15 +52,69 @@ class ArtisanRepository {
     List<Map<String, dynamic>> data,
   ) {
     return data.map((row) {
+      final id = row['id'] as String;
+      final hasDocumentPayload = row.containsKey('artisan_documents');
+      final resolvedImageUrl = hasDocumentPayload
+          ? _firstSavedWorkshopImage(row['artisan_documents'])
+          : null;
+
+      if (hasDocumentPayload) {
+        if (resolvedImageUrl == null) {
+          _workshopImageCache.remove(id);
+        } else {
+          _workshopImageCache[id] = resolvedImageUrl;
+        }
+      }
+
       return WorkshopLocation(
-        id: row['id'] as String,
+        id: id,
         name: row['studio_name'] as String,
         craftCategory: row['craft_category'] as String,
         address: row['address'] as String,
         state: row['state'] as String,
         latitude: (row['latitude'] as num).toDouble(),
         longitude: (row['longitude'] as num).toDouble(),
+        primaryImageUrl: resolvedImageUrl ?? _workshopImageCache[id] ?? '',
       );
     }).toList();
+  }
+
+  String? _firstSavedWorkshopImage(Object? rawDocuments) {
+    if (rawDocuments is! List) return null;
+
+    Map<String, dynamic>? selectedDocument;
+    int? selectedUploadTimestamp;
+
+    for (final rawDocument in rawDocuments) {
+      if (rawDocument is! Map) continue;
+      final document = Map<String, dynamic>.from(rawDocument);
+      final type = document['doc_type']?.toString().trim().toUpperCase();
+      if (type != 'PORTFOLIO_IMAGE' && type != 'STUDIO_PHOTO') continue;
+
+      final imageUrl = document['file_url']?.toString().trim() ?? '';
+      final uri = Uri.tryParse(imageUrl);
+      if (imageUrl.isEmpty ||
+          uri == null ||
+          !(uri.isScheme('http') || uri.isScheme('https'))) {
+        continue;
+      }
+
+      final uploadTimestamp = _uploadTimestamp(document['file_name']);
+      if (selectedDocument == null ||
+          (uploadTimestamp != null &&
+              selectedUploadTimestamp != null &&
+              uploadTimestamp < selectedUploadTimestamp)) {
+        selectedDocument = document;
+        selectedUploadTimestamp = uploadTimestamp;
+      }
+    }
+
+    return selectedDocument?['file_url']?.toString().trim();
+  }
+
+  int? _uploadTimestamp(Object? rawFileName) {
+    final fileName = rawFileName?.toString().trim() ?? '';
+    if (fileName.isEmpty) return null;
+    return int.tryParse(fileName.split('_').first);
   }
 }
