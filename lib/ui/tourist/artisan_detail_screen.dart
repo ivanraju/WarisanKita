@@ -843,7 +843,7 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                     isDark: isDark,
                   ),
 
-                  if (widget.tags.isNotEmpty) ...[
+                  if (widget.tags.any((t) => !t.startsWith('__') && !t.startsWith('doc_') && !t.startsWith('premise:'))) ...[
                     const SizedBox(height: 24),
                     Text(
                       tr('Materials & Traditional Tools Used'),
@@ -859,6 +859,10 @@ class _ArtisanDetailScreenState extends State<ArtisanDetailScreen> {
                       spacing: 8,
                       runSpacing: 8,
                       children: widget.tags
+                          .where((t) =>
+                              !t.startsWith('__') &&
+                              !t.startsWith('doc_') &&
+                              !t.startsWith('premise:'))
                           .map(
                             (tag) => Chip(
                               backgroundColor: isDark

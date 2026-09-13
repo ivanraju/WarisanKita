@@ -234,7 +234,12 @@ class UserModel {
         final url = t.substring('doc_crafting_photo_url:'.length);
         if (url.isNotEmpty) return url;
       }
+      if (t.startsWith('doc_studio_photo:')) {
+        final url = t.substring('doc_studio_photo:'.length);
+        if (url.isNotEmpty) return url;
+      }
     }
+    if (photos.isNotEmpty) return photos.first;
     return null;
   }
 
@@ -255,11 +260,23 @@ class UserModel {
         final name = t.substring('doc_crafting_photo_name:'.length);
         if (name.isNotEmpty) return name;
       }
+      if (t.startsWith('doc_studio_photo_name:')) {
+        final name = t.substring('doc_studio_photo_name:'.length);
+        if (name.isNotEmpty) return name;
+      }
     }
     final url = craftingPhotoUrl;
     if (url != null && url.isNotEmpty) return url.split('/').last;
     return null;
   }
+
+  List<String> get toolsAndMaterials => tags
+      .where((t) =>
+          !t.startsWith('doc_') &&
+          !t.startsWith('premise:') &&
+          !t.startsWith('__'))
+      .toList();
+
 
   String? get ssmFileName {
     for (final d in artisanDocuments) {
@@ -614,6 +631,9 @@ class UserModel {
           docType = 'CRAFTING_PHOTO';
         } else if (t.startsWith('doc_crafting_photo_name:')) {
           fallbackName = t.substring('doc_crafting_photo_name:'.length);
+        } else if (t.startsWith('doc_studio_photo:') && fallbackUrl == null) {
+          fallbackUrl = t.substring('doc_studio_photo:'.length);
+          docType = 'CRAFTING_PHOTO';
         } else if (t.startsWith('doc_ssm_cert_url:') && fallbackUrl == null) {
           fallbackUrl = t.substring('doc_ssm_cert_url:'.length);
           docType = 'SSM_BUSINESS_CERT';

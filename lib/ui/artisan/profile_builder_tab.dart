@@ -151,10 +151,10 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
     }
 
     // 10. Tools & Materials Tags
-    final userTags = user.tags;
-    if (_toolsAndMaterials.length != userTags.length) return true;
+    final userTools = user.toolsAndMaterials;
+    if (_toolsAndMaterials.length != userTools.length) return true;
     for (final tag in _toolsAndMaterials) {
-      if (!userTags.contains(tag)) return true;
+      if (!userTools.contains(tag)) return true;
     }
 
     return false;
@@ -274,55 +274,96 @@ class _ProfileBuilderTabState extends State<ProfileBuilderTab> {
       _selectedWorkshopPin = LatLng(user.latitude!, user.longitude!);
     }
 
+    // 1. Sync documents
+    final newDocs = Map<String, String>.from(_documents);
+    for (var doc in user.artisanDocuments) {
+      final type = doc['doc_type'] as String?;
+      final url = doc['file_url'] as String?;
+      if (type != null && url != null && url.isNotEmpty) {
+        newDocs[type] = url;
+        if (type == 'STUDIO_PHOTO' ||
+            type == 'CRAFTING_PHOTO' ||
+            type == 'VILLAGE_CRAFTING_PHOTO') {
+          newDocs['CRAFTING_PHOTO'] = url;
+        }
+      }
+    }
+    if (user.isVillageWorkshop &&
+        (newDocs['CRAFTING_PHOTO'] == null ||
+            newDocs['CRAFTING_PHOTO']!.isEmpty)) {
+      final fallbackCraft = user.craftingPhotoUrl ?? user.ssmFileUrl;
+      if (fallbackCraft != null && fallbackCraft.isNotEmpty) {
+        newDocs['CRAFTING_PHOTO'] = fallbackCraft;
+      }
+    }
+    if (!user.isVillageWorkshop &&
+        (newDocs['SSM_BUSINESS_CERT'] == null ||
+            newDocs['SSM_BUSINESS_CERT']!.isEmpty)) {
+      final fallbackSsm = user.ssmFileUrl;
+      if (fallbackSsm != null && fallbackSsm.isNotEmpty) {
+        newDocs['SSM_BUSINESS_CERT'] = fallbackSsm;
+      }
+    }
+    if (newDocs['KRAFTANGAN_MASTER_CERT'] == null ||
+        newDocs['KRAFTANGAN_MASTER_CERT']!.isEmpty) {
+      final fallbackCert = user.certFileUrl;
+      if (fallbackCert != null && fallbackCert.isNotEmpty) {
+        newDocs['KRAFTANGAN_MASTER_CERT'] = fallbackCert;
+      }
+    }
+    if (user.isVillageWorkshop &&
+        (newDocs['CRAFTING_PHOTO'] == null ||
+            newDocs['CRAFTING_PHOTO']!.isEmpty)) {
+      if (_portfolioImages.isNotEmpty) {
+        newDocs['CRAFTING_PHOTO'] = _portfolioImages.first;
+      } else if (user.photos.isNotEmpty) {
+        newDocs['CRAFTING_PHOTO'] = user.photos.first;
+      }
+    }
+    _documents = newDocs;
+
+    // 2. Sync portfolio images
     if (force || _portfolioImages.isEmpty) {
       final newImages = <String>[];
-      final newDocs = <String, String>{};
       for (var doc in user.artisanDocuments) {
         final type = doc['doc_type'] as String?;
         final url = doc['file_url'] as String?;
-        if (type != null && url != null) {
-          if (type == 'PORTFOLIO_IMAGE') {
-            newImages.add(url);
-          } else if (type == 'STUDIO_PHOTO' ||
+        if (type != null && url != null && url.isNotEmpty) {
+          if (type == 'PORTFOLIO_IMAGE' ||
+              type == 'STUDIO_PHOTO' ||
               type == 'CRAFTING_PHOTO' ||
               type == 'VILLAGE_CRAFTING_PHOTO') {
-            newImages.add(url);
-            newDocs['CRAFTING_PHOTO'] = url;
-            newDocs[type] = url;
-          } else {
-            newDocs[type] = url;
+            if (!newImages.contains(url)) newImages.add(url);
           }
         }
       }
-      if (user.isVillageWorkshop && newDocs['CRAFTING_PHOTO'] == null) {
-        final fallbackCraft = user.craftingPhotoUrl ?? user.ssmFileUrl;
-        if (fallbackCraft != null && fallbackCraft.isNotEmpty) {
-          newDocs['CRAFTING_PHOTO'] = fallbackCraft;
-        }
+      for (var photo in user.photos) {
+        if (!newImages.contains(photo)) newImages.add(photo);
       }
-      if (!user.isVillageWorkshop && newDocs['SSM_BUSINESS_CERT'] == null) {
-        final fallbackSsm = user.ssmFileUrl;
-        if (fallbackSsm != null && fallbackSsm.isNotEmpty) {
-          newDocs['SSM_BUSINESS_CERT'] = fallbackSsm;
-        }
-      }
-      if (newDocs['KRAFTANGAN_MASTER_CERT'] == null) {
-        final fallbackCert = user.certFileUrl;
-        if (fallbackCert != null && fallbackCert.isNotEmpty) {
-          newDocs['KRAFTANGAN_MASTER_CERT'] = fallbackCert;
-        }
+      if (newDocs['CRAFTING_PHOTO'] != null &&
+          !newImages.contains(newDocs['CRAFTING_PHOTO']!)) {
+        newImages.add(newDocs['CRAFTING_PHOTO']!);
       }
       if (newImages.isNotEmpty) {
         _portfolioImages = newImages;
       }
-      if (newDocs.isNotEmpty) {
-        _documents = newDocs;
-      }
     }
 
+    // 3. Sync Tools & Materials
     if (force || _toolsAndMaterials.isEmpty) {
-      if (user.tags.isNotEmpty) {
-        _toolsAndMaterials = List<String>.from(user.tags);
+      final tools = user.toolsAndMaterials;
+      if (tools.isNotEmpty) {
+        _toolsAndMaterials = List<String>.from(tools);
+      } else if (user.tags.isNotEmpty) {
+        final filtered = user.tags
+            .where((t) =>
+                !t.startsWith('doc_') &&
+                !t.startsWith('premise:') &&
+                !t.startsWith('__'))
+            .toList();
+        if (filtered.isNotEmpty) {
+          _toolsAndMaterials = List<String>.from(filtered);
+        }
       }
     }
   }

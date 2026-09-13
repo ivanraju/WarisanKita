@@ -58,6 +58,13 @@ class ArtisanModel {
   String get artisanTitle =>
       isVillageWorkshop ? 'Heritage Village Crafter' : 'Master Artisan';
 
+  List<String> get toolsAndMaterials => tags
+      .where((t) =>
+          !t.startsWith('doc_') &&
+          !t.startsWith('premise:') &&
+          !t.startsWith('__'))
+      .toList();
+
   ArtisanModel copyWith({
     String? id,
     String? name,
@@ -116,13 +123,15 @@ class ArtisanModel {
           .where(
             (d) =>
                 d['doc_type'] == 'STUDIO_PHOTO' ||
-                d['doc_type'] == 'PORTFOLIO_IMAGE',
+                d['doc_type'] == 'PORTFOLIO_IMAGE' ||
+                d['doc_type'] == 'CRAFTING_PHOTO' ||
+                d['doc_type'] == 'VILLAGE_CRAFTING_PHOTO',
           )
           .toList();
 
       for (var photo in photos) {
-        if (photo['file_url'] != null) {
-          allImages.add(photo['file_url']);
+        if (photo['file_url'] != null && photo['file_url'].toString().isNotEmpty) {
+          allImages.add(photo['file_url'].toString());
         }
       }
 
@@ -131,14 +140,35 @@ class ArtisanModel {
       }
     }
 
+    final List<String> rawTags = map['tags'] != null
+        ? List<String>.from(map['tags'])
+        : [map['craft_category']?.toString() ?? 'Heritage'];
+    final bool isClosedTag = rawTags.contains('__LIVE_DEMO_CLOSED__');
+
+    for (final t in rawTags) {
+      if (t.startsWith('doc_studio_photo:')) {
+        final u = t.substring('doc_studio_photo:'.length);
+        if (u.isNotEmpty && !allImages.contains(u)) allImages.add(u);
+      }
+      if (t.startsWith('doc_crafting_photo_url:')) {
+        final u = t.substring('doc_crafting_photo_url:'.length);
+        if (u.isNotEmpty && !allImages.contains(u)) allImages.add(u);
+      }
+    }
+
     if (allImages.isEmpty &&
         map['users'] != null &&
         map['users']['avatar_url'] != null) {
-      extractedImageUrl = map['users']['avatar_url'];
-      allImages.add(extractedImageUrl);
+      final userAvatar = map['users']['avatar_url'].toString();
+      if (userAvatar.isNotEmpty) {
+        extractedImageUrl = userAvatar;
+        allImages.add(userAvatar);
+      }
     }
 
-    if (allImages.isEmpty) {
+    if (allImages.isNotEmpty) {
+      extractedImageUrl = allImages.first;
+    } else {
       allImages.add(extractedImageUrl);
     }
 
@@ -159,11 +189,6 @@ class ArtisanModel {
         lng = double.tryParse(map['longitude'].toString());
       }
     }
-
-    final List<String> rawTags = map['tags'] != null
-        ? List<String>.from(map['tags'])
-        : [map['craft_category']?.toString() ?? 'Heritage'];
-    final bool isClosedTag = rawTags.contains('__LIVE_DEMO_CLOSED__');
 
     final bool isLive =
         map['is_live_open'] ??
@@ -228,7 +253,12 @@ class ArtisanModel {
           (map['workshops_hosted'] as num?)?.toInt() ??
           (map['workshopCount'] as num?)?.toInt() ??
           0,
-      tags: rawTags.where((t) => !t.startsWith('__')).toList(),
+      tags: rawTags
+          .where((t) =>
+              !t.startsWith('__') &&
+              !t.startsWith('doc_') &&
+              !t.startsWith('premise:'))
+          .toList(),
       images: allImages,
       address: map['address'] as String?,
       latitude: lat,
