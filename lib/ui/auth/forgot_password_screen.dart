@@ -689,10 +689,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             ),
             hintText: 'At least 8 characters',
             hintStyle: GoogleFonts.plusJakartaSans(
-              fontSize: 13,
+              fontSize: 12,
               color: isDark ? Colors.white38 : Colors.black38,
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
             prefixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 44),
             suffixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 44),
             errorText: _newError,
@@ -749,12 +749,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             labelStyle: GoogleFonts.plusJakartaSans(
               color: isDark ? Colors.white70 : null,
             ),
-            hintText: 'Re-enter your new password',
+            hintText: 'Re-enter password',
             hintStyle: GoogleFonts.plusJakartaSans(
-              fontSize: 13,
+              fontSize: 12,
               color: isDark ? Colors.white38 : Colors.black38,
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
             prefixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 44),
             suffixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 44),
             errorText: _confirmError,
